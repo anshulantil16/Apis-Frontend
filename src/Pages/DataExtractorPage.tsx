@@ -239,82 +239,94 @@ export function DataExtractorPage() {
         <div className="flex-1 overflow-y-auto p-4 md:p-10 lg:p-14">
           <div className="w-full max-w-[1400px] mx-auto space-y-8"> {/* Changed from max-w-5xl to max-w-[1400px] to fill space */}
             
-            {/* Upload Section */}
-            <div className="bg-white/90 backdrop-blur-2xl p-8 md:p-10 rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white relative overflow-hidden group hover:shadow-[0_8px_50px_rgb(245,158,11,0.12)] transition-all duration-500">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto] animate-gradient"></div>
-              
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold text-slate-800">
-                  {activeTool === 'joining' && '1. Upload Joining Forms Excel'}
-                  {activeTool === 'medical' && '1. Upload Medical Reports Excel'}
-                  {activeTool === 'payroll' && '1. Upload Payroll Data Excel'}
-                </h3>
-                <p className="text-slate-500 mt-1">Our intelligent extraction engine will process the file instantly.</p>
-              </div>
-
-              <FileUploadZone 
-                file={file}
-                loading={loading}
-                isProcessed={data.length > 0}
-                onFileSelect={handleFileSelect}
-                onProcess={handleUpload}
-              />
-
-              {error && (
-                <div className="mt-8 p-5 bg-red-50 text-red-700 rounded-2xl flex items-start space-x-4 border border-red-100 shadow-sm">
-                  <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-bold text-red-800">Processing Error</h4>
-                    <p className="mt-1 text-sm font-medium">{error}</p>
+            {activeTool === 'joining' ? (
+              <>
+                {/* Upload Section */}
+                <div className="bg-white/90 backdrop-blur-2xl p-8 md:p-10 rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white relative overflow-hidden group hover:shadow-[0_8px_50px_rgb(245,158,11,0.12)] transition-all duration-500">
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto] animate-gradient"></div>
+                  
+                  <div className="mb-8">
+                    <h3 className="text-2xl font-bold text-slate-800">
+                      1. Upload Joining Forms Excel
+                    </h3>
+                    <p className="text-slate-500 mt-1">Our intelligent extraction engine will process the file instantly.</p>
                   </div>
-                </div>
-              )}
-            </div>
 
-            {/* Data Preview Section */}
-            {data.length > 0 && (
-              <div className="bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white overflow-hidden animate-in fade-in slide-in-from-bottom-12 duration-700">
-                
-                <div className="p-8 md:p-10 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-br from-slate-50 to-white">
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-800">2. Review & Export</h2>
-                    <p className="text-base text-slate-500 mt-2">
-                      Successfully extracted <span className="font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">{data.length} records</span> from the raw file.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleExport}
-                    disabled={loading || selectedColumns.size === 0}
-                    className="flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-lg rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:scale-100 hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/30 w-full lg:w-auto transform"
-                  >
-                    {loading ? (
-                      <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <Download className="w-6 h-6 animate-bounce-subtle" />
-                    )}
-                    <span>Download Final Excel</span>
-                  </button>
-                </div>
-
-                <div className="bg-white p-8 border-b border-slate-50">
-                  <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Select columns to include in export</h4>
-                  <ColumnPills 
-                    headers={headers}
-                    selectedColumns={selectedColumns}
-                    onToggleColumn={toggleColumn}
+                  <FileUploadZone 
+                    file={file}
+                    loading={loading}
+                    isProcessed={data.length > 0}
+                    onFileSelect={handleFileSelect}
+                    onProcess={handleUpload}
                   />
+
+                  {error && (
+                    <div className="mt-8 p-5 bg-red-50 text-red-700 rounded-2xl flex items-start space-x-4 border border-red-100 shadow-sm">
+                      <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-bold text-red-800">Processing Error</h4>
+                        <p className="mt-1 text-sm font-medium">{error}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="p-4 md:p-8 bg-slate-50/50">
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <PreviewTable 
-                      data={displayData}
-                      selectedColumns={selectedColumns}
-                      totalRows={data.length}
-                    />
+                {/* Data Preview Section */}
+                {data.length > 0 && (
+                  <div className="bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white overflow-hidden animate-in fade-in slide-in-from-bottom-12 duration-700">
+                    
+                    <div className="p-8 md:p-10 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-br from-slate-50 to-white">
+                      <div>
+                        <h2 className="text-2xl font-bold text-slate-800">2. Review & Export</h2>
+                        <p className="text-base text-slate-500 mt-2">
+                          Successfully extracted <span className="font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">{data.length} records</span> from the raw file.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleExport}
+                        disabled={loading || selectedColumns.size === 0}
+                        className="flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-lg rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:scale-100 hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/30 w-full lg:w-auto transform"
+                      >
+                        {loading ? (
+                          <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Download className="w-6 h-6 animate-bounce-subtle" />
+                        )}
+                        <span>Download Final Excel</span>
+                      </button>
+                    </div>
+
+                    <div className="bg-white p-8 border-b border-slate-50">
+                      <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Select columns to include in export</h4>
+                      <ColumnPills 
+                        headers={headers}
+                        selectedColumns={selectedColumns}
+                        onToggleColumn={toggleColumn}
+                      />
+                    </div>
+
+                    <div className="p-4 md:p-8 bg-slate-50/50">
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <PreviewTable 
+                          data={displayData}
+                          selectedColumns={selectedColumns}
+                          totalRows={data.length}
+                        />
+                      </div>
+                    </div>
+
                   </div>
+                )}
+              </>
+            ) : (
+              <div className="bg-white/90 backdrop-blur-2xl p-12 md:p-20 rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white text-center flex flex-col items-center justify-center min-h-[400px]">
+                <div className="bg-slate-100 p-6 rounded-full mb-6">
+                  <Sparkles className="w-12 h-12 text-slate-400" />
                 </div>
-
+                <h3 className="text-3xl font-extrabold text-slate-800 mb-4">Module In Development</h3>
+                <p className="text-lg text-slate-500 max-w-lg mx-auto leading-relaxed">
+                  The automated extraction logic for {activeTool === 'medical' ? 'Medical Reports' : 'Payroll Exports'} is currently being engineered by our team. Check back soon for updates!
+                </p>
               </div>
             )}
 
