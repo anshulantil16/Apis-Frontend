@@ -35,8 +35,10 @@ export function DataExtractorPage() {
     const formData = new FormData();
     formData.append('file', file);
 
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
     try {
-      const response = await fetch('http://localhost:8000/api/user_management/upload-excel/', {
+      const response = await fetch(`${API_BASE_URL}/api/user_management/upload-excel/`, {
         method: 'POST',
         body: formData,
       });
@@ -77,8 +79,10 @@ export function DataExtractorPage() {
       return filteredRow;
     });
 
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
     try {
-      const response = await fetch('http://localhost:8000/api/user_management/export-excel/', {
+      const response = await fetch(`${API_BASE_URL}/api/user_management/export-excel/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
