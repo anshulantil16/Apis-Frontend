@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { UploadCloud, FileSpreadsheet, Trash2, CheckCircle } from 'lucide-react';
 

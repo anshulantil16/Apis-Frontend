@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Download, AlertCircle, Building2, LayoutDashboard, Settings, LogOut, FileSpreadsheet, HeartPulse, Users, Sparkles } from 'lucide-react';
 import { FileUploadZone } from '../Components/FileUploadZone';
 import { ColumnPills } from '../Components/ColumnPills';
