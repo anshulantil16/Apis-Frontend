@@ -30,11 +30,10 @@ export function DataExtractorPage() {
     
     setFile(selectedFile);
     setError(null);
-    if (selectedFile) {
-      setHeaders([]);
-      setData([]);
-      setSelectedColumns(new Set());
-    }
+    // Always clear previous data when selection changes (either new file or file removed)
+    setHeaders([]);
+    setData([]);
+    setSelectedColumns(new Set());
   };
 
   const handleUpload = async () => {
@@ -68,9 +67,9 @@ export function DataExtractorPage() {
       setData(result.data);
       setSelectedColumns(new Set(result.headers));
       
-    } catch (err: unknown) {
+    } catch (err: any) {
       // If the request was intentionally cancelled (file deleted), do nothing
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (err?.name === 'AbortError') {
         return;
       }
       
