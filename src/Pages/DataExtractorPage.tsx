@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Download, AlertCircle, Building2, LayoutDashboard, Settings, LogOut, FileSpreadsheet, HeartPulse, Users, Sparkles } from 'lucide-react';
 import { FileUploadZone } from '../Components/FileUploadZone';
 import { ColumnPills } from '../Components/ColumnPills';
@@ -16,7 +16,18 @@ export function DataExtractorPage() {
   // New state for the active tool
   const [activeTool, setActiveTool] = useState<'joining' | 'medical' | 'payroll'>('joining');
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const handleFileSelect = (selectedFile: File | null) => {
+    if (!selectedFile) {
+      // If the file is removed, cancel any ongoing processing
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      setLoading(false);
+    }
+    
     setFile(selectedFile);
     setError(null);
     if (selectedFile) {
@@ -32,6 +43,9 @@ export function DataExtractorPage() {
     setLoading(true);
     setError(null);
 
+    // Initialize AbortController for this request
+    abortControllerRef.current = new AbortController();
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -41,6 +55,7 @@ export function DataExtractorPage() {
       const response = await fetch(`${API_BASE_URL}/api/user_management/upload-excel/`, {
         method: 'POST',
         body: formData,
+        signal: abortControllerRef.current.signal,
       });
 
       const result = await response.json();
@@ -54,6 +69,11 @@ export function DataExtractorPage() {
       setSelectedColumns(new Set(result.headers));
       
     } catch (err: unknown) {
+      // If the request was intentionally cancelled (file deleted), do nothing
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -61,6 +81,7 @@ export function DataExtractorPage() {
       }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
