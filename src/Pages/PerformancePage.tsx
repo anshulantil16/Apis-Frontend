@@ -28,6 +28,15 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
       const res = await fetch(`${PERF_API}/employee/${inputId.trim()}/`);
       if (!res.ok) throw new Error('Employee ID not found. Please check and try again.');
       const data = await res.json();
+
+      // Validate account type vs selected role
+      if (role === 'manager' && data.user_type !== 'manager') {
+        throw new Error(`${data.name} is registered as an Employee (${data.designation || 'Field Force'}), not a Manager. Please choose 'Employee' role or enter a Manager ID (e.g., MGR001).`);
+      }
+      if (role === 'hr' && data.user_type !== 'hr') {
+        throw new Error(`${data.name} is registered as an Employee (${data.designation || 'Field Force'}), not an HR Admin. Please choose 'Employee' role or enter an HR ID (e.g., HR001).`);
+      }
+
       setEmployee(data);
     } catch (e: any) {
       setError(e.message);
