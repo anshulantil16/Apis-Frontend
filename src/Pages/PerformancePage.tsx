@@ -135,10 +135,12 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
 
           {/* Employee ID input */}
           <div className="mb-5">
-            <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">Employee ID</label>
+            <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">
+              {role === 'hr' ? 'HR Admin ID' : role === 'manager' ? 'Manager ID' : 'Employee ID'}
+            </label>
             <input
               type="text"
-              placeholder="e.g. EMP001"
+              placeholder={role === 'hr' ? 'e.g. HR001' : role === 'manager' ? 'e.g. MGR001' : 'e.g. EMP001'}
               value={inputId}
               onChange={e => setInputId(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
