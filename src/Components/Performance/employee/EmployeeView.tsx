@@ -261,8 +261,17 @@ export function EmployeeView({ employee }: { employee: any }) {
                       className="flex-1 py-3.5 rounded-2xl border border-white/10 text-slate-300 font-bold text-sm hover:bg-white/5 transition-all disabled:opacity-50">
                       {saving ? 'Saving...' : '💾 Save Draft'}
                     </button>
-                    <button onClick={() => saveGoals(true)} disabled={saving || totalWeight !== 100}
-                      className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-sm hover:from-violet-500 hover:to-purple-500 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => {
+                        if (totalWeight !== 100) {
+                          setMsg(`⚠️ Cannot submit: Total weightage must equal exactly 100%. Currently, it is ${totalWeight}%. Please adjust your goal weightages.`);
+                          return;
+                        }
+                        saveGoals(true);
+                      }}
+                      disabled={saving}
+                      className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-sm hover:from-violet-500 hover:to-purple-500 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
                       <Send className="w-4 h-4" /> {saving ? 'Submitting...' : 'Submit to Manager'}
                     </button>
                   </div>
