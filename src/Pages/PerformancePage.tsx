@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, TrendingUp, Users, Shield, BarChart3 } from 'lucide-react';
 import { EmployeeView } from '../Components/Performance/employee/EmployeeView';
 import { ManagerView } from '../Components/Performance/manager/ManagerView';
@@ -19,14 +19,6 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
   const [employee, setEmployee] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [dbEmployees, setDbEmployees] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetch(`${PERF_API}/employees/`)
-      .then(r => r.ok ? r.json() : [])
-      .then(setDbEmployees)
-      .catch(() => {});
-  }, [employee]);
 
   const handleLogin = async () => {
     if (!inputId.trim() || !role) return;
@@ -132,42 +124,9 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
             ))}
           </div>
 
-          {/* Quick Select testing accounts */}
-          {dbEmployees.length > 0 && (
-            <div className="mb-5">
-              <label className="text-slate-400 text-[10px] font-bold uppercase tracking-widest block mb-2">
-                ⚡ Testing & Demo Accounts (Click to autofill)
-              </label>
-              <div className="max-h-32 overflow-y-auto bg-white/5 border border-white/10 rounded-2xl p-2 space-y-1 scrollbar-thin">
-                {dbEmployees.map(emp => (
-                  <button
-                    key={emp.employee_id}
-                    onClick={() => {
-                      setInputId(emp.employee_id);
-                      setRole(emp.user_type === 'hr' ? 'hr' : emp.user_type === 'manager' ? 'manager' : 'employee');
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-violet-500/10 hover:border-violet-500/20 border border-transparent text-xs text-slate-300 font-semibold transition-all flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="text-white font-bold">{emp.name}</p>
-                      <p className="text-[10px] text-slate-400">ID: {emp.employee_id} · Mgr: {emp.reporting_manager_id || 'None'}</p>
-                    </div>
-                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      emp.user_type === 'hr' ? 'bg-rose-500/20 text-rose-300'
-                      : emp.user_type === 'manager' ? 'bg-amber-500/20 text-amber-300'
-                      : 'bg-violet-500/20 text-violet-300'
-                    }`}>
-                      {emp.user_type === 'hr' ? 'HR' : emp.user_type === 'manager' ? 'Mgr' : 'Emp'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Employee ID input */}
           <div className="mb-5">
-            <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">Or type Employee ID</label>
+            <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">Employee ID</label>
             <input
               type="text"
               placeholder="e.g. EMP001"
