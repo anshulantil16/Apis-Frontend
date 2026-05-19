@@ -40,6 +40,28 @@ export function HRView({ hrUser }: { hrUser: any }) {
   const [finalizingId, setFinalizingId] = useState<number | null>(null);
   const [hrRatings, setHrRatings] = useState<Record<number, any>>({});
   const [finalizeMsg, setFinalizeMsg] = useState<Record<number, string>>({});
+  const [resetting, setResetting] = useState(false);
+
+  const handleResetDatabase = async () => {
+    if (!window.confirm('⚠️ WARNING: This will permanently delete ALL cycles, employees, goal cards, reviews, and logs from the Performance Hub. This action CANNOT be undone.\n\nAre you sure you want to clear the entire performance database?')) {
+      return;
+    }
+    setResetting(true);
+    try {
+      const res = await fetch(`${PERF_API}/org/reset/`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        alert('✅ Performance Database successfully reset! The page will now reload.');
+        window.location.reload();
+      } else {
+        alert('❌ Reset failed: ' + data.error);
+      }
+    } catch {
+      alert('❌ Failed to connect to server for reset.');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   useEffect(() => {
     fetch(`${PERF_API}/cycles/`).then(r => r.json()).then(data => {
@@ -163,12 +185,21 @@ export function HRView({ hrUser }: { hrUser: any }) {
     <div className="min-h-screen bg-[#0f0f1a] p-6 lg:p-10">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* HR Header */}
-        <div className="bg-gradient-to-br from-rose-600/20 to-pink-800/20 border border-rose-500/20 rounded-3xl p-6 flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-2xl font-black text-white">{hrUser.name?.[0]}</div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">{hrUser.name}</h2>
-            <p className="text-rose-300 text-sm font-semibold">HR Admin · Full Access</p>
+        <div className="bg-gradient-to-br from-rose-600/20 to-pink-800/20 border border-rose-500/20 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-2xl font-black text-white">{hrUser.name?.[0]}</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">{hrUser.name}</h2>
+              <p className="text-rose-300 text-sm font-semibold">HR Admin · Full Access</p>
+            </div>
           </div>
+          <button 
+            onClick={handleResetDatabase} 
+            disabled={resetting}
+            className="sm:ml-auto px-5 py-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs transition-all hover:shadow-lg active:scale-95 disabled:opacity-40 flex items-center gap-2 self-start sm:self-auto"
+          >
+            ⚠️ Reset & Clear All Database
+          </button>
         </div>
 
         {/* Cycle Selector */}
