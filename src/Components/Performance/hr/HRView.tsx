@@ -67,6 +67,42 @@ export function HRView({ hrUser }: { hrUser: any }) {
     finally { setImporting(false); }
   };
 
+  const downloadTemplate = () => {
+    const headers = [
+      'Employee ID', 'Name', 'Email', 'Phone',
+      'Designation', 'Department', 'Zone', 'Sub Zone',
+      'Reporting Manager ID', 'User Type', 'Joined Date',
+    ];
+    const sample = [
+      ['EMP001', 'Rahul Sharma', 'rahul@company.com', '9876543210',
+       'Sales Executive', 'Sales', 'North Zone', 'Delhi Sub Zone',
+       'MGR001', 'field_force', '2024-01-15'],
+      ['EMP002', 'Priya Singh', 'priya@company.com', '9876543211',
+       'Area Manager', 'Sales', 'South Zone', 'Hyderabad Sub Zone',
+       'MGR002', 'manager', '2023-06-01'],
+      ['MGR001', 'Amit Verma', 'amit@company.com', '9876543212',
+       'Zonal Manager', 'Management', 'North Zone', '',
+       '', 'manager', '2022-03-10'],
+      ['HR001', 'Sneha Patel', 'sneha@company.com', '9876543213',
+       'HR Manager', 'Human Resources', '', '',
+       '', 'hr', '2022-01-01'],
+    ];
+    const csvContent = [
+      headers.join(','),
+      ...sample.map(row => row.map(v => `"${v}"`).join(','))
+    ].join('\n');
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'APIS_Employee_Master_Template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleCreateCycle = async () => {
     setCreatingCycle(true); setCycleMsg('');
     try {
@@ -212,6 +248,45 @@ export function HRView({ hrUser }: { hrUser: any }) {
               <h3 className="text-white font-bold text-lg mb-1">Import Employee Master Sheet</h3>
               <p className="text-slate-400 text-sm">Upload Excel/CSV with columns: Employee ID, Name, Designation, Zone, Reporting Manager ID, User Type</p>
             </div>
+
+            {/* Download Template */}
+            <div className="flex items-center justify-between bg-violet-500/10 border border-violet-500/20 rounded-2xl px-6 py-4">
+              <div>
+                <p className="text-violet-200 font-bold text-sm">📥 Step 1 — Download the Template</p>
+                <p className="text-violet-400 text-xs mt-0.5">Get the pre-formatted CSV with all required columns and sample data</p>
+              </div>
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm rounded-xl transition-all hover:shadow-lg hover:shadow-violet-500/20 active:scale-95 flex-shrink-0 ml-4"
+              >
+                ⬇ Download Template
+              </button>
+            </div>
+
+            {/* Column reference */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">Required Columns</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {[
+                  ['Employee ID','EMP001 — unique identifier'],
+                  ['Name','Full name of the employee'],
+                  ['Designation','Job title / role'],
+                  ['Zone','Geographic zone'],
+                  ['Sub Zone','Sub-zone or city'],
+                  ['Department','Team or department'],
+                  ['Reporting Manager ID','Manager\'s Employee ID'],
+                  ['User Type','field_force / manager / hr'],
+                  ['Joined Date','YYYY-MM-DD format'],
+                ].map(([col, desc]) => (
+                  <div key={col} className="bg-white/5 rounded-xl p-2.5">
+                    <p className="text-white text-xs font-bold">{col}</p>
+                    <p className="text-slate-500 text-[10px] mt-0.5">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest text-center">— Step 2: Fill the template and upload below —</p>
             <div className="border-2 border-dashed border-white/10 rounded-2xl p-10 text-center hover:border-rose-500/30 transition-all">
               <Upload className="w-10 h-10 text-slate-600 mx-auto mb-3" />
               <input type="file" accept=".xlsx,.xls,.csv" onChange={e => setImportFile(e.target.files?.[0] || null)}
