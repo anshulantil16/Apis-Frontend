@@ -1,11 +1,15 @@
 import { useState, useRef } from 'react';
-import { Download, AlertCircle, Building2, LayoutDashboard, Settings, LogOut, FileSpreadsheet, HeartPulse, Users, Sparkles } from 'lucide-react';
+import { Download, AlertCircle, Building2, LayoutDashboard, Settings, LogOut, FileSpreadsheet, HeartPulse, Users, Sparkles, TrendingUp } from 'lucide-react';
 import { FileUploadZone } from '../Components/FileUploadZone';
 import { ColumnPills } from '../Components/ColumnPills';
 import { PreviewTable } from '../Components/PreviewTable';
 import { AttendanceDashboard } from '../Components/AttendanceDashboard';
 
-export function DataExtractorPage() {
+interface DataExtractorPageProps {
+  onNavigateToPerformance?: () => void;
+}
+
+export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,7 +215,24 @@ export function DataExtractorPage() {
             <span>Attendance Dashboard</span>
           </button>
 
+          {/* Divider */}
+          <div className="my-3 border-t border-slate-100" />
+          <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Performance</p>
+
+          {/* Performance Hub Button */}
+          <button 
+            onClick={onNavigateToPerformance}
+            className="flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group bg-gradient-to-r from-violet-50 to-purple-50 text-violet-800 border border-violet-200/50 hover:from-violet-100 hover:to-purple-100"
+          >
+            <TrendingUp className="w-5 h-5 text-violet-500" />
+            <div className="flex flex-col items-start">
+              <span>Performance Hub</span>
+              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Goals & Reviews</span>
+            </div>
+          </button>
+
           <div className="my-6 border-t border-slate-100"></div>
+
           
           <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">System</p>
           <a href="#" className="flex items-center space-x-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-2xl font-semibold transition-colors">
