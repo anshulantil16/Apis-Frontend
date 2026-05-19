@@ -63,7 +63,7 @@ export function EmployeeView({ employee }: { employee: any }) {
       .then(r => r.json()).then(setCycles).catch(() => {});
   }, []);
 
-  useEffect(() => {
+  useEffect(() => { 
     if (!selectedCycle) return;
     fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`)
       .then(r => r.ok ? r.json() : null)
@@ -252,7 +252,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                     <p className="text-slate-500 font-semibold group-hover:text-slate-300">Click to add your first goal</p>
                   </div>
                 )}
-
+ 
                 {msg && <p className="text-sm font-semibold text-center py-3 bg-white/5 rounded-xl text-slate-300">{msg}</p>}
 
                 {canEdit && goals.length > 0 && (
@@ -312,7 +312,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-600 resize-none" rows={2} />
                       </div>
                     ))}
-
+ 
                     {[
                       ['employee_summary','Overall Summary','Summarize your quarter performance...'],
                       ['key_achievements','Key Achievements','List your top achievements this quarter...'],
