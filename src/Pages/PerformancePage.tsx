@@ -150,7 +150,27 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
           >
             {loading ? 'Verifying...' : 'Enter Performance Hub →'}
           </button>
+
+          {/* First-time setup bypass */}
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-slate-500 text-xs text-center mb-3">
+              First time? No employees imported yet?
+            </p>
+            <button
+              onClick={() => {
+                setRole('hr');
+                setEmployee({ name: 'HR Admin', designation: 'Administrator', employee_id: 'ADMIN', zone: '', reporting_manager_id: '' });
+              }}
+              className="w-full py-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-sm transition-all flex items-center justify-center gap-2"
+            >
+              🏢 Enter as HR Admin (First-Time Setup)
+            </button>
+            <p className="text-slate-600 text-[10px] text-center mt-2">
+              Use this to import your employee master sheet, then log in normally.
+            </p>
+          </div>
         </div>
+
       </div>
     </div>
   );
