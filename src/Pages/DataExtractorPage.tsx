@@ -3,6 +3,7 @@ import { Download, AlertCircle, Building2, LayoutDashboard, Settings, LogOut, Fi
 import { FileUploadZone } from '../Components/FileUploadZone';
 import { ColumnPills } from '../Components/ColumnPills';
 import { PreviewTable } from '../Components/PreviewTable';
+import { AttendanceDashboard } from '../Components/AttendanceDashboard';
 
 export function DataExtractorPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -14,7 +15,7 @@ export function DataExtractorPage() {
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
   
   // New state for the active tool
-  const [activeTool, setActiveTool] = useState<'joining' | 'medical' | 'payroll'>('joining');
+  const [activeTool, setActiveTool] = useState<'joining' | 'medical' | 'payroll' | 'attendance'>('joining');
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -22,20 +23,19 @@ export function DataExtractorPage() {
     if (!selectedFile) {
       // If the file is removed, cancel any ongoing processing
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+        abortControllerRef.current.abort(); 
         abortControllerRef.current = null;
       }
       setLoading(false);
     }
-    
     setFile(selectedFile);
     setError(null);
     // Always clear previous data when selection changes (either new file or file removed)
     setHeaders([]);
     setData([]);
     setSelectedColumns(new Set());
-  };
-
+  };   
+  
   const handleUpload = async () => {
     if (!file) return;
 
@@ -44,9 +44,9 @@ export function DataExtractorPage() {
 
     // Initialize AbortController for this request
     abortControllerRef.current = new AbortController();
-
-    const formData = new FormData();
+    const formData = new FormData(); 
     formData.append('file', file);
+    formData.append('tool', activeTool);
 
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -113,7 +113,6 @@ export function DataExtractorPage() {
       if (!response.ok) {
         throw new Error('Failed to export file');
       }
-
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -201,6 +200,17 @@ export function DataExtractorPage() {
             <span>Payroll Exports</span>
           </button>
 
+          <button 
+            onClick={() => { setActiveTool('attendance'); setFile(null); setData([]); }}
+            className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group
+              ${activeTool === 'attendance' 
+                ? 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-800 shadow-sm border border-amber-200/50' 
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+          >
+            <LayoutDashboard className={`w-5 h-5 ${activeTool === 'attendance' ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <span>Attendance Dashboard</span>
+          </button>
+
           <div className="my-6 border-t border-slate-100"></div>
           
           <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">System</p>
@@ -249,12 +259,14 @@ export function DataExtractorPage() {
               {activeTool === 'joining' && 'Joining Form Processor'}
               {activeTool === 'medical' && 'Medical Report Extractor'}
               {activeTool === 'payroll' && 'Payroll Data Manager'}
+              {activeTool === 'attendance' && 'Daily Attendance Dashboard'}
               <Sparkles className="text-amber-400 w-8 h-8 animate-pulse" />
             </h1>
             <p className="text-slate-300 max-w-3xl text-base md:text-lg font-medium leading-relaxed">
               {activeTool === 'joining' && "Upload raw HR Joining Forms. The system will automatically detect and extract all 'Done' profiles into a clean, ready-to-share dataset."}
               {activeTool === 'medical' && "Upload batch Medical Examination responses. Seamlessly extract flagged health metrics and employee details in one click."}
               {activeTool === 'payroll' && "Consolidate and filter monthly payroll exports. Select specific columns to generate specialized financial reports."}
+              {activeTool === 'attendance' && "Analyze daily sales & staff logs in the BIZOM format. Aggregate metrics instantly by Zone, Sub-zone, Reporting Manager, or Location."}
             </p>
           </div>
         </div>
@@ -263,84 +275,105 @@ export function DataExtractorPage() {
         <div className="flex-1 overflow-y-auto p-4 md:p-10 lg:p-14">
           <div className="w-full max-w-[1400px] mx-auto space-y-8"> {/* Changed from max-w-5xl to max-w-[1400px] to fill space */}
             
-            {activeTool === 'joining' ? (
+            {(activeTool === 'joining' || activeTool === 'attendance') ? (
               <>
                 {/* Upload Section */}
-                <div className="bg-white/90 backdrop-blur-2xl p-8 md:p-10 rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white relative overflow-hidden group hover:shadow-[0_8px_50px_rgb(245,158,11,0.12)] transition-all duration-500">
-                  <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto] animate-gradient"></div>
-                  
-                  <div className="mb-8">
-                    <h3 className="text-2xl font-bold text-slate-800">
-                      1. Upload Joining Forms Excel
-                    </h3>
-                    <p className="text-slate-500 mt-1">Our intelligent extraction engine will process the file instantly.</p>
-                  </div>
+                {data.length === 0 && (
+                  <div className="bg-white/90 backdrop-blur-2xl p-8 md:p-10 rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white relative overflow-hidden group hover:shadow-[0_8px_50px_rgb(245,158,11,0.12)] transition-all duration-500">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto] animate-gradient"></div>
 
-                  <FileUploadZone 
-                    file={file}
-                    loading={loading}
-                    isProcessed={data.length > 0}
-                    onFileSelect={handleFileSelect}
-                    onProcess={handleUpload}
-                  />
+                    <div className="mb-8">
+                      <h3 className="text-2xl font-bold text-slate-800">
+                        {activeTool === 'joining' ? '1. Upload Joining Forms Excel' : '1. Upload Attendance Sheet Excel'}
+                      </h3>
+                      <p className="text-slate-500 mt-1">Our intelligent extraction engine will process the file instantly.</p>
+                    </div>
 
-                  {error && (
-                    <div className="mt-8 p-5 bg-red-50 text-red-700 rounded-2xl flex items-start space-x-4 border border-red-100 shadow-sm">
-                      <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="font-bold text-red-800">Processing Error</h4>
-                        <p className="mt-1 text-sm font-medium">{error}</p>
+                    <FileUploadZone 
+                      file={file}
+                      loading={loading}
+                      isProcessed={data.length > 0}
+                      onFileSelect={handleFileSelect}
+                      onProcess={handleUpload}
+                    />
+
+                    {error && (
+                      <div className="mt-8 p-5 bg-red-50 text-red-700 rounded-2xl flex items-start space-x-4 border border-red-100 shadow-sm">
+                        <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-bold text-red-800">Processing Error</h4>
+                          <p className="mt-1 text-sm font-medium">{error}</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Data Preview Section */}
-                {data.length > 0 && (
-                  <div className="bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white overflow-hidden animate-in fade-in slide-in-from-bottom-12 duration-700">
-                    
-                    <div className="p-8 md:p-10 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-br from-slate-50 to-white">
-                      <div>
-                        <h2 className="text-2xl font-bold text-slate-800">2. Review & Export</h2>
-                        <p className="text-base text-slate-500 mt-2">
-                          Successfully extracted <span className="font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">{data.length} records</span> from the raw file.
-                        </p>
-                      </div>
-                      <button
-                        onClick={handleExport}
-                        disabled={loading || selectedColumns.size === 0}
-                        className="flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-lg rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:scale-100 hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/30 w-full lg:w-auto transform"
-                      >
-                        {loading ? (
-                          <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <Download className="w-6 h-6 animate-bounce-subtle" />
-                        )}
-                        <span>Download Final Excel</span>
-                      </button>
-                    </div>
-
-                    <div className="bg-white p-8 border-b border-slate-50">
-                      <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Select columns to include in export</h4>
-                      <ColumnPills 
-                        headers={headers}
-                        selectedColumns={selectedColumns}
-                        onToggleColumn={toggleColumn}
-                      />
-                    </div>
-
-                    <div className="p-4 md:p-8 bg-slate-50/50">
-                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <PreviewTable 
-                          data={displayData}
-                          selectedColumns={selectedColumns}
-                          totalRows={data.length}
-                        />
-                      </div>
-                    </div>
-
+                    )}
                   </div>
                 )}
+
+                {/* Data Preview / Dashboard Section */}
+                {data.length > 0 && (
+                  activeTool === 'joining' ? (
+                    <div className="bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white overflow-hidden animate-in fade-in slide-in-from-bottom-12 duration-700">
+                     
+                      <div className="p-8 md:p-10 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-br from-slate-50 to-white">
+                        <div>
+                          <h2 className="text-2xl font-bold text-slate-800">2. Review & Export</h2>
+                          <p className="text-base text-slate-500 mt-2">
+                            Successfully extracted <span className="font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">{data.length} records</span> from the raw file.
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleExport}
+                          disabled={loading || selectedColumns.size === 0}
+                          className="flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-lg rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:scale-100 hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/30 w-full lg:w-auto transform"
+                        >
+                          {loading ? (
+                            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <Download className="w-6 h-6 animate-bounce-subtle" />
+                          )}
+                          <span>Download Final Excel</span>
+                        </button>
+                      </div>
+
+                      <div className="bg-white p-8 border-b border-slate-50">
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Select columns to include in export</h4>
+                        <ColumnPills 
+                          headers={headers}
+                          selectedColumns={selectedColumns}
+                          onToggleColumn={toggleColumn}
+                        />
+                      </div>
+
+                      <div className="p-4 md:p-8 bg-slate-50/50">
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                          <PreviewTable 
+                            data={displayData}
+                            selectedColumns={selectedColumns}
+                            totalRows={data.length}
+                          />
+                        </div>
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Back button to reupload / clear */}
+                      <div className="flex justify-between items-center bg-white px-6 py-4 rounded-2xl border border-slate-100 shadow-sm">
+                        <div className="flex items-center space-x-3">
+                          <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                          <span className="text-sm font-bold text-slate-600">Active Sheet: {file?.name || 'Attendance Sheet'}</span>
+                        </div>
+                        <button
+                          onClick={() => { setFile(null); setData([]); setHeaders([]); }}
+                          className="px-4 py-2 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all border border-rose-200 hover:border-rose-300"
+                        >
+                          Upload Different Sheet
+                        </button>
+                      </div>
+                      <AttendanceDashboard rawData={data} />
+                    </div>
+                  )
+                )} 
               </>
             ) : (
               <div className="bg-white/90 backdrop-blur-2xl p-12 md:p-20 rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white text-center flex flex-col items-center justify-center min-h-[400px]">
