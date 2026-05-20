@@ -27,13 +27,14 @@ const TYPE_MAP: Record<string, { label: string; cls: string; cat: LeaveCategory 
   A:   { label: 'Absent',          cls: 'bg-rose-100    text-rose-800    border-rose-300',    cat: 'absent'  },
   CL:  { label: 'Casual Leave',    cls: 'bg-orange-100  text-orange-800  border-orange-300',  cat: 'leave'   },
   PL:  { label: 'Privilege Leave', cls: 'bg-purple-100  text-purple-800  border-purple-300',  cat: 'leave'   },
-  SL:  { label: 'Sick Leave',      cls: 'bg-pink-100    text-pink-800    border-pink-300',     cat: 'leave'   },
-  ML:  { label: 'Medical Leave',   cls: 'bg-pink-100    text-pink-800    border-pink-300',     cat: 'leave'   },
+  SL:  { label: 'Sick Leave',      cls: 'bg-pink-100    text-pink-800    border-pink-300',    cat: 'leave'   },
+  ML:  { label: 'Medical Leave',   cls: 'bg-pink-100    text-pink-800    border-pink-300',    cat: 'leave'   },
   EL:  { label: 'Earned Leave',    cls: 'bg-violet-100  text-violet-800  border-violet-300',  cat: 'leave'   },
-  LWP: { label: 'LWP',             cls: 'bg-red-100     text-red-800     border-red-300',      cat: 'leave'   },
-  WO:  { label: 'Weekly Off',      cls: 'bg-sky-100     text-sky-800     border-sky-300',      cat: 'off'     },
+  LWP: { label: 'LWP',             cls: 'bg-red-100     text-red-800     border-red-300',     cat: 'leave'   },
+  W:   { label: 'Sunday Off',      cls: 'bg-sky-100     text-sky-800     border-sky-300',     cat: 'off'     },
+  WO:  { label: 'Weekly Off',      cls: 'bg-sky-100     text-sky-800     border-sky-300',     cat: 'off'     },
   HD:  { label: 'Half Day',        cls: 'bg-amber-100   text-amber-800   border-amber-300',   cat: 'present' },
-  CO:  { label: 'Comp Off',        cls: 'bg-teal-100    text-teal-800    border-teal-300',     cat: 'off'     },
+  CO:  { label: 'Comp Off',        cls: 'bg-teal-100    text-teal-800    border-teal-300',    cat: 'off'     },
 };
 
 function typeInfo(raw: string) {
@@ -102,9 +103,6 @@ export function DelhiAttendanceDashboard({ rawData }: Props) {
   }, [records]);
 
   const [selectedDate, setSelectedDate] = useState(() => uniqueDates[0] || '');
-  React.useEffect(() => {
-    if (uniqueDates.length && !selectedDate) setSelectedDate(uniqueDates[0]);
-  }, [uniqueDates, selectedDate]);
 
   const [groupBy, setGroupBy] = useState<'department' | 'category' | 'designation'>('department');
   const [search, setSearch] = useState('');
