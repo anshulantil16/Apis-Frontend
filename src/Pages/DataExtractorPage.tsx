@@ -4,6 +4,7 @@ import { FileUploadZone } from '../Components/FileUploadZone';
 import { ColumnPills } from '../Components/ColumnPills';
 import { PreviewTable } from '../Components/PreviewTable';
 import { AttendanceDashboard } from '../Components/AttendanceDashboard';
+import { DelhiAttendanceDashboard } from '../Components/DelhiAttendanceDashboard';
 
 interface DataExtractorPageProps {
   onNavigateToPerformance?: () => void;
@@ -19,7 +20,7 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
   
   // New state for the active tool
-  const [activeTool, setActiveTool] = useState<'joining' | 'medical' | 'payroll' | 'attendance'>('joining');
+  const [activeTool, setActiveTool] = useState<'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi'>('joining');
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -71,9 +72,9 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
       setData(result.data);
       setSelectedColumns(new Set(result.headers));
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If the request was intentionally cancelled (file deleted), do nothing
-      if (err?.name === 'AbortError') {
+      if ((err as { name?: string })?.name === 'AbortError') {
         return;
       }
       
@@ -204,15 +205,29 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
             <span>Payroll Exports</span>
           </button>
 
-          <button 
+          <button
             onClick={() => { setActiveTool('attendance'); setFile(null); setData([]); }}
             className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group
-              ${activeTool === 'attendance' 
-                ? 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-800 shadow-sm border border-amber-200/50' 
+              ${activeTool === 'attendance'
+                ? 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-800 shadow-sm border border-amber-200/50'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
           >
             <LayoutDashboard className={`w-5 h-5 ${activeTool === 'attendance' ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
             <span>Attendance Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTool('delhi'); setFile(null); setData([]); }}
+            className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group
+              ${activeTool === 'delhi'
+                ? 'bg-gradient-to-r from-violet-50 to-purple-50 text-violet-800 shadow-sm border border-violet-200/50'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+          >
+            <Building2 className={`w-5 h-5 ${activeTool === 'delhi' ? 'text-violet-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
+            <div className="flex flex-col items-start">
+              <span>Delhi / HO Attendance</span>
+              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Pocket HRMS</span>
+            </div>
           </button>
 
           {/* Divider */}
@@ -277,17 +292,19 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
               </span>
             </div>
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-3 flex items-center gap-4">
-              {activeTool === 'joining' && 'Joining Form Processor'}
-              {activeTool === 'medical' && 'Medical Report Extractor'}
-              {activeTool === 'payroll' && 'Payroll Data Manager'}
+              {activeTool === 'joining'    && 'Joining Form Processor'}
+              {activeTool === 'medical'    && 'Medical Report Extractor'}
+              {activeTool === 'payroll'    && 'Payroll Data Manager'}
               {activeTool === 'attendance' && 'Daily Attendance Dashboard'}
+              {activeTool === 'delhi'      && 'Delhi / HO Attendance'}
               <Sparkles className="text-amber-400 w-8 h-8 animate-pulse" />
             </h1>
             <p className="text-slate-300 max-w-3xl text-base md:text-lg font-medium leading-relaxed">
-              {activeTool === 'joining' && "Upload raw HR Joining Forms. The system will automatically detect and extract all 'Done' profiles into a clean, ready-to-share dataset."}
-              {activeTool === 'medical' && "Upload batch Medical Examination responses. Seamlessly extract flagged health metrics and employee details in one click."}
-              {activeTool === 'payroll' && "Consolidate and filter monthly payroll exports. Select specific columns to generate specialized financial reports."}
+              {activeTool === 'joining'    && "Upload raw HR Joining Forms. The system will automatically detect and extract all 'Done' profiles into a clean, ready-to-share dataset."}
+              {activeTool === 'medical'    && "Upload batch Medical Examination responses. Seamlessly extract flagged health metrics and employee details in one click."}
+              {activeTool === 'payroll'    && "Consolidate and filter monthly payroll exports. Select specific columns to generate specialized financial reports."}
               {activeTool === 'attendance' && "Analyze daily sales & staff logs in the BIZOM format. Aggregate metrics instantly by Zone, Sub-zone, Reporting Manager, or Location."}
+              {activeTool === 'delhi'      && "Upload Pocket HRMS attendance exports for Delhi Head Office. Instantly see punch-time insights, late arrivals, leave breakdown, and department-wise summaries."}
             </p>
           </div>
         </div>
@@ -296,7 +313,7 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
         <div className="flex-1 overflow-y-auto p-4 md:p-10 lg:p-14">
           <div className="w-full max-w-[1400px] mx-auto space-y-8"> {/* Changed from max-w-5xl to max-w-[1400px] to fill space */}
             
-            {(activeTool === 'joining' || activeTool === 'attendance') ? (
+            {(activeTool === 'joining' || activeTool === 'attendance' || activeTool === 'delhi') ? (
               <>
                 {/* Upload Section */}
                 {data.length === 0 && (
@@ -305,7 +322,9 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
 
                     <div className="mb-8">
                       <h3 className="text-2xl font-bold text-slate-800">
-                        {activeTool === 'joining' ? '1. Upload Joining Forms Excel' : '1. Upload Attendance Sheet Excel'}
+                        {activeTool === 'joining'    && '1. Upload Joining Forms Excel'}
+                        {activeTool === 'attendance' && '1. Upload Attendance Sheet Excel'}
+                        {activeTool === 'delhi'      && '1. Upload Pocket HRMS Attendance Excel'}
                       </h3>
                       <p className="text-slate-500 mt-1">Our intelligent extraction engine will process the file instantly.</p>
                     </div>
@@ -391,7 +410,10 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
                           Upload Different Sheet
                         </button>
                       </div>
-                      <AttendanceDashboard rawData={data} />
+                      {activeTool === 'delhi'
+                        ? <DelhiAttendanceDashboard rawData={data} />
+                        : <AttendanceDashboard rawData={data} />
+                      }
                     </div>
                   )
                 )} 
