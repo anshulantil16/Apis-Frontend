@@ -1,413 +1,261 @@
 import { useState, useRef } from 'react';
-import { Download, AlertCircle, Building2, LayoutDashboard, Settings, LogOut, FileSpreadsheet, HeartPulse, Users, Sparkles, TrendingUp } from 'lucide-react';
+import {
+  Download, AlertCircle, Building2, FileSpreadsheet, HeartPulse, Users,
+  TrendingUp, LayoutDashboard, LogOut, Settings, Sparkles, ChevronRight,
+} from 'lucide-react';
 import { FileUploadZone } from '../Components/FileUploadZone';
 import { ColumnPills } from '../Components/ColumnPills';
 import { PreviewTable } from '../Components/PreviewTable';
 import { AttendanceDashboard } from '../Components/AttendanceDashboard';
 import { DelhiAttendanceDashboard } from '../Components/DelhiAttendanceDashboard';
 
+type ToolId = 'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi';
+
 interface DataExtractorPageProps {
   onNavigateToPerformance?: () => void;
 }
+
+const TOOLS: {
+  id: ToolId; label: string; sub: string | null;
+  accentBg: string; accentText: string; accentBorder: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { id: 'joining',    label: 'Joining Forms',    sub: null,          icon: Users,           accentBg: 'bg-amber-500/10',  accentText: 'text-amber-400',  accentBorder: 'border-amber-500'  },
+  { id: 'medical',    label: 'Medical Reports',   sub: null,          icon: HeartPulse,      accentBg: 'bg-rose-500/10',   accentText: 'text-rose-400',   accentBorder: 'border-rose-500'   },
+  { id: 'payroll',    label: 'Payroll Exports',   sub: null,          icon: FileSpreadsheet, accentBg: 'bg-sky-500/10',    accentText: 'text-sky-400',    accentBorder: 'border-sky-500'    },
+  { id: 'attendance', label: 'Field Attendance',  sub: 'BIZOM',       icon: LayoutDashboard, accentBg: 'bg-amber-500/10',  accentText: 'text-amber-400',  accentBorder: 'border-amber-500'  },
+  { id: 'delhi',      label: 'Delhi / HO',        sub: 'Pocket HRMS', icon: Building2,       accentBg: 'bg-violet-500/10', accentText: 'text-violet-400', accentBorder: 'border-violet-500' },
+];
+
+const TOOL_META: Record<ToolId, { title: string; desc: string; bar: string; badge: string }> = {
+  joining:    { title: 'Joining Form Processor',     desc: 'Extract employee profiles from raw HR joining forms',                      bar: 'bg-amber-500',  badge: 'bg-amber-50  text-amber-700  border-amber-200'  },
+  medical:    { title: 'Medical Report Extractor',   desc: 'Parse batch medical examination responses',                                bar: 'bg-rose-500',   badge: 'bg-rose-50   text-rose-700   border-rose-200'   },
+  payroll:    { title: 'Payroll Data Manager',       desc: 'Filter and consolidate monthly payroll exports',                           bar: 'bg-sky-500',    badge: 'bg-sky-50    text-sky-700    border-sky-200'    },
+  attendance: { title: 'Field Attendance Dashboard', desc: 'BIZOM format · aggregate by zone, sub-zone, manager, or location',         bar: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' },
+  delhi:      { title: 'Delhi / HO Attendance',      desc: 'Pocket HRMS format · department, punch-time and leave analytics',          bar: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
+};
 
 export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
   const [headers, setHeaders] = useState<string[]>([]);
   const [data, setData] = useState<unknown[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
-  
-  // New state for the active tool
-  const [activeTool, setActiveTool] = useState<'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi'>('joining');
+  const [activeTool, setActiveTool] = useState<ToolId>('joining');
+  const abortRef = useRef<AbortController | null>(null);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const handleFileSelect = (f: File | null) => {
+    if (!f && abortRef.current) { abortRef.current.abort(); abortRef.current = null; setLoading(false); }
+    setFile(f); setError(null); setHeaders([]); setData([]); setSelectedColumns(new Set());
+  };
 
-  const handleFileSelect = (selectedFile: File | null) => {
-    if (!selectedFile) {
-      // If the file is removed, cancel any ongoing processing
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort(); 
-        abortControllerRef.current = null;
-      }
-      setLoading(false);
-    }
-    setFile(selectedFile);
-    setError(null);
-    // Always clear previous data when selection changes (either new file or file removed)
-    setHeaders([]);
-    setData([]);
-    setSelectedColumns(new Set());
-  };   
-  
   const handleUpload = async () => {
     if (!file) return;
-
-    setLoading(true);
-    setError(null);
-
-    // Initialize AbortController for this request
-    abortControllerRef.current = new AbortController();
-    const formData = new FormData(); 
-    formData.append('file', file);
-    formData.append('tool', activeTool);
-
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
+    setLoading(true); setError(null);
+    abortRef.current = new AbortController();
+    const fd = new FormData(); fd.append('file', file); fd.append('tool', activeTool);
+    const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
     try {
-      const response = await fetch(`${API_BASE_URL}/api/user_management/upload-excel/`, {
-        method: 'POST',
-        body: formData,
-        signal: abortControllerRef.current.signal,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to process file');
-      }
-
-      setHeaders(result.headers);
-      setData(result.data);
-      setSelectedColumns(new Set(result.headers));
-      
+      const res = await fetch(`${API}/api/user_management/upload-excel/`, { method: 'POST', body: fd, signal: abortRef.current.signal });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to process file');
+      setHeaders(result.headers); setData(result.data); setSelectedColumns(new Set(result.headers));
     } catch (err: unknown) {
-      // If the request was intentionally cancelled (file deleted), do nothing
-      if ((err as { name?: string })?.name === 'AbortError') {
-        return;
-      }
-      
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError(String(err));
-      }
-    } finally {
-      setLoading(false);
-      abortControllerRef.current = null;
-    }
+      if ((err as { name?: string })?.name === 'AbortError') return;
+      setError(err instanceof Error ? err.message : String(err));
+    } finally { setLoading(false); abortRef.current = null; }
   };
 
   const handleExport = async () => {
-    if (data.length === 0) return;
-
-    setLoading(true);
-    setError(null);
-
-    const filteredData = data.map((row) => {
-      const filteredRow: Record<string, unknown> = {};
-      const record = row as Record<string, unknown>;
-      selectedColumns.forEach(col => {
-        filteredRow[col] = record[col];
-      });
-      return filteredRow;
+    if (!data.length) return;
+    setLoading(true); setError(null);
+    const filtered = data.map(row => {
+      const r: Record<string, unknown> = {};
+      selectedColumns.forEach(c => { r[c] = (row as Record<string, unknown>)[c]; });
+      return r;
     });
-
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
+    const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
     try {
-      const response = await fetch(`${API_BASE_URL}/api/user_management/export-excel/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: filteredData }),
+      const res = await fetch(`${API}/api/user_management/export-excel/`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: filtered }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to export file');
-      }
-      const blob = await response.blob();
+      if (!res.ok) throw new Error('Failed to export file');
+      const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Apis_${activeTool.toUpperCase()}_Filtered_${file?.name || 'export.xlsx'}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
+      const a = Object.assign(document.createElement('a'), { href: url, download: `Apis_${activeTool.toUpperCase()}_${file?.name || 'export.xlsx'}` });
+      document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError(String(err));
-      }
-    } finally {
-      setLoading(false);
-    }
+      setError(err instanceof Error ? err.message : String(err));
+    } finally { setLoading(false); }
   };
 
   const toggleColumn = (col: string) => {
-    const newSelection = new Set(selectedColumns);
-    if (newSelection.has(col)) {
-      newSelection.delete(col);
-    } else {
-      newSelection.add(col);
-    }
-    setSelectedColumns(newSelection);
+    const s = new Set(selectedColumns);
+    if (s.has(col)) { s.delete(col); } else { s.add(col); }
+    setSelectedColumns(s);
   };
 
-  const displayData = data.slice(0, 10);
+  const switchTool = (id: ToolId) => {
+    setActiveTool(id); setFile(null); setData([]); setHeaders([]); setSelectedColumns(new Set()); setError(null);
+  };
+
+  const meta = TOOL_META[activeTool];
+  const isDashboard = activeTool === 'attendance' || activeTool === 'delhi';
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans flex flex-col md:flex-row selection:bg-amber-200 selection:text-amber-900">
-      
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-72 bg-white/80 backdrop-blur-xl border-r border-slate-200 flex flex-col shadow-lg z-20 sticky top-0 h-screen">
-        <div className="p-6 flex items-center space-x-4 border-b border-slate-100 bg-white">
-          <div className="bg-gradient-to-br from-amber-400 to-orange-500 text-white p-2.5 rounded-xl shadow-md shadow-amber-500/20">
-            <Building2 className="w-7 h-7" />
+    <div className="flex h-screen bg-[#f5f7fa] font-sans overflow-hidden">
+
+      {/* ── Dark sidebar ─────────────────────────────────────────────────── */}
+      <aside className="w-60 bg-[#0a0d14] flex flex-col flex-shrink-0">
+        {/* Brand */}
+        <div className="px-5 py-4 flex items-center gap-3 border-b border-white/[0.06]">
+          <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-1.5 rounded-lg shadow-lg shadow-amber-500/20 flex-shrink-0">
+            <Building2 className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">APIS INDIA</h2>
-            <div className="flex items-center space-x-1 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Enterprise Hub</p>
+            <p className="text-white font-black text-sm tracking-tight leading-none">APIS INDIA</p>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+              <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">Enterprise Hub</p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4">Data Tools</p>
-          
-          <button 
-            onClick={() => { setActiveTool('joining'); setFile(null); setData([]); }}
-            className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group
-              ${activeTool === 'joining' 
-                ? 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-800 shadow-sm border border-amber-200/50' 
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
-          >
-            <Users className={`w-5 h-5 ${activeTool === 'joining' ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span>Joining Forms</span>
-          </button>
-          
-          <button 
-            onClick={() => { setActiveTool('medical'); setFile(null); setData([]); }}
-            className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group
-              ${activeTool === 'medical' 
-                ? 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-800 shadow-sm border border-amber-200/50' 
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
-          >
-            <HeartPulse className={`w-5 h-5 ${activeTool === 'medical' ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span>Medical Reports</span>
-          </button>
+        {/* Nav */}
+        <nav className="flex-1 p-2.5 overflow-y-auto">
+          <p className="px-2.5 pt-4 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Data Tools</p>
+          {TOOLS.map(t => {
+            const Icon = t.icon;
+            const active = activeTool === t.id;
+            return (
+              <button key={t.id} onClick={() => switchTool(t.id)}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-all mb-0.5 ${
+                  active
+                    ? `${t.accentBg} ${t.accentText} border-l-2 ${t.accentBorder} !pl-[8px]`
+                    : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+                }`}>
+                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                <div className="text-left min-w-0">
+                  <p className="leading-tight truncate">{t.label}</p>
+                  {t.sub && <p className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${active ? 'opacity-60' : 'text-slate-700'}`}>{t.sub}</p>}
+                </div>
+              </button>
+            );
+          })}
 
-          <button 
-            onClick={() => { setActiveTool('payroll'); setFile(null); setData([]); }}
-            className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group
-              ${activeTool === 'payroll' 
-                ? 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-800 shadow-sm border border-amber-200/50' 
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
-          >
-            <FileSpreadsheet className={`w-5 h-5 ${activeTool === 'payroll' ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span>Payroll Exports</span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTool('attendance'); setFile(null); setData([]); }}
-            className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group
-              ${activeTool === 'attendance'
-                ? 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-800 shadow-sm border border-amber-200/50'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
-          >
-            <LayoutDashboard className={`w-5 h-5 ${activeTool === 'attendance' ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span>Attendance Dashboard</span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTool('delhi'); setFile(null); setData([]); }}
-            className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group
-              ${activeTool === 'delhi'
-                ? 'bg-gradient-to-r from-violet-50 to-purple-50 text-violet-800 shadow-sm border border-violet-200/50'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
-          >
-            <Building2 className={`w-5 h-5 ${activeTool === 'delhi' ? 'text-violet-500' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <div className="flex flex-col items-start">
-              <span>Delhi / HO Attendance</span>
-              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Pocket HRMS</span>
+          <div className="my-2.5 border-t border-white/[0.06]" />
+          <p className="px-2.5 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Performance</p>
+          <button onClick={onNavigateToPerformance}
+            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
+            <div className="flex items-center gap-2.5">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <div>
+                <p>Performance Hub</p>
+                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-violet-700">Goals &amp; Reviews</p>
+              </div>
             </div>
+            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
           </button>
-
-          {/* Divider */}
-          <div className="my-3 border-t border-slate-100" />
-          <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Performance</p>
-
-          {/* Performance Hub Button */}
-          <button 
-            onClick={onNavigateToPerformance}
-            className="flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-semibold transition-all duration-300 w-full text-left group bg-gradient-to-r from-violet-50 to-purple-50 text-violet-800 border border-violet-200/50 hover:from-violet-100 hover:to-purple-100"
-          >
-            <TrendingUp className="w-5 h-5 text-violet-500" />
-            <div className="flex flex-col items-start">
-              <span>Performance Hub</span>
-              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Goals & Reviews</span>
-            </div>
-          </button>
-
-          <div className="my-6 border-t border-slate-100"></div>
-
-          
-          <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">System</p>
-          <a href="#" className="flex items-center space-x-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-2xl font-semibold transition-colors">
-            <LayoutDashboard className="w-5 h-5 text-slate-400" />
-            <span>Dashboard Hub</span>
-          </a>
-          <a href="#" className="flex items-center space-x-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-2xl font-semibold transition-colors">
-            <Settings className="w-5 h-5 text-slate-400" />
-            <span>Settings</span>
-          </a>
         </nav>
 
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100">
-          <button className="flex items-center justify-center space-x-3 px-4 py-3 w-full text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-xl font-bold transition-colors">
-            <LogOut className="w-5 h-5" />
-            <span>Sign Out</span>
+        {/* Bottom */}
+        <div className="p-2.5 border-t border-white/[0.06] space-y-0.5">
+          <a href="#" className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-slate-600 hover:bg-white/5 hover:text-slate-300 text-[13px] font-semibold transition-all">
+            <Settings className="w-3.5 h-3.5" /><span>Settings</span>
+          </a>
+          <button className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-slate-600 hover:bg-rose-500/10 hover:text-rose-400 text-[13px] font-semibold transition-all">
+            <LogOut className="w-3.5 h-3.5" /><span>Sign Out</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[url('/grid-bg.svg')] bg-center">
-        
-        {/* Hero Banner */}
-        <div className="relative h-56 md:h-72 bg-slate-900 overflow-hidden flex-shrink-0 shadow-xl">
-          <div className="absolute inset-0">
-            <img 
-              src="/dashboard-bg.png" 
-              alt="Apis India Background" 
-              className="w-full h-full object-cover opacity-30 mix-blend-color-dodge transition-transform duration-1000 scale-105 hover:scale-100"
-            />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent"></div>
-          
-          {/* Magic glow effect */}
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-amber-500 rounded-full mix-blend-screen filter blur-[100px] opacity-20 animate-pulse"></div>
+      {/* ── Main area ────────────────────────────────────────────────────── */}
+      <main className="flex-1 flex flex-col overflow-hidden">
 
-          <div className="relative h-full flex flex-col justify-end p-8 md:p-14 text-white">
-            <div className="flex items-center space-x-3 mb-3">
-              <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-xs font-bold uppercase tracking-widest backdrop-blur-md">
-                Active Module
-              </span>
+        {/* Compact page header */}
+        <header className="bg-white border-b border-slate-100 px-7 py-3.5 flex items-center justify-between flex-shrink-0 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className={`w-1 h-7 rounded-full ${meta.bar}`} />
+            <div>
+              <h1 className="text-sm font-black text-slate-900 leading-tight">{meta.title}</h1>
+              <p className="text-xs text-slate-400 mt-0.5">{meta.desc}</p>
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-3 flex items-center gap-4">
-              {activeTool === 'joining'    && 'Joining Form Processor'}
-              {activeTool === 'medical'    && 'Medical Report Extractor'}
-              {activeTool === 'payroll'    && 'Payroll Data Manager'}
-              {activeTool === 'attendance' && 'Daily Attendance Dashboard'}
-              {activeTool === 'delhi'      && 'Delhi / HO Attendance'}
-              <Sparkles className="text-amber-400 w-8 h-8 animate-pulse" />
-            </h1>
-            <p className="text-slate-300 max-w-3xl text-base md:text-lg font-medium leading-relaxed">
-              {activeTool === 'joining'    && "Upload raw HR Joining Forms. The system will automatically detect and extract all 'Done' profiles into a clean, ready-to-share dataset."}
-              {activeTool === 'medical'    && "Upload batch Medical Examination responses. Seamlessly extract flagged health metrics and employee details in one click."}
-              {activeTool === 'payroll'    && "Consolidate and filter monthly payroll exports. Select specific columns to generate specialized financial reports."}
-              {activeTool === 'attendance' && "Analyze daily sales & staff logs in the BIZOM format. Aggregate metrics instantly by Zone, Sub-zone, Reporting Manager, or Location."}
-              {activeTool === 'delhi'      && "Upload Pocket HRMS attendance exports for Delhi Head Office. Instantly see punch-time insights, late arrivals, leave breakdown, and department-wise summaries."}
-            </p>
           </div>
-        </div>
+          <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full border ${meta.badge}`}>
+            Active
+          </span>
+        </header>
 
-        {/* Scrollable Content (Wider Layout) */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-10 lg:p-14">
-          <div className="w-full max-w-[1400px] mx-auto space-y-8"> {/* Changed from max-w-5xl to max-w-[1400px] to fill space */}
-            
-            {(activeTool === 'joining' || activeTool === 'attendance' || activeTool === 'delhi') ? (
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-[1440px] mx-auto space-y-5">
+
+            {(activeTool === 'joining' || isDashboard) ? (
               <>
-                {/* Upload Section */}
+                {/* Upload zone */}
                 {data.length === 0 && (
-                  <div className="bg-white/90 backdrop-blur-2xl p-8 md:p-10 rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white relative overflow-hidden group hover:shadow-[0_8px_50px_rgb(245,158,11,0.12)] transition-all duration-500">
-                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-[length:200%_auto] animate-gradient"></div>
-
-                    <div className="mb-8">
-                      <h3 className="text-2xl font-bold text-slate-800">
-                        {activeTool === 'joining'    && '1. Upload Joining Forms Excel'}
-                        {activeTool === 'attendance' && '1. Upload Attendance Sheet Excel'}
-                        {activeTool === 'delhi'      && '1. Upload Pocket HRMS Attendance Excel'}
-                      </h3>
-                      <p className="text-slate-500 mt-1">Our intelligent extraction engine will process the file instantly.</p>
-                    </div>
-
-                    <FileUploadZone 
-                      file={file}
-                      loading={loading}
-                      isProcessed={data.length > 0}
-                      onFileSelect={handleFileSelect}
-                      onProcess={handleUpload}
-                    />
-
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-7">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-5">Upload File</p>
+                    <FileUploadZone file={file} loading={loading} isProcessed={data.length > 0}
+                      onFileSelect={handleFileSelect} onProcess={handleUpload} />
                     {error && (
-                      <div className="mt-8 p-5 bg-red-50 text-red-700 rounded-2xl flex items-start space-x-4 border border-red-100 shadow-sm">
-                        <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+                      <div className="mt-4 flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-xl">
+                        <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
                         <div>
-                          <h4 className="font-bold text-red-800">Processing Error</h4>
-                          <p className="mt-1 text-sm font-medium">{error}</p>
+                          <p className="text-xs font-bold text-rose-800">Processing Error</p>
+                          <p className="text-xs text-rose-600 mt-0.5">{error}</p>
                         </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Data Preview / Dashboard Section */}
                 {data.length > 0 && (
                   activeTool === 'joining' ? (
-                    <div className="bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white overflow-hidden animate-in fade-in slide-in-from-bottom-12 duration-700">
-                     
-                      <div className="p-8 md:p-10 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-br from-slate-50 to-white">
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      {/* Header bar */}
+                      <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
                         <div>
-                          <h2 className="text-2xl font-bold text-slate-800">2. Review & Export</h2>
-                          <p className="text-base text-slate-500 mt-2">
-                            Successfully extracted <span className="font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">{data.length} records</span> from the raw file.
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Review &amp; Export</p>
+                          <p className="text-sm font-semibold text-slate-700 mt-0.5">
+                            <span className="text-amber-600 font-black">{data.length}</span> records extracted from {file?.name}
                           </p>
                         </div>
-                        <button
-                          onClick={handleExport}
-                          disabled={loading || selectedColumns.size === 0}
-                          className="flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-lg rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:scale-100 hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/30 w-full lg:w-auto transform"
-                        >
-                          {loading ? (
-                            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-                          ) : (
-                            <Download className="w-6 h-6 animate-bounce-subtle" />
-                          )}
-                          <span>Download Final Excel</span>
-                        </button>
-                      </div>
-
-                      <div className="bg-white p-8 border-b border-slate-50">
-                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Select columns to include in export</h4>
-                        <ColumnPills 
-                          headers={headers}
-                          selectedColumns={selectedColumns}
-                          onToggleColumn={toggleColumn}
-                        />
-                      </div>
-
-                      <div className="p-4 md:p-8 bg-slate-50/50">
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                          <PreviewTable 
-                            data={displayData}
-                            selectedColumns={selectedColumns}
-                            totalRows={data.length}
-                          />
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => { setFile(null); setData([]); setHeaders([]); }}
+                            className="px-3.5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all border border-slate-200">
+                            ← Re-upload
+                          </button>
+                          <button onClick={handleExport} disabled={loading || selectedColumns.size === 0}
+                            className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 shadow-md shadow-amber-500/15 hover:scale-[1.02] active:scale-95">
+                            {loading ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                            Download Excel
+                          </button>
                         </div>
                       </div>
-
+                      {/* Column selector */}
+                      <div className="px-6 py-4 border-b border-slate-50">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Select columns to include</p>
+                        <ColumnPills headers={headers} selectedColumns={selectedColumns} onToggleColumn={toggleColumn} />
+                      </div>
+                      {/* Preview */}
+                      <div className="bg-slate-50/40">
+                        <PreviewTable data={data.slice(0, 10)} selectedColumns={selectedColumns} totalRows={data.length} />
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {/* Back button to reupload / clear */}
-                      <div className="flex justify-between items-center bg-white px-6 py-4 rounded-2xl border border-slate-100 shadow-sm">
-                        <div className="flex items-center space-x-3">
-                          <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                          <span className="text-sm font-bold text-slate-600">Active Sheet: {file?.name || 'Attendance Sheet'}</span>
+                      {/* Active sheet bar */}
+                      <div className="bg-white flex items-center justify-between px-5 py-2.5 rounded-xl border border-slate-100 shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                          <span className="text-sm font-bold text-slate-700">{file?.name}</span>
+                          <span className="text-xs text-slate-400">· {data.length} rows</span>
                         </div>
-                        <button
-                          onClick={() => { setFile(null); setData([]); setHeaders([]); }}
-                          className="px-4 py-2 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all border border-rose-200 hover:border-rose-300"
-                        >
-                          Upload Different Sheet
+                        <button onClick={() => { setFile(null); setData([]); setHeaders([]); }}
+                          className="px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-rose-200">
+                          New Sheet
                         </button>
                       </div>
                       {activeTool === 'delhi'
@@ -416,16 +264,16 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
                       }
                     </div>
                   )
-                )} 
+                )}
               </>
             ) : (
-              <div className="bg-white/90 backdrop-blur-2xl p-12 md:p-20 rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white text-center flex flex-col items-center justify-center min-h-[400px]">
-                <div className="bg-slate-100 p-6 rounded-full mb-6">
-                  <Sparkles className="w-12 h-12 text-slate-400" />
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center min-h-80 text-center p-12">
+                <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                  <Sparkles className="w-6 h-6 text-slate-400" />
                 </div>
-                <h3 className="text-3xl font-extrabold text-slate-800 mb-4">Module In Development</h3>
-                <p className="text-lg text-slate-500 max-w-lg mx-auto leading-relaxed">
-                  The automated extraction logic for {activeTool === 'medical' ? 'Medical Reports' : 'Payroll Exports'} is currently being engineered by our team. Check back soon for updates!
+                <h3 className="text-lg font-black text-slate-800 mb-2">Module In Development</h3>
+                <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
+                  The <span className="font-bold text-slate-700">{meta.title}</span> module is being engineered. Check back soon.
                 </p>
               </div>
             )}
@@ -433,7 +281,6 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
           </div>
         </div>
       </main>
-
     </div>
   );
 }

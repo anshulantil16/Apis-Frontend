@@ -1,5 +1,3 @@
-
-
 interface PreviewTableProps {
   data: unknown[];
   selectedColumns: Set<string>;
@@ -7,24 +5,28 @@ interface PreviewTableProps {
 }
 
 export function PreviewTable({ data, selectedColumns, totalRows }: PreviewTableProps) {
+  const cols = Array.from(selectedColumns);
+
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse">
+      <table className="w-full text-left text-xs">
         <thead>
-          <tr className="bg-slate-50 border-b border-slate-200">
-            {Array.from(selectedColumns).map(col => (
-              <th key={col} className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+          <tr className="border-b border-slate-100">
+            <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-10 text-center">#</th>
+            {cols.map(col => (
+              <th key={col} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
                 {col}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-slate-50">
           {data.map((row, i) => (
-            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-              {Array.from(selectedColumns).map(col => (
-                <td key={col} className="p-4 text-sm text-slate-700 whitespace-nowrap truncate max-w-xs">
-                  {((row as Record<string, unknown>)[col])?.toString() || '-'}
+            <tr key={i} className="hover:bg-amber-50/30 transition-colors">
+              <td className="px-4 py-2.5 text-slate-300 font-bold text-center tabular-nums">{i + 1}</td>
+              {cols.map(col => (
+                <td key={col} className="px-4 py-2.5 text-slate-600 font-medium whitespace-nowrap max-w-[200px] truncate">
+                  {((row as Record<string, unknown>)[col])?.toString() || <span className="text-slate-300">—</span>}
                 </td>
               ))}
             </tr>
@@ -32,8 +34,8 @@ export function PreviewTable({ data, selectedColumns, totalRows }: PreviewTableP
         </tbody>
       </table>
       {totalRows > data.length && (
-        <div className="p-4 text-center text-sm text-slate-500 bg-slate-50/50 border-t border-slate-100">
-          ... and {totalRows - data.length} more rows
+        <div className="px-4 py-3 text-center text-xs text-slate-400 font-semibold bg-slate-50/50 border-t border-slate-100">
+          Showing {data.length} of <span className="font-black text-slate-600">{totalRows}</span> rows
         </div>
       )}
     </div>
