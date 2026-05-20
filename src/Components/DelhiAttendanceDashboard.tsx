@@ -434,7 +434,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                         </div>
                       </td>
                     </tr>
-
+  
                     {open && (
                       <tr>
                         <td colSpan={9} className="px-6 py-4 bg-slate-50/50">

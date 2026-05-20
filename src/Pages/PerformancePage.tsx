@@ -95,7 +95,7 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
       <button onClick={onNavigateBack} className="absolute top-6 left-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold">
         <ArrowLeft className="w-4 h-4" /> Back to Data Tools
       </button>
-
+  
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-10">
@@ -126,7 +126,7 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
                       : 'bg-rose-500/20 border-rose-500/50 text-rose-300'
                     : 'border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-300'
                 }`}
-              >
+              > 
                 <Icon className="w-5 h-5" />
                 {label}
               </button>

@@ -174,7 +174,7 @@ export function EmployeeView({ employee }: { employee: any }) {
 
         {selectedCycle && (
           <>
-            {/* Tabs */}
+            {/* Tabs */} 
             <div className="flex gap-1 bg-white/5 p-1 rounded-2xl border border-white/10">
               {[{id:'goals', label:'🎯 Set Goals', icon: Target}, {id:'review', label:'📋 Self Review', icon: FileText}].map(t => (
                 <button key={t.id} onClick={() => setTab(t.id as any)}
