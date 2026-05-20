@@ -17,6 +17,7 @@
     "react-dom": "^19.2.6",
     "react-dropzone": "^15.0.0",
     "react-router-dom": "^7.15.0",
+    "recharts": "^3.8.1",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {

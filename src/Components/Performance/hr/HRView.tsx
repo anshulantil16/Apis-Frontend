@@ -151,8 +151,10 @@ export function HRView({ hrUser }: { hrUser: any }) {
     const rv = hrRatings[review.id] || {};
     setFinalizingId(review.id);
     try {
-      const goal_ratings = (review.goal_card?.goals || []).map((g: any) => ({
-        goal_id: g.id, hr_rating: rv.goal_ratings?.[g.id] || g.manager_rating || 3, hr_comments: '',
+      const goal_ratings = (review.goal_card_goals || []).map((g: any) => ({
+        goal_id: g.id,
+        hr_rating: rv.goal_ratings?.[g.id] ?? g.manager_rating ?? 3,
+        hr_comments: rv.goal_comments?.[g.id] || '',
       }));
       const res = await fetch(`${PERF_API}/reviews/${review.id}/hr-finalize/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -399,7 +401,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
             {reviews.length === 0 && <div className="text-slate-500 text-center py-16 font-semibold">No reviews submitted yet.</div>}
             {reviews.map(r => {
               const hr = hrRatings[r.id] || {};
-              const goals = r.goal_card?.goals || [];
+              const goals = r.goal_card_goals || [];
               return (
                 <div key={r.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
                   <div className="flex items-center justify-between">
@@ -416,8 +418,8 @@ export function HRView({ hrUser }: { hrUser: any }) {
                   </div>
                   {r.employee_summary && <p className="text-slate-300 text-sm italic">"{r.employee_summary}"</p>}
 
-                  {/* HR rating inputs for pending/finalized reviews */}
-                  {['submitted','manager_reviewed'].includes(r.status) && (
+                  {/* HR rating inputs — also shown for hr_finalized/published so HR can re-calibrate if score was wrong */}
+                  {['submitted','manager_reviewed','hr_finalized','published'].includes(r.status) && (
                     <div className="space-y-3 border-t border-white/10 pt-4">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">HR Calibration</p>
                       <div>

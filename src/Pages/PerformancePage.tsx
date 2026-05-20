@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ArrowLeft, TrendingUp, Users, Shield, BarChart3 } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Shield, BarChart3, LineChart } from 'lucide-react';
 import { EmployeeView } from '../Components/Performance/employee/EmployeeView';
 import { ManagerView } from '../Components/Performance/manager/ManagerView';
 import { HRView } from '../Components/Performance/hr/HRView';
+import { ProgressReportDashboard } from '../Components/ProgressReport/ProgressReportDashboard';
 
 interface PerformancePageProps {
   onNavigateBack: () => void;
@@ -12,6 +13,112 @@ type Role = 'employee' | 'manager' | 'hr';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const PERF_API = `${API_BASE}/api/performance`;
+
+// ─── Inner hub wrapper (shown after login) ────────────────────────────────────
+
+type HubSection = 'goals' | 'progress';
+
+function PerformanceHub({
+  employee, role, onLogout, onNavigateBack,
+}: { employee: any; role: Role; onLogout: () => void; onNavigateBack: () => void }) {
+  const [section, setSection] = useState<HubSection>('goals');
+
+  const roleLabel = role === 'hr' ? '🏢 HR Admin' : role === 'manager' ? '👔 Manager' : '👤 Employee';
+  const roleBadge = role === 'hr'
+    ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+    : role === 'manager'
+    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+    : 'bg-violet-500/20 text-violet-300 border-violet-500/30';
+
+  const sectionLabel = role === 'employee'
+    ? ['Goal Setting & Review', 'Progress & Reports']
+    : role === 'manager'
+    ? ['Goal Approvals & Ratings', 'Team Progress & Reports']
+    : ['HR Admin Controls', 'Org Analytics & Reports'];
+
+  return (
+    <div className="min-h-screen bg-[#0f0f1a]">
+      {/* ── Sticky header ── */}
+      <header className="border-b border-white/5 bg-[#0f0f1a]/80 backdrop-blur-xl sticky top-0 z-50 px-6 py-3">
+        <div className="flex items-center justify-between">
+          {/* Left: logo + name */}
+          <div className="flex items-center gap-4">
+            <button onClick={onLogout} className="text-slate-400 hover:text-white transition p-2 hover:bg-white/5 rounded-xl">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm leading-none">APIS Performance Hub</p>
+                <p className="text-slate-400 text-xs mt-0.5">{employee.name} · {employee.designation}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Center: section tabs */}
+          <div className="hidden md:flex gap-1 p-1 bg-white/3 rounded-2xl">
+            {(['goals', 'progress'] as const).map((s, i) => (
+              <button
+                key={s}
+                onClick={() => setSection(s)}
+                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${
+                  section === s ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {s === 'goals'
+                  ? <BarChart3 className="w-4 h-4" />
+                  : <LineChart className="w-4 h-4" />
+                }
+                {sectionLabel[i]}
+              </button>
+            ))}
+          </div>
+
+          {/* Right: role badge + back */}
+          <div className="flex items-center gap-3">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${roleBadge}`}>
+              {roleLabel}
+            </span>
+            <button onClick={onNavigateBack} className="text-slate-500 hover:text-slate-300 text-xs font-semibold transition hidden sm:block">
+              ← Data Tools
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile tabs */}
+        <div className="flex md:hidden gap-1 mt-3">
+          {(['goals', 'progress'] as const).map((s, i) => (
+            <button
+              key={s}
+              onClick={() => setSection(s)}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all ${
+                section === s ? 'bg-white/10 text-white' : 'text-slate-400'
+              }`}
+            >
+              {s === 'goals' ? <BarChart3 className="w-3.5 h-3.5" /> : <LineChart className="w-3.5 h-3.5" />}
+              {sectionLabel[i]}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* ── Content ── */}
+      {section === 'goals' ? (
+        <>
+          {role === 'employee' && <EmployeeView employee={employee} />}
+          {role === 'manager' && <ManagerView manager={employee} />}
+          {role === 'hr' && <HRView hrUser={employee} />}
+        </>
+      ) : (
+        <ProgressReportDashboard role={role} user={employee} />
+      )}
+    </div>
+  );
+}
+
+// ─── Login / Role Selection ───────────────────────────────────────────────────
 
 export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
   const [role, setRole] = useState<Role | null>(null);
@@ -48,40 +155,12 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
   // Logged in — show role view
   if (employee && role) {
     return (
-      <div className="min-h-screen bg-[#0f0f1a]">
-        <header className="border-b border-white/5 bg-[#0f0f1a]/80 backdrop-blur-xl sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => { setEmployee(null); setRole(null); setInputId(''); }} className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-xl">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-white font-bold text-sm leading-none">APIS Performance Hub</p>
-                <p className="text-slate-400 text-xs mt-0.5">{employee.name} · {employee.designation}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-              role === 'hr' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-              : role === 'manager' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-              : 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
-            }`}>
-              {role === 'hr' ? '🏢 HR Admin' : role === 'manager' ? '👔 Manager' : '👤 Employee'}
-            </span>
-            <button onClick={onNavigateBack} className="text-slate-500 hover:text-slate-300 text-xs font-semibold transition-colors">
-              ← Data Tools
-            </button>
-          </div>
-        </header>
-
-        {role === 'employee' && <EmployeeView employee={employee} />}
-        {role === 'manager' && <ManagerView manager={employee} />}
-        {role === 'hr' && <HRView hrUser={employee} />}
-      </div>
+      <PerformanceHub
+        employee={employee}
+        role={role}
+        onLogout={() => { setEmployee(null); setRole(null); setInputId(''); }}
+        onNavigateBack={onNavigateBack}
+      />
     );
   }
 

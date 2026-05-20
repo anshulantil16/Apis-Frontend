@@ -74,7 +74,9 @@ export function ManagerView({ manager }: { manager: any }) {
       const goal_ratings = Object.entries(rv.goal_ratings || {}).map(([goal_id, r]: any) => ({
         goal_id: Number(goal_id), manager_rating: r.manager_rating, manager_comments: r.manager_comments,
       }));
-      const res = await fetch(`${PERF_API}/reviews/${gc.id}/manager-rate/`, {
+      const reviewId = gc.review_data?.id;
+      if (!reviewId) { setMsg(p => ({ ...p, [gc.id]: '❌ No review found. Employee must submit their quarterly review first.' })); return; }
+      const res = await fetch(`${PERF_API}/reviews/${reviewId}/manager-rate/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ manager_overall_rating: rv.overall_rating || 0, manager_review_comments: rv.remarks, manager_name: manager.name, goal_ratings }),
       });
@@ -214,13 +216,13 @@ export function ManagerView({ manager }: { manager: any }) {
                       )}
 
                       {/* Rate quarterly review */}
-                      {gc.status === 'manager_approved' && gc.review?.status === 'submitted' && !rv && (
+                      {gc.status === 'manager_approved' && gc.review_data?.status === 'submitted' && !rv && (
                         <button onClick={() => initReview(gc)}
                           className="w-full py-3 rounded-xl bg-amber-600/20 border border-amber-500/30 text-amber-300 font-bold text-sm hover:bg-amber-600/30 flex items-center justify-center gap-2">
                           <Star className="w-4 h-4" /> Rate Quarterly Submission
                         </button>
                       )}
-                      {rv && gc.review?.status === 'submitted' && (
+                      {rv && gc.review_data?.status === 'submitted' && (
                         <div className="space-y-3">
                           <textarea value={rv.remarks} onChange={e => setReviewMode(p => ({...p, [gc.id]: {...p[gc.id], remarks: e.target.value}}))}
                             placeholder="Overall review comments..." rows={2}
