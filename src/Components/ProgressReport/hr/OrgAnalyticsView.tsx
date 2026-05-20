@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie, Legend,
-  LineChart, Line,
 } from 'recharts';
 import { BarChart3, Trophy, TrendingUp, Users, Target, Globe, Building } from 'lucide-react';
 import { getOrgAnalytics, getAllCycles } from '../../../Services/progressApi';
@@ -48,7 +47,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
 
 // ─── Custom Donut Label ───────────────────────────────────────────────────────
 
-function CustomPieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) {
+function CustomPieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) {
   if (percent < 0.05) return null;
   const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -63,7 +62,7 @@ function CustomPieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, n
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function OrgAnalyticsView({ hrUser }: { hrUser: any }) {
+export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
   const [cycles, setCycles] = useState<any[]>([]);
   const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
   const [analytics, setAnalytics] = useState<any>(null);

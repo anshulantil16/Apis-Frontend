@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import {
-  Users, TrendingUp, AlertTriangle, CheckCircle, Clock,
+  Users, AlertTriangle, CheckCircle, Clock,
   ChevronDown, ChevronUp, Search, Zap,
 } from 'lucide-react';
 import { getTeamProgressReport, getAllCycles } from '../../../Services/progressApi';
