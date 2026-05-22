@@ -157,15 +157,12 @@ function WeightageBar({ goals }: { goals: any[] }) {
         {remaining > 0 && <div className="bg-white/5 flex-1" />}
       </div>
       <div className="flex gap-3 mt-2 flex-wrap">
-        {goals.map((g, i) => {
-          const cat = CAT_MAP[g.category];
-          return (
-            <span key={i} className="flex items-center gap-1 text-[10px] text-slate-400">
-              <span className={`w-2 h-2 rounded-full ${colorMap[g.category] || 'bg-slate-400'}`} />
-              G{i + 1}: {g.weightage || 0}%
-            </span>
-          );
-        })}
+        {goals.map((g, i) => (
+          <span key={i} className="flex items-center gap-1 text-[10px] text-slate-400">
+            <span className={`w-2 h-2 rounded-full ${colorMap[g.category] || 'bg-slate-400'}`} />
+            G{i + 1}: {g.weightage || 0}%
+          </span>
+        ))}
         {remaining > 0 && (
           <span className="flex items-center gap-1 text-[10px] text-amber-400">
             <span className="w-2 h-2 rounded-full bg-white/10" />

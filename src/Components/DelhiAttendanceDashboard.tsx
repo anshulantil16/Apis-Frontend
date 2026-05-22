@@ -211,7 +211,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
 
   const grouped = useMemo(() => {
     const g: Record<string, {
-      name: string; present: number; absent: number; leave: number; off: number; late: number; withRemarks: number;
+      name: string; present: number; absent: number; leave: number; off: number; late: number; withRemarks: number; invalidPunch: number;
       employees: Record<string, DelhiRecord[]>; records: DelhiRecord[];
     }> = {};
     filtered.forEach(r => {
