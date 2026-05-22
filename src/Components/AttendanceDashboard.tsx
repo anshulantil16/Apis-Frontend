@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Users, UserCheck, CalendarOff, Coffee, CheckSquare, Search,
   Download, MapPin, User, Clock, ChevronDown, ChevronUp, SlidersHorizontal,
+  AlertTriangle,
 } from 'lucide-react';
 
 const getImageUrl = (html: string): string => {
@@ -88,6 +89,17 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
     return true;
   }), [normalized, selectedDate, search]);
 
+  const hasPunch = (t: string) => !!t?.trim() && t.trim() !== '' && t.trim() !== '0:00' && t.trim() !== '00:00';
+
+  const missingFieldPunch = (r: AttendanceRecord): 'no_out' | 'no_in' | null => {
+    if (!isPresent(r)) return null;
+    const hasIn  = hasPunch(r.attendanceTime);
+    const hasOut = hasPunch(r.eodTime);
+    if (hasIn && !hasOut) return 'no_out';
+    if (!hasIn && hasOut) return 'no_in';
+    return null;
+  };
+
   const isPresent = (r: AttendanceRecord) => {
     const a = r.attendance.toLowerCase(), t = r.presentType.toLowerCase();
     return a.includes('present') || t.includes('present') || a === 'p';
@@ -96,16 +108,17 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
   const isWO = (r: AttendanceRecord) => { const a = r.attendance.toLowerCase(); return a.includes('wo') || a.includes('weekly') || a.includes('off'); };
 
   const kpi = useMemo(() => {
-    let present = 0, leave = 0, wo = 0, eod = 0;
+    let present = 0, leave = 0, wo = 0, eod = 0, invalidPunch = 0;
     filtered.forEach(r => {
       if (isPresent(r)) present++;
       else if (isLeave(r)) leave++;
       else if (isWO(r)) wo++;
       if (r.eodTime) eod++;
+      if (missingFieldPunch(r)) invalidPunch++;
     });
     const total = filtered.length;
     return {
-      total, present, leave, wo, eod,
+      total, present, leave, wo, eod, invalidPunch,
       presentPct: total ? Math.round(present / total * 100) : 0,
       leavePct:   total ? Math.round(leave   / total * 100) : 0,
       woPct:      total ? Math.round(wo      / total * 100) : 0,
@@ -114,15 +127,16 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
   }, [filtered]);
 
   const grouped = useMemo(() => {
-    const g: Record<string, { name: string; total: number; present: number; leave: number; wo: number; eod: number; records: AttendanceRecord[] }> = {};
+    const g: Record<string, { name: string; total: number; present: number; leave: number; wo: number; eod: number; invalidPunch: number; records: AttendanceRecord[] }> = {};
     filtered.forEach(r => {
       const key = String(r[groupBy] || 'Not Assigned').trim() || 'Not Assigned';
-      if (!g[key]) g[key] = { name: key, total: 0, present: 0, leave: 0, wo: 0, eod: 0, records: [] };
+      if (!g[key]) g[key] = { name: key, total: 0, present: 0, leave: 0, wo: 0, eod: 0, invalidPunch: 0, records: [] };
       g[key].total++;
       if (isPresent(r)) g[key].present++;
       else if (isLeave(r)) g[key].leave++;
       else if (isWO(r)) g[key].wo++;
       if (r.eodTime) g[key].eod++;
+      if (missingFieldPunch(r)) g[key].invalidPunch++;
       g[key].records.push(r);
     });
     return Object.values(g).map(g => ({
@@ -184,13 +198,14 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       </div>
 
       {/* ── KPI cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total Active',    value: kpi.total,   sub: 'Workforce',          border: 'border-t-2 border-slate-200',   icon: Users,        iconCls: 'bg-slate-100 text-slate-500',   valCls: '' },
-          { label: 'Present',         value: kpi.present, sub: `${kpi.presentPct}%`, border: 'border-t-2 border-emerald-400', icon: UserCheck,    iconCls: 'bg-emerald-50 text-emerald-500', valCls: 'text-emerald-700' },
-          { label: 'On Leave',        value: kpi.leave,   sub: `${kpi.leavePct}%`,   border: 'border-t-2 border-rose-400',    icon: CalendarOff,  iconCls: 'bg-rose-50 text-rose-500',      valCls: '' },
-          { label: 'Weekly Off',      value: kpi.wo,      sub: `${kpi.woPct}%`,      border: 'border-t-2 border-sky-400',     icon: Coffee,       iconCls: 'bg-sky-50 text-sky-500',        valCls: '' },
-          { label: 'EOD Completed',   value: kpi.eod,     sub: `${kpi.eodPct}% of present`, border: 'border-t-2 border-indigo-400', icon: CheckSquare, iconCls: 'bg-indigo-50 text-indigo-500', valCls: '' },
+          { label: 'Total Active',   value: kpi.total,        sub: 'Workforce',                  border: 'border-t-2 border-slate-200',   icon: Users,          iconCls: 'bg-slate-100 text-slate-500',    valCls: '' },
+          { label: 'Present',        value: kpi.present,      sub: `${kpi.presentPct}%`,          border: 'border-t-2 border-emerald-400', icon: UserCheck,      iconCls: 'bg-emerald-50 text-emerald-500', valCls: 'text-emerald-700' },
+          { label: 'On Leave',       value: kpi.leave,        sub: `${kpi.leavePct}%`,            border: 'border-t-2 border-rose-400',    icon: CalendarOff,    iconCls: 'bg-rose-50 text-rose-500',       valCls: '' },
+          { label: 'Weekly Off',     value: kpi.wo,           sub: `${kpi.woPct}%`,               border: 'border-t-2 border-sky-400',     icon: Coffee,         iconCls: 'bg-sky-50 text-sky-500',         valCls: '' },
+          { label: 'EOD Completed',  value: kpi.eod,          sub: `${kpi.eodPct}% of present`,   border: 'border-t-2 border-indigo-400',  icon: CheckSquare,    iconCls: 'bg-indigo-50 text-indigo-500',   valCls: '' },
+          { label: 'Invalid Punch',  value: kpi.invalidPunch, sub: 'Missing in or out',           border: 'border-t-2 border-red-500',     icon: AlertTriangle,  iconCls: 'bg-red-50 text-red-500',         valCls: 'text-red-600' },
         ].map(c => (
           <div key={c.label} className={`bg-white rounded-2xl border border-slate-100 ${c.border} p-4 shadow-sm hover:shadow-md transition-all`}>
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${c.iconCls}`}>
@@ -231,6 +246,11 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                       <td className="px-6 py-3.5 flex items-center gap-2 font-bold text-slate-700">
                         {open ? <ChevronUp className="w-3.5 h-3.5 text-amber-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-300 group-hover:text-amber-400 transition-colors" />}
                         <span className="group-hover:text-amber-700 transition-colors text-sm">{grp.name}</span>
+                        {grp.invalidPunch > 0 && (
+                          <span className="flex items-center gap-0.5 text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">
+                            ⚠ {grp.invalidPunch} invalid
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-center text-slate-600 font-semibold text-sm">{grp.total}</td>
                       <td className="px-4 py-3.5 text-center">
@@ -264,8 +284,11 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
                             {grp.records.map((rec, i) => {
                               const present = isPresent(rec), leave = isLeave(rec), wo = isWO(rec);
+                              const mp = missingFieldPunch(rec);
                               return (
-                                <div key={i} className="bg-white rounded-xl border border-slate-100 p-3.5 flex gap-3 hover:shadow-sm transition-all">
+                                <div key={i} className={`bg-white rounded-xl border p-3.5 flex gap-3 hover:shadow-sm transition-all ${
+                                  mp ? 'border-red-300 bg-red-50/30' : 'border-slate-100'
+                                }`}>
                                   {rec.attendanceImage && (
                                     <a href={rec.attendanceImage} target="_blank" rel="noopener noreferrer"
                                       className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
@@ -278,23 +301,41 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                         <p className="font-bold text-slate-800 text-xs truncate">{rec.userName}</p>
                                         <p className="text-[9px] text-slate-400 font-bold">{rec.empId || rec.userId || '—'}</p>
                                       </div>
-                                      <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border flex-shrink-0 ${
-                                        present ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                        leave   ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                        wo      ? 'bg-sky-50 text-sky-700 border-sky-200' :
-                                                  'bg-slate-50 text-slate-600 border-slate-200'
-                                      }`}>
-                                        {present ? 'P' : leave ? 'L' : wo ? 'WO' : rec.attendance || '?'}
-                                      </span>
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        {mp && <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-300 px-1 py-0.5 rounded-full flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" />INVALID</span>}
+                                        <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                                          present ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                          leave   ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                          wo      ? 'bg-sky-50 text-sky-700 border-sky-200' :
+                                                    'bg-slate-50 text-slate-600 border-slate-200'
+                                        }`}>
+                                          {present ? 'P' : leave ? 'L' : wo ? 'WO' : rec.attendance || '?'}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-slate-400 font-medium">
-                                      {rec.reportingTo && <span className="flex items-center gap-0.5"><User className="w-2.5 h-2.5" />{rec.reportingTo}</span>}
-                                      {rec.attendanceTime && <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5 text-emerald-400" />{rec.attendanceTime}</span>}
+                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-medium">
+                                      {rec.reportingTo && <span className="flex items-center gap-0.5 text-slate-400"><User className="w-2.5 h-2.5" />{rec.reportingTo}</span>}
+                                      <span className={`flex items-center gap-0.5 ${mp === 'no_in' ? 'text-red-500 font-black' : 'text-slate-400'}`}>
+                                        <Clock className={`w-2.5 h-2.5 ${mp === 'no_in' ? 'text-red-400' : 'text-emerald-400'}`} />
+                                        {rec.attendanceTime || <span className="text-red-500 font-black">NO IN PUNCH</span>}
+                                      </span>
+                                      {(rec.eodTime || mp === 'no_out') && (
+                                        <span className={`flex items-center gap-0.5 ${mp === 'no_out' ? 'text-red-500 font-black' : 'text-slate-400'}`}>
+                                          <Clock className={`w-2.5 h-2.5 ${mp === 'no_out' ? 'text-red-400' : 'text-indigo-400'}`} />
+                                          {rec.eodTime || <span className="text-red-500 font-black">NO OUT PUNCH</span>}
+                                        </span>
+                                      )}
                                       {rec.location && getMapsLink(rec.location)
                                         ? <a href={getMapsLink(rec.location)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 text-amber-500 font-bold"><MapPin className="w-2.5 h-2.5" />Map</a>
-                                        : rec.location ? <span className="flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" />{rec.location}</span> : null}
+                                        : rec.location ? <span className="flex items-center gap-0.5 text-slate-400"><MapPin className="w-2.5 h-2.5" />{rec.location}</span> : null}
                                     </div>
-                                    {rec.designation && <span className="text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold w-fit">{rec.designation}</span>}
+                                    {mp && (
+                                      <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded w-fit flex items-center gap-0.5">
+                                        <AlertTriangle className="w-2.5 h-2.5" />
+                                        {mp === 'no_out' ? 'Missing Out Punch' : 'Missing In Punch'}
+                                      </span>
+                                    )}
+                                    {!mp && rec.designation && <span className="text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold w-fit">{rec.designation}</span>}
                                   </div>
                                 </div>
                               );

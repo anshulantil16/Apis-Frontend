@@ -26,6 +26,15 @@ function fmtAvgDur(total: number, count: number): string {
 
 const LATE_MINS = 10 * 60 + 30;
 
+function missingPunchType(rec: DelhiRecord): 'no_out' | 'no_in' | null {
+  if (typeInfo(rec.type).cat !== 'present') return null;
+  const hasIn  = parseTimeMinutes(rec.inTime)  !== -1;
+  const hasOut = parseTimeMinutes(rec.outTime) !== -1;
+  if (hasIn && !hasOut) return 'no_out';
+  if (!hasIn && hasOut) return 'no_in';
+  return null;
+}
+
 type AttCat = 'present' | 'absent' | 'leave' | 'off';
 
 const TYPE_MAP: Record<string, { label: string; cls: string; cat: AttCat }> = {
@@ -146,9 +155,10 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
     const leaveTypes: Record<string, number> = {};
     const remarkTypes: Record<string, number> = {};
     const uniqueEmps = new Set<string>();
-    let totalDur = 0, durCount = 0, shortHours = 0;
+    let totalDur = 0, durCount = 0, shortHours = 0, invalidPunch = 0;
 
     filtered.forEach(r => {
+      if (missingPunchType(r)) invalidPunch++;
       uniqueEmps.add(r.code || r.name);
       const ti = typeInfo(r.type);
       const d = r.date || '_';
@@ -188,7 +198,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
     const total   = isRange ? uniqueEmps.size : filtered.length;
 
     return {
-      total, present, absent, leave, off, late, shortHours, leaveTypes, remarkTypes,
+      total, present, absent, leave, off, late, shortHours, invalidPunch, leaveTypes, remarkTypes,
       avgDurStr: fmtAvgDur(totalDur, durCount),
       daysCount: n,
       presentPct: total ? Math.round(present / total * 100) : 0,
@@ -205,13 +215,14 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
     }> = {};
     filtered.forEach(r => {
       const key = (groupBy === 'department' ? r.department : groupBy === 'category' ? r.category : r.designation) || 'Not Assigned';
-      if (!g[key]) g[key] = { name: key, present: 0, absent: 0, leave: 0, off: 0, late: 0, withRemarks: 0, employees: {}, records: [] };
+      if (!g[key]) g[key] = { name: key, present: 0, absent: 0, leave: 0, off: 0, late: 0, withRemarks: 0, invalidPunch: 0, employees: {}, records: [] };
       const ti = typeInfo(r.type);
       if (ti.cat === 'present') { g[key].present++; if (parseTimeMinutes(r.inTime) > LATE_MINS) g[key].late++; }
       else if (ti.cat === 'absent') g[key].absent++;
       else if (ti.cat === 'leave')  g[key].leave++;
       else                          g[key].off++;
       if (r.remarks?.trim()) g[key].withRemarks++;
+      if (missingPunchType(r)) g[key].invalidPunch++;
       const ek = r.code || r.name || '?';
       if (!g[key].employees[ek]) g[key].employees[ek] = [];
       g[key].employees[ek].push(r);
@@ -315,15 +326,16 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       )}
 
       {/* ── KPI cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {[
-          { label: 'Total',       value: kpi.total,       sub: isRange ? 'Unique emps' : 'Employees',         border: 'border-t-2 border-slate-200',   icon: Users,       iconCls: 'bg-slate-100 text-slate-500'    },
-          { label: 'Present',     value: kpi.present,     sub: `${kpi.presentPct}%${isRange ? ' avg' : ''}`,   border: 'border-t-2 border-emerald-400', icon: UserCheck,   iconCls: 'bg-emerald-50 text-emerald-500' },
-          { label: 'Absent',      value: kpi.absent,      sub: `${kpi.absentPct}%${isRange ? ' avg' : ''}`,    border: 'border-t-2 border-rose-400',    icon: CalendarOff, iconCls: 'bg-rose-50 text-rose-500'       },
-          { label: 'On Leave',    value: kpi.leave,       sub: `${kpi.leavePct}%${isRange ? ' avg' : ''}`,     border: 'border-t-2 border-orange-400',  icon: CalendarOff, iconCls: 'bg-orange-50 text-orange-500'   },
-          { label: 'Weekly Off',  value: kpi.off,         sub: isRange ? 'avg/day' : 'Scheduled',              border: 'border-t-2 border-sky-400',     icon: Coffee,      iconCls: 'bg-sky-50 text-sky-500'         },
-          { label: 'Late In',     value: kpi.late,        sub: `${kpi.latePct}% of present`,                   border: 'border-t-2 border-amber-400',   icon: AlertTriangle,iconCls:'bg-amber-50 text-amber-500'    },
-          { label: 'Avg Hours',   value: kpi.avgDurStr,   sub: `${kpi.shortHours} short days`,                 border: 'border-t-2 border-violet-400',  icon: Timer,       iconCls: 'bg-violet-50 text-violet-500'   },
+          { label: 'Total',          value: kpi.total,          sub: isRange ? 'Unique emps' : 'Employees',        border: 'border-t-2 border-slate-200',   icon: Users,        iconCls: 'bg-slate-100 text-slate-500'    },
+          { label: 'Present',        value: kpi.present,        sub: `${kpi.presentPct}%${isRange ? ' avg' : ''}`,  border: 'border-t-2 border-emerald-400', icon: UserCheck,    iconCls: 'bg-emerald-50 text-emerald-500' },
+          { label: 'Absent',         value: kpi.absent,         sub: `${kpi.absentPct}%${isRange ? ' avg' : ''}`,   border: 'border-t-2 border-rose-400',    icon: CalendarOff,  iconCls: 'bg-rose-50 text-rose-500'       },
+          { label: 'On Leave',       value: kpi.leave,          sub: `${kpi.leavePct}%${isRange ? ' avg' : ''}`,    border: 'border-t-2 border-orange-400',  icon: CalendarOff,  iconCls: 'bg-orange-50 text-orange-500'   },
+          { label: 'Weekly Off',     value: kpi.off,            sub: isRange ? 'avg/day' : 'Scheduled',             border: 'border-t-2 border-sky-400',     icon: Coffee,       iconCls: 'bg-sky-50 text-sky-500'         },
+          { label: 'Late In',        value: kpi.late,           sub: `${kpi.latePct}% of present`,                  border: 'border-t-2 border-amber-400',   icon: AlertTriangle,iconCls: 'bg-amber-50 text-amber-500'    },
+          { label: 'Avg Hours',      value: kpi.avgDurStr,      sub: `${kpi.shortHours} short days`,                border: 'border-t-2 border-violet-400',  icon: Timer,        iconCls: 'bg-violet-50 text-violet-500'   },
+          { label: 'Invalid Punch',  value: kpi.invalidPunch,   sub: 'Missing in or out',                           border: 'border-t-2 border-red-500',     icon: AlertTriangle,iconCls: 'bg-red-50 text-red-500'         },
         ].map(c => (
           <div key={c.label} className={`bg-white rounded-2xl border border-slate-100 ${c.border} p-4 shadow-sm hover:shadow-md transition-all`}>
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${c.iconCls}`}>
@@ -417,6 +429,11 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                       <td className="px-6 py-3.5 flex items-center gap-2 font-bold text-slate-700">
                         {open ? <ChevronUp className="w-3.5 h-3.5 text-violet-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-300 group-hover:text-violet-400 transition-colors" />}
                         <span className="group-hover:text-violet-700 transition-colors text-sm">{grp.name}</span>
+                        {grp.invalidPunch > 0 && (
+                          <span className="flex items-center gap-0.5 text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">
+                            ⚠ {grp.invalidPunch} invalid
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-center text-slate-600 font-semibold text-sm">{grp.total}</td>
                       <td className="px-4 py-3.5 text-center"><span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{grp.present} ({grp.presentPct}%)</span></td>
@@ -478,16 +495,24 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                         const isLate = ti.cat === 'present' && parseTimeMinutes(rec.inTime) > LATE_MINS;
                                         const rk = remarkKey(rec.remarks);
                                         const rs = rk ? REMARK_STYLE[rk] : null;
+                                        const mp = missingPunchType(rec);
+                                        const inDisplay = ti.cat === 'present' && !rec.inTime.toLowerCase().includes('unswipe') && parseTimeMinutes(rec.inTime) !== -1 ? rec.inTime : null;
+                                        const outDisplay = ti.cat === 'present' && !rec.outTime.toLowerCase().includes('unswipe') && parseTimeMinutes(rec.outTime) !== -1 ? rec.outTime : null;
                                         return (
-                                          <div key={ri} className={`flex items-center gap-3 px-4 py-1.5 text-xs ${isShort ? 'bg-amber-50/40' : ''}`}>
+                                          <div key={ri} className={`flex items-center gap-3 px-4 py-1.5 text-xs ${mp ? 'bg-red-50/60 border-l-2 border-red-400' : isShort ? 'bg-amber-50/40' : ''}`}>
                                             <span className="font-bold text-slate-500 w-20 flex-shrink-0">{rec.date}</span>
-                                            <span className={`w-14 flex-shrink-0 font-bold ${isLate ? 'text-amber-600' : 'text-slate-600'}`}>{ti.cat === 'present' && !rec.inTime.toLowerCase().includes('unswipe') ? rec.inTime : '—'}</span>
+                                            <span className={`w-14 flex-shrink-0 font-bold ${mp === 'no_in' ? 'text-red-500' : isLate ? 'text-amber-600' : 'text-slate-600'}`}>
+                                              {inDisplay ?? <span className="text-red-400 font-black text-[9px]">NO IN</span>}
+                                            </span>
                                             <span className="text-slate-300">→</span>
-                                            <span className="w-14 flex-shrink-0 text-slate-600 font-bold">{ti.cat === 'present' && !rec.outTime.toLowerCase().includes('unswipe') ? rec.outTime : '—'}</span>
+                                            <span className={`w-14 flex-shrink-0 font-bold ${mp === 'no_out' ? 'text-red-500' : 'text-slate-600'}`}>
+                                              {outDisplay ?? <span className="text-red-400 font-black text-[9px]">NO OUT</span>}
+                                            </span>
                                             <span className={`w-12 flex-shrink-0 font-black ${isShort ? 'text-amber-600' : dh >= 9 ? 'text-emerald-600' : 'text-slate-600'}`}>{rec.duration ? rec.duration+'h' : '—'}</span>
                                             <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded border ${ti.cls}`}>{rec.type?.trim().toUpperCase() || '—'}</span>
                                             <div className="flex gap-1 flex-1 flex-wrap">
-                                              {isLate && <span className="text-[9px] font-black bg-amber-100 text-amber-700 border border-amber-200 px-1 py-0.5 rounded flex items-center gap-0.5"><AlertTriangle className="w-2 h-2" />Late</span>}
+                                              {mp && <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded flex items-center gap-0.5"><AlertTriangle className="w-2 h-2" />Invalid — {mp === 'no_out' ? 'No Out Punch' : 'No In Punch'}</span>}
+                                              {isLate && !mp && <span className="text-[9px] font-black bg-amber-100 text-amber-700 border border-amber-200 px-1 py-0.5 rounded flex items-center gap-0.5"><AlertTriangle className="w-2 h-2" />Late</span>}
                                               {isShort && <span className="text-[9px] font-black bg-orange-100 text-orange-700 border border-orange-200 px-1 py-0.5 rounded flex items-center gap-0.5"><TrendingDown className="w-2 h-2" />Short</span>}
                                               {rs && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${rs.cls}`}>{rs.label}</span>}
                                               {!rk && rec.remarks?.trim() && <span className="text-[9px] text-slate-400 italic truncate max-w-[120px]">"{rec.remarks}"</span>}
@@ -510,31 +535,44 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                 const isLate = ti.cat === 'present' && parseTimeMinutes(rec.inTime) > LATE_MINS;
                                 const rk = remarkKey(rec.remarks);
                                 const rs = rk ? REMARK_STYLE[rk] : null;
+                                const mp = missingPunchType(rec);
+                                const inDisplay  = parseTimeMinutes(rec.inTime)  !== -1 ? rec.inTime  : null;
+                                const outDisplay = parseTimeMinutes(rec.outTime) !== -1 ? rec.outTime : null;
                                 return (
-                                  <div key={i} className={`bg-white rounded-xl border p-3.5 flex flex-col gap-2 hover:shadow-sm transition-all ${isShort ? 'border-amber-200' : 'border-slate-100'}`}>
+                                  <div key={i} className={`bg-white rounded-xl border p-3.5 flex flex-col gap-2 hover:shadow-sm transition-all ${
+                                    mp ? 'border-red-300 bg-red-50/30 shadow-red-100' : isShort ? 'border-amber-200' : 'border-slate-100'
+                                  }`}>
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="min-w-0">
                                         <p className="font-bold text-slate-800 text-sm truncate">{rec.name || '—'}</p>
                                         <p className="text-[10px] font-bold text-slate-400 font-mono">{rec.code}</p>
                                       </div>
-                                      <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded border flex-shrink-0 ${ti.cls}`}>{rec.type?.trim().toUpperCase() || '—'}</span>
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        {mp && <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" />INVALID</span>}
+                                        <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded border ${ti.cls}`}>{rec.type?.trim().toUpperCase() || '—'}</span>
+                                      </div>
                                     </div>
                                     <div className="flex flex-wrap gap-1">
                                       {rec.department && <span className="text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded">{rec.department}</span>}
                                       {rec.designation && <span className="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{rec.designation}</span>}
                                     </div>
                                     {ti.cat === 'present' && (
-                                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${rec.inTime.toLowerCase().includes('unswipe') ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-700'}`}>
-                                        <Clock className={`w-3 h-3 flex-shrink-0 ${isLate ? 'text-amber-500' : 'text-emerald-500'}`} />
-                                        <span className={isLate ? 'font-bold text-amber-700' : ''}>{rec.inTime}</span>
+                                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${mp ? 'bg-red-50 border border-red-200' : 'bg-slate-50 text-slate-700'}`}>
+                                        <Clock className={`w-3 h-3 flex-shrink-0 ${mp ? 'text-red-500' : isLate ? 'text-amber-500' : 'text-emerald-500'}`} />
+                                        <span className={mp === 'no_in' ? 'font-black text-red-600' : isLate ? 'font-bold text-amber-700' : ''}>
+                                          {inDisplay ?? <span className="text-red-600 font-black">NO IN PUNCH</span>}
+                                        </span>
                                         <span className="text-slate-300">→</span>
-                                        <span>{rec.outTime}</span>
+                                        <span className={mp === 'no_out' ? 'font-black text-red-600' : ''}>
+                                          {outDisplay ?? <span className="text-red-600 font-black">NO OUT PUNCH</span>}
+                                        </span>
                                         {rec.duration && <><span className="text-slate-200 mx-0.5">|</span><span className={`font-black ${isShort ? 'text-amber-600' : dh >= 9 ? 'text-emerald-600' : ''}`}>{rec.duration}h</span></>}
                                       </div>
                                     )}
-                                    {(isLate || isShort || rs || (rec.shiftName && rec.shiftName !== 'General Shift')) && (
+                                    {(mp || isLate || isShort || rs || (rec.shiftName && rec.shiftName !== 'General Shift')) && (
                                       <div className="flex flex-wrap gap-1">
-                                        {isLate && <span className="text-[9px] font-black bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" />Late In</span>}
+                                        {mp && <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" />{mp === 'no_out' ? 'Missing Out Punch' : 'Missing In Punch'}</span>}
+                                        {isLate && !mp && <span className="text-[9px] font-black bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" />Late In</span>}
                                         {isShort && <span className="text-[9px] font-black bg-orange-100 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded flex items-center gap-0.5"><TrendingDown className="w-2.5 h-2.5" />Short Hrs</span>}
                                         {rs && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${rs.cls}`}>{rs.label}</span>}
                                         {rec.shiftName && rec.shiftName !== 'General Shift' && <span className="text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded">{rec.shiftName}</span>}
