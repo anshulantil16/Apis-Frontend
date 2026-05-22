@@ -92,7 +92,7 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
   const hasPunch = (t: string) => !!t?.trim() && t.trim() !== '' && t.trim() !== '0:00' && t.trim() !== '00:00';
 
   const missingFieldPunch = (r: AttendanceRecord): 'no_out' | 'no_in' | null => {
-    if (!isPresent(r)) return null;
+    // Don't gate on isPresent — system may mark "A" when only one punch exists.
     const hasIn  = hasPunch(r.attendanceTime);
     const hasOut = hasPunch(r.eodTime);
     if (hasIn && !hasOut) return 'no_out';

@@ -27,7 +27,8 @@ function fmtAvgDur(total: number, count: number): string {
 const LATE_MINS = 10 * 60 + 30;
 
 function missingPunchType(rec: DelhiRecord): 'no_out' | 'no_in' | null {
-  if (typeInfo(rec.type).cat !== 'present') return null;
+  // Check purely on punch presence — type column may be "A" when system auto-marks
+  // absent due to a missing punch, so we don't gate on type here.
   const hasIn  = parseTimeMinutes(rec.inTime)  !== -1;
   const hasOut = parseTimeMinutes(rec.outTime) !== -1;
   if (hasIn && !hasOut) return 'no_out';
@@ -469,18 +470,20 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                 const oC = emp.recs.filter(r => typeInfo(r.type).cat === 'off').length;
                                 const durTotal = emp.recs.reduce((s, r) => s + parseDurationHours(r.duration), 0);
                                 const durN = emp.recs.filter(r => typeInfo(r.type).cat === 'present' && parseDurationHours(r.duration) > 0).length;
+                                const invalidC = emp.recs.filter(r => missingPunchType(r)).length;
                                 const first = emp.recs[0];
                                 return (
-                                  <div key={emp.code} className="bg-white rounded-xl border border-slate-200/70 shadow-sm overflow-hidden">
-                                    <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
+                                  <div key={emp.code} className={`rounded-xl border shadow-sm overflow-hidden ${invalidC > 0 ? 'border-red-300 bg-red-50/20' : 'border-slate-200/70 bg-white'}`}>
+                                    <div className={`flex items-center justify-between px-4 py-2.5 border-b ${invalidC > 0 ? 'bg-red-50/50 border-red-100' : 'bg-slate-50/70 border-slate-100'}`}>
                                       <div className="flex items-center gap-2 min-w-0">
                                         <span className="font-bold text-slate-800 text-sm">{first?.name || '—'}</span>
                                         <span className="text-[10px] font-bold text-slate-400 font-mono">{emp.code}</span>
                                         {first?.department && <span className="text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded">{first.department}</span>}
                                         {first?.designation && <span className="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{first.designation}</span>}
+                                        {invalidC > 0 && <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" />{invalidC} invalid punch{invalidC > 1 ? 'es' : ''}</span>}
                                       </div>
                                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                                        <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">{pC}P</span>
+                                        {pC > 0 && <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">{pC}P</span>}
                                         {aC > 0 && <span className="text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded">{aC}A</span>}
                                         {lC > 0 && <span className="text-[10px] font-black bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded">{lC}L</span>}
                                         {oC > 0 && <span className="text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded">{oC}W</span>}
