@@ -36,8 +36,9 @@ function fmtAvgDur(total: number, count: number): string {
 const LATE_MINS = 10 * 60 + 30;
 
 function missingPunchType(rec: DelhiRecord): 'no_out' | 'no_in' | null {
-  const hasIn  = hasPunchTime(rec.inTime);
-  const hasOut = hasPunchTime(rec.outTime);
+  // parseTimeMinutes validates format — rejects placeholders like "0", "N/A", "unswipe"
+  const hasIn  = parseTimeMinutes(rec.inTime)  !== -1;
+  const hasOut = parseTimeMinutes(rec.outTime) !== -1;
   if (hasIn && !hasOut) return 'no_out';
   if (!hasIn && hasOut) return 'no_in';
   return null;
@@ -506,8 +507,8 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                         const rk = remarkKey(rec.remarks);
                                         const rs = rk ? REMARK_STYLE[rk] : null;
                                         const mp = missingPunchType(rec);
-                                        const hasIn  = hasPunchTime(rec.inTime);
-                                        const hasOut = hasPunchTime(rec.outTime);
+                                        const hasIn  = parseTimeMinutes(rec.inTime)  !== -1;
+                                        const hasOut = parseTimeMinutes(rec.outTime) !== -1;
                                         return (
                                           <div key={ri} className={`flex items-center gap-3 px-4 py-1.5 text-xs ${mp ? 'bg-red-50/60 border-l-2 border-red-400' : isShort ? 'bg-amber-50/40' : ''}`}>
                                             <span className="font-bold text-slate-500 w-20 flex-shrink-0">{rec.date}</span>
@@ -546,9 +547,9 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                 const rk = remarkKey(rec.remarks);
                                 const rs = rk ? REMARK_STYLE[rk] : null;
                                 const mp = missingPunchType(rec);
-                                const hasIn  = hasPunchTime(rec.inTime);
-                                const hasOut = hasPunchTime(rec.outTime);
-                                const showTimeRow = hasIn || hasOut || mp;
+                                const hasIn  = parseTimeMinutes(rec.inTime)  !== -1;
+                                const hasOut = parseTimeMinutes(rec.outTime) !== -1;
+                                const showTimeRow = hasIn || hasOut || mp !== null;
                                 return (
                                   <div key={i} className={`bg-white rounded-xl border p-3.5 flex flex-col gap-2 hover:shadow-sm transition-all ${
                                     mp ? 'border-red-300 bg-red-50/30 shadow-red-100' : isShort ? 'border-amber-200' : 'border-slate-100'

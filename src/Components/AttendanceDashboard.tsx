@@ -89,16 +89,19 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
     return true;
   }), [normalized, selectedDate, search]);
 
-  const hasPunch = (t: string): boolean => {
+  const isValidTime = (t: string): boolean => {
     if (!t || !t.trim()) return false;
     const l = t.trim().toLowerCase();
-    return !l.includes('unswipe') && l !== '—' && l !== '-' && l !== '0:00' && l !== '00:00';
+    if (l.includes('unswipe') || l === '—' || l === '-' || l === 'n/a') return false;
+    // Reject zero/placeholder times
+    if (/^0+[:h]0*/.test(l)) return false;
+    // Must contain at least a digit:colon pattern
+    return /\d:\d/.test(l);
   };
 
   const missingFieldPunch = (r: AttendanceRecord): 'no_out' | 'no_in' | null => {
-    // Don't gate on isPresent — system may mark "A" when only one punch exists.
-    const hasIn  = hasPunch(r.attendanceTime);
-    const hasOut = hasPunch(r.eodTime);
+    const hasIn  = isValidTime(r.attendanceTime);
+    const hasOut = isValidTime(r.eodTime);
     if (hasIn && !hasOut) return 'no_out';
     if (!hasIn && hasOut) return 'no_in';
     return null;
@@ -321,16 +324,16 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                       {rec.reportingTo && <span className="flex items-center gap-0.5 text-slate-400"><User className="w-2.5 h-2.5" />{rec.reportingTo}</span>}
                                       <span className={`flex items-center gap-0.5 ${mp === 'no_in' ? 'text-red-500 font-black' : 'text-slate-400'}`}>
                                         <Clock className={`w-2.5 h-2.5 ${mp === 'no_in' ? 'text-red-400' : 'text-emerald-400'}`} />
-                                        {hasPunch(rec.attendanceTime)
+                                        {isValidTime(rec.attendanceTime)
                                           ? rec.attendanceTime
                                           : mp === 'no_in'
                                             ? <span className="text-red-500 font-black">NO IN PUNCH</span>
                                             : '—'}
                                       </span>
-                                      {(hasPunch(rec.eodTime) || mp === 'no_out') && (
+                                      {(isValidTime(rec.eodTime) || mp === 'no_out') && (
                                         <span className={`flex items-center gap-0.5 ${mp === 'no_out' ? 'text-red-500 font-black' : 'text-slate-400'}`}>
                                           <Clock className={`w-2.5 h-2.5 ${mp === 'no_out' ? 'text-red-400' : 'text-indigo-400'}`} />
-                                          {hasPunch(rec.eodTime)
+                                          {isValidTime(rec.eodTime)
                                             ? rec.eodTime
                                             : mp === 'no_out'
                                               ? <span className="text-red-500 font-black">NO OUT PUNCH</span>
