@@ -12,9 +12,18 @@ function parseDurationHours(dur: string): number {
   return m ? parseInt(m[1], 10) + parseInt(m[2], 10) / 60 : 0;
 }
 
+// Checks only existence — tolerates any non-empty, non-unswipe value
+function hasPunchTime(t: string): boolean {
+  if (!t || !t.trim()) return false;
+  const l = t.trim().toLowerCase();
+  return !l.includes('unswipe') && l !== '—' && l !== '-' && l !== '0:00' && l !== '00:00';
+}
+
+// Parses HH:MM into minutes — used only for LATE check (requires strict format)
 function parseTimeMinutes(t: string): number {
-  if (!t || t.toLowerCase().includes('unswipe') || !t.trim()) return -1;
-  const m = t.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!hasPunchTime(t)) return -1;
+  const clean = t.trim().replace(/^(\d{1,2}:\d{2}).*$/, '$1'); // strip seconds/AM-PM
+  const m = clean.match(/^(\d{1,2}):(\d{2})$/);
   return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : -1;
 }
 
@@ -27,10 +36,8 @@ function fmtAvgDur(total: number, count: number): string {
 const LATE_MINS = 10 * 60 + 30;
 
 function missingPunchType(rec: DelhiRecord): 'no_out' | 'no_in' | null {
-  // Check purely on punch presence — type column may be "A" when system auto-marks
-  // absent due to a missing punch, so we don't gate on type here.
-  const hasIn  = parseTimeMinutes(rec.inTime)  !== -1;
-  const hasOut = parseTimeMinutes(rec.outTime) !== -1;
+  const hasIn  = hasPunchTime(rec.inTime);
+  const hasOut = hasPunchTime(rec.outTime);
   if (hasIn && !hasOut) return 'no_out';
   if (!hasIn && hasOut) return 'no_in';
   return null;
@@ -499,17 +506,17 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                         const rk = remarkKey(rec.remarks);
                                         const rs = rk ? REMARK_STYLE[rk] : null;
                                         const mp = missingPunchType(rec);
-                                        const inDisplay = ti.cat === 'present' && !rec.inTime.toLowerCase().includes('unswipe') && parseTimeMinutes(rec.inTime) !== -1 ? rec.inTime : null;
-                                        const outDisplay = ti.cat === 'present' && !rec.outTime.toLowerCase().includes('unswipe') && parseTimeMinutes(rec.outTime) !== -1 ? rec.outTime : null;
+                                        const hasIn  = hasPunchTime(rec.inTime);
+                                        const hasOut = hasPunchTime(rec.outTime);
                                         return (
                                           <div key={ri} className={`flex items-center gap-3 px-4 py-1.5 text-xs ${mp ? 'bg-red-50/60 border-l-2 border-red-400' : isShort ? 'bg-amber-50/40' : ''}`}>
                                             <span className="font-bold text-slate-500 w-20 flex-shrink-0">{rec.date}</span>
                                             <span className={`w-14 flex-shrink-0 font-bold ${mp === 'no_in' ? 'text-red-500' : isLate ? 'text-amber-600' : 'text-slate-600'}`}>
-                                              {inDisplay ?? <span className="text-red-400 font-black text-[9px]">NO IN</span>}
+                                              {hasIn ? rec.inTime : mp === 'no_in' ? <span className="text-red-400 font-black text-[9px]">NO IN</span> : '—'}
                                             </span>
                                             <span className="text-slate-300">→</span>
                                             <span className={`w-14 flex-shrink-0 font-bold ${mp === 'no_out' ? 'text-red-500' : 'text-slate-600'}`}>
-                                              {outDisplay ?? <span className="text-red-400 font-black text-[9px]">NO OUT</span>}
+                                              {hasOut ? rec.outTime : mp === 'no_out' ? <span className="text-red-400 font-black text-[9px]">NO OUT</span> : '—'}
                                             </span>
                                             <span className={`w-12 flex-shrink-0 font-black ${isShort ? 'text-amber-600' : dh >= 9 ? 'text-emerald-600' : 'text-slate-600'}`}>{rec.duration ? rec.duration+'h' : '—'}</span>
                                             <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded border ${ti.cls}`}>{rec.type?.trim().toUpperCase() || '—'}</span>
@@ -539,8 +546,9 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                 const rk = remarkKey(rec.remarks);
                                 const rs = rk ? REMARK_STYLE[rk] : null;
                                 const mp = missingPunchType(rec);
-                                const inDisplay  = parseTimeMinutes(rec.inTime)  !== -1 ? rec.inTime  : null;
-                                const outDisplay = parseTimeMinutes(rec.outTime) !== -1 ? rec.outTime : null;
+                                const hasIn  = hasPunchTime(rec.inTime);
+                                const hasOut = hasPunchTime(rec.outTime);
+                                const showTimeRow = hasIn || hasOut || mp;
                                 return (
                                   <div key={i} className={`bg-white rounded-xl border p-3.5 flex flex-col gap-2 hover:shadow-sm transition-all ${
                                     mp ? 'border-red-300 bg-red-50/30 shadow-red-100' : isShort ? 'border-amber-200' : 'border-slate-100'
@@ -559,15 +567,15 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                       {rec.department && <span className="text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded">{rec.department}</span>}
                                       {rec.designation && <span className="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{rec.designation}</span>}
                                     </div>
-                                    {ti.cat === 'present' && (
+                                    {showTimeRow && (
                                       <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${mp ? 'bg-red-50 border border-red-200' : 'bg-slate-50 text-slate-700'}`}>
                                         <Clock className={`w-3 h-3 flex-shrink-0 ${mp ? 'text-red-500' : isLate ? 'text-amber-500' : 'text-emerald-500'}`} />
                                         <span className={mp === 'no_in' ? 'font-black text-red-600' : isLate ? 'font-bold text-amber-700' : ''}>
-                                          {inDisplay ?? <span className="text-red-600 font-black">NO IN PUNCH</span>}
+                                          {hasIn ? rec.inTime : mp === 'no_in' ? <span className="text-red-600 font-black">NO IN PUNCH</span> : '—'}
                                         </span>
                                         <span className="text-slate-300">→</span>
                                         <span className={mp === 'no_out' ? 'font-black text-red-600' : ''}>
-                                          {outDisplay ?? <span className="text-red-600 font-black">NO OUT PUNCH</span>}
+                                          {hasOut ? rec.outTime : mp === 'no_out' ? <span className="text-red-600 font-black">NO OUT PUNCH</span> : '—'}
                                         </span>
                                         {rec.duration && <><span className="text-slate-200 mx-0.5">|</span><span className={`font-black ${isShort ? 'text-amber-600' : dh >= 9 ? 'text-emerald-600' : ''}`}>{rec.duration}h</span></>}
                                       </div>

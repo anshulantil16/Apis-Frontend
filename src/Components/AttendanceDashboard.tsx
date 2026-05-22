@@ -89,7 +89,11 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
     return true;
   }), [normalized, selectedDate, search]);
 
-  const hasPunch = (t: string) => !!t?.trim() && t.trim() !== '' && t.trim() !== '0:00' && t.trim() !== '00:00';
+  const hasPunch = (t: string): boolean => {
+    if (!t || !t.trim()) return false;
+    const l = t.trim().toLowerCase();
+    return !l.includes('unswipe') && l !== '—' && l !== '-' && l !== '0:00' && l !== '00:00';
+  };
 
   const missingFieldPunch = (r: AttendanceRecord): 'no_out' | 'no_in' | null => {
     // Don't gate on isPresent — system may mark "A" when only one punch exists.
@@ -317,12 +321,20 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                       {rec.reportingTo && <span className="flex items-center gap-0.5 text-slate-400"><User className="w-2.5 h-2.5" />{rec.reportingTo}</span>}
                                       <span className={`flex items-center gap-0.5 ${mp === 'no_in' ? 'text-red-500 font-black' : 'text-slate-400'}`}>
                                         <Clock className={`w-2.5 h-2.5 ${mp === 'no_in' ? 'text-red-400' : 'text-emerald-400'}`} />
-                                        {rec.attendanceTime || <span className="text-red-500 font-black">NO IN PUNCH</span>}
+                                        {hasPunch(rec.attendanceTime)
+                                          ? rec.attendanceTime
+                                          : mp === 'no_in'
+                                            ? <span className="text-red-500 font-black">NO IN PUNCH</span>
+                                            : '—'}
                                       </span>
-                                      {(rec.eodTime || mp === 'no_out') && (
+                                      {(hasPunch(rec.eodTime) || mp === 'no_out') && (
                                         <span className={`flex items-center gap-0.5 ${mp === 'no_out' ? 'text-red-500 font-black' : 'text-slate-400'}`}>
                                           <Clock className={`w-2.5 h-2.5 ${mp === 'no_out' ? 'text-red-400' : 'text-indigo-400'}`} />
-                                          {rec.eodTime || <span className="text-red-500 font-black">NO OUT PUNCH</span>}
+                                          {hasPunch(rec.eodTime)
+                                            ? rec.eodTime
+                                            : mp === 'no_out'
+                                              ? <span className="text-red-500 font-black">NO OUT PUNCH</span>
+                                              : '—'}
                                         </span>
                                       )}
                                       {rec.location && getMapsLink(rec.location)
