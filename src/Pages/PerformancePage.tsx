@@ -120,6 +120,8 @@ function PerformanceHub({
 
 // ─── Login / Role Selection ───────────────────────────────────────────────────
 
+type LoginStep = 'id' | 'otp';
+
 export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
   const [role, setRole] = useState<Role | null>(null);
   const [inputId, setInputId] = useState('');
@@ -127,21 +129,60 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
+  const [step, setStep] = useState<LoginStep>('id');
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [otpInput, setOtpInput] = useState('');
+
+  const parseJsonSafe = async (res: Response) => {
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) return res.json();
+    await res.text();
+    throw new Error(`Server returned an unexpected response (${res.status}). Make sure the backend server is running and restarted.`);
+  };
+
+  const handleSendOtp = async () => {
     if (!inputId.trim() || !role) return;
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${PERF_API}/employee/${inputId.trim()}/`);
-      if (!res.ok) throw new Error('Employee ID not found. Please check and try again.');
-      const data = await res.json();
+      const res = await fetch(`${PERF_API}/auth/send-otp/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: inputId.trim() }),
+      });
+      const data = await parseJsonSafe(res);
+      if (!res.ok) throw new Error(data.error || 'Failed to send OTP.');
 
-      // Validate account type vs selected role
+      // Validate role before proceeding to OTP step
+      // (we get role info from employee lookup implicitly; we'll re-check at verify)
+      setMaskedEmail(data.masked_email);
+      setStep('otp');
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpInput.trim()) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${PERF_API}/auth/verify-otp/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: inputId.trim(), otp: otpInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'OTP verification failed.');
+
+      // Validate role matches
       if (role === 'manager' && data.user_type !== 'manager') {
-        throw new Error(`${data.name} is registered as an Employee (${data.designation || 'Field Force'}), not a Manager. Please choose 'Employee' role or enter a Manager ID (e.g., MGR001).`);
+        throw new Error(`${data.name} is registered as an Employee (${data.designation || 'Field Force'}), not a Manager.`);
       }
       if (role === 'hr' && data.user_type !== 'hr') {
-        throw new Error(`${data.name} is registered as an Employee (${data.designation || 'Field Force'}), not an HR Admin. Please choose 'Employee' role or enter an HR ID (e.g., HR001).`);
+        throw new Error(`${data.name} is registered as an Employee (${data.designation || 'Field Force'}), not an HR Admin.`);
       }
 
       setEmployee(data);
@@ -152,13 +193,20 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
     }
   };
 
+  const handleBackToId = () => {
+    setStep('id');
+    setOtpInput('');
+    setMaskedEmail('');
+    setError('');
+  };
+
   // Logged in — show role view
   if (employee && role) {
     return (
       <PerformanceHub
         employee={employee}
         role={role}
-        onLogout={() => { setEmployee(null); setRole(null); setInputId(''); }}
+        onLogout={() => { setEmployee(null); setRole(null); setInputId(''); setStep('id'); setOtpInput(''); }}
         onNavigateBack={onNavigateBack}
       />
     );
@@ -174,7 +222,7 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
       <button onClick={onNavigateBack} className="absolute top-6 left-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold">
         <ArrowLeft className="w-4 h-4" /> Back to Data Tools
       </button>
-  
+
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-10">
@@ -187,78 +235,143 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
 
         {/* Card */}
         <div className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl">
-          {/* Role picker */}
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">I am a...</p>
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {([
-              { id: 'employee', label: 'Employee', icon: Users, color: 'violet' },
-              { id: 'manager', label: 'Manager', icon: Shield, color: 'amber' },
-              { id: 'hr', label: 'HR Admin', icon: BarChart3, color: 'rose' },
-            ] as const).map(({ id, label, icon: Icon, color }) => (
+
+          {step === 'id' ? (
+            <>
+              {/* Role picker */}
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">I am a...</p>
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {([
+                  { id: 'employee', label: 'Employee', icon: Users, color: 'violet' },
+                  { id: 'manager', label: 'Manager', icon: Shield, color: 'amber' },
+                  { id: 'hr', label: 'HR Admin', icon: BarChart3, color: 'rose' },
+                ] as const).map(({ id, label, icon: Icon, color }) => (
+                  <button
+                    key={id}
+                    onClick={() => setRole(id)}
+                    className={`flex flex-col items-center gap-2 py-4 rounded-2xl border transition-all font-semibold text-sm ${
+                      role === id
+                        ? color === 'violet' ? 'bg-violet-500/20 border-violet-500/50 text-violet-300'
+                          : color === 'amber' ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                          : 'bg-rose-500/20 border-rose-500/50 text-rose-300'
+                        : 'border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-300'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Employee ID input */}
+              <div className="mb-5">
+                <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">
+                  {role === 'hr' ? 'HR Admin ID' : role === 'manager' ? 'Manager ID' : 'Employee ID'}
+                </label>
+                <input
+                  type="text"
+                  placeholder={role === 'hr' ? 'e.g. HR001' : role === 'manager' ? 'e.g. MGR001' : 'e.g. EMP001'}
+                  value={inputId}
+                  onChange={e => setInputId(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-500 font-semibold text-sm focus:outline-none focus:border-violet-500/50 focus:bg-violet-500/5 transition-all"
+                />
+              </div>
+
+              {error && (
+                <p className="text-rose-400 text-sm font-semibold mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                  ⚠️ {error}
+                </p>
+              )}
+
               <button
-                key={id}
-                onClick={() => setRole(id)}
-                className={`flex flex-col items-center gap-2 py-4 rounded-2xl border transition-all font-semibold text-sm ${
-                  role === id
-                    ? color === 'violet' ? 'bg-violet-500/20 border-violet-500/50 text-violet-300'
-                      : color === 'amber' ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                      : 'bg-rose-500/20 border-rose-500/50 text-rose-300'
-                    : 'border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-300'
-                }`}
-              > 
-                <Icon className="w-5 h-5" />
-                {label}
+                onClick={handleSendOtp}
+                disabled={!role || !inputId.trim() || loading}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-violet-500/30 active:scale-95"
+              >
+                {loading ? 'Sending OTP...' : 'Send OTP →'}
               </button>
-            ))}
-          </div>
 
-          {/* Employee ID input */}
-          <div className="mb-5">
-            <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">
-              {role === 'hr' ? 'HR Admin ID' : role === 'manager' ? 'Manager ID' : 'Employee ID'}
-            </label>
-            <input
-              type="text"
-              placeholder={role === 'hr' ? 'e.g. HR001' : role === 'manager' ? 'e.g. MGR001' : 'e.g. EMP001'}
-              value={inputId}
-              onChange={e => setInputId(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-500 font-semibold text-sm focus:outline-none focus:border-violet-500/50 focus:bg-violet-500/5 transition-all"
-            />
-          </div>
+              {/* First-time setup bypass */}
+              <div className="pt-4 border-t border-white/10 mt-4">
+                <p className="text-slate-500 text-xs text-center mb-3">
+                  First time? No employees imported yet?
+                </p>
+                <button
+                  onClick={() => {
+                    setRole('hr');
+                    setEmployee({ name: 'HR Admin', designation: 'Administrator', employee_id: 'ADMIN', zone: '', reporting_manager_id: '' });
+                  }}
+                  className="w-full py-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-sm transition-all flex items-center justify-center gap-2"
+                >
+                  🏢 Enter as HR Admin (First-Time Setup)
+                </button>
+                <p className="text-slate-600 text-[10px] text-center mt-2">
+                  Use this to import your employee master sheet, then log in normally.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* OTP step */}
+              <button
+                onClick={handleBackToId}
+                className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-semibold mb-5 transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Change ID
+              </button>
 
-          {error && (
-            <p className="text-rose-400 text-sm font-semibold mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-              ⚠️ {error}
-            </p>
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-violet-500/20 border border-violet-500/30 mb-3">
+                  <Shield className="w-6 h-6 text-violet-300" />
+                </div>
+                <p className="text-white font-bold text-sm">Check your email</p>
+                <p className="text-slate-400 text-xs mt-1">
+                  We sent a 6-digit OTP to <span className="text-violet-300 font-semibold">{maskedEmail}</span>
+                </p>
+                <p className="text-slate-500 text-[11px] mt-1">Expires in 5 minutes</p>
+              </div>
+
+              <div className="mb-5">
+                <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">
+                  Enter OTP
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  maxLength={6}
+                  value={otpInput}
+                  onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
+                  autoFocus
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-600 font-mono font-bold text-2xl text-center tracking-[0.5em] focus:outline-none focus:border-violet-500/50 focus:bg-violet-500/5 transition-all"
+                />
+              </div>
+
+              {error && (
+                <p className="text-rose-400 text-sm font-semibold mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                  ⚠️ {error}
+                </p>
+              )}
+
+              <button
+                onClick={handleVerifyOtp}
+                disabled={otpInput.length !== 6 || loading}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-violet-500/30 active:scale-95"
+              >
+                {loading ? 'Verifying...' : 'Verify & Enter Hub →'}
+              </button>
+
+              <button
+                onClick={handleSendOtp}
+                disabled={loading}
+                className="w-full mt-3 py-2.5 rounded-2xl border border-white/10 text-slate-400 hover:text-white hover:border-white/20 font-semibold text-xs transition-all disabled:opacity-40"
+              >
+                Resend OTP
+              </button>
+            </>
           )}
-
-          <button
-            onClick={handleLogin}
-            disabled={!role || !inputId.trim() || loading}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-violet-500/30 active:scale-95"
-          >
-            {loading ? 'Verifying...' : 'Enter Performance Hub →'}
-          </button>
-
-          {/* First-time setup bypass */}
-          <div className="pt-4 border-t border-white/10">
-            <p className="text-slate-500 text-xs text-center mb-3">
-              First time? No employees imported yet?
-            </p>
-            <button
-              onClick={() => {
-                setRole('hr');
-                setEmployee({ name: 'HR Admin', designation: 'Administrator', employee_id: 'ADMIN', zone: '', reporting_manager_id: '' });
-              }}
-              className="w-full py-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-sm transition-all flex items-center justify-center gap-2"
-            >
-              🏢 Enter as HR Admin (First-Time Setup)
-            </button>
-            <p className="text-slate-600 text-[10px] text-center mt-2">
-              Use this to import your employee master sheet, then log in normally.
-            </p>
-          </div>
         </div>
 
       </div>
