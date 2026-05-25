@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Target, Star, CheckCircle, Clock, Plus, Trash2, Send,
-  FileText, AlertCircle, ChevronRight, Award, TrendingUp,
+  FileText, AlertCircle, ChevronRight, Award, TrendingUp, Lock, Unlock,
 } from 'lucide-react';
 import { PERF_API } from '../../../Pages/PerformancePage';
 
@@ -175,6 +175,72 @@ function Toast({ msg }: { msg: { text: string; type: 'success' | 'error' | 'warn
   );
 }
 
+// ─── Cycle Phase Banner ───────────────────────────────────────────────────────
+
+const PHASE_INFO: Record<string, {
+  icon: JSX.Element; title: string; desc: string;
+  cls: string; border: string; locked: boolean;
+}> = {
+  draft: {
+    icon: <Clock className="w-4 h-4" />,
+    title: 'Cycle Not Yet Open',
+    desc: 'This cycle has not been opened for goal setting. Contact HR.',
+    cls: 'text-slate-400 bg-slate-500/8', border: 'border-slate-500/20', locked: true,
+  },
+  goal_setting: {
+    icon: <Unlock className="w-4 h-4" />,
+    title: 'Goal Setting Open',
+    desc: 'You can add, edit, and submit your goals for manager approval.',
+    cls: 'text-emerald-300 bg-emerald-500/8', border: 'border-emerald-500/20', locked: false,
+  },
+  goals_locked: {
+    icon: <Lock className="w-4 h-4" />,
+    title: 'Goals Locked',
+    desc: 'Goal setting is closed. Wait for HR to open the review phase.',
+    cls: 'text-amber-300 bg-amber-500/8', border: 'border-amber-500/20', locked: true,
+  },
+  review_open: {
+    icon: <FileText className="w-4 h-4" />,
+    title: 'Review Phase Open',
+    desc: 'Goals are locked. Submit your quarterly self-review and evidence now.',
+    cls: 'text-blue-300 bg-blue-500/8', border: 'border-blue-500/20', locked: false,
+  },
+  closed: {
+    icon: <Lock className="w-4 h-4" />,
+    title: 'Cycle Closed',
+    desc: 'This performance cycle has been closed by HR.',
+    cls: 'text-slate-400 bg-slate-500/8', border: 'border-slate-500/20', locked: true,
+  },
+};
+
+function CyclePhaseBanner({ cycle }: { cycle: any }) {
+  const info = PHASE_INFO[cycle.status] || PHASE_INFO['draft'];
+  const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+
+  return (
+    <div className={`flex items-start gap-3 px-4 py-3.5 rounded-2xl border ${info.cls} ${info.border}`}>
+      <span className="mt-0.5 shrink-0">{info.icon}</span>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-sm">{info.title}</p>
+        <p className="text-xs opacity-70 mt-0.5">{info.desc}</p>
+        {/* Deadlines */}
+        <div className="flex flex-wrap gap-3 mt-2">
+          {cycle.goal_setting_deadline && (
+            <span className="text-[11px] opacity-60">
+              Goal deadline: <strong>{fmt(cycle.goal_setting_deadline)}</strong>
+            </span>
+          )}
+          {cycle.review_deadline && (
+            <span className="text-[11px] opacity-60">
+              Review deadline: <strong>{fmt(cycle.review_deadline)}</strong>
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function EmployeeView({ employee }: { employee: any }) {
@@ -273,10 +339,16 @@ export function EmployeeView({ employee }: { employee: any }) {
     finally { setSaving(false); }
   };
 
-  const canEdit = !goalCard || goalCard.status === 'draft' || goalCard.status === 'manager_rejected';
-  const canReview = goalCard?.status === 'manager_approved' || goalCard?.status === 'hr_approved';
+  const cycleStatus = selectedCycle?.status;
+  // Goal editing is only allowed when the cycle is in goal_setting phase
+  const canEdit = cycleStatus === 'goal_setting' &&
+    (!goalCard || goalCard.status === 'draft' || goalCard.status === 'manager_rejected');
+  // Quarterly review can only be submitted during review_open phase
+  const canReview = cycleStatus === 'review_open' &&
+    (goalCard?.status === 'manager_approved' || goalCard?.status === 'hr_approved');
   const journeyStep = getJourneyStep(goalCard);
   const isRejected = goalCard?.status === 'manager_rejected';
+  const goalsLocked = cycleStatus && cycleStatus !== 'goal_setting';
 
   return (
     <div className="min-h-screen bg-[#080818] p-4 lg:p-8">
@@ -380,11 +452,14 @@ export function EmployeeView({ employee }: { employee: any }) {
 
         {selectedCycle && (
           <>
+            {/* ── Phase Banner ── */}
+            <CyclePhaseBanner cycle={selectedCycle} />
+
             {/* ── Tabs ── */}
             <div className="flex gap-1 bg-white/[0.03] p-1 rounded-2xl border border-white/[0.06]">
               {([
-                { id: 'goals', label: 'KRA / Goal Setting', icon: Target },
-                { id: 'review', label: 'Self Review', icon: FileText },
+                { id: 'goals',  label: 'KRA / Goal Setting', icon: cycleStatus === 'goal_setting' ? Target : Lock },
+                { id: 'review', label: 'Self Review',        icon: cycleStatus === 'review_open'  ? FileText : Lock },
               ] as const).map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
@@ -401,6 +476,26 @@ export function EmployeeView({ employee }: { employee: any }) {
             {/* ═══════════════ GOALS TAB ═══════════════ */}
             {tab === 'goals' && (
               <div className="space-y-4">
+                {/* Locked overlay for goals when cycle phase doesn't allow editing */}
+                {goalsLocked && cycleStatus !== 'review_open' && (
+                  <div className="flex items-center gap-3 bg-amber-500/8 border border-amber-500/20 rounded-2xl px-4 py-3.5">
+                    <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div>
+                      <p className="text-amber-300 font-bold text-sm">Goal Setting is Locked</p>
+                      <p className="text-amber-400/60 text-xs mt-0.5">{PHASE_INFO[cycleStatus!]?.desc}</p>
+                    </div>
+                  </div>
+                )}
+                {cycleStatus === 'review_open' && (
+                  <div className="flex items-center gap-3 bg-blue-500/8 border border-blue-500/20 rounded-2xl px-4 py-3.5">
+                    <Lock className="w-4 h-4 text-blue-400 shrink-0" />
+                    <div>
+                      <p className="text-blue-300 font-bold text-sm">Goals Locked — Review Phase is Open</p>
+                      <p className="text-blue-400/60 text-xs mt-0.5">Switch to the Self Review tab to submit your quarterly assessment.</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-white font-bold text-lg">{selectedCycle.name} — KRA Goals</h3>
@@ -555,13 +650,32 @@ export function EmployeeView({ employee }: { employee: any }) {
             {/* ═══════════════ SELF REVIEW TAB ═══════════════ */}
             {tab === 'review' && (
               <div className="space-y-4">
-                {!canReview ? (
+                {/* Phase-locked: reviews not open yet */}
+                {cycleStatus !== 'review_open' ? (
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-14 text-center">
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
+                      cycleStatus === 'goal_setting' ? 'bg-violet-500/10' : 'bg-amber-500/10'
+                    }`}>
+                      <Lock className={`w-8 h-8 ${cycleStatus === 'goal_setting' ? 'text-violet-500' : 'text-amber-500'}`} />
+                    </div>
+                    <p className="text-white font-bold mb-1">
+                      {cycleStatus === 'goal_setting' ? 'Review Phase Not Open Yet' : PHASE_INFO[cycleStatus!]?.title || 'Review Locked'}
+                    </p>
+                    <p className="text-slate-500 text-sm mt-1">
+                      {cycleStatus === 'goal_setting'
+                        ? 'Complete and submit your goals first. Reviews open once goals are locked and HR opens the review window.'
+                        : PHASE_INFO[cycleStatus!]?.desc}
+                    </p>
+                    {goalCard && <div className="mt-5 flex justify-center"><StatusBadge status={goalCard.status} /></div>}
+                  </div>
+                ) : !canReview ? (
+                  /* Review phase IS open but goals aren't approved yet */
                   <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-14 text-center">
                     <div className="w-16 h-16 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
                       <Clock className="w-8 h-8 text-slate-600" />
                     </div>
-                    <p className="text-white font-bold mb-1">Self-review not available yet</p>
-                    <p className="text-slate-500 text-sm">Opens after your manager approves your goals.</p>
+                    <p className="text-white font-bold mb-1">Waiting for manager to approve your goals</p>
+                    <p className="text-slate-500 text-sm mt-1">Review phase is open, but you need manager-approved goals before submitting your self-assessment.</p>
                     {goalCard && <div className="mt-5 flex justify-center"><StatusBadge status={goalCard.status} /></div>}
                   </div>
                 ) : (
