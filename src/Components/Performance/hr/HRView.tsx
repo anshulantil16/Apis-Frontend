@@ -703,7 +703,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
                 </div>
               )}
 
-              {leaderboard.map((entry, idx) => {
+              {leaderboard.map((entry) => {
                 const rank = entry.rank as number;
                 const medal = RANK_MEDAL[rank];
                 const bs = BAND_STYLES[entry.performance_band] || { bg: 'bg-white/5', border: 'border-white/10', text: 'text-slate-400', icon: '📊' };

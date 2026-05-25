@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import {
   Target, Star, CheckCircle, Clock, Plus, Trash2, Send,
   FileText, AlertCircle, ChevronRight, Award, TrendingUp, Lock, Unlock,
@@ -178,7 +178,7 @@ function Toast({ msg }: { msg: { text: string; type: 'success' | 'error' | 'warn
 // ─── Cycle Phase Banner ───────────────────────────────────────────────────────
 
 const PHASE_INFO: Record<string, {
-  icon: JSX.Element; title: string; desc: string;
+  icon: ReactNode; title: string; desc: string;
   cls: string; border: string; locked: boolean;
 }> = {
   draft: {
@@ -348,7 +348,6 @@ export function EmployeeView({ employee }: { employee: any }) {
     (goalCard?.status === 'manager_approved' || goalCard?.status === 'hr_approved');
   const journeyStep = getJourneyStep(goalCard);
   const isRejected = goalCard?.status === 'manager_rejected';
-  const goalsLocked = cycleStatus && cycleStatus !== 'goal_setting';
 
   return (
     <div className="min-h-screen bg-[#080818] p-4 lg:p-8">
