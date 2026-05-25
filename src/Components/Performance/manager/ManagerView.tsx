@@ -7,21 +7,14 @@ import { PERF_API } from '../../../Pages/PerformancePage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const CAT_COLORS: Record<string, string> = {
-  sales: 'text-amber-300 bg-amber-500/10 border-amber-500/20',
-  customer: 'text-sky-300 bg-sky-500/10 border-sky-500/20',
-  learning: 'text-violet-300 bg-violet-500/10 border-violet-500/20',
-  process: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
-  innovation: 'text-rose-300 bg-rose-500/10 border-rose-500/20',
-};
-
-const CAT_BORDER: Record<string, string> = {
-  sales: 'border-l-amber-400',
-  customer: 'border-l-sky-400',
-  learning: 'border-l-violet-400',
-  process: 'border-l-emerald-400',
-  innovation: 'border-l-rose-400',
-};
+const GOAL_COLORS = [
+  { border: 'border-l-amber-400',   badge: 'text-amber-300 bg-amber-500/10 border-amber-500/20' },
+  { border: 'border-l-sky-400',     badge: 'text-sky-300 bg-sky-500/10 border-sky-500/20' },
+  { border: 'border-l-violet-400',  badge: 'text-violet-300 bg-violet-500/10 border-violet-500/20' },
+  { border: 'border-l-emerald-400', badge: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20' },
+  { border: 'border-l-rose-400',    badge: 'text-rose-300 bg-rose-500/10 border-rose-500/20' },
+];
+const getGoalColor = (index: number) => GOAL_COLORS[index % GOAL_COLORS.length];
 
 const STATUS_META: Record<string, { cls: string; dot: string; label: string }> = {
   draft:            { cls: 'text-slate-400',   dot: 'bg-slate-500',              label: 'Draft' },
@@ -194,14 +187,16 @@ function MemberCard({ member, manager, onRated }: { member: any; manager: any; o
           </p>
 
           <div className="space-y-3">
-            {gc.goals?.map((g: any) => (
-              <div key={g.id} className={`bg-white/3 border border-white/6 rounded-xl overflow-hidden border-l-4 ${CAT_BORDER[g.category] || 'border-l-slate-500'}`}>
+            {gc.goals?.map((g: any, gi: number) => (
+              <div key={g.id} className={`bg-white/3 border border-white/6 rounded-xl overflow-hidden border-l-4 ${getGoalColor(gi).border}`}>
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${CAT_COLORS[g.category] || 'text-slate-400 bg-white/5 border-white/10'}`}>
-                        {g.get_category_display || g.category}
-                      </span>
+                      {g.category && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getGoalColor(gi).badge}`}>
+                          {g.category}
+                        </span>
+                      )}
                       <p className="text-slate-200 font-semibold text-sm mt-1.5">{g.title}</p>
                       {g.kpi_metric && <p className="text-slate-500 text-xs mt-0.5">KPI: {g.kpi_metric} · Target: {g.target_value}</p>}
                     </div>

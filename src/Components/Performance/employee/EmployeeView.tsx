@@ -7,15 +7,15 @@ import { PERF_API } from '../../../Pages/PerformancePage';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  { id: 'sales',      label: '💰 Sales & Revenue',    color: 'amber',   border: 'border-l-amber-400',   bg: 'bg-amber-400/10',   text: 'text-amber-300' },
-  { id: 'customer',   label: '🤝 Customer Relations',  color: 'sky',     border: 'border-l-sky-400',     bg: 'bg-sky-400/10',     text: 'text-sky-300' },
-  { id: 'learning',   label: '📚 Learning & Growth',   color: 'violet',  border: 'border-l-violet-400',  bg: 'bg-violet-400/10',  text: 'text-violet-300' },
-  { id: 'process',    label: '⚙️ Process Excellence',  color: 'emerald', border: 'border-l-emerald-400', bg: 'bg-emerald-400/10', text: 'text-emerald-300' },
-  { id: 'innovation', label: '🚀 Innovation',          color: 'rose',    border: 'border-l-rose-400',    bg: 'bg-rose-400/10',    text: 'text-rose-300' },
+const GOAL_COLORS = [
+  { border: 'border-l-amber-400',   bg: 'bg-amber-400/10',   text: 'text-amber-300',   bar: 'bg-amber-400' },
+  { border: 'border-l-sky-400',     bg: 'bg-sky-400/10',     text: 'text-sky-300',     bar: 'bg-sky-400' },
+  { border: 'border-l-violet-400',  bg: 'bg-violet-400/10',  text: 'text-violet-300',  bar: 'bg-violet-400' },
+  { border: 'border-l-emerald-400', bg: 'bg-emerald-400/10', text: 'text-emerald-300', bar: 'bg-emerald-400' },
+  { border: 'border-l-rose-400',    bg: 'bg-rose-400/10',    text: 'text-rose-300',    bar: 'bg-rose-400' },
 ];
 
-const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+const getGoalColor = (index: number) => GOAL_COLORS[index % GOAL_COLORS.length];
 
 const JOURNEY_STEPS = [
   { key: 'goal_setting',   label: 'Set Goals',       icon: Target },
@@ -132,11 +132,6 @@ function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }
 function WeightageBar({ goals }: { goals: any[] }) {
   const total = goals.reduce((s, g) => s + Number(g.weightage || 0), 0);
   const remaining = 100 - total;
-  const colorMap: Record<string, string> = {
-    sales: 'bg-amber-400', customer: 'bg-sky-400',
-    learning: 'bg-violet-400', process: 'bg-emerald-400', innovation: 'bg-rose-400',
-  };
-
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -147,19 +142,16 @@ function WeightageBar({ goals }: { goals: any[] }) {
       </div>
       <div className="h-3 bg-white/5 rounded-full overflow-hidden flex gap-px">
         {goals.map((g, i) => (
-          <div
-            key={i}
-            className={`${colorMap[g.category] || 'bg-slate-400'} transition-all duration-300`}
+          <div key={i} className={`${getGoalColor(i).bar} transition-all duration-300`}
             style={{ width: `${Math.min(Number(g.weightage || 0), 100)}%` }}
-            title={`${g.title || `Goal ${i + 1}`}: ${g.weightage}%`}
-          />
+            title={`${g.title || `Goal ${i + 1}`}: ${g.weightage}%`} />
         ))}
         {remaining > 0 && <div className="bg-white/5 flex-1" />}
       </div>
       <div className="flex gap-3 mt-2 flex-wrap">
         {goals.map((g, i) => (
           <span key={i} className="flex items-center gap-1 text-[10px] text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${colorMap[g.category] || 'bg-slate-400'}`} />
+            <span className={`w-2 h-2 rounded-full ${getGoalColor(i).bar}`} />
             G{i + 1}: {g.weightage || 0}%
           </span>
         ))}
@@ -212,7 +204,7 @@ export function EmployeeView({ employee }: { employee: any }) {
   }, [selectedCycle, employee.employee_id]);
 
   const addGoal = () => setGoals(prev => [...prev, {
-    _id: Date.now(), category: 'sales', title: '', description: '',
+    _id: Date.now(), category: '', title: '', description: '',
     kpi_metric: '', target_value: '', weightage: 20,
     self_rating: 0, self_completion_pct: 0, self_comments: '', achievement_description: '',
   }]);
@@ -427,18 +419,20 @@ export function EmployeeView({ employee }: { employee: any }) {
 
                 {/* Goal cards */}
                 {goals.map((g, i) => {
-                  const cat = CAT_MAP[g.category] || CAT_MAP.sales;
+                  const col = getGoalColor(i);
                   return (
                     <div key={g._id || g.id || i}
-                      className={`bg-white/3 border border-white/8 rounded-2xl overflow-hidden border-l-4 ${cat.border} transition-all hover:border-l-[5px]`}>
+                      className={`bg-white/3 border border-white/8 rounded-2xl overflow-hidden border-l-4 ${col.border} transition-all hover:border-l-[5px]`}>
                       <div className="p-5 space-y-4">
                         {/* Goal header */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${cat.bg} ${cat.text} border-current/20`}>
+                            <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${col.bg} ${col.text} border-current/20`}>
                               Goal {i + 1}
                             </span>
-                            <span className={`text-xs font-semibold ${cat.text}`}>{cat.label}</span>
+                            {g.category && (
+                              <span className={`text-xs font-semibold ${col.text}`}>{g.category}</span>
+                            )}
                           </div>
                           {canEdit && (
                             <button onClick={() => removeGoal(i)}
@@ -452,16 +446,15 @@ export function EmployeeView({ employee }: { employee: any }) {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-slate-400 text-xs font-bold block mb-1.5">Category</label>
-                            <select disabled={!canEdit} value={g.category}
+                            <input disabled={!canEdit} value={g.category}
                               onChange={e => updateGoal(i, 'category', e.target.value)}
-                              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 disabled:opacity-60 cursor-pointer">
-                              {CATEGORIES.map(c => <option key={c.id} value={c.id} className="bg-[#1a1a2e]">{c.label}</option>)}
-                            </select>
+                              placeholder="e.g. Sales, Distribution, Collections..."
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-600 disabled:opacity-60 transition" />
                           </div>
                           <div>
                             <label className="text-slate-400 text-xs font-bold block mb-1.5">
                               Weightage
-                              <span className={`ml-2 font-black ${Number(g.weightage) > 0 ? cat.text : 'text-slate-500'}`}>
+                              <span className={`ml-2 font-black ${Number(g.weightage) > 0 ? col.text : 'text-slate-500'}`}>
                                 {g.weightage || 0}%
                               </span>
                             </label>
@@ -593,17 +586,17 @@ export function EmployeeView({ employee }: { employee: any }) {
 
                     {/* Per-goal self rating */}
                     {goals.map((g, i) => {
-                      const cat = CAT_MAP[g.category] || CAT_MAP.sales;
+                      const col = getGoalColor(i);
                       return (
-                        <div key={i} className={`bg-white/3 border border-white/8 rounded-2xl overflow-hidden border-l-4 ${cat.border}`}>
+                        <div key={i} className={`bg-white/3 border border-white/8 rounded-2xl overflow-hidden border-l-4 ${col.border}`}>
                           <div className="p-5 space-y-4">
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <span className={`text-[10px] font-black uppercase tracking-wider ${cat.text}`}>{cat.label}</span>
+                                {g.category && <span className={`text-[10px] font-black uppercase tracking-wider ${col.text}`}>{g.category}</span>}
                                 <p className="text-white font-bold text-sm mt-0.5">{g.title || `Goal ${i + 1}`}</p>
                                 {g.kpi_metric && <p className="text-slate-500 text-xs mt-0.5">KPI: {g.kpi_metric}</p>}
                               </div>
-                              <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-black border ${cat.bg} ${cat.text}`}>
+                              <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-black border ${col.bg} ${col.text}`}>
                                 {g.weightage}%
                               </span>
                             </div>
