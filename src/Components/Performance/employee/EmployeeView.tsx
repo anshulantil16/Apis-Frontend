@@ -187,6 +187,7 @@ export function EmployeeView({ employee }: { employee: any }) {
 
   const [reviewForm, setReviewForm] = useState({
     employee_summary: '', key_achievements: '', challenges_faced: '',
+    support_required: '', training_needs: '', career_aspirations: '',
     learning_outcomes: '', next_quarter_plans: '', overall_self_rating: 0,
   });
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
@@ -311,6 +312,16 @@ export function EmployeeView({ employee }: { employee: any }) {
                 )}
                 {employee.employee_id && (
                   <span className="text-xs text-slate-500">ID: {employee.employee_id}</span>
+                )}
+                {employee.reporting_manager_id && (
+                  <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/8">
+                    Reports to: {employee.manager_name || employee.reporting_manager_id}
+                  </span>
+                )}
+                {employee.joined_date && (
+                  <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/8">
+                    Joined: {new Date(employee.joined_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' })}
+                  </span>
                 )}
               </div>
             </div>
@@ -461,9 +472,9 @@ export function EmployeeView({ employee }: { employee: any }) {
                           </div>
                         </div>
 
-                        {/* Title */}
+                        {/* KRA Title */}
                         <div>
-                          <label className="text-slate-400 text-xs font-bold block mb-1.5">Goal Title <span className="text-rose-400">*</span></label>
+                          <label className="text-slate-400 text-xs font-bold block mb-1.5">KRA — Key Result Area <span className="text-rose-400">*</span></label>
                           <input disabled={!canEdit} value={g.title}
                             onChange={e => updateGoal(i, 'title', e.target.value)}
                             placeholder="e.g. Achieve ₹50L revenue in Q1"
@@ -640,13 +651,15 @@ export function EmployeeView({ employee }: { employee: any }) {
                       );
                     })}
 
-                    {/* Review text fields */}
+                    {/* Section D – Employee Self Remarks */}
                     {[
-                      { field: 'employee_summary', label: 'Overall Summary', icon: '📋', ph: 'Summarize your quarter performance...' },
-                      { field: 'key_achievements', label: 'Key Achievements', icon: '🏆', ph: 'List your top wins this quarter...' },
-                      { field: 'challenges_faced', label: 'Challenges Faced', icon: '⚡', ph: 'What obstacles did you face?' },
-                      { field: 'learning_outcomes', label: 'Learning Outcomes', icon: '📚', ph: 'What new skills or insights did you gain?' },
-                      { field: 'next_quarter_plans', label: 'Next Quarter Plans', icon: '🎯', ph: 'What are your plans for next quarter?' },
+                      { field: 'key_achievements',  label: 'Key Achievements',   icon: '🏆', ph: 'List your top wins this quarter...' },
+                      { field: 'challenges_faced',  label: 'Challenges Faced',   icon: '⚡', ph: 'What obstacles did you face?' },
+                      { field: 'support_required',  label: 'Support Required',   icon: '🤝', ph: 'What support do you need from the organisation?' },
+                      { field: 'training_needs',    label: 'Training Needs',     icon: '📚', ph: 'What skills or training would help you grow?' },
+                      { field: 'career_aspirations',label: 'Career Aspirations', icon: '🚀', ph: 'Where do you see yourself in the next 1-2 years?' },
+                      { field: 'employee_summary',  label: 'Overall Summary',    icon: '📋', ph: 'Summarise your overall quarter performance...' },
+                      { field: 'next_quarter_plans',label: 'Next Quarter Plans',  icon: '🎯', ph: 'What are your plans for next quarter?' },
                     ].map(({ field, label, icon, ph }) => (
                       <div key={field} className="bg-white/3 border border-white/8 rounded-2xl p-5">
                         <label className="flex items-center gap-2 text-slate-300 text-sm font-bold mb-3">

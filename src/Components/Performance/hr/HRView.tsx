@@ -158,7 +158,15 @@ export function HRView({ hrUser }: { hrUser: any }) {
       }));
       const res = await fetch(`${PERF_API}/reviews/${review.id}/hr-finalize/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hr_final_rating: rv.overall || 3, hr_comments: rv.comments || '', publish, hr_name: hrUser.name, goal_ratings }),
+        body: JSON.stringify({
+          hr_final_rating: rv.overall || 3,
+          hr_comments: rv.comments || '',
+          functional_head_remarks: rv.functional_head_remarks || '',
+          functional_head_rating: rv.functional_head_rating || null,
+          management_approval_remarks: rv.management_approval_remarks || '',
+          management_approval_rating: rv.management_approval_rating || null,
+          publish, hr_name: hrUser.name, goal_ratings,
+        }),
       });
       if (res.ok) {
         setFinalizeMsg(p => ({ ...p, [review.id]: publish ? '✅ Score published!' : '✅ Saved.' }));
@@ -441,6 +449,36 @@ export function HRView({ hrUser }: { hrUser: any }) {
                       <textarea value={hr.comments || ''} onChange={e => setHrRatings(p => ({...p, [r.id]: {...(p[r.id]||{}), comments: e.target.value}}))}
                         placeholder="HR comments..." rows={2}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-rose-500/50 resize-none" />
+
+                      {/* Section F – Functional Head + Management Approval */}
+                      <div className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
+                        <p className="text-xs font-bold uppercase tracking-widest text-rose-300 px-4 py-2.5 border-b border-white/5">
+                          Section F — HR / Management Review
+                        </p>
+                        <div className="p-4 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-slate-400 text-xs font-bold block mb-1">Functional Head Rating</label>
+                              <StarRating value={hr.functional_head_rating || 0}
+                                onChange={v => setHrRatings(p => ({...p, [r.id]: {...(p[r.id]||{}), functional_head_rating: v}}))} />
+                            </div>
+                            <div>
+                              <label className="text-slate-400 text-xs font-bold block mb-1">Management Approval Rating</label>
+                              <StarRating value={hr.management_approval_rating || 0}
+                                onChange={v => setHrRatings(p => ({...p, [r.id]: {...(p[r.id]||{}), management_approval_rating: v}}))} />
+                            </div>
+                          </div>
+                          <input placeholder="Functional Head remarks..."
+                            value={hr.functional_head_remarks || ''}
+                            onChange={e => setHrRatings(p => ({...p, [r.id]: {...(p[r.id]||{}), functional_head_remarks: e.target.value}}))}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-rose-500/40 placeholder-slate-600" />
+                          <input placeholder="Management approval remarks..."
+                            value={hr.management_approval_remarks || ''}
+                            onChange={e => setHrRatings(p => ({...p, [r.id]: {...(p[r.id]||{}), management_approval_remarks: e.target.value}}))}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-rose-500/40 placeholder-slate-600" />
+                        </div>
+                      </div>
+
                       <div className="flex gap-3">
                         <button onClick={() => finalizeReview(r, false)} disabled={finalizingId === r.id}
                           className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/20 text-slate-200 font-bold text-sm hover:bg-white/20">

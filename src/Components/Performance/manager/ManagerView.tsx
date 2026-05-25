@@ -64,12 +64,34 @@ function MemberCard({ member, manager, onRated }: { member: any; manager: any; o
   const status = gc?.status;
   const sm = STATUS_META[status] || { cls: 'text-slate-500', dot: 'bg-slate-600', label: 'No Goals' };
 
+  const COMPETENCIES = [
+    { key: 'ownership',      label: 'Ownership & Accountability' },
+    { key: 'communication',  label: 'Communication' },
+    { key: 'teamwork',       label: 'Teamwork' },
+    { key: 'leadership',     label: 'Leadership' },
+    { key: 'compliance',     label: 'Compliance & Discipline' },
+    { key: 'problem_solving',label: 'Problem Solving' },
+    { key: 'innovation',     label: 'Innovation' },
+  ];
+
   const initRating = () => {
     const ratings: Record<number, { manager_rating: number; manager_comments: string }> = {};
     gc.goals?.forEach((g: any) => {
       ratings[g.id] = { manager_rating: g.manager_rating || 0, manager_comments: g.manager_comments || '' };
     });
-    setReviewMode({ action: 'approved', remarks: '', overall_rating: gc.review_data?.manager_overall_rating || 0, goal_ratings: ratings });
+    const initCompetencies: Record<string, { marks: number; manager_remarks: string }> = {};
+    const existing = gc.competency_ratings || [];
+    COMPETENCIES.forEach(c => {
+      const found = existing.find((r: any) => r.competency === c.key);
+      initCompetencies[c.key] = { marks: found?.marks || 0, manager_remarks: found?.manager_remarks || '' };
+    });
+    setReviewMode({
+      action: 'approved', remarks: '', overall_rating: gc.review_data?.manager_overall_rating || 0,
+      goal_ratings: ratings,
+      competency_ratings: initCompetencies,
+      employee_strengths: '', areas_of_improvement: '', development_plan: '',
+      promotion_recommendation: '', increment_recommendation: '',
+    });
   };
 
   const submitGoalReview = async (action: 'approved' | 'rejected') => {
@@ -102,14 +124,23 @@ function MemberCard({ member, manager, onRated }: { member: any; manager: any; o
       const goal_ratings = Object.entries(reviewMode.goal_ratings || {}).map(([goal_id, r]: any) => ({
         goal_id: Number(goal_id), manager_rating: r.manager_rating, manager_comments: r.manager_comments,
       }));
+      const competency_ratings = Object.entries(reviewMode.competency_ratings || {}).map(([competency, r]: any) => ({
+        competency, marks: r.marks || null, manager_remarks: r.manager_remarks || '',
+      }));
       const res = await fetch(`${PERF_API}/reviews/${reviewId}/manager-rate/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           manager_overall_rating: reviewMode.overall_rating || 0,
           manager_review_comments: reviewMode.remarks,
+          employee_strengths: reviewMode.employee_strengths || '',
+          areas_of_improvement: reviewMode.areas_of_improvement || '',
+          development_plan: reviewMode.development_plan || '',
+          promotion_recommendation: reviewMode.promotion_recommendation || '',
+          increment_recommendation: reviewMode.increment_recommendation || '',
           manager_name: manager.name,
           goal_ratings,
+          competency_ratings,
         }),
       });
       if (res.ok) {
@@ -253,6 +284,75 @@ function MemberCard({ member, manager, onRated }: { member: any; manager: any; o
                 value={reviewMode.overall_rating || 0}
                 onChange={v => setReviewMode((p: any) => ({ ...p, overall_rating: v }))}
               />
+            </div>
+          )}
+
+          {/* Section C – Competency Evaluation */}
+          {reviewMode && gc.review_data?.status === 'submitted' && (
+            <div className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
+              <p className="text-xs font-bold uppercase tracking-widest text-amber-300 px-4 py-3 border-b border-white/5">
+                Section C — Competency Evaluation
+              </p>
+              <div className="divide-y divide-white/5">
+                {COMPETENCIES.map(c => (
+                  <div key={c.key} className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 text-xs font-semibold">{c.label}</span>
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map(n => (
+                          <button key={n}
+                            onClick={() => setReviewMode((p: any) => ({
+                              ...p,
+                              competency_ratings: { ...p.competency_ratings, [c.key]: { ...p.competency_ratings?.[c.key], marks: n } }
+                            }))}
+                            className={`w-7 h-7 rounded-lg text-xs font-black transition-all border ${
+                              (reviewMode.competency_ratings?.[c.key]?.marks || 0) >= n
+                                ? 'bg-amber-500/30 border-amber-500/50 text-amber-300'
+                                : 'bg-white/5 border-white/10 text-slate-500 hover:border-white/20'
+                            }`}>{n}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <input
+                      placeholder="Remarks (optional)"
+                      value={reviewMode.competency_ratings?.[c.key]?.manager_remarks || ''}
+                      onChange={e => setReviewMode((p: any) => ({
+                        ...p,
+                        competency_ratings: { ...p.competency_ratings, [c.key]: { ...p.competency_ratings?.[c.key], manager_remarks: e.target.value } }
+                      }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500/40 placeholder-slate-600"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section E – Manager Assessment */}
+          {reviewMode && gc.review_data?.status === 'submitted' && (
+            <div className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
+              <p className="text-xs font-bold uppercase tracking-widest text-amber-300 px-4 py-3 border-b border-white/5">
+                Section E — Manager Assessment
+              </p>
+              <div className="p-4 space-y-3">
+                {[
+                  { field: 'employee_strengths',     label: 'Employee Strengths',       ph: 'Key strengths observed this quarter...' },
+                  { field: 'areas_of_improvement',   label: 'Areas of Improvement',     ph: 'Where can this employee improve?' },
+                  { field: 'development_plan',       label: 'Development Plan',         ph: 'Suggested actions / training for growth...' },
+                  { field: 'promotion_recommendation',label: 'Promotion Recommendation', ph: 'e.g. Recommended / Not Yet / Under Review' },
+                  { field: 'increment_recommendation',label: 'Increment Recommendation', ph: 'e.g. 10% / Standard / Exceptional' },
+                ].map(({ field, label, ph }) => (
+                  <div key={field}>
+                    <label className="text-slate-400 text-xs font-bold block mb-1">{label}</label>
+                    <input
+                      placeholder={ph}
+                      value={reviewMode[field] || ''}
+                      onChange={e => setReviewMode((p: any) => ({ ...p, [field]: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500/40 placeholder-slate-600"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
