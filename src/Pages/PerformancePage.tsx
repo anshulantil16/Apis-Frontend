@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, TrendingUp, Users, Shield, BarChart3, LineChart } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
 import { EmployeeView } from '../Components/Performance/employee/EmployeeView';
 import { ManagerView } from '../Components/Performance/manager/ManagerView';
 import { HRView } from '../Components/Performance/hr/HRView';
@@ -14,7 +14,7 @@ type Role = 'employee' | 'manager' | 'hr';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const PERF_API = `${API_BASE}/api/performance`;
 
-// ─── Inner hub wrapper (shown after login) ────────────────────────────────────
+// ─── Inner hub wrapper ────────────────────────────────────────────────────────
 
 type HubSection = 'goals' | 'progress';
 
@@ -23,88 +23,87 @@ function PerformanceHub({
 }: { employee: any; role: Role; onLogout: () => void; onNavigateBack: () => void }) {
   const [section, setSection] = useState<HubSection>('goals');
 
-  const roleLabel = role === 'hr' ? '🏢 HR Admin' : role === 'manager' ? '👔 Manager' : '👤 Employee';
-  const roleBadge = role === 'hr'
-    ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-    : role === 'manager'
-    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-    : 'bg-violet-500/20 text-violet-300 border-violet-500/30';
+  const roleConfig = {
+    hr:       { label: 'HR Admin',  badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30',   dot: 'bg-rose-400',    glow: 'shadow-rose-500/20' },
+    manager:  { label: 'Manager',   badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', dot: 'bg-amber-400',   glow: 'shadow-amber-500/20' },
+    employee: { label: 'Employee',  badge: 'bg-violet-500/20 text-violet-300 border-violet-500/30', dot: 'bg-violet-400', glow: 'shadow-violet-500/20' },
+  }[role];
 
-  const sectionLabel = role === 'employee'
+  const tabs = role === 'employee'
     ? ['Goal Setting & Review', 'Progress & Reports']
     : role === 'manager'
-    ? ['Goal Approvals & Ratings', 'Team Progress & Reports']
-    : ['HR Admin Controls', 'Org Analytics & Reports'];
+    ? ['Goal Approvals & Ratings', 'Team Progress']
+    : ['HR Controls', 'Org Analytics'];
+
+  const initial = (employee.name || 'U')[0].toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#0f0f1a]">
-      {/* ── Sticky header ── */}
-      <header className="border-b border-white/5 bg-[#0f0f1a]/80 backdrop-blur-xl sticky top-0 z-50 px-6 py-3">
-        <div className="flex items-center justify-between">
-          {/* Left: logo + name */}
-          <div className="flex items-center gap-4">
-            <button onClick={onLogout} className="text-slate-400 hover:text-white transition p-2 hover:bg-white/5 rounded-xl">
-              <ArrowLeft className="w-5 h-5" />
+    <div className="min-h-screen bg-[#080818]">
+      <header className="border-b border-white/[0.06] bg-[#080818]/90 backdrop-blur-2xl sticky top-0 z-50">
+        <div className="px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
+          {/* Left */}
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={onLogout}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-all shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-lg ${roleConfig.glow} shrink-0`}>
+                <TrendingUp className="w-4 h-4 text-white" />
               </div>
-              <div>
-                <p className="text-white font-bold text-sm leading-none">APIS Performance Hub</p>
-                <p className="text-slate-400 text-xs mt-0.5">{employee.name} · {employee.designation}</p>
+              <div className="min-w-0">
+                <p className="text-white font-bold text-sm leading-none truncate">APIS Performance Hub</p>
+                <p className="text-slate-500 text-[11px] mt-0.5 truncate">{employee.name} · {employee.designation}</p>
               </div>
             </div>
           </div>
 
-          {/* Center: section tabs */}
-          <div className="hidden md:flex gap-1 p-1 bg-white/3 rounded-2xl">
+          {/* Center tabs */}
+          <div className="hidden md:flex gap-1 p-1 bg-white/[0.04] border border-white/[0.06] rounded-2xl">
             {(['goals', 'progress'] as const).map((s, i) => (
-              <button
-                key={s}
-                onClick={() => setSection(s)}
-                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${
-                  section === s ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {s === 'goals'
-                  ? <BarChart3 className="w-4 h-4" />
-                  : <LineChart className="w-4 h-4" />
-                }
-                {sectionLabel[i]}
+              <button key={s} onClick={() => setSection(s)}
+                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  section === s
+                    ? 'bg-gradient-to-r from-violet-600/80 to-purple-700/80 text-white shadow-lg shadow-violet-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}>
+                {s === 'goals' ? <BarChart3 className="w-4 h-4" /> : <LineChart className="w-4 h-4" />}
+                {tabs[i]}
               </button>
             ))}
           </div>
 
-          {/* Right: role badge + back */}
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${roleBadge}`}>
-              {roleLabel}
+          {/* Right */}
+          <div className="flex items-center gap-3 shrink-0">
+            <span className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${roleConfig.badge}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${roleConfig.dot}`} />
+              {roleConfig.label}
             </span>
-            <button onClick={onNavigateBack} className="text-slate-500 hover:text-slate-300 text-xs font-semibold transition hidden sm:block">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500/30 to-purple-600/30 border border-violet-500/30 flex items-center justify-center text-violet-300 font-black text-sm">
+              {initial}
+            </div>
+            <button onClick={onNavigateBack} className="hidden lg:block text-slate-600 hover:text-slate-300 text-xs font-semibold transition-colors">
               ← Data Tools
             </button>
           </div>
         </div>
 
         {/* Mobile tabs */}
-        <div className="flex md:hidden gap-1 mt-3">
+        <div className="flex md:hidden gap-1 px-4 pb-2">
           {(['goals', 'progress'] as const).map((s, i) => (
-            <button
-              key={s}
-              onClick={() => setSection(s)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all ${
-                section === s ? 'bg-white/10 text-white' : 'text-slate-400'
-              }`}
-            >
+            <button key={s} onClick={() => setSection(s)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                section === s ? 'bg-violet-600/40 text-violet-200' : 'text-slate-500'
+              }`}>
               {s === 'goals' ? <BarChart3 className="w-3.5 h-3.5" /> : <LineChart className="w-3.5 h-3.5" />}
-              {sectionLabel[i]}
+              {tabs[i]}
             </button>
           ))}
         </div>
       </header>
 
-      {/* ── Content ── */}
       {section === 'goals' ? (
         <>
           {role === 'employee' && <EmployeeView employee={employee} />}
@@ -118,9 +117,39 @@ function PerformanceHub({
   );
 }
 
-// ─── Login / Role Selection ───────────────────────────────────────────────────
+// ─── Login Screen ─────────────────────────────────────────────────────────────
 
 type LoginStep = 'id' | 'otp';
+
+const ROLE_CONFIG = [
+  {
+    id: 'employee' as Role,
+    label: 'Employee',
+    sub: 'Set goals & self-review',
+    icon: Users,
+    active: 'from-violet-600/30 to-violet-800/20 border-violet-500/50 text-violet-200',
+    inactive: 'border-white/[0.08] text-slate-400 hover:border-white/20 hover:bg-white/[0.04]',
+    iconBg: 'bg-violet-500/20 text-violet-300',
+  },
+  {
+    id: 'manager' as Role,
+    label: 'Manager',
+    sub: 'Review & rate team',
+    icon: Shield,
+    active: 'from-amber-600/30 to-amber-800/20 border-amber-500/50 text-amber-200',
+    inactive: 'border-white/[0.08] text-slate-400 hover:border-white/20 hover:bg-white/[0.04]',
+    iconBg: 'bg-amber-500/20 text-amber-300',
+  },
+  {
+    id: 'hr' as Role,
+    label: 'HR Admin',
+    sub: 'Full access & analytics',
+    icon: BarChart3,
+    active: 'from-rose-600/30 to-rose-800/20 border-rose-500/50 text-rose-200',
+    inactive: 'border-white/[0.08] text-slate-400 hover:border-white/20 hover:bg-white/[0.04]',
+    iconBg: 'bg-rose-500/20 text-rose-300',
+  },
+] as const;
 
 export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
   const [role, setRole] = useState<Role | null>(null);
@@ -128,7 +157,6 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
   const [employee, setEmployee] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const [step, setStep] = useState<LoginStep>('id');
   const [maskedEmail, setMaskedEmail] = useState('');
   const [otpInput, setOtpInput] = useState('');
@@ -137,243 +165,244 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
     const ct = res.headers.get('content-type') || '';
     if (ct.includes('application/json')) return res.json();
     await res.text();
-    throw new Error(`Server returned an unexpected response (${res.status}). Make sure the backend server is running and restarted.`);
+    throw new Error(`Server error (${res.status}). Make sure the backend is running.`);
   };
 
   const handleSendOtp = async () => {
     if (!inputId.trim() || !role) return;
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const res = await fetch(`${PERF_API}/auth/send-otp/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: inputId.trim() }),
       });
       const data = await parseJsonSafe(res);
       if (!res.ok) throw new Error(data.error || 'Failed to send OTP.');
-
-      // Validate role before proceeding to OTP step
-      // (we get role info from employee lookup implicitly; we'll re-check at verify)
       setMaskedEmail(data.masked_email);
       setStep('otp');
     } catch (e: any) {
       setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleVerifyOtp = async () => {
     if (!otpInput.trim()) return;
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const res = await fetch(`${PERF_API}/auth/verify-otp/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: inputId.trim(), otp: otpInput.trim() }),
       });
-      const data = await res.json();
+      const data = await parseJsonSafe(res);
       if (!res.ok) throw new Error(data.error || 'OTP verification failed.');
-
-      // Validate role matches
-      if (role === 'manager' && data.user_type !== 'manager') {
-        throw new Error(`${data.name} is registered as an Employee (${data.designation || 'Field Force'}), not a Manager.`);
-      }
-      if (role === 'hr' && data.user_type !== 'hr') {
-        throw new Error(`${data.name} is registered as an Employee (${data.designation || 'Field Force'}), not an HR Admin.`);
-      }
-
+      if (role === 'manager' && data.user_type !== 'manager')
+        throw new Error(`${data.name} is not registered as a Manager.`);
+      if (role === 'hr' && data.user_type !== 'hr')
+        throw new Error(`${data.name} is not registered as an HR Admin.`);
       setEmployee(data);
     } catch (e: any) {
       setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  const handleBackToId = () => {
-    setStep('id');
-    setOtpInput('');
-    setMaskedEmail('');
-    setError('');
-  };
+  const handleBackToId = () => { setStep('id'); setOtpInput(''); setMaskedEmail(''); setError(''); };
 
-  // Logged in — show role view
   if (employee && role) {
     return (
       <PerformanceHub
-        employee={employee}
-        role={role}
+        employee={employee} role={role}
         onLogout={() => { setEmployee(null); setRole(null); setInputId(''); setStep('id'); setOtpInput(''); }}
         onNavigateBack={onNavigateBack}
       />
     );
   }
 
-  // Login / Role Selection Screen
   return (
-    <div className="min-h-screen bg-[#0f0f1a] flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Ambient glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-[#080818] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Background layers */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(120,80,255,0.15),transparent)]" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
+      <div className="absolute top-1/3 -left-32 w-96 h-96 bg-violet-700/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-32 w-80 h-80 bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-2/3 left-1/3 w-64 h-64 bg-purple-500/8 rounded-full blur-[80px] pointer-events-none" />
 
-      <button onClick={onNavigateBack} className="absolute top-6 left-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold">
-        <ArrowLeft className="w-4 h-4" /> Back to Data Tools
+      {/* Back button */}
+      <button onClick={onNavigateBack}
+        className="absolute top-5 left-5 flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors text-sm font-medium group">
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+        Data Tools
       </button>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 mb-5 shadow-lg shadow-violet-500/30">
-            <TrendingUp className="w-8 h-8 text-white" />
+      <div className="w-full max-w-lg relative z-10">
+        {/* Brand */}
+        <div className="text-center mb-8">
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-violet-500/30 rounded-2xl blur-xl scale-150" />
+            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-700 flex items-center justify-center shadow-2xl shadow-violet-500/40">
+              <TrendingUp className="w-8 h-8 text-white" />
+            </div>
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Performance Hub</h1>
-          <p className="text-slate-400 mt-2 text-sm">Goal setting, reviews & quarterly rankings</p>
+          <h1 className="text-4xl font-black tracking-tight">
+            <span className="bg-gradient-to-r from-white via-white/90 to-white/60 bg-clip-text text-transparent">
+              Performance Hub
+            </span>
+          </h1>
+          <p className="text-slate-500 mt-2 text-sm font-medium">Goal setting · Reviews · Rankings · Analytics</p>
         </div>
 
-        {/* Card */}
-        <div className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl">
+        {/* Main card */}
+        <div className="relative">
+          {/* Card glow */}
+          <div className="absolute -inset-px bg-gradient-to-br from-violet-500/20 via-transparent to-purple-500/10 rounded-3xl" />
+          <div className="relative bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-3xl p-7 shadow-2xl">
 
-          {step === 'id' ? (
-            <>
-              {/* Role picker */}
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">I am a...</p>
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                {([
-                  { id: 'employee', label: 'Employee', icon: Users, color: 'violet' },
-                  { id: 'manager', label: 'Manager', icon: Shield, color: 'amber' },
-                  { id: 'hr', label: 'HR Admin', icon: BarChart3, color: 'rose' },
-                ] as const).map(({ id, label, icon: Icon, color }) => (
-                  <button
-                    key={id}
-                    onClick={() => setRole(id)}
-                    className={`flex flex-col items-center gap-2 py-4 rounded-2xl border transition-all font-semibold text-sm ${
-                      role === id
-                        ? color === 'violet' ? 'bg-violet-500/20 border-violet-500/50 text-violet-300'
-                          : color === 'amber' ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                          : 'bg-rose-500/20 border-rose-500/50 text-rose-300'
-                        : 'border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-300'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Employee ID input */}
-              <div className="mb-5">
-                <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">
-                  {role === 'hr' ? 'HR Admin ID' : role === 'manager' ? 'Manager ID' : 'Employee ID'}
-                </label>
-                <input
-                  type="text"
-                  placeholder={role === 'hr' ? 'e.g. HR001' : role === 'manager' ? 'e.g. MGR001' : 'e.g. EMP001'}
-                  value={inputId}
-                  onChange={e => setInputId(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-500 font-semibold text-sm focus:outline-none focus:border-violet-500/50 focus:bg-violet-500/5 transition-all"
-                />
-              </div>
-
-              {error && (
-                <p className="text-rose-400 text-sm font-semibold mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                  ⚠️ {error}
-                </p>
-              )}
-
-              <button
-                onClick={handleSendOtp}
-                disabled={!role || !inputId.trim() || loading}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-violet-500/30 active:scale-95"
-              >
-                {loading ? 'Sending OTP...' : 'Send OTP →'}
-              </button>
-
-              {/* First-time setup bypass */}
-              <div className="pt-4 border-t border-white/10 mt-4">
-                <p className="text-slate-500 text-xs text-center mb-3">
-                  First time? No employees imported yet?
-                </p>
-                <button
-                  onClick={() => {
-                    setRole('hr');
-                    setEmployee({ name: 'HR Admin', designation: 'Administrator', employee_id: 'ADMIN', zone: '', reporting_manager_id: '' });
-                  }}
-                  className="w-full py-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-sm transition-all flex items-center justify-center gap-2"
-                >
-                  🏢 Enter as HR Admin (First-Time Setup)
-                </button>
-                <p className="text-slate-600 text-[10px] text-center mt-2">
-                  Use this to import your employee master sheet, then log in normally.
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* OTP step */}
-              <button
-                onClick={handleBackToId}
-                className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-semibold mb-5 transition-colors"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" /> Change ID
-              </button>
-
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-violet-500/20 border border-violet-500/30 mb-3">
-                  <Shield className="w-6 h-6 text-violet-300" />
+            {step === 'id' ? (
+              <>
+                {/* Step label */}
+                <div className="flex items-center gap-2 mb-5">
+                  <span className="w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-black flex items-center justify-center">1</span>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Select your role</p>
                 </div>
-                <p className="text-white font-bold text-sm">Check your email</p>
-                <p className="text-slate-400 text-xs mt-1">
-                  We sent a 6-digit OTP to <span className="text-violet-300 font-semibold">{maskedEmail}</span>
-                </p>
-                <p className="text-slate-500 text-[11px] mt-1">Expires in 5 minutes</p>
-              </div>
 
-              <div className="mb-5">
-                <label className="text-slate-400 text-xs font-bold uppercase tracking-widest block mb-2">
-                  Enter OTP
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="000000"
-                  maxLength={6}
-                  value={otpInput}
-                  onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
-                  onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
-                  autoFocus
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-600 font-mono font-bold text-2xl text-center tracking-[0.5em] focus:outline-none focus:border-violet-500/50 focus:bg-violet-500/5 transition-all"
-                />
-              </div>
+                {/* Role cards */}
+                <div className="space-y-2.5 mb-6">
+                  {ROLE_CONFIG.map(({ id, label, sub, icon: Icon, active, inactive, iconBg }) => (
+                    <button key={id} onClick={() => setRole(id)}
+                      className={`w-full flex items-center gap-4 p-4 rounded-2xl border bg-gradient-to-r transition-all duration-200 ${
+                        role === id ? active : inactive
+                      }`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        role === id ? iconBg : 'bg-white/5 text-slate-500'
+                      }`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className={`font-bold text-sm ${role === id ? '' : 'text-slate-300'}`}>{label}</p>
+                        <p className={`text-xs mt-0.5 ${role === id ? 'opacity-70' : 'text-slate-600'}`}>{sub}</p>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border-2 shrink-0 transition-all ${
+                        role === id ? 'border-current bg-current scale-100' : 'border-white/20 scale-75'
+                      }`} />
+                    </button>
+                  ))}
+                </div>
 
-              {error && (
-                <p className="text-rose-400 text-sm font-semibold mb-4 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
-                  ⚠️ {error}
-                </p>
-              )}
+                {/* ID input */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-black flex items-center justify-center">2</span>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Enter your ID</p>
+                </div>
+                <div className="relative mb-5">
+                  <input
+                    type="text"
+                    placeholder={role === 'hr' ? 'e.g. HR001' : role === 'manager' ? 'e.g. MGR001' : 'e.g. EMP001'}
+                    value={inputId}
+                    onChange={e => setInputId(e.target.value.toUpperCase())}
+                    onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
+                    className="w-full bg-white/[0.06] border border-white/[0.1] rounded-2xl px-5 py-3.5 text-white placeholder-slate-600 font-mono font-bold text-sm focus:outline-none focus:border-violet-500/60 focus:bg-violet-500/[0.04] transition-all"
+                  />
+                </div>
 
-              <button
-                onClick={handleVerifyOtp}
-                disabled={otpInput.length !== 6 || loading}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-violet-500/30 active:scale-95"
-              >
-                {loading ? 'Verifying...' : 'Verify & Enter Hub →'}
-              </button>
+                {error && (
+                  <div className="flex items-start gap-3 text-rose-400 text-sm font-semibold mb-4 bg-rose-500/[0.08] border border-rose-500/20 rounded-xl px-4 py-3">
+                    <span className="shrink-0 mt-0.5">⚠️</span>
+                    <span>{error}</span>
+                  </div>
+                )}
 
-              <button
-                onClick={handleSendOtp}
-                disabled={loading}
-                className="w-full mt-3 py-2.5 rounded-2xl border border-white/10 text-slate-400 hover:text-white hover:border-white/20 font-semibold text-xs transition-all disabled:opacity-40"
-              >
-                Resend OTP
-              </button>
-            </>
-          )}
+                <button
+                  onClick={handleSendOtp}
+                  disabled={!role || !inputId.trim() || loading}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending OTP...</>
+                  ) : (
+                    <><Mail className="w-4 h-4" /> Send OTP to Email</>
+                  )}
+                </button>
+
+                {/* Setup bypass */}
+                <div className="mt-5 pt-4 border-t border-white/[0.06]">
+                  <button
+                    onClick={() => {
+                      setRole('hr');
+                      setEmployee({ name: 'HR Admin', designation: 'Administrator', employee_id: 'ADMIN', zone: '', reporting_manager_id: '' });
+                    }}
+                    className="w-full py-3 rounded-2xl border border-rose-500/20 bg-rose-500/[0.06] hover:bg-rose-500/[0.12] text-rose-400 font-semibold text-xs transition-all flex items-center justify-center gap-2"
+                  >
+                    🏢 First-time setup — Enter as HR Admin
+                  </button>
+                  <p className="text-slate-700 text-[10px] text-center mt-2">Use this once to import your employee master sheet</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <button onClick={handleBackToId}
+                  className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-xs font-semibold mb-6 transition-colors group">
+                  <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" /> Back
+                </button>
+
+                {/* OTP illustration */}
+                <div className="text-center mb-7">
+                  <div className="relative inline-block mb-4">
+                    <div className="absolute inset-0 bg-violet-500/20 rounded-2xl blur-xl" />
+                    <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/30 to-purple-600/30 border border-violet-500/40 flex items-center justify-center">
+                      <Mail className="w-7 h-7 text-violet-300" />
+                    </div>
+                  </div>
+                  <h3 className="text-white font-bold text-base mb-1">Check your inbox</h3>
+                  <p className="text-slate-400 text-sm">
+                    OTP sent to <span className="text-violet-300 font-semibold">{maskedEmail}</span>
+                  </p>
+                  <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full">
+                    <Zap className="w-3 h-3 text-amber-400" />
+                    <span className="text-amber-400 text-[11px] font-bold">Expires in 5 minutes</span>
+                  </div>
+                </div>
+
+                {/* OTP input */}
+                <div className="mb-5">
+                  <label className="text-slate-500 text-xs font-bold uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
+                  <input
+                    type="text" inputMode="numeric" placeholder="· · · · · ·" maxLength={6}
+                    value={otpInput}
+                    onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                    onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
+                    autoFocus
+                    className="w-full bg-white/[0.06] border border-white/[0.1] rounded-2xl px-5 py-4 text-white placeholder-slate-700 font-mono font-black text-3xl text-center tracking-[0.6em] focus:outline-none focus:border-violet-500/60 focus:bg-violet-500/[0.04] transition-all"
+                  />
+                  {/* Progress dots */}
+                  <div className="flex justify-center gap-1.5 mt-3">
+                    {[0,1,2,3,4,5].map(i => (
+                      <div key={i} className={`h-1 rounded-full transition-all duration-200 ${
+                        i < otpInput.length ? 'w-5 bg-violet-500' : 'w-3 bg-white/10'
+                      }`} />
+                    ))}
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="flex items-start gap-3 text-rose-400 text-sm font-semibold mb-4 bg-rose-500/[0.08] border border-rose-500/20 rounded-xl px-4 py-3">
+                    <span className="shrink-0">⚠️</span><span>{error}</span>
+                  </div>
+                )}
+
+                <button onClick={handleVerifyOtp} disabled={otpInput.length !== 6 || loading}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 active:scale-[0.98] flex items-center justify-center gap-2">
+                  {loading ? (
+                    <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Verifying...</>
+                  ) : '✓ Verify & Enter Hub'}
+                </button>
+
+                <button onClick={handleSendOtp} disabled={loading}
+                  className="w-full mt-3 py-2.5 text-slate-500 hover:text-slate-300 text-xs font-semibold transition-colors disabled:opacity-40">
+                  Didn't receive it? Resend OTP
+                </button>
+              </>
+            )}
+          </div>
         </div>
-
       </div>
     </div>
   );

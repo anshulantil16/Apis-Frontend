@@ -1,29 +1,28 @@
 import { useState, useEffect } from 'react';
 import {
   Target, Star, CheckCircle, Clock, Plus, Trash2, Send,
-  FileText, AlertCircle, ChevronRight, Award,
+  FileText, AlertCircle, ChevronRight, Award, TrendingUp,
 } from 'lucide-react';
 import { PERF_API } from '../../../Pages/PerformancePage';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Color palette ─────────────────────────────────────────────────────────────
 
 const GOAL_COLORS = [
-  { border: 'border-l-amber-400',   bg: 'bg-amber-400/10',   text: 'text-amber-300',   bar: 'bg-amber-400' },
-  { border: 'border-l-sky-400',     bg: 'bg-sky-400/10',     text: 'text-sky-300',     bar: 'bg-sky-400' },
-  { border: 'border-l-violet-400',  bg: 'bg-violet-400/10',  text: 'text-violet-300',  bar: 'bg-violet-400' },
-  { border: 'border-l-emerald-400', bg: 'bg-emerald-400/10', text: 'text-emerald-300', bar: 'bg-emerald-400' },
-  { border: 'border-l-rose-400',    bg: 'bg-rose-400/10',    text: 'text-rose-300',    bar: 'bg-rose-400' },
+  { border: 'border-l-violet-500', bg: 'bg-violet-500/10',   text: 'text-violet-300',   bar: 'bg-violet-500',   glow: 'shadow-violet-500/20' },
+  { border: 'border-l-amber-500',  bg: 'bg-amber-500/10',    text: 'text-amber-300',    bar: 'bg-amber-500',    glow: 'shadow-amber-500/20' },
+  { border: 'border-l-sky-500',    bg: 'bg-sky-500/10',      text: 'text-sky-300',      bar: 'bg-sky-500',      glow: 'shadow-sky-500/20' },
+  { border: 'border-l-emerald-500',bg: 'bg-emerald-500/10',  text: 'text-emerald-300',  bar: 'bg-emerald-500',  glow: 'shadow-emerald-500/20' },
+  { border: 'border-l-rose-500',   bg: 'bg-rose-500/10',     text: 'text-rose-300',     bar: 'bg-rose-500',     glow: 'shadow-rose-500/20' },
 ];
-
-const getGoalColor = (index: number) => GOAL_COLORS[index % GOAL_COLORS.length];
+const getGoalColor = (i: number) => GOAL_COLORS[i % GOAL_COLORS.length];
 
 const JOURNEY_STEPS = [
-  { key: 'goal_setting',   label: 'Set Goals',       icon: Target },
-  { key: 'mgr_review',     label: 'Manager Review',  icon: Clock },
-  { key: 'goals_approved', label: 'Goals Approved',  icon: CheckCircle },
-  { key: 'self_review',    label: 'Self Review',     icon: FileText },
-  { key: 'mgr_rating',     label: 'Manager Rating',  icon: Star },
-  { key: 'published',      label: 'Published',       icon: Award },
+  { key: 'goal_setting',   label: 'Set Goals',     icon: Target },
+  { key: 'mgr_review',     label: 'Mgr Review',    icon: Clock },
+  { key: 'goals_approved', label: 'Approved',      icon: CheckCircle },
+  { key: 'self_review',    label: 'Self Review',   icon: FileText },
+  { key: 'mgr_rating',     label: 'Mgr Rating',    icon: Star },
+  { key: 'published',      label: 'Published',     icon: Award },
 ];
 
 function getJourneyStep(gc: any): number {
@@ -39,25 +38,18 @@ function getJourneyStep(gc: any): number {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StarRating({ value, onChange, size = 'md' }: { value: number; onChange?: (v: number) => void; size?: 'sm' | 'md' }) {
+function StarRating({ value, onChange, size = 'md' }: { value: number; onChange?: (v: number) => void; size?: 'sm' | 'md' | 'lg' }) {
   const [hover, setHover] = useState(0);
-  const sz = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+  const sz = size === 'sm' ? 'w-3.5 h-3.5' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
   return (
     <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map(s => (
-        <button
-          key={s}
-          onClick={() => onChange?.(s)}
+      {[1,2,3,4,5].map(s => (
+        <button key={s} onClick={() => onChange?.(s)}
           onMouseEnter={() => onChange && setHover(s)}
           onMouseLeave={() => setHover(0)}
           disabled={!onChange}
-          className={`transition-all ${onChange ? 'hover:scale-125 cursor-pointer' : 'cursor-default'}`}
-        >
-          <Star className={`${sz} transition-colors ${
-            s <= (hover || value)
-              ? 'text-amber-400 fill-amber-400'
-              : 'text-slate-600'
-          }`} />
+          className={`transition-all ${onChange ? 'hover:scale-125 cursor-pointer' : 'cursor-default'}`}>
+          <Star className={`${sz} transition-colors ${s <= (hover || value) ? 'text-amber-400 fill-amber-400' : 'text-slate-700'}`} />
         </button>
       ))}
     </div>
@@ -65,29 +57,27 @@ function StarRating({ value, onChange, size = 'md' }: { value: number; onChange?
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { cls: string; label: string; dot?: string }> = {
-    draft:            { cls: 'bg-slate-700/60 text-slate-300 border-slate-600/40', label: 'Draft', dot: 'bg-slate-400' },
-    submitted:        { cls: 'bg-blue-500/15 text-blue-300 border-blue-500/30', label: 'Pending Review', dot: 'bg-blue-400 animate-pulse' },
+  const map: Record<string, { cls: string; label: string; dot: string }> = {
+    draft:            { cls: 'bg-slate-800 text-slate-400 border-slate-700',          label: 'Draft',             dot: 'bg-slate-500' },
+    submitted:        { cls: 'bg-blue-500/15 text-blue-300 border-blue-500/30',       label: 'Pending Review',    dot: 'bg-blue-400 animate-pulse' },
     manager_approved: { cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30', label: 'Manager Approved', dot: 'bg-emerald-400' },
-    manager_rejected: { cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30', label: 'Changes Requested', dot: 'bg-rose-400' },
-    hr_approved:      { cls: 'bg-violet-500/15 text-violet-300 border-violet-500/30', label: 'HR Approved', dot: 'bg-violet-400' },
-    finalized:        { cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30', label: 'Finalized', dot: 'bg-amber-400' },
+    manager_rejected: { cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30',       label: 'Changes Requested', dot: 'bg-rose-400' },
+    hr_approved:      { cls: 'bg-violet-500/15 text-violet-300 border-violet-500/30', label: 'HR Approved',       dot: 'bg-violet-400' },
+    finalized:        { cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30',    label: 'Finalized',         dot: 'bg-amber-400' },
   };
-  const s = map[status] || { cls: 'bg-slate-700/60 text-slate-300 border-slate-600/40', label: status, dot: 'bg-slate-400' };
+  const s = map[status] || { cls: 'bg-slate-800 text-slate-400 border-slate-700', label: status, dot: 'bg-slate-500' };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${s.cls}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${s.cls}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
       {s.label}
     </span>
   );
 }
 
-// ─── Journey Stepper ──────────────────────────────────────────────────────────
-
 function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }) {
   return (
-    <div className="bg-white/3 border border-white/8 rounded-2xl p-4 overflow-x-auto">
-      <div className="flex items-center min-w-max mx-auto w-full justify-between px-2">
+    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl px-4 py-4 overflow-x-auto">
+      <div className="flex items-center min-w-max mx-auto justify-between">
         {JOURNEY_STEPS.map((s, i) => {
           const Icon = s.icon;
           const done = i < step;
@@ -95,29 +85,29 @@ function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }
           const isRejected = rejected && i === 1;
           return (
             <div key={s.key} className="flex items-center">
-              <div className="flex flex-col items-center gap-1.5">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                  isRejected  ? 'bg-rose-500/20 border border-rose-500/40'
-                  : done      ? 'bg-emerald-500/20 border border-emerald-500/40'
-                  : active    ? 'bg-violet-500/20 border border-violet-500/50 shadow-lg shadow-violet-500/20'
-                  : 'bg-white/5 border border-white/10'
+              <div className="flex flex-col items-center gap-1.5 min-w-[60px]">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
+                  isRejected ? 'bg-rose-500/20 border-2 border-rose-500/50 shadow-lg shadow-rose-500/20'
+                  : done     ? 'bg-emerald-500/20 border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20'
+                  : active   ? 'bg-violet-500/20 border-2 border-violet-500/60 shadow-lg shadow-violet-500/30'
+                  : 'bg-white/[0.04] border border-white/[0.08]'
                 }`}>
                   <Icon className={`w-4 h-4 ${
                     isRejected ? 'text-rose-400'
                     : done     ? 'text-emerald-400'
-                    : active   ? 'text-violet-400'
-                    : 'text-slate-500'
+                    : active   ? 'text-violet-300'
+                    : 'text-slate-600'
                   }`} />
                 </div>
-                <span className={`text-[10px] font-bold whitespace-nowrap ${
+                <span className={`text-[10px] font-bold text-center leading-tight ${
                   isRejected ? 'text-rose-400'
                   : done     ? 'text-emerald-400'
                   : active   ? 'text-violet-300'
-                  : 'text-slate-500'
+                  : 'text-slate-600'
                 }`}>{isRejected ? 'Rejected' : s.label}</span>
               </div>
               {i < JOURNEY_STEPS.length - 1 && (
-                <div className={`w-10 sm:w-16 h-px mx-2 mt-[-12px] ${done ? 'bg-emerald-500/50' : 'bg-white/8'}`} />
+                <div className={`w-8 sm:w-14 h-0.5 mx-2 rounded-full mt-[-14px] transition-all ${done ? 'bg-gradient-to-r from-emerald-500/60 to-emerald-500/20' : 'bg-white/[0.06]'}`} />
               )}
             </div>
           );
@@ -127,38 +117,43 @@ function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }
   );
 }
 
-// ─── Weightage Bar ────────────────────────────────────────────────────────────
-
 function WeightageBar({ goals }: { goals: any[] }) {
   const total = goals.reduce((s, g) => s + Number(g.weightage || 0), 0);
   const remaining = 100 - total;
+  const isOk = total === 100;
+  const isOver = total > 100;
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Weightage Allocation</span>
-        <span className={`text-sm font-black ${total === 100 ? 'text-emerald-400' : total > 100 ? 'text-rose-400' : 'text-amber-400'}`}>
-          {total}% / 100%
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-base font-black ${isOk ? 'text-emerald-400' : isOver ? 'text-rose-400' : 'text-amber-400'}`}>
+            {total}%
+          </span>
+          <span className="text-slate-600 text-xs">/ 100%</span>
+          {isOk && <span className="text-emerald-400 text-xs font-bold">✓ Perfect</span>}
+        </div>
       </div>
-      <div className="h-3 bg-white/5 rounded-full overflow-hidden flex gap-px">
+      <div className="h-2.5 bg-white/[0.04] rounded-full overflow-hidden flex gap-px">
         {goals.map((g, i) => (
-          <div key={i} className={`${getGoalColor(i).bar} transition-all duration-300`}
+          <div key={i}
+            className={`${getGoalColor(i).bar} transition-all duration-500 rounded-full`}
             style={{ width: `${Math.min(Number(g.weightage || 0), 100)}%` }}
-            title={`${g.title || `Goal ${i + 1}`}: ${g.weightage}%`} />
+            title={`Goal ${i+1}: ${g.weightage}%`} />
         ))}
-        {remaining > 0 && <div className="bg-white/5 flex-1" />}
+        {remaining > 0 && <div className="bg-white/[0.04] flex-1 rounded-full" />}
       </div>
-      <div className="flex gap-3 mt-2 flex-wrap">
+      <div className="flex gap-4 mt-2.5 flex-wrap">
         {goals.map((g, i) => (
-          <span key={i} className="flex items-center gap-1 text-[10px] text-slate-400">
+          <span key={i} className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <span className={`w-2 h-2 rounded-full ${getGoalColor(i).bar}`} />
-            G{i + 1}: {g.weightage || 0}%
+            G{i + 1} <span className="font-bold text-slate-400">{g.weightage || 0}%</span>
           </span>
         ))}
         {remaining > 0 && (
-          <span className="flex items-center gap-1 text-[10px] text-amber-400">
-            <span className="w-2 h-2 rounded-full bg-white/10" />
-            Unallocated: {remaining}%
+          <span className="flex items-center gap-1.5 text-[11px] text-amber-500/70">
+            <span className="w-2 h-2 rounded-full bg-white/10 border border-white/20" />
+            Remaining <span className="font-bold">{remaining}%</span>
           </span>
         )}
       </div>
@@ -166,7 +161,21 @@ function WeightageBar({ goals }: { goals: any[] }) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+function Toast({ msg }: { msg: { text: string; type: 'success' | 'error' | 'warn' } | null }) {
+  if (!msg) return null;
+  const cfg = {
+    success: { cls: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300', icon: <CheckCircle className="w-4 h-4 shrink-0" /> },
+    error:   { cls: 'bg-rose-500/10 border-rose-500/25 text-rose-300',         icon: <AlertCircle className="w-4 h-4 shrink-0" /> },
+    warn:    { cls: 'bg-amber-500/10 border-amber-500/25 text-amber-300',       icon: <AlertCircle className="w-4 h-4 shrink-0" /> },
+  }[msg.type];
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border font-semibold text-sm ${cfg.cls}`}>
+      {cfg.icon} {msg.text}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function EmployeeView({ employee }: { employee: any }) {
   const [cycles, setCycles] = useState<any[]>([]);
@@ -225,52 +234,43 @@ export function EmployeeView({ employee }: { employee: any }) {
     setSaving(true);
     try {
       const res = await fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goals }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goals }),
       });
       const data = await res.json();
       setGoalCard(data);
       if (submit) {
         await fetch(`${PERF_API}/goal-cards/${data.id}/submit/`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ comment: 'Submitted for manager review.' }),
         });
-        showMsg('Goals submitted for manager review!', 'success');
+        showMsg('Goals submitted for manager review!');
         setGoalCard((p: any) => ({ ...p, status: 'submitted' }));
       } else {
-        showMsg('Draft saved successfully.', 'success');
+        showMsg('Draft saved.');
       }
-    } catch {
-      showMsg('Failed to save. Please try again.', 'error');
-    } finally {
-      setSaving(false);
-    }
+    } catch { showMsg('Failed to save. Please try again.', 'error'); }
+    finally { setSaving(false); }
   };
 
   const submitReview = async () => {
     if (!goalCard) return;
     setSaving(true);
     try {
-      const formData = new FormData();
-      Object.entries(reviewForm).forEach(([k, v]) => formData.append(k, String(v)));
+      const fd = new FormData();
+      Object.entries(reviewForm).forEach(([k, v]) => fd.append(k, String(v)));
       goals.forEach((g, i) => {
-        formData.append(`goal_ratings[${i}][goal_id]`, g.id);
-        formData.append(`goal_ratings[${i}][self_rating]`, g.self_rating);
-        formData.append(`goal_ratings[${i}][self_completion_pct]`, g.self_completion_pct);
-        formData.append(`goal_ratings[${i}][self_comments]`, g.self_comments || '');
-        formData.append(`goal_ratings[${i}][achievement_description]`, g.achievement_description || '');
+        fd.append(`goal_ratings[${i}][goal_id]`, g.id);
+        fd.append(`goal_ratings[${i}][self_rating]`, g.self_rating);
+        fd.append(`goal_ratings[${i}][self_completion_pct]`, g.self_completion_pct);
+        fd.append(`goal_ratings[${i}][self_comments]`, g.self_comments || '');
+        fd.append(`goal_ratings[${i}][achievement_description]`, g.achievement_description || '');
       });
-      if (evidenceFile) formData.append('evidence_file', evidenceFile);
-      const res = await fetch(`${PERF_API}/reviews/${goalCard.id}/`, { method: 'POST', body: formData });
-      if (res.ok) showMsg('Quarterly review submitted successfully!', 'success');
-      else showMsg('Submission failed. Please try again.', 'error');
-    } catch {
-      showMsg('Error submitting review.', 'error');
-    } finally {
-      setSaving(false);
-    }
+      if (evidenceFile) fd.append('evidence_file', evidenceFile);
+      const res = await fetch(`${PERF_API}/reviews/${goalCard.id}/`, { method: 'POST', body: fd });
+      if (res.ok) showMsg('Quarterly review submitted!');
+      else showMsg('Submission failed.', 'error');
+    } catch { showMsg('Error submitting review.', 'error'); }
+    finally { setSaving(false); }
   };
 
   const canEdit = !goalCard || goalCard.status === 'draft' || goalCard.status === 'manager_rejected';
@@ -279,39 +279,46 @@ export function EmployeeView({ employee }: { employee: any }) {
   const isRejected = goalCard?.status === 'manager_rejected';
 
   return (
-    <div className="min-h-screen bg-[#0f0f1a] p-4 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-5">
+    <div className="min-h-screen bg-[#080818] p-4 lg:p-8">
+      <div className="max-w-3xl mx-auto space-y-4">
 
-        {/* ── Profile Header ── */}
-        <div className="bg-gradient-to-br from-violet-600/15 to-purple-900/20 border border-violet-500/20 rounded-3xl p-6">
-          <div className="flex items-start gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-violet-500/30 shrink-0">
-              {employee.name?.[0] || 'E'}
+        {/* ── Profile Card ── */}
+        <div className="relative overflow-hidden rounded-3xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-600/25 via-violet-900/15 to-transparent" />
+          <div className="absolute inset-0 border border-violet-500/20 rounded-3xl" />
+          <div className="relative p-6 flex items-center gap-5">
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <div className="absolute inset-0 bg-violet-500/40 rounded-2xl blur-md scale-110" />
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-700 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-violet-500/30">
+                {employee.name?.[0] || 'E'}
+              </div>
             </div>
+            {/* Info */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-extrabold text-white tracking-tight">{employee.name}</h2>
+              <h2 className="text-xl font-extrabold text-white tracking-tight truncate">{employee.name}</h2>
               <p className="text-violet-300 text-sm font-semibold mt-0.5">{employee.designation}</p>
-              <div className="flex items-center gap-3 mt-2 flex-wrap">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {employee.department && (
-                  <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/8">
+                  <span className="text-[11px] text-slate-400 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/[0.08]">
                     {employee.department}
                   </span>
                 )}
                 {employee.zone && (
-                  <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/8">
+                  <span className="text-[11px] text-slate-400 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/[0.08]">
                     📍 {employee.zone}
                   </span>
                 )}
                 {employee.employee_id && (
-                  <span className="text-xs text-slate-500">ID: {employee.employee_id}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">#{employee.employee_id}</span>
                 )}
                 {employee.reporting_manager_id && (
-                  <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/8">
+                  <span className="text-[11px] text-slate-400 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/[0.08]">
                     Reports to: {employee.manager_name || employee.reporting_manager_id}
                   </span>
                 )}
                 {employee.joined_date && (
-                  <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/8">
+                  <span className="text-[11px] text-slate-400 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/[0.08]">
                     Joined: {new Date(employee.joined_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' })}
                   </span>
                 )}
@@ -321,53 +328,50 @@ export function EmployeeView({ employee }: { employee: any }) {
           </div>
         </div>
 
-        {/* ── Journey Stepper ── */}
+        {/* ── Journey ── */}
         {goalCard && <JourneyStepper step={journeyStep} rejected={isRejected} />}
 
-        {/* ── Manager Rejection Feedback ── */}
+        {/* ── Alerts ── */}
         {isRejected && goalCard?.manager_remarks && (
-          <div className="bg-rose-500/8 border border-rose-500/25 rounded-2xl p-5 flex gap-4">
+          <div className="bg-rose-500/[0.07] border border-rose-500/20 rounded-2xl p-4 flex gap-3">
             <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
             <div>
-              <p className="text-rose-300 font-bold text-sm mb-1">Manager requested changes</p>
-              <p className="text-slate-300 text-sm">{goalCard.manager_remarks}</p>
+              <p className="text-rose-300 font-bold text-sm">Manager requested changes</p>
+              <p className="text-slate-300 text-sm mt-1">{goalCard.manager_remarks}</p>
             </div>
           </div>
         )}
-
-        {/* ── Manager Approval Message ── */}
         {goalCard?.status === 'manager_approved' && (
-          <div className="bg-emerald-500/8 border border-emerald-500/25 rounded-2xl p-4 flex gap-3 items-center">
+          <div className="bg-emerald-500/[0.07] border border-emerald-500/20 rounded-2xl p-4 flex gap-3 items-center">
             <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
             <div className="flex-1">
-              <p className="text-emerald-300 font-bold text-sm">Goals approved by your manager!</p>
+              <p className="text-emerald-300 font-bold text-sm">Goals approved — you can now do your self-review</p>
               {goalCard.manager_remarks && <p className="text-slate-400 text-xs mt-0.5">{goalCard.manager_remarks}</p>}
             </div>
-            <ChevronRight className="w-4 h-4 text-emerald-500" />
+            <ChevronRight className="w-4 h-4 text-emerald-600" />
           </div>
         )}
 
-        {/* ── Cycle Selector ── */}
-        <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">Select Quarter</p>
+        {/* ── Cycle selector ── */}
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4">
+          <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest mb-3">Select Quarter</p>
           {cycles.length === 0 ? (
-            <div className="flex items-center gap-3 text-slate-500">
-              <Clock className="w-4 h-4" />
-              <p className="text-sm">No active cycles. Please contact HR.</p>
+            <div className="flex items-center gap-2 text-slate-600 text-sm">
+              <Clock className="w-4 h-4" /> No active cycles. Contact HR.
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
               {cycles.map(c => (
                 <button key={c.id} onClick={() => setSelectedCycle(c)}
-                  className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all border ${
+                  className={`px-4 py-2 rounded-xl font-bold text-sm transition-all border ${
                     selectedCycle?.id === c.id
-                      ? 'bg-violet-500/20 border-violet-500/50 text-violet-300 shadow-lg shadow-violet-500/10'
-                      : 'bg-white/3 border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200'
+                      ? 'bg-violet-600/30 border-violet-500/50 text-violet-200 shadow-lg shadow-violet-500/10'
+                      : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:border-white/20 hover:text-slate-200'
                   }`}>
                   {c.name}
-                  <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-md ${
-                    selectedCycle?.id === c.id ? 'bg-violet-500/30 text-violet-200' : 'bg-white/5 text-slate-500'
-                  }`}>{c.status}</span>
+                  <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                    selectedCycle?.id === c.id ? 'bg-violet-500/30 text-violet-200' : 'bg-white/5 text-slate-600'
+                  }`}>{c.status.replace(/_/g,' ')}</span>
                 </button>
               ))}
             </div>
@@ -377,16 +381,16 @@ export function EmployeeView({ employee }: { employee: any }) {
         {selectedCycle && (
           <>
             {/* ── Tabs ── */}
-            <div className="flex gap-1 bg-white/3 p-1 rounded-2xl border border-white/8">
+            <div className="flex gap-1 bg-white/[0.03] p-1 rounded-2xl border border-white/[0.06]">
               {([
-                { id: 'goals', label: 'Set Goals', icon: Target },
+                { id: 'goals', label: 'KRA / Goal Setting', icon: Target },
                 { id: 'review', label: 'Self Review', icon: FileText },
               ] as const).map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
                     tab === t.id
-                      ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-lg shadow-violet-500/20'
+                      : 'text-slate-500 hover:text-slate-300'
                   }`}>
                   <t.icon className="w-4 h-4" />
                   {t.label}
@@ -394,116 +398,114 @@ export function EmployeeView({ employee }: { employee: any }) {
               ))}
             </div>
 
-            {/* ─────────────── GOALS TAB ─────────────── */}
+            {/* ═══════════════ GOALS TAB ═══════════════ */}
             {tab === 'goals' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-white font-bold text-lg">Your Goals — {selectedCycle.name}</h3>
-                    <p className="text-slate-400 text-xs mt-0.5">Define up to 5 goals that add up to 100% weightage</p>
+                    <h3 className="text-white font-bold text-lg">{selectedCycle.name} — KRA Goals</h3>
+                    <p className="text-slate-500 text-xs mt-0.5">Up to 5 goals · total weightage must equal 100%</p>
                   </div>
                   {canEdit && (
                     <button onClick={addGoal} disabled={goals.length >= 5}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-violet-500/20">
+                      className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-violet-500/20 active:scale-95">
                       <Plus className="w-4 h-4" /> Add Goal
                     </button>
                   )}
                 </div>
 
-                {/* Weightage bar */}
                 {goals.length > 0 && (
-                  <div className="bg-white/3 border border-white/8 rounded-2xl p-4">
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4">
                     <WeightageBar goals={goals} />
                   </div>
                 )}
 
-                {/* Goal cards */}
                 {goals.map((g, i) => {
                   const col = getGoalColor(i);
                   return (
                     <div key={g._id || g.id || i}
-                      className={`bg-white/3 border border-white/8 rounded-2xl overflow-hidden border-l-4 ${col.border} transition-all hover:border-l-[5px]`}>
+                      className={`relative bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden border-l-[3px] ${col.border} transition-all hover:bg-white/[0.05]`}>
                       <div className="p-5 space-y-4">
-                        {/* Goal header */}
+                        {/* Header row */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${col.bg} ${col.text} border-current/20`}>
+                          <div className="flex items-center gap-2.5">
+                            <span className={`text-xs font-black px-2.5 py-1 rounded-lg ${col.bg} ${col.text}`}>
                               Goal {i + 1}
                             </span>
                             {g.category && (
-                              <span className={`text-xs font-semibold ${col.text}`}>{g.category}</span>
+                              <span className={`text-xs font-semibold ${col.text} opacity-80`}>{g.category}</span>
                             )}
                           </div>
                           {canEdit && (
                             <button onClick={() => removeGoal(i)}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-700 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           )}
                         </div>
 
-                        {/* Category + Weightage row */}
+                        {/* Category + Weightage */}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-slate-400 text-xs font-bold block mb-1.5">Category</label>
+                            <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">Category</label>
                             <input disabled={!canEdit} value={g.category}
                               onChange={e => updateGoal(i, 'category', e.target.value)}
-                              placeholder="e.g. Sales, Distribution, Collections..."
-                              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-600 disabled:opacity-60 transition" />
+                              placeholder="e.g. Sales, Collections…"
+                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
                           </div>
                           <div>
-                            <label className="text-slate-400 text-xs font-bold block mb-1.5">
-                              Weightage
-                              <span className={`ml-2 font-black ${Number(g.weightage) > 0 ? col.text : 'text-slate-500'}`}>
-                                {g.weightage || 0}%
-                              </span>
-                            </label>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Weightage</label>
+                              <span className={`text-base font-black ${col.text}`}>{g.weightage || 0}%</span>
+                            </div>
                             <input disabled={!canEdit} type="range" min={5} max={100} step={5}
                               value={g.weightage || 0}
                               onChange={e => updateGoal(i, 'weightage', Number(e.target.value))}
-                              className="w-full accent-violet-500 disabled:opacity-60 cursor-pointer" />
+                              className="w-full accent-violet-500 disabled:opacity-50 cursor-pointer mt-1" />
                           </div>
                         </div>
 
                         {/* KRA Title */}
                         <div>
-                          <label className="text-slate-400 text-xs font-bold block mb-1.5">KRA — Key Result Area <span className="text-rose-400">*</span></label>
+                          <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">
+                            KRA — Key Result Area <span className="text-rose-500">*</span>
+                          </label>
                           <input disabled={!canEdit} value={g.title}
                             onChange={e => updateGoal(i, 'title', e.target.value)}
-                            placeholder="e.g. Achieve ₹50L revenue in Q1"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-600 disabled:opacity-60 transition" />
+                            placeholder="e.g. Achieve ₹50L revenue in Q1…"
+                            className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
                         </div>
 
                         {/* KPI + Target */}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-slate-400 text-xs font-bold block mb-1.5">KPI / Metric</label>
+                            <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">KPI / Metric</label>
                             <input disabled={!canEdit} value={g.kpi_metric}
                               onChange={e => updateGoal(i, 'kpi_metric', e.target.value)}
                               placeholder="e.g. ₹50L revenue"
-                              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-600 disabled:opacity-60 transition" />
+                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
                           </div>
                           <div>
-                            <label className="text-slate-400 text-xs font-bold block mb-1.5">Target / Success Criteria</label>
+                            <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">Target</label>
                             <input disabled={!canEdit} value={g.target_value}
                               onChange={e => updateGoal(i, 'target_value', e.target.value)}
                               placeholder="e.g. 100% target achieved"
-                              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-600 disabled:opacity-60 transition" />
+                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
                           </div>
                         </div>
 
-                        {/* Ratings row (read-only, if manager has rated) */}
+                        {/* Ratings (read-only) */}
                         {(g.manager_rating || g.final_score) && (
-                          <div className="flex items-center gap-4 pt-2 border-t border-white/5 flex-wrap">
+                          <div className="flex items-center gap-4 pt-3 border-t border-white/[0.05] flex-wrap">
                             {g.manager_rating && (
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-500">Manager:</span>
+                                <span className="text-[11px] text-slate-500 font-semibold">Manager:</span>
                                 <StarRating value={g.manager_rating} size="sm" />
                               </div>
                             )}
                             {g.final_score && (
-                              <span className="ml-auto text-amber-400 font-black text-sm">
-                                Score: {Number(g.final_score).toFixed(2)} / 5
+                              <span className={`ml-auto text-sm font-black ${col.text}`}>
+                                Score: {Number(g.final_score).toFixed(2)}/5
                               </span>
                             )}
                           </div>
@@ -516,196 +518,171 @@ export function EmployeeView({ employee }: { employee: any }) {
                 {/* Empty state */}
                 {goals.length === 0 && canEdit && (
                   <button onClick={addGoal}
-                    className="w-full border-2 border-dashed border-white/10 rounded-2xl p-12 text-center hover:border-violet-500/30 hover:bg-violet-500/3 transition-all group">
-                    <div className="w-14 h-14 rounded-2xl bg-white/5 group-hover:bg-violet-500/15 flex items-center justify-center mx-auto mb-4 transition-all">
-                      <Plus className="w-7 h-7 text-slate-500 group-hover:text-violet-400 transition-colors" />
+                    className="w-full border-2 border-dashed border-white/[0.08] rounded-2xl p-12 text-center hover:border-violet-500/30 hover:bg-violet-500/[0.03] transition-all group">
+                    <div className="w-14 h-14 rounded-2xl bg-white/[0.04] group-hover:bg-violet-500/15 flex items-center justify-center mx-auto mb-4 transition-all">
+                      <Plus className="w-7 h-7 text-slate-600 group-hover:text-violet-400 transition-colors" />
                     </div>
                     <p className="text-slate-400 font-bold group-hover:text-slate-200 transition-colors">Add your first goal</p>
                     <p className="text-slate-600 text-sm mt-1">Click to get started for {selectedCycle.name}</p>
                   </button>
                 )}
 
-                {/* Submitted read-only state */}
                 {goals.length === 0 && !canEdit && (
-                  <div className="text-center py-12 text-slate-500">
-                    <CheckCircle className="w-10 h-10 mx-auto mb-3 text-emerald-500/40" />
-                    <p className="font-bold text-slate-300">Goals submitted</p>
-                    <p className="text-sm mt-1">Awaiting manager review</p>
+                  <div className="text-center py-14 text-slate-600">
+                    <CheckCircle className="w-10 h-10 mx-auto mb-3 text-emerald-600/40" />
+                    <p className="font-bold text-slate-400">Goals submitted — awaiting review</p>
                   </div>
                 )}
 
-                {/* Toast */}
-                {msg && (
-                  <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl border font-semibold text-sm ${
-                    msg.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
-                    : msg.type === 'error'  ? 'bg-rose-500/10 border-rose-500/25 text-rose-300'
-                    : 'bg-amber-500/10 border-amber-500/25 text-amber-300'
-                  }`}>
-                    {msg.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" />
-                      : msg.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" />
-                      : <AlertCircle className="w-4 h-4 shrink-0" />}
-                    {msg.text}
-                  </div>
-                )}
+                <Toast msg={msg} />
 
-                {/* Save / Submit buttons */}
                 {canEdit && goals.length > 0 && (
                   <div className="flex gap-3">
                     <button onClick={() => saveGoals(false)} disabled={saving}
-                      className="flex-1 py-3.5 rounded-2xl border border-white/10 text-slate-300 font-bold text-sm hover:bg-white/5 hover:border-white/20 transition-all disabled:opacity-50">
-                      {saving ? 'Saving...' : '💾 Save Draft'}
+                      className="flex-1 py-3.5 rounded-2xl border border-white/[0.1] text-slate-300 font-bold text-sm hover:bg-white/[0.04] hover:border-white/20 transition-all disabled:opacity-50">
+                      {saving ? 'Saving…' : '💾 Save Draft'}
                     </button>
                     <button onClick={() => saveGoals(true)} disabled={saving}
-                      className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20">
+                      className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]">
                       <Send className="w-4 h-4" />
-                      {saving ? 'Submitting...' : 'Submit to Manager'}
+                      {saving ? 'Submitting…' : 'Submit to Manager'}
                     </button>
                   </div>
                 )}
               </div>
             )}
 
-            {/* ─────────────── SELF REVIEW TAB ─────────────── */}
+            {/* ═══════════════ SELF REVIEW TAB ═══════════════ */}
             {tab === 'review' && (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {!canReview ? (
-                  <div className="bg-white/3 border border-white/8 rounded-2xl p-12 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                      <Clock className="w-7 h-7 text-slate-500" />
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-14 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
+                      <Clock className="w-8 h-8 text-slate-600" />
                     </div>
                     <p className="text-white font-bold mb-1">Self-review not available yet</p>
-                    <p className="text-slate-400 text-sm">Opens after your manager approves your goals.</p>
-                    {goalCard && <div className="mt-4 flex justify-center"><StatusBadge status={goalCard.status} /></div>}
+                    <p className="text-slate-500 text-sm">Opens after your manager approves your goals.</p>
+                    {goalCard && <div className="mt-5 flex justify-center"><StatusBadge status={goalCard.status} /></div>}
                   </div>
                 ) : (
                   <>
                     <div className="flex items-center justify-between">
                       <h3 className="text-white font-bold text-lg">Quarter-End Self Assessment</h3>
-                      <span className="text-xs text-slate-400 bg-white/5 px-3 py-1.5 rounded-xl border border-white/8">{selectedCycle.name}</span>
+                      <span className="text-[11px] text-slate-500 bg-white/[0.04] px-3 py-1.5 rounded-xl border border-white/[0.07]">{selectedCycle.name}</span>
                     </div>
 
                     {/* Per-goal self rating */}
                     {goals.map((g, i) => {
                       const col = getGoalColor(i);
                       return (
-                        <div key={i} className={`bg-white/3 border border-white/8 rounded-2xl overflow-hidden border-l-4 ${col.border}`}>
+                        <div key={i} className={`bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden border-l-[3px] ${col.border}`}>
                           <div className="p-5 space-y-4">
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 {g.category && <span className={`text-[10px] font-black uppercase tracking-wider ${col.text}`}>{g.category}</span>}
                                 <p className="text-white font-bold text-sm mt-0.5">{g.title || `Goal ${i + 1}`}</p>
-                                {g.kpi_metric && <p className="text-slate-500 text-xs mt-0.5">KPI: {g.kpi_metric}</p>}
+                                {g.kpi_metric && <p className="text-slate-500 text-xs mt-0.5">KPI: {g.kpi_metric} · Target: {g.target_value}</p>}
                               </div>
-                              <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-black border ${col.bg} ${col.text}`}>
+                              <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-black ${col.bg} ${col.text}`}>
                                 {g.weightage}%
                               </span>
                             </div>
 
-                            {/* Completion slider */}
+                            {/* Completion */}
                             <div>
                               <div className="flex items-center justify-between mb-2">
-                                <label className="text-slate-400 text-xs font-bold">Completion</label>
+                                <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Completion</label>
                                 <span className={`text-lg font-black ${
                                   (g.self_completion_pct || 0) >= 80 ? 'text-emerald-400'
-                                  : (g.self_completion_pct || 0) >= 50 ? 'text-violet-400'
-                                  : 'text-amber-400'
+                                  : (g.self_completion_pct || 0) >= 50 ? 'text-violet-400' : 'text-amber-400'
                                 }`}>{g.self_completion_pct || 0}%</span>
                               </div>
                               <input type="range" min={0} max={100} step={5}
                                 value={g.self_completion_pct || 0}
                                 onChange={e => updateGoal(i, 'self_completion_pct', Number(e.target.value))}
                                 className="w-full accent-violet-500" />
-                              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mt-1.5">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-300 ${
-                                    (g.self_completion_pct || 0) >= 80 ? 'bg-emerald-400'
-                                    : (g.self_completion_pct || 0) >= 50 ? 'bg-violet-400'
-                                    : 'bg-amber-400'
-                                  }`}
-                                  style={{ width: `${g.self_completion_pct || 0}%` }}
-                                />
+                              <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden mt-1.5">
+                                <div className={`h-full rounded-full transition-all duration-500 ${
+                                  (g.self_completion_pct || 0) >= 80 ? 'bg-emerald-500'
+                                  : (g.self_completion_pct || 0) >= 50 ? 'bg-violet-500' : 'bg-amber-500'
+                                }`} style={{ width: `${g.self_completion_pct || 0}%` }} />
                               </div>
                             </div>
 
-                            {/* Self rating */}
                             <div className="flex items-center justify-between">
-                              <label className="text-slate-400 text-xs font-bold">Self Rating</label>
+                              <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Self Rating</label>
                               <StarRating value={g.self_rating || 0} onChange={v => updateGoal(i, 'self_rating', v)} />
                             </div>
 
-                            {/* Achievement */}
                             <textarea value={g.achievement_description || ''}
                               onChange={e => updateGoal(i, 'achievement_description', e.target.value)}
-                              placeholder="What did you achieve on this goal?"
-                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-600 resize-none transition"
+                              placeholder="What did you achieve on this goal? Be specific."
+                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 resize-none transition-all"
                               rows={2} />
                           </div>
                         </div>
                       );
                     })}
 
-                    {/* Section D – Employee Self Remarks */}
-                    {[
-                      { field: 'key_achievements',  label: 'Key Achievements',   icon: '🏆', ph: 'List your top wins this quarter...' },
-                      { field: 'challenges_faced',  label: 'Challenges Faced',   icon: '⚡', ph: 'What obstacles did you face?' },
-                      { field: 'support_required',  label: 'Support Required',   icon: '🤝', ph: 'What support do you need from the organisation?' },
-                      { field: 'training_needs',    label: 'Training Needs',     icon: '📚', ph: 'What skills or training would help you grow?' },
-                      { field: 'career_aspirations',label: 'Career Aspirations', icon: '🚀', ph: 'Where do you see yourself in the next 1-2 years?' },
-                      { field: 'employee_summary',  label: 'Overall Summary',    icon: '📋', ph: 'Summarise your overall quarter performance...' },
-                      { field: 'next_quarter_plans',label: 'Next Quarter Plans',  icon: '🎯', ph: 'What are your plans for next quarter?' },
-                    ].map(({ field, label, icon, ph }) => (
-                      <div key={field} className="bg-white/3 border border-white/8 rounded-2xl p-5">
-                        <label className="flex items-center gap-2 text-slate-300 text-sm font-bold mb-3">
-                          <span>{icon}</span> {label}
-                        </label>
-                        <textarea value={(reviewForm as any)[field]}
-                          onChange={e => setReviewForm(p => ({ ...p, [field]: e.target.value }))}
-                          placeholder={ph} rows={3}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-600 resize-none transition" />
+                    {/* Section D – Self remarks */}
+                    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
+                      <div className="px-5 py-3.5 border-b border-white/[0.05] flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-violet-400" />
+                        <p className="text-slate-300 text-sm font-bold">Section D — Employee Self Remarks</p>
                       </div>
-                    ))}
+                      <div className="p-5 space-y-4">
+                        {[
+                          { field: 'key_achievements',   label: 'Key Achievements',   ph: 'List your top wins this quarter…' },
+                          { field: 'challenges_faced',   label: 'Challenges Faced',   ph: 'What obstacles did you face?' },
+                          { field: 'support_required',   label: 'Support Required',   ph: 'What support do you need from the organisation?' },
+                          { field: 'training_needs',     label: 'Training Needs',     ph: 'What skills or training would help you grow?' },
+                          { field: 'career_aspirations', label: 'Career Aspirations', ph: 'Where do you see yourself in 1-2 years?' },
+                          { field: 'employee_summary',   label: 'Overall Summary',    ph: 'Summarise your overall quarter performance…' },
+                          { field: 'next_quarter_plans', label: 'Next Quarter Plans',  ph: 'What are your plans for next quarter?' },
+                        ].map(({ field, label, ph }) => (
+                          <div key={field}>
+                            <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">{label}</label>
+                            <textarea value={(reviewForm as any)[field]}
+                              onChange={e => setReviewForm(p => ({ ...p, [field]: e.target.value }))}
+                              placeholder={ph} rows={2}
+                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 resize-none transition-all" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
                     {/* Overall rating + evidence */}
-                    <div className="bg-white/3 border border-white/8 rounded-2xl p-5 space-y-5">
+                    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 space-y-5">
                       <div className="flex items-center justify-between">
                         <div>
-                          <label className="text-slate-300 text-sm font-bold block mb-1">⭐ Overall Self Rating</label>
-                          <p className="text-slate-500 text-xs">How would you rate your overall quarter?</p>
+                          <p className="text-slate-300 text-sm font-bold">Overall Self Rating</p>
+                          <p className="text-slate-600 text-xs mt-0.5">How would you rate your overall quarter?</p>
                         </div>
-                        <StarRating value={reviewForm.overall_self_rating}
+                        <StarRating value={reviewForm.overall_self_rating} size="lg"
                           onChange={v => setReviewForm(p => ({ ...p, overall_self_rating: v }))} />
                       </div>
-                      <div className="border-t border-white/5 pt-4">
-                        <label className="text-slate-300 text-sm font-bold block mb-2">📎 Evidence File <span className="text-slate-500 font-normal">(optional)</span></label>
-                        <p className="text-slate-500 text-xs mb-3">Upload your base sheet, report, or supporting document</p>
-                        <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-white/10 hover:border-violet-500/30 rounded-xl cursor-pointer transition-all group">
+                      <div className="border-t border-white/[0.05] pt-4">
+                        <p className="text-slate-300 text-sm font-bold mb-1">Evidence File <span className="text-slate-600 font-normal text-xs">(optional)</span></p>
+                        <p className="text-slate-600 text-xs mb-3">Upload base sheet, report, or supporting document</p>
+                        <label className="flex items-center gap-3 px-4 py-3 bg-white/[0.04] border border-white/[0.08] hover:border-violet-500/30 rounded-xl cursor-pointer transition-all group">
                           <div className="w-9 h-9 rounded-xl bg-violet-500/15 group-hover:bg-violet-500/25 flex items-center justify-center transition-all">
                             <FileText className="w-4 h-4 text-violet-400" />
                           </div>
                           <div className="flex-1">
                             <p className="text-slate-300 text-sm font-semibold">{evidenceFile ? evidenceFile.name : 'Choose file to upload'}</p>
-                            <p className="text-slate-500 text-xs mt-0.5">{evidenceFile ? `${(evidenceFile.size / 1024).toFixed(1)} KB` : 'Excel, PDF, or any document'}</p>
+                            <p className="text-slate-600 text-xs mt-0.5">{evidenceFile ? `${(evidenceFile.size / 1024).toFixed(1)} KB` : 'Excel, PDF, or any document'}</p>
                           </div>
                           <input type="file" className="hidden" onChange={e => setEvidenceFile(e.target.files?.[0] || null)} />
                         </label>
                       </div>
                     </div>
 
-                    {msg && (
-                      <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl border font-semibold text-sm ${
-                        msg.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
-                        : msg.type === 'error'  ? 'bg-rose-500/10 border-rose-500/25 text-rose-300'
-                        : 'bg-amber-500/10 border-amber-500/25 text-amber-300'
-                      }`}>
-                        {msg.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-                        {msg.text}
-                      </div>
-                    )}
+                    <Toast msg={msg} />
 
                     <button onClick={submitReview} disabled={saving}
-                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20">
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-bold transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]">
                       <CheckCircle className="w-5 h-5" />
-                      {saving ? 'Submitting...' : 'Submit Quarterly Review'}
+                      {saving ? 'Submitting…' : 'Submit Quarterly Review'}
                     </button>
                   </>
                 )}
