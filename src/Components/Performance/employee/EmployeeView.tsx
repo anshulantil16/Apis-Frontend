@@ -476,45 +476,54 @@ export function EmployeeView({ employee }: { employee: any }) {
             {/* ═══════════════ GOALS TAB ═══════════════ */}
             {tab === 'goals' && (
               <div className="space-y-4">
-                {/* Locked overlay for goals when cycle phase doesn't allow editing */}
-                {goalsLocked && cycleStatus !== 'review_open' && (
-                  <div className="flex items-center gap-3 bg-amber-500/8 border border-amber-500/20 rounded-2xl px-4 py-3.5">
-                    <Lock className="w-4 h-4 text-amber-400 shrink-0" />
-                    <div>
-                      <p className="text-amber-300 font-bold text-sm">Goal Setting is Locked</p>
-                      <p className="text-amber-400/60 text-xs mt-0.5">{PHASE_INFO[cycleStatus!]?.desc}</p>
+
+                {canEdit ? (
+                  /* ── EDITING MODE (goal_setting phase, draft/rejected status) ── */
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-white font-bold text-lg">{selectedCycle.name} — KRA Goals</h3>
+                        <p className="text-slate-500 text-xs mt-0.5">Up to 5 goals · total weightage must equal 100%</p>
+                      </div>
+                      <button onClick={addGoal} disabled={goals.length >= 5}
+                        className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-violet-500/20 active:scale-95">
+                        <Plus className="w-4 h-4" /> Add Goal
+                      </button>
                     </div>
-                  </div>
-                )}
-                {cycleStatus === 'review_open' && (
-                  <div className="flex items-center gap-3 bg-blue-500/8 border border-blue-500/20 rounded-2xl px-4 py-3.5">
-                    <Lock className="w-4 h-4 text-blue-400 shrink-0" />
+
+                    {goals.length > 0 && (
+                      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4">
+                        <WeightageBar goals={goals} />
+                      </div>
+                    )}
+
+                    {goals.length === 0 && (
+                      <button onClick={addGoal}
+                        className="w-full border-2 border-dashed border-white/[0.08] rounded-2xl p-12 text-center hover:border-violet-500/30 hover:bg-violet-500/[0.03] transition-all group">
+                        <div className="w-14 h-14 rounded-2xl bg-white/[0.04] group-hover:bg-violet-500/15 flex items-center justify-center mx-auto mb-4 transition-all">
+                          <Plus className="w-7 h-7 text-slate-600 group-hover:text-violet-400 transition-colors" />
+                        </div>
+                        <p className="text-slate-400 font-bold group-hover:text-slate-200 transition-colors">Add your first goal</p>
+                        <p className="text-slate-600 text-sm mt-1">Click to get started for {selectedCycle.name}</p>
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  /* ── READ-ONLY / LOCKED MODE ── */
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-blue-300 font-bold text-sm">Goals Locked — Review Phase is Open</p>
-                      <p className="text-blue-400/60 text-xs mt-0.5">Switch to the Self Review tab to submit your quarterly assessment.</p>
+                      <h3 className="text-white font-bold text-lg">{selectedCycle.name} — KRA Goals</h3>
+                      <p className="text-slate-500 text-xs mt-0.5">
+                        {goalCard
+                          ? `${goals.length} goal${goals.length !== 1 ? 's' : ''} · read-only`
+                          : 'No goals on record'}
+                      </p>
                     </div>
+                    {goalCard && <StatusBadge status={goalCard.status} />}
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-white font-bold text-lg">{selectedCycle.name} — KRA Goals</h3>
-                    <p className="text-slate-500 text-xs mt-0.5">Up to 5 goals · total weightage must equal 100%</p>
-                  </div>
-                  {canEdit && (
-                    <button onClick={addGoal} disabled={goals.length >= 5}
-                      className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-violet-500/20 active:scale-95">
-                      <Plus className="w-4 h-4" /> Add Goal
-                    </button>
-                  )}
-                </div>
-
-                {goals.length > 0 && (
-                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4">
-                    <WeightageBar goals={goals} />
-                  </div>
-                )}
-
+                {/* Goals list — shown in both edit and read-only mode when goals exist */}
                 {goals.map((g, i) => {
                   const col = getGoalColor(i);
                   return (
@@ -563,7 +572,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                         {/* KRA Title */}
                         <div>
                           <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">
-                            KRA — Key Result Area <span className="text-rose-500">*</span>
+                            KRA — Key Result Area {canEdit && <span className="text-rose-500">*</span>}
                           </label>
                           <input disabled={!canEdit} value={g.title}
                             onChange={e => updateGoal(i, 'title', e.target.value)}
@@ -610,22 +619,19 @@ export function EmployeeView({ employee }: { employee: any }) {
                   );
                 })}
 
-                {/* Empty state */}
-                {goals.length === 0 && canEdit && (
-                  <button onClick={addGoal}
-                    className="w-full border-2 border-dashed border-white/[0.08] rounded-2xl p-12 text-center hover:border-violet-500/30 hover:bg-violet-500/[0.03] transition-all group">
-                    <div className="w-14 h-14 rounded-2xl bg-white/[0.04] group-hover:bg-violet-500/15 flex items-center justify-center mx-auto mb-4 transition-all">
-                      <Plus className="w-7 h-7 text-slate-600 group-hover:text-violet-400 transition-colors" />
-                    </div>
-                    <p className="text-slate-400 font-bold group-hover:text-slate-200 transition-colors">Add your first goal</p>
-                    <p className="text-slate-600 text-sm mt-1">Click to get started for {selectedCycle.name}</p>
-                  </button>
+                {/* No goals set and phase is locked — can't do anything */}
+                {goals.length === 0 && !canEdit && goalCard && (
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-10 text-center">
+                    <CheckCircle className="w-10 h-10 mx-auto mb-3 text-emerald-500/40" />
+                    <p className="font-bold text-slate-400">Goals submitted</p>
+                    <p className="text-slate-600 text-sm mt-1">Your goals are under review.</p>
+                  </div>
                 )}
 
-                {goals.length === 0 && !canEdit && (
-                  <div className="text-center py-14 text-slate-600">
-                    <CheckCircle className="w-10 h-10 mx-auto mb-3 text-emerald-600/40" />
-                    <p className="font-bold text-slate-400">Goals submitted — awaiting review</p>
+                {goals.length === 0 && !canEdit && !goalCard && (
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-10 text-center">
+                    <AlertCircle className="w-10 h-10 mx-auto mb-3 text-slate-700" />
+                    <p className="font-bold text-slate-500">No goals were set for this cycle.</p>
                   </div>
                 )}
 
