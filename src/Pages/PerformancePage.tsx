@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, TrendingUp, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
+import { ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
 import { EmployeeView } from '../Components/Performance/employee/EmployeeView';
 import { ManagerView } from '../Components/Performance/manager/ManagerView';
 import { HRView } from '../Components/Performance/hr/HRView';
@@ -24,7 +24,7 @@ function PerformanceHub({
   const [section, setSection] = useState<HubSection>('goals');
 
   const roleConfig = {
-    hr:       { label: 'HR Admin',  badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30',   dot: 'bg-rose-400',    glow: 'shadow-rose-500/20' },
+    hr:       { label: 'Admin',  badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30',   dot: 'bg-rose-400',    glow: 'shadow-rose-500/20' },
     manager:  { label: 'Manager',   badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', dot: 'bg-amber-400',   glow: 'shadow-amber-500/20' },
     employee: { label: 'Employee',  badge: 'bg-violet-500/20 text-violet-300 border-violet-500/30', dot: 'bg-violet-400', glow: 'shadow-violet-500/20' },
   }[role];
@@ -50,8 +50,8 @@ function PerformanceHub({
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-lg ${roleConfig.glow} shrink-0`}>
-                <TrendingUp className="w-4 h-4 text-white" />
+              <div className="w-9 h-9 flex items-center justify-center shrink-0">
+                <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-lg" />
               </div>
               <div className="min-w-0">
                 <p className="text-white font-bold text-sm leading-none truncate">APIS Performance Hub</p>
@@ -142,7 +142,7 @@ const ROLE_CONFIG = [
   },
   {
     id: 'hr' as Role,
-    label: 'HR Admin',
+    label: 'Admin',
     sub: 'Full access & analytics',
     icon: BarChart3,
     active: 'from-rose-600/30 to-rose-800/20 border-rose-500/50 text-rose-200',
@@ -198,7 +198,7 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
       if (role === 'manager' && data.user_type !== 'manager')
         throw new Error(`${data.name} is not registered as a Manager.`);
       if (role === 'hr' && data.user_type !== 'hr')
-        throw new Error(`${data.name} is not registered as an HR Admin.`);
+        throw new Error(`${data.name} is not registered as an Admin.`);
       setEmployee(data);
     } catch (e: any) {
       setError(e.message);
@@ -236,10 +236,10 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
       <div className="w-full max-w-lg relative z-10">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="relative inline-block mb-6">
-            <div className="absolute inset-0 bg-violet-500/30 rounded-2xl blur-xl scale-150" />
-            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-700 flex items-center justify-center shadow-2xl shadow-violet-500/40">
-              <TrendingUp className="w-8 h-8 text-white" />
+          <div className="relative inline-block mb-2">
+            <div className="absolute inset-0 bg-yellow-500/20 rounded-2xl blur-2xl scale-150" />
+            <div className="relative w-24 h-24 flex items-center justify-center">
+              <img src="/logo.png" alt="APIS India" className="w-full h-full object-contain drop-shadow-2xl" />
             </div>
           </div>
           <h1 className="text-4xl font-black tracking-tight">
@@ -327,11 +327,11 @@ export function PerformancePage({ onNavigateBack }: PerformancePageProps) {
                   <button
                     onClick={() => {
                       setRole('hr');
-                      setEmployee({ name: 'HR Admin', designation: 'Administrator', employee_id: 'ADMIN', zone: '', reporting_manager_id: '' });
+                      setEmployee({ name: 'Admin', designation: 'Administrator', employee_id: 'ADMIN', zone: '', reporting_manager_id: '' });
                     }}
                     className="w-full py-3 rounded-2xl border border-rose-500/20 bg-rose-500/[0.06] hover:bg-rose-500/[0.12] text-rose-400 font-semibold text-xs transition-all flex items-center justify-center gap-2"
                   >
-                    🏢 First-time setup — Enter as HR Admin
+                    🏢 First-time setup — Enter as Admin
                   </button>
                   <p className="text-slate-700 text-[10px] text-center mt-2">Use this once to import your employee master sheet</p>
                 </div>

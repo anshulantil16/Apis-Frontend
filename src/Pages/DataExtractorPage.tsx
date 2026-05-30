@@ -110,8 +110,8 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
       <aside className="w-60 bg-[#0a0d14] flex flex-col flex-shrink-0">
         {/* Brand */}
         <div className="px-5 py-4 flex items-center gap-3 border-b border-white/[0.06]">
-          <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-1.5 rounded-lg shadow-lg shadow-amber-500/20 flex-shrink-0">
-            <Building2 className="w-4 h-4 text-white" />
+          <div className="w-7 h-7 flex items-center justify-center flex-shrink-0">
+            <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-lg" />
           </div>
           <div>
             <p className="text-white font-black text-sm tracking-tight leading-none">APIS INDIA</p>

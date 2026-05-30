@@ -204,7 +204,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-400 uppercase tracking-widest">HR Admin</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-400 uppercase tracking-widest">Admin</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-400 uppercase tracking-widest">Full Access</span>
                   </div>
                   <h2 className="text-xl font-extrabold text-white">{hrUser.name}</h2>

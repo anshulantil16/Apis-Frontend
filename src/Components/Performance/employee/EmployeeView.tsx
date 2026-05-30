@@ -7,6 +7,13 @@ import { PERF_API } from '../../../Pages/PerformancePage';
 
 // ─── Color palette ─────────────────────────────────────────────────────────────
 
+const CATEGORIES = [
+  'Financial',
+  'Customer Enhancement',
+  'Internal Business Process',
+  'People Development',
+];
+
 const GOAL_COLORS = [
   { border: 'border-l-violet-500', bg: 'bg-violet-500/10',   text: 'text-violet-300',   bar: 'bg-violet-500',   glow: 'shadow-violet-500/20' },
   { border: 'border-l-amber-500',  bg: 'bg-amber-500/10',    text: 'text-amber-300',    bar: 'bg-amber-500',    glow: 'shadow-amber-500/20' },
@@ -118,7 +125,8 @@ function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }
 }
 
 function WeightageBar({ goals }: { goals: any[] }) {
-  const total = goals.reduce((s, g) => s + Number(g.weightage || 0), 0);
+  const goalWeights = goals.map(g => (g.kpis || []).reduce((s: number, k: any) => s + Number(k.weightage || 0), 0));
+  const total = goalWeights.reduce((s, w) => s + w, 0);
   const remaining = 100 - total;
   const isOk = total === 100;
   const isOver = total > 100;
@@ -135,11 +143,11 @@ function WeightageBar({ goals }: { goals: any[] }) {
         </div>
       </div>
       <div className="h-2.5 bg-white/[0.04] rounded-full overflow-hidden flex gap-px">
-        {goals.map((g, i) => (
+        {goalWeights.map((w, i) => (
           <div key={i}
             className={`${getGoalColor(i).bar} transition-all duration-500 rounded-full`}
-            style={{ width: `${Math.min(Number(g.weightage || 0), 100)}%` }}
-            title={`Goal ${i+1}: ${g.weightage}%`} />
+            style={{ width: `${Math.min(w, 100)}%` }}
+            title={`Goal ${i+1}: ${w}%`} />
         ))}
         {remaining > 0 && <div className="bg-white/[0.04] flex-1 rounded-full" />}
       </div>
@@ -147,13 +155,18 @@ function WeightageBar({ goals }: { goals: any[] }) {
         {goals.map((g, i) => (
           <span key={i} className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <span className={`w-2 h-2 rounded-full ${getGoalColor(i).bar}`} />
-            G{i + 1} <span className="font-bold text-slate-400">{g.weightage || 0}%</span>
+            G{i + 1} <span className="font-bold text-slate-400">{goalWeights[i]}%</span>
           </span>
         ))}
         {remaining > 0 && (
           <span className="flex items-center gap-1.5 text-[11px] text-amber-500/70">
             <span className="w-2 h-2 rounded-full bg-white/10 border border-white/20" />
             Remaining <span className="font-bold">{remaining}%</span>
+          </span>
+        )}
+        {isOver && (
+          <span className="flex items-center gap-1.5 text-[11px] text-rose-400 font-bold ml-auto">
+            ⚠ Over by {total - 100}%
           </span>
         )}
       </div>
@@ -278,23 +291,40 @@ export function EmployeeView({ employee }: { employee: any }) {
       }).catch(() => {});
   }, [selectedCycle, employee.employee_id]);
 
-  const addGoal = () => setGoals(prev => [...prev, {
-    _id: Date.now(), category: '', title: '', description: '',
-    kpi_metric: '', target_value: '', weightage: 20,
-    self_rating: 0, self_completion_pct: 0, self_comments: '', achievement_description: '',
-  }]);
+  const addGoal = (category: string = CATEGORIES[0]) => {
+    setGoals((prev: any[]) => [...prev, {
+      _id: Date.now(), category, title: '', description: '',
+      kpis: [{ _id: Date.now() + 1, metric: '', target_value: '', weightage: '' }],
+    }]);
+  };
 
   const updateGoal = (idx: number, field: string, val: any) =>
-    setGoals(prev => prev.map((g, i) => i === idx ? { ...g, [field]: val } : g));
+    setGoals((prev: any[]) => prev.map((g, i) => i === idx ? { ...g, [field]: val } : g));
+
+  const addKPI = (goalIdx: number) =>
+    setGoals((prev: any[]) => prev.map((g, i) => i === goalIdx
+      ? { ...g, kpis: [...(g.kpis || []), { _id: Date.now(), metric: '', target_value: '', weightage: '' }] }
+      : g));
+
+  const updateKPI = (goalIdx: number, kpiIdx: number, field: string, val: any) =>
+    setGoals((prev: any[]) => prev.map((g, i) => i === goalIdx
+      ? { ...g, kpis: g.kpis.map((k: any, j: number) => j === kpiIdx ? { ...k, [field]: val } : k) }
+      : g));
+
+  const removeKPI = (goalIdx: number, kpiIdx: number) =>
+    setGoals((prev: any[]) => prev.map((g, i) => i === goalIdx
+      ? { ...g, kpis: g.kpis.filter((_: any, j: number) => j !== kpiIdx) }
+      : g));
 
   const removeGoal = (idx: number) => setGoals(prev => prev.filter((_, i) => i !== idx));
 
-  const totalWeight = goals.reduce((s, g) => s + Number(g.weightage || 0), 0);
+  const totalWeight = goals.reduce((s, g) =>
+    s + (g.kpis || []).reduce((ks: number, k: any) => ks + Number(k.weightage || 0), 0), 0);
 
   const saveGoals = async (submit = false) => {
     if (!selectedCycle) return;
     if (submit && totalWeight !== 100) {
-      showMsg(`Total weightage is ${totalWeight}%. It must equal exactly 100% before submitting.`, 'warn');
+      showMsg(`Total weightage is ${totalWeight}%. It must equal exactly 100% to submit.`, 'warn');
       return;
     }
     setSaving(true);
@@ -322,15 +352,23 @@ export function EmployeeView({ employee }: { employee: any }) {
     if (!goalCard) return;
     setSaving(true);
     try {
+      const kpiRatings: any[] = [];
+      goals.forEach(g => {
+        (g.kpis || []).forEach((kpi: any) => {
+          if (kpi.id) {
+            kpiRatings.push({
+              kpi_id: kpi.id,
+              self_rating: kpi.self_rating || null,
+              self_completion_pct: kpi.self_completion_pct || null,
+              self_comments: kpi.self_comments || '',
+              achievement_description: kpi.achievement_description || '',
+            });
+          }
+        });
+      });
       const fd = new FormData();
       Object.entries(reviewForm).forEach(([k, v]) => fd.append(k, String(v)));
-      goals.forEach((g, i) => {
-        fd.append(`goal_ratings[${i}][goal_id]`, g.id);
-        fd.append(`goal_ratings[${i}][self_rating]`, g.self_rating);
-        fd.append(`goal_ratings[${i}][self_completion_pct]`, g.self_completion_pct);
-        fd.append(`goal_ratings[${i}][self_comments]`, g.self_comments || '');
-        fd.append(`goal_ratings[${i}][achievement_description]`, g.achievement_description || '');
-      });
+      fd.append('kpi_ratings', JSON.stringify(kpiRatings));
       if (evidenceFile) fd.append('evidence_file', evidenceFile);
       const res = await fetch(`${PERF_API}/reviews/${goalCard.id}/`, { method: 'POST', body: fd });
       if (res.ok) showMsg('Quarterly review submitted!');
@@ -476,167 +514,145 @@ export function EmployeeView({ employee }: { employee: any }) {
             {tab === 'goals' && (
               <div className="space-y-4">
 
-                {canEdit ? (
-                  /* ── EDITING MODE (goal_setting phase, draft/rejected status) ── */
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-white font-bold text-lg">{selectedCycle.name} — KRA Goals</h3>
-                        <p className="text-slate-500 text-xs mt-0.5">Up to 5 goals · total weightage must equal 100%</p>
-                      </div>
-                      <button onClick={addGoal} disabled={goals.length >= 5}
-                        className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-violet-500/20 active:scale-95">
-                        <Plus className="w-4 h-4" /> Add Goal
-                      </button>
-                    </div>
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-bold text-lg">{selectedCycle.name} — Goals</h3>
+                    <p className="text-slate-500 text-xs mt-0.5">
+                      {canEdit
+                        ? '4 categories · multiple KRAs per category · total KPI weightage must equal 100%'
+                        : goalCard ? `${goals.length} KRA${goals.length !== 1 ? 's' : ''} across 4 categories` : 'No goals on record'}
+                    </p>
+                  </div>
+                  {!canEdit && goalCard && <StatusBadge status={goalCard.status} />}
+                </div>
 
-                    {goals.length > 0 && (
-                      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4">
-                        <WeightageBar goals={goals} />
-                      </div>
-                    )}
-
-                    {goals.length === 0 && (
-                      <button onClick={addGoal}
-                        className="w-full border-2 border-dashed border-white/[0.08] rounded-2xl p-12 text-center hover:border-violet-500/30 hover:bg-violet-500/[0.03] transition-all group">
-                        <div className="w-14 h-14 rounded-2xl bg-white/[0.04] group-hover:bg-violet-500/15 flex items-center justify-center mx-auto mb-4 transition-all">
-                          <Plus className="w-7 h-7 text-slate-600 group-hover:text-violet-400 transition-colors" />
-                        </div>
-                        <p className="text-slate-400 font-bold group-hover:text-slate-200 transition-colors">Add your first goal</p>
-                        <p className="text-slate-600 text-sm mt-1">Click to get started for {selectedCycle.name}</p>
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  /* ── READ-ONLY / LOCKED MODE ── */
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-white font-bold text-lg">{selectedCycle.name} — KRA Goals</h3>
-                      <p className="text-slate-500 text-xs mt-0.5">
-                        {goalCard
-                          ? `${goals.length} goal${goals.length !== 1 ? 's' : ''} · read-only`
-                          : 'No goals on record'}
-                      </p>
-                    </div>
-                    {goalCard && <StatusBadge status={goalCard.status} />}
+                {/* Weightage bar */}
+                {goals.length > 0 && (
+                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4">
+                    <WeightageBar goals={goals} />
                   </div>
                 )}
 
-                {/* Goals list — shown in both edit and read-only mode when goals exist */}
-                {goals.map((g, i) => {
-                  const col = getGoalColor(i);
+                {/* 4 fixed category blocks */}
+                {CATEGORIES.map((cat, catColorIdx) => {
+                  const col = getGoalColor(catColorIdx);
+                  const catGoals = goals
+                    .map((g: any, i: number) => ({ g, i }))
+                    .filter(({ g }) => g.category === cat);
+
                   return (
-                    <div key={g._id || g.id || i}
-                      className={`relative bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden border-l-[3px] ${col.border} transition-all hover:bg-white/[0.05]`}>
-                      <div className="p-5 space-y-4">
-                        {/* Header row */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <span className={`text-xs font-black px-2.5 py-1 rounded-lg ${col.bg} ${col.text}`}>
-                              Goal {i + 1}
-                            </span>
-                            {g.category && (
-                              <span className={`text-xs font-semibold ${col.text} opacity-80`}>{g.category}</span>
-                            )}
-                          </div>
-                          {canEdit && (
-                            <button onClick={() => removeGoal(i)}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-700 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                    <div key={cat} className="bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden">
+
+                      {/* Category header */}
+                      <div className={`flex items-center justify-between px-5 py-3 ${col.bg} border-b border-white/[0.05]`}>
+                        <div className="flex items-center gap-2.5">
+                          <span className={`text-xs font-black ${col.text}`}>{cat}</span>
+                          {catGoals.length > 0 && (
+                            <span className="text-[10px] text-slate-500">{catGoals.length} KRA{catGoals.length !== 1 ? 's' : ''}</span>
                           )}
                         </div>
+                        {canEdit && (
+                          <button onClick={() => addGoal(cat)}
+                            className={`flex items-center gap-1 text-[11px] font-bold ${col.text} hover:opacity-70 px-2.5 py-1 rounded-lg hover:bg-white/[0.05] transition-all`}>
+                            <Plus className="w-3 h-3" /> Add KRA
+                          </button>
+                        )}
+                      </div>
 
-                        {/* Category + Weightage */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">Category</label>
-                            <input disabled={!canEdit} value={g.category}
-                              onChange={e => updateGoal(i, 'category', e.target.value)}
-                              placeholder="e.g. Sales, Collections…"
-                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
-                          </div>
-                          <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Weightage</label>
-                              <span className={`text-base font-black ${col.text}`}>{g.weightage || 0}%</span>
+                      {/* KRA list for this category */}
+                      <div className="divide-y divide-white/[0.04]">
+                        {catGoals.map(({ g, i }, catIdx) => (
+                          <div key={g._id || g.id || i} className="p-4 space-y-3">
+
+                            {/* KRA header */}
+                            <div className="flex items-center justify-between">
+                              <span className={`text-[10px] font-black uppercase tracking-wider ${col.text}`}>KRA {catIdx + 1}</span>
+                              {canEdit && (
+                                <button onClick={() => removeGoal(i)}
+                                  className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-700 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
                             </div>
-                            <input disabled={!canEdit} type="range" min={5} max={100} step={5}
-                              value={g.weightage || 0}
-                              onChange={e => updateGoal(i, 'weightage', Number(e.target.value))}
-                              className="w-full accent-violet-500 disabled:opacity-50 cursor-pointer mt-1" />
-                          </div>
-                        </div>
 
-                        {/* KRA Title */}
-                        <div>
-                          <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">
-                            KRA — Key Result Area {canEdit && <span className="text-rose-500">*</span>}
-                          </label>
-                          <input disabled={!canEdit} value={g.title}
-                            onChange={e => updateGoal(i, 'title', e.target.value)}
-                            placeholder="e.g. Achieve ₹50L revenue in Q1…"
-                            className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
-                        </div>
+                            {/* KRA Title */}
+                            <input disabled={!canEdit} value={g.title}
+                              onChange={e => updateGoal(i, 'title', e.target.value)}
+                              placeholder="Key Result Area title…"
+                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
 
-                        {/* KPI + Target */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">KPI / Metric</label>
-                            <input disabled={!canEdit} value={g.kpi_metric}
-                              onChange={e => updateGoal(i, 'kpi_metric', e.target.value)}
-                              placeholder="e.g. ₹50L revenue"
-                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
-                          </div>
-                          <div>
-                            <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider block mb-1.5">Target</label>
-                            <input disabled={!canEdit} value={g.target_value}
-                              onChange={e => updateGoal(i, 'target_value', e.target.value)}
-                              placeholder="e.g. 100% target achieved"
-                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
-                          </div>
-                        </div>
-
-                        {/* Ratings (read-only) */}
-                        {(g.manager_rating || g.final_score) && (
-                          <div className="flex items-center gap-4 pt-3 border-t border-white/[0.05] flex-wrap">
-                            {g.manager_rating && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] text-slate-500 font-semibold">Manager:</span>
-                                <StarRating value={g.manager_rating} size="sm" />
+                            {/* KPIs */}
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">KPIs</label>
+                                {canEdit && (
+                                  <button onClick={() => addKPI(i)}
+                                    className="flex items-center gap-1 text-[10px] font-bold text-violet-400 hover:text-violet-300 px-2 py-1 rounded-lg hover:bg-violet-500/10 transition-all">
+                                    <Plus className="w-2.5 h-2.5" /> Add KPI
+                                  </button>
+                                )}
                               </div>
-                            )}
-                            {g.final_score && (
-                              <span className={`ml-auto text-sm font-black ${col.text}`}>
-                                Score: {Number(g.final_score).toFixed(2)}/5
-                              </span>
-                            )}
+                              {(g.kpis || []).map((kpi: any, j: number) => (
+                                <div key={kpi._id || kpi.id || j} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">KPI {j + 1}</span>
+                                    {canEdit && g.kpis.length > 1 && (
+                                      <button onClick={() => removeKPI(i, j)}
+                                        className="w-5 h-5 flex items-center justify-center text-slate-700 hover:text-rose-400 transition-all">
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <input disabled={!canEdit} value={kpi.metric || ''}
+                                      onChange={e => updateKPI(i, j, 'metric', e.target.value)}
+                                      placeholder="KPI / Metric"
+                                      className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-white text-xs font-semibold focus:outline-none focus:border-violet-500/40 placeholder-slate-700 disabled:opacity-50 transition-all" />
+                                    <input disabled={!canEdit} value={kpi.target_value || ''}
+                                      onChange={e => updateKPI(i, j, 'target_value', e.target.value)}
+                                      placeholder="Target"
+                                      className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-white text-xs font-semibold focus:outline-none focus:border-violet-500/40 placeholder-slate-700 disabled:opacity-50 transition-all" />
+                                    <input disabled={!canEdit} type="number" min={1} max={100}
+                                      value={kpi.weightage || ''}
+                                      onChange={e => updateKPI(i, j, 'weightage', Number(e.target.value))}
+                                      placeholder="Weightage %"
+                                      className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-white text-xs font-semibold focus:outline-none focus:border-violet-500/40 placeholder-slate-700 disabled:opacity-50 transition-all" />
+                                  </div>
+                                  {(kpi.manager_rating || kpi.final_score) && (
+                                    <div className="flex items-center gap-3 pt-1 flex-wrap">
+                                      {kpi.manager_rating && (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] text-slate-500 font-semibold">Manager:</span>
+                                          <StarRating value={kpi.manager_rating} size="sm" />
+                                        </div>
+                                      )}
+                                      {kpi.final_score && (
+                                        <span className={`ml-auto text-xs font-black ${col.text}`}>
+                                          Score: {Number(kpi.final_score).toFixed(2)}/5
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
+                        ))}
+
+                        {catGoals.length === 0 && (
+                          <p className="px-5 py-3 text-slate-700 text-xs">
+                            {canEdit ? `Click "+ Add KRA" to add a KRA under ${cat}.` : 'No KRAs set for this category.'}
+                          </p>
                         )}
                       </div>
                     </div>
                   );
                 })}
 
-                {/* No goals set and phase is locked — can't do anything */}
-                {goals.length === 0 && !canEdit && goalCard && (
-                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-10 text-center">
-                    <CheckCircle className="w-10 h-10 mx-auto mb-3 text-emerald-500/40" />
-                    <p className="font-bold text-slate-400">Goals submitted</p>
-                    <p className="text-slate-600 text-sm mt-1">Your goals are under review.</p>
-                  </div>
-                )}
-
-                {goals.length === 0 && !canEdit && !goalCard && (
-                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-10 text-center">
-                    <AlertCircle className="w-10 h-10 mx-auto mb-3 text-slate-700" />
-                    <p className="font-bold text-slate-500">No goals were set for this cycle.</p>
-                  </div>
-                )}
-
                 <Toast msg={msg} />
 
-                {canEdit && goals.length > 0 && (
+                {canEdit && (
                   <div className="flex gap-3">
                     <button onClick={() => saveGoals(false)} disabled={saving}
                       className="flex-1 py-3.5 rounded-2xl border border-white/[0.1] text-slate-300 font-bold text-sm hover:bg-white/[0.04] hover:border-white/20 transition-all disabled:opacity-50">
@@ -690,55 +706,48 @@ export function EmployeeView({ employee }: { employee: any }) {
                       <span className="text-[11px] text-slate-500 bg-white/[0.04] px-3 py-1.5 rounded-xl border border-white/[0.07]">{selectedCycle.name}</span>
                     </div>
 
-                    {/* Per-goal self rating */}
+                    {/* Per-KPI self rating */}
                     {goals.map((g, i) => {
                       const col = getGoalColor(i);
                       return (
                         <div key={i} className={`bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden border-l-[3px] ${col.border}`}>
-                          <div className="p-5 space-y-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                {g.category && <span className={`text-[10px] font-black uppercase tracking-wider ${col.text}`}>{g.category}</span>}
-                                <p className="text-white font-bold text-sm mt-0.5">{g.title || `Goal ${i + 1}`}</p>
-                                {g.kpi_metric && <p className="text-slate-500 text-xs mt-0.5">KPI: {g.kpi_metric} · Target: {g.target_value}</p>}
-                              </div>
-                              <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-black ${col.bg} ${col.text}`}>
-                                {g.weightage}%
-                              </span>
-                            </div>
-
-                            {/* Completion */}
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Completion</label>
-                                <span className={`text-lg font-black ${
-                                  (g.self_completion_pct || 0) >= 80 ? 'text-emerald-400'
-                                  : (g.self_completion_pct || 0) >= 50 ? 'text-violet-400' : 'text-amber-400'
-                                }`}>{g.self_completion_pct || 0}%</span>
-                              </div>
-                              <input type="range" min={0} max={100} step={5}
-                                value={g.self_completion_pct || 0}
-                                onChange={e => updateGoal(i, 'self_completion_pct', Number(e.target.value))}
-                                className="w-full accent-violet-500" />
-                              <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden mt-1.5">
-                                <div className={`h-full rounded-full transition-all duration-500 ${
-                                  (g.self_completion_pct || 0) >= 80 ? 'bg-emerald-500'
-                                  : (g.self_completion_pct || 0) >= 50 ? 'bg-violet-500' : 'bg-amber-500'
-                                }`} style={{ width: `${g.self_completion_pct || 0}%` }} />
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Self Rating</label>
-                              <StarRating value={g.self_rating || 0} onChange={v => updateGoal(i, 'self_rating', v)} />
-                            </div>
-
-                            <textarea value={g.achievement_description || ''}
-                              onChange={e => updateGoal(i, 'achievement_description', e.target.value)}
-                              placeholder="What did you achieve on this goal? Be specific."
-                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 resize-none transition-all"
-                              rows={2} />
+                          <div className="px-5 py-3 border-b border-white/[0.05]">
+                            {g.category && <span className={`text-[10px] font-black uppercase tracking-wider ${col.text}`}>{g.category}</span>}
+                            <p className="text-white font-bold text-sm mt-0.5">{g.title || `Goal ${i + 1}`}</p>
                           </div>
+                          {(g.kpis || []).map((kpi: any, j: number) => (
+                            <div key={kpi.id || j} className="p-4 border-b border-white/[0.04] last:border-0 space-y-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-white text-sm font-semibold">{kpi.metric || `KPI ${j + 1}`}</p>
+                                  {kpi.target_value && <p className="text-slate-500 text-xs mt-0.5">Target: {kpi.target_value}</p>}
+                                </div>
+                                <span className={`shrink-0 px-2 py-1 rounded-lg text-xs font-black ${col.bg} ${col.text}`}>{kpi.weightage}%</span>
+                              </div>
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Completion</label>
+                                  <span className={`text-base font-black ${
+                                    (kpi.self_completion_pct || 0) >= 80 ? 'text-emerald-400'
+                                    : (kpi.self_completion_pct || 0) >= 50 ? 'text-violet-400' : 'text-amber-400'
+                                  }`}>{kpi.self_completion_pct || 0}%</span>
+                                </div>
+                                <input type="range" min={0} max={100} step={5}
+                                  value={kpi.self_completion_pct || 0}
+                                  onChange={e => updateKPI(i, j, 'self_completion_pct', Number(e.target.value))}
+                                  className="w-full accent-violet-500" />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Self Rating</label>
+                                <StarRating value={kpi.self_rating || 0} onChange={v => updateKPI(i, j, 'self_rating', v)} />
+                              </div>
+                              <textarea value={kpi.achievement_description || ''}
+                                onChange={e => updateKPI(i, j, 'achievement_description', e.target.value)}
+                                placeholder="What did you achieve on this KPI? Be specific."
+                                className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 resize-none transition-all"
+                                rows={2} />
+                            </div>
+                          ))}
                         </div>
                       );
                     })}
