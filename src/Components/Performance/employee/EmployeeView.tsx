@@ -152,7 +152,7 @@ function WeightageBar({ goals }: { goals: any[] }) {
         {remaining > 0 && <div className="bg-white/[0.04] flex-1 rounded-full" />}
       </div>
       <div className="flex gap-4 mt-2.5 flex-wrap">
-        {goals.map((g, i) => (
+        {goals.map((_, i) => (
           <span key={i} className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <span className={`w-2 h-2 rounded-full ${getGoalColor(i).bar}`} />
             G{i + 1} <span className="font-bold text-slate-400">{goalWeights[i]}%</span>
