@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import {
   Target, Star, CheckCircle, Clock, Plus, Trash2, Send,
-  FileText, AlertCircle, ChevronRight, Award, TrendingUp, Lock, Unlock,
+  FileText, AlertCircle, ChevronRight, Award, TrendingUp, Lock, Unlock, Download,
 } from 'lucide-react';
 import { PERF_API } from '../../../Pages/PerformancePage';
 
@@ -321,6 +321,92 @@ export function EmployeeView({ employee }: { employee: any }) {
   const totalWeight = goals.reduce((s, g) =>
     s + (g.kpis || []).reduce((ks: number, k: any) => ks + Number(k.weightage || 0), 0), 0);
 
+  const downloadReport = async () => {
+    if (!goalCard || !selectedCycle) return;
+    const XLSX = await import('xlsx');
+    const wb = XLSX.utils.book_new();
+    const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString('en-IN') : '—';
+
+    // ── Sheet 1: KPI Performance Table ──────────────────────────────────────
+    const aoa: any[][] = [
+      [`Performance Report — ${selectedCycle.name}`],
+      [`Employee: ${employee.name}  |  ID: ${employee.employee_id}  |  Designation: ${employee.designation || '—'}`],
+      [`Department: ${employee.department || '—'}  |  Zone: ${employee.zone || '—'}  |  Manager: ${employee.manager_name || employee.reporting_manager_id || '—'}`],
+      [`Goal Card Status: ${goalCard.status_display || goalCard.status}  |  Generated: ${fmt(new Date().toISOString())}`],
+      [],
+      ['Goal', 'KRA (Strategic Focus Area)', 'KPI / Metric', 'Weightage %', 'Plan (Budgeted / Target)',
+       'Self Completion %', 'Self Rating (/5)', 'Achievement Description', 'Self Comments',
+       'Manager Rating (/5)', 'Manager Comments', 'HR Rating (/5)', 'HR Comments', 'Final Score (/5)'],
+    ];
+
+    goals.forEach((g: any) => {
+      (g.kpis || []).forEach((kpi: any, j: number) => {
+        aoa.push([
+          j === 0 ? g.category : '',
+          j === 0 ? (g.title || '') : '',
+          kpi.metric || '',
+          kpi.weightage ?? '',
+          kpi.target_value || '',
+          kpi.self_completion_pct ?? '',
+          kpi.self_rating ?? '',
+          kpi.achievement_description || '',
+          kpi.self_comments || '',
+          kpi.manager_rating ?? '',
+          kpi.manager_comments || '',
+          kpi.hr_rating ?? '',
+          kpi.hr_comments || '',
+          kpi.final_score ? Number(kpi.final_score).toFixed(2) : '',
+        ]);
+      });
+    });
+
+    aoa.push([]);
+    aoa.push(['', '', 'TOTAL WEIGHTAGE', `${totalWeight}%`]);
+    const rev = goalCard.review_data;
+    if (rev?.final_weighted_score) {
+      aoa.push(['', '', 'FINAL WEIGHTED SCORE', rev.final_weighted_score]);
+      aoa.push(['', '', 'PERFORMANCE BAND', rev.performance_band || '—']);
+    }
+
+    const ws1 = XLSX.utils.aoa_to_sheet(aoa);
+    ws1['!cols'] = [
+      { wch: 24 }, { wch: 32 }, { wch: 30 }, { wch: 13 }, { wch: 24 },
+      { wch: 16 }, { wch: 15 }, { wch: 35 }, { wch: 30 },
+      { wch: 16 }, { wch: 30 }, { wch: 13 }, { wch: 30 }, { wch: 14 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws1, 'KPI Performance');
+
+    // ── Sheet 2: Remarks & Summary ───────────────────────────────────────────
+    const r2: any[][] = [
+      [`Summary & Remarks — ${employee.name} — ${selectedCycle.name}`],
+      [],
+      ['Section', 'Field', 'Content'],
+      ['GOAL SETTING', 'Goal Card Status', goalCard.status_display || goalCard.status],
+      ['GOAL SETTING', 'Submitted On', fmt(goalCard.submitted_at)],
+      ['GOAL SETTING', 'Manager Reviewed On', fmt(goalCard.manager_reviewed_at)],
+      ['GOAL SETTING', 'Manager Remarks', goalCard.manager_remarks || '—'],
+      ['GOAL SETTING', 'HR Remarks', goalCard.hr_remarks || '—'],
+      [],
+    ];
+
+    if (rev) {
+      r2.push(
+        ['QUARTERLY REVIEW', 'Review Status', rev.status_display || rev.status || '—'],
+        ['QUARTERLY REVIEW', 'Submitted On', fmt(rev.submitted_at)],
+        ['QUARTERLY REVIEW', 'Manager Overall Rating', rev.manager_overall_rating ?? '—'],
+        ['QUARTERLY REVIEW', 'HR Final Rating', rev.hr_final_rating ?? '—'],
+        ['QUARTERLY REVIEW', 'Final Weighted Score', rev.final_weighted_score ?? '—'],
+        ['QUARTERLY REVIEW', 'Performance Band', rev.performance_band || '—'],
+      );
+    }
+
+    const ws2 = XLSX.utils.aoa_to_sheet(r2);
+    ws2['!cols'] = [{ wch: 20 }, { wch: 28 }, { wch: 70 }];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Remarks & Summary');
+
+    XLSX.writeFile(wb, `${employee.name}_${selectedCycle.name}_Performance.xlsx`);
+  };
+
   const saveGoals = async (submit = false) => {
     if (!selectedCycle) return;
     if (submit && totalWeight !== 100) {
@@ -433,7 +519,15 @@ export function EmployeeView({ employee }: { employee: any }) {
                 )}
               </div>
             </div>
-            {goalCard && <div className="shrink-0"><StatusBadge status={goalCard.status} /></div>}
+            {goalCard && (
+              <div className="shrink-0 flex flex-col items-end gap-2">
+                <StatusBadge status={goalCard.status} />
+                <button onClick={downloadReport}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-slate-300 text-[11px] font-bold transition-all">
+                  <Download className="w-3.5 h-3.5" /> Download Report
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
