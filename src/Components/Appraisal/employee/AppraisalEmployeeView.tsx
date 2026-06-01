@@ -417,7 +417,13 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   };
 
   useEffect(() => {
-    fetch(`${PERF_API}/cycles/active/`).then(r => r.json()).then(setCycles).catch(() => {});
+    fetch(`${PERF_API}/cycles/active/`)
+      .then(r => r.json())
+      .then(data => {
+        setCycles(data);
+        if (data.length > 0) setSelectedCycle(data[0]);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
