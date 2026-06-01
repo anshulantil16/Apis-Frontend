@@ -207,20 +207,25 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total Active',   value: kpi.total,        sub: 'Workforce',                  border: 'border-t-2 border-slate-200',   icon: Users,          iconCls: 'bg-slate-100 text-slate-500',    valCls: '' },
-          { label: 'Present',        value: kpi.present,      sub: `${kpi.presentPct}%`,          border: 'border-t-2 border-emerald-400', icon: UserCheck,      iconCls: 'bg-emerald-50 text-emerald-500', valCls: 'text-emerald-700' },
-          { label: 'On Leave',       value: kpi.leave,        sub: `${kpi.leavePct}%`,            border: 'border-t-2 border-rose-400',    icon: CalendarOff,    iconCls: 'bg-rose-50 text-rose-500',       valCls: '' },
-          { label: 'Weekly Off',     value: kpi.wo,           sub: `${kpi.woPct}%`,               border: 'border-t-2 border-sky-400',     icon: Coffee,         iconCls: 'bg-sky-50 text-sky-500',         valCls: '' },
-          { label: 'EOD Completed',  value: kpi.eod,          sub: `${kpi.eodPct}% of present`,   border: 'border-t-2 border-indigo-400',  icon: CheckSquare,    iconCls: 'bg-indigo-50 text-indigo-500',   valCls: '' },
-          { label: 'Invalid Punch',  value: kpi.invalidPunch, sub: 'Missing in or out',           border: 'border-t-2 border-red-500',     icon: AlertTriangle,  iconCls: 'bg-red-50 text-red-500',         valCls: 'text-red-600' },
+          { label: 'Total Active',  value: kpi.total,        sub: 'Total workforce',          pct: null,             icon: Users,         iconCls: 'bg-slate-100 text-slate-600',    valCls: 'text-slate-800',   grad: 'from-white to-slate-50',    ring: 'border-slate-200' },
+          { label: 'Present',       value: kpi.present,      sub: 'Marked attendance',        pct: kpi.presentPct,   icon: UserCheck,     iconCls: 'bg-emerald-100 text-emerald-600',valCls: 'text-emerald-700', grad: 'from-white to-emerald-50/60',ring: 'border-emerald-200' },
+          { label: 'On Leave',      value: kpi.leave,        sub: 'Approved leave',           pct: kpi.leavePct,     icon: CalendarOff,   iconCls: 'bg-rose-100 text-rose-600',      valCls: 'text-rose-700',    grad: 'from-white to-rose-50/60',   ring: 'border-rose-200' },
+          { label: 'Weekly Off',    value: kpi.wo,           sub: 'Rest day',                 pct: kpi.woPct,        icon: Coffee,        iconCls: 'bg-sky-100 text-sky-600',        valCls: 'text-sky-700',     grad: 'from-white to-sky-50/60',    ring: 'border-sky-200' },
+          { label: 'EOD Done',      value: kpi.eod,          sub: 'Of present employees',     pct: kpi.eodPct,       icon: CheckSquare,   iconCls: 'bg-indigo-100 text-indigo-600',  valCls: 'text-indigo-700',  grad: 'from-white to-indigo-50/60', ring: 'border-indigo-200' },
+          { label: 'Invalid Punch', value: kpi.invalidPunch, sub: 'Missing in / out',         pct: null,             icon: AlertTriangle, iconCls: 'bg-red-100 text-red-600',        valCls: 'text-red-700',     grad: 'from-white to-red-50/60',    ring: 'border-red-200' },
         ].map(c => (
-          <div key={c.label} className={`bg-white rounded-2xl border border-slate-100 ${c.border} p-4 shadow-sm hover:shadow-md transition-all`}>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${c.iconCls}`}>
-              <c.icon className="w-4 h-4" />
+          <div key={c.label} className={`bg-gradient-to-br ${c.grad} rounded-2xl border ${c.ring} p-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}>
+            <div className="flex items-start justify-between mb-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${c.iconCls} shadow-sm`}>
+                <c.icon className="w-5 h-5" />
+              </div>
+              {c.pct !== null && (
+                <span className={`text-xs font-black px-2 py-0.5 rounded-full bg-white/70 border ${c.ring} ${c.valCls}`}>{c.pct}%</span>
+              )}
             </div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.label}</p>
-            <p className={`text-2xl font-black text-slate-800 mt-0.5 ${c.valCls}`}>{c.value}</p>
-            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{c.sub}</p>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{c.label}</p>
+            <p className={`text-3xl font-black mt-0.5 ${c.valCls}`}>{c.value}</p>
+            <p className="text-[11px] font-medium text-slate-400 mt-1">{c.sub}</p>
           </div>
         ))}
       </div>
@@ -232,7 +237,7 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
             <h3 className="text-sm font-black text-slate-800">By {groupBy.charAt(0).toUpperCase() + String(groupBy).slice(1)}</h3>
             <p className="text-xs text-slate-400 mt-0.5">Click a row to expand employee records</p>
           </div>
-          <span className="px-2.5 py-1 bg-amber-50 text-amber-700 font-bold text-[10px] rounded-full border border-amber-200 uppercase tracking-wider">{grouped.length} groups</span>
+          <span className="px-3 py-1.5 bg-amber-50 text-amber-700 font-bold text-xs rounded-full border border-amber-200">{grouped.length} groups</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -240,7 +245,7 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
                 {['Group', 'Total', 'Present', 'Leave', 'WO', 'EOD Done', 'Attendance %'].map((h, i) => (
-                  <th key={h} className={`py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider ${i === 0 ? 'px-6 w-1/3' : i === 6 ? 'px-6 text-right' : 'px-4 text-center'}`}>{h}</th>
+                  <th key={h} className={`py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider ${i === 0 ? 'px-6 w-1/3' : i === 6 ? 'px-6 text-right' : 'px-4 text-center'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -254,8 +259,8 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                         {open ? <ChevronUp className="w-3.5 h-3.5 text-amber-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-300 group-hover:text-amber-400 transition-colors" />}
                         <span className="group-hover:text-amber-700 transition-colors text-sm">{grp.name}</span>
                         {grp.invalidPunch > 0 && (
-                          <span className="flex items-center gap-0.5 text-[9px] font-black bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full">
-                            ⚠ {grp.invalidPunch} invalid
+                          <span className="flex items-center gap-1 text-[11px] font-bold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full">
+                            <AlertTriangle className="w-3 h-3" /> {grp.invalidPunch} invalid
                           </span>
                         )}
                       </td>
@@ -273,10 +278,10 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${grp.eodPct >= 80 ? 'text-indigo-600 bg-indigo-50' : grp.eod > 0 ? 'text-amber-600 bg-amber-50' : 'text-slate-300 bg-slate-50'}`}>{grp.eod} ({grp.eodPct}%)</span>
                       </td>
                       <td className="px-6 py-3.5 text-right">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs font-bold text-slate-700">{grp.presentPct}%</span>
-                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${grp.presentPct >= 80 ? 'bg-emerald-500' : grp.presentPct >= 50 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${grp.presentPct}%` }} />
+                        <div className="flex flex-col items-end gap-1.5">
+                          <span className={`text-sm font-black ${grp.presentPct >= 80 ? 'text-emerald-600' : grp.presentPct >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>{grp.presentPct}%</span>
+                          <div className="w-28 h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${grp.presentPct >= 80 ? 'bg-emerald-500' : grp.presentPct >= 50 ? 'bg-amber-400' : 'bg-rose-400'}`} style={{ width: `${grp.presentPct}%` }} />
                           </div>
                         </div>
                       </td>
@@ -285,7 +290,7 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                     {open && (
                       <tr>
                         <td colSpan={7} className="px-6 py-4 bg-slate-50/50">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
                             {grp.name} · {grp.records.length} employees
                           </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
@@ -293,64 +298,61 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                               const present = isPresent(rec), leave = isLeave(rec), wo = isWO(rec);
                               const mp = missingFieldPunch(rec);
                               return (
-                                <div key={i} className={`bg-white rounded-xl border p-3.5 flex gap-3 hover:shadow-sm transition-all ${
-                                  mp ? 'border-red-300 bg-red-50/30' : 'border-slate-100'
+                                <div key={i} className={`bg-white rounded-xl border p-4 flex gap-3 hover:shadow-md transition-all ${
+                                  mp ? 'border-red-300 bg-red-50/40 ring-1 ring-red-200' : 'border-slate-150 hover:border-slate-200'
                                 }`}>
                                   {rec.attendanceImage && (
                                     <a href={rec.attendanceImage} target="_blank" rel="noopener noreferrer"
-                                      className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
+                                      className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm">
                                       <img src={rec.attendanceImage} alt={rec.userName} className="w-full h-full object-cover" />
                                     </a>
                                   )}
-                                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                                    <div className="flex items-start justify-between gap-1">
+                                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                                    <div className="flex items-start justify-between gap-2">
                                       <div className="min-w-0">
-                                        <p className="font-bold text-slate-800 text-xs truncate">{rec.userName}</p>
-                                        <p className="text-[9px] text-slate-400 font-bold">{rec.empId || rec.userId || '—'}</p>
+                                        <p className="font-bold text-slate-800 text-sm truncate">{rec.userName}</p>
+                                        <p className="text-[11px] text-slate-400 font-semibold">{rec.empId || rec.userId || '—'}</p>
                                       </div>
                                       <div className="flex items-center gap-1 flex-shrink-0">
-                                        {mp && <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-300 px-1 py-0.5 rounded-full flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" />INVALID</span>}
-                                        <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                                        <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-lg border ${
                                           present ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                                           leave   ? 'bg-rose-50 text-rose-700 border-rose-200' :
                                           wo      ? 'bg-sky-50 text-sky-700 border-sky-200' :
                                                     'bg-slate-50 text-slate-600 border-slate-200'
                                         }`}>
-                                          {present ? 'P' : leave ? 'L' : wo ? 'WO' : rec.attendance || '?'}
+                                          {present ? 'Present' : leave ? 'Leave' : wo ? 'W/Off' : rec.attendance || '?'}
                                         </span>
                                       </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-medium">
-                                      {rec.reportingTo && <span className="flex items-center gap-0.5 text-slate-400"><User className="w-2.5 h-2.5" />{rec.reportingTo}</span>}
-                                      <span className={`flex items-center gap-0.5 ${mp === 'no_in' ? 'text-red-500 font-black' : 'text-slate-400'}`}>
-                                        <Clock className={`w-2.5 h-2.5 ${mp === 'no_in' ? 'text-red-400' : 'text-emerald-400'}`} />
+                                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium">
+                                      {rec.reportingTo && <span className="flex items-center gap-1 text-slate-400"><User className="w-3 h-3" />{rec.reportingTo}</span>}
+                                      <span className={`flex items-center gap-1 ${mp === 'no_in' ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
+                                        <Clock className={`w-3 h-3 ${mp === 'no_in' ? 'text-red-500' : 'text-emerald-500'}`} />
                                         {isValidTime(rec.attendanceTime)
                                           ? rec.attendanceTime
                                           : mp === 'no_in'
-                                            ? <span className="text-red-500 font-black">NO IN PUNCH</span>
+                                            ? 'No In Punch'
                                             : '—'}
                                       </span>
                                       {(isValidTime(rec.eodTime) || mp === 'no_out') && (
-                                        <span className={`flex items-center gap-0.5 ${mp === 'no_out' ? 'text-red-500 font-black' : 'text-slate-400'}`}>
-                                          <Clock className={`w-2.5 h-2.5 ${mp === 'no_out' ? 'text-red-400' : 'text-indigo-400'}`} />
+                                        <span className={`flex items-center gap-1 ${mp === 'no_out' ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
+                                          <Clock className={`w-3 h-3 ${mp === 'no_out' ? 'text-red-500' : 'text-indigo-500'}`} />
                                           {isValidTime(rec.eodTime)
                                             ? rec.eodTime
-                                            : mp === 'no_out'
-                                              ? <span className="text-red-500 font-black">NO OUT PUNCH</span>
-                                              : '—'}
+                                            : 'No Out Punch'}
                                         </span>
                                       )}
                                       {rec.location && getMapsLink(rec.location)
-                                        ? <a href={getMapsLink(rec.location)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 text-amber-500 font-bold"><MapPin className="w-2.5 h-2.5" />Map</a>
-                                        : rec.location ? <span className="flex items-center gap-0.5 text-slate-400"><MapPin className="w-2.5 h-2.5" />{rec.location}</span> : null}
+                                        ? <a href={getMapsLink(rec.location)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-amber-600 font-bold hover:underline"><MapPin className="w-3 h-3" />Map</a>
+                                        : rec.location ? <span className="flex items-center gap-1 text-slate-400"><MapPin className="w-3 h-3" />{rec.location}</span> : null}
                                     </div>
                                     {mp && (
-                                      <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded w-fit flex items-center gap-0.5">
-                                        <AlertTriangle className="w-2.5 h-2.5" />
+                                      <span className="text-[11px] font-bold bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-lg w-fit flex items-center gap-1">
+                                        <AlertTriangle className="w-3 h-3" />
                                         {mp === 'no_out' ? 'Missing Out Punch' : 'Missing In Punch'}
                                       </span>
                                     )}
-                                    {!mp && rec.designation && <span className="text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold w-fit">{rec.designation}</span>}
+                                    {!mp && rec.designation && <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-lg font-bold w-fit">{rec.designation}</span>}
                                   </div>
                                 </div>
                               );
