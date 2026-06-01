@@ -13,6 +13,7 @@ type ToolId = 'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi';
 
 interface DataExtractorPageProps {
   onNavigateToPerformance?: () => void;
+  onNavigateToAppraisal?: () => void;
 }
 
 const TOOLS: {
@@ -35,7 +36,7 @@ const TOOL_META: Record<ToolId, { title: string; desc: string; bar: string; badg
   delhi:      { title: 'Delhi / HO Attendance',      desc: 'Pocket HRMS format · department, punch-time and leave analytics',          bar: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
 };
 
-export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPageProps) {
+export function DataExtractorPage({ onNavigateToPerformance, onNavigateToAppraisal }: DataExtractorPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +154,17 @@ export function DataExtractorPage({ onNavigateToPerformance }: DataExtractorPage
               <div>
                 <p>Performance Hub</p>
                 <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-violet-700">Goals &amp; Reviews</p>
+              </div>
+            </div>
+            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
+          </button>
+          <button onClick={onNavigateToAppraisal}
+            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-blue-500/10 hover:text-blue-400 transition-all group">
+            <div className="flex items-center gap-2.5">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <div>
+                <p>Appraisal Hub</p>
+                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-blue-700">Annual Appraisal</p>
               </div>
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
