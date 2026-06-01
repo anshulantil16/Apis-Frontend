@@ -4,6 +4,7 @@ import {
   AlertCircle, Award, Lock, Unlock, Download, ChevronDown,
   ChevronRight, ArrowLeft, MessageSquare, BookOpen, X, ThumbsUp,
 } from 'lucide-react';
+import { downloadScorecard } from '../../../utils/downloadScorecard';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PERF_API = `${API_BASE}/api/performance`;
@@ -474,49 +475,11 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   const totalWeight = goals.reduce((s, g) =>
     s + (g.kpis || []).reduce((ks: number, k: any) => ks + Number(k.weightage || 0), 0), 0);
 
-  const downloadReport = async () => {
-    if (!goalCard || !selectedCycle) return;
-    const XLSX = await import('xlsx');
-    const wb = XLSX.utils.book_new();
+  const SCORECARD_STATUSES = ['hod_approved', 'hr_approved', 'finalized'];
 
-    const aoa: any[][] = [
-      [`Appraisal Report — ${selectedCycle.name}`],
-      [`Employee: ${employee.name}  |  ID: ${employee.employee_id}  |  Designation: ${employee.designation || '—'}`],
-      [],
-      ['Goal', 'KRA (Strategic Focus Area)', 'KPI / Metric', 'Weightage %', 'Frequency',
-       'Unit of Measurement', 'Parameter Direction', 'Data Source', 'Plan (Budgeted/Target)',
-       'Actual Achievement', 'Score Achievement', 'Weightage % (System)'],
-    ];
-
-    goals.forEach((g: any) => {
-      (g.kpis || []).forEach((kpi: any, j: number) => {
-        const scoreAch = calcScoreAchievement(kpi);
-        const wtSys    = calcWeightageSystem(kpi);
-        aoa.push([
-          j === 0 ? g.category : '',
-          j === 0 ? (g.title || '') : '',
-          kpi.metric || '',
-          kpi.weightage ?? '',
-          kpi.frequency || '',
-          kpi.unit_of_measurement || '',
-          kpi.parameter_type || '',
-          kpi.data_source || '',
-          kpi.target_value || '',
-          kpi.actual_achievement || '',
-          scoreAch !== null ? `${scoreAch.toFixed(1)}%` : '',
-          wtSys    !== null ? `${wtSys.toFixed(2)}%`    : '',
-        ]);
-      });
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [
-      { wch: 22 }, { wch: 30 }, { wch: 28 }, { wch: 12 }, { wch: 12 },
-      { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
-      { wch: 18 }, { wch: 18 }, { wch: 18 },
-    ];
-    XLSX.utils.book_append_sheet(wb, ws, 'Appraisal Goals');
-    XLSX.writeFile(wb, `${employee.name}_${selectedCycle.name}_Appraisal.xlsx`);
+  const handleDownloadScorecard = () => {
+    if (!goalCard) return;
+    downloadScorecard(goalCard, selectedCycle?.name);
   };
 
   const saveDraftGoals = async (): Promise<any | null> => {
@@ -645,10 +608,12 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
             {goalCard && (
               <div className="shrink-0 flex flex-col items-end gap-2">
                 <StatusBadge status={goalCard.status} />
-                <button onClick={downloadReport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 text-[11px] font-bold transition-all">
-                  <Download className="w-3.5 h-3.5" /> Download
-                </button>
+                {SCORECARD_STATUSES.includes(goalCard.status) && (
+                  <button onClick={handleDownloadScorecard}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 border border-blue-600 text-white text-[11px] font-bold transition-all shadow-sm shadow-blue-200">
+                    <Download className="w-3.5 h-3.5" /> Download Scorecard
+                  </button>
+                )}
               </div>
             )}
           </div>

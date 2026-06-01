@@ -112,18 +112,22 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
   const keySkills: string[] = gc.key_skills || [];
   const trainingPrograms: string = gc.training_programs || '';
 
-  // Manager rating state per KPI: { [goalIdx_kpiIdx]: manager_score }
+  // Manager rating state per KPI: { [goalIdx_kpiIdx]: manager_score / manager_comments }
   const buildInitialRatings = () => {
-    const r: Record<string, string> = {};
+    const scores: Record<string, string> = {};
+    const comments: Record<string, string> = {};
     goals.forEach((g: any, gi: number) => {
       (g.kpis || []).forEach((k: any, ki: number) => {
-        r[`${gi}_${ki}`] = k.manager_score || '';
+        scores[`${gi}_${ki}`]   = k.manager_score    != null ? String(k.manager_score) : '';
+        comments[`${gi}_${ki}`] = k.manager_comments || '';
       });
     });
-    return r;
+    return { scores, comments };
   };
 
-  const [ratings, setRatings] = useState<Record<string, string>>(buildInitialRatings);
+  const initial = buildInitialRatings();
+  const [ratings,  setRatings]  = useState<Record<string, string>>(initial.scores);
+  const [comments, setComments] = useState<Record<string, string>>(initial.comments);
   const [specialAchievements, setSpecialAchievements] = useState(gc.manager_special_achievements || '');
   const [promoted, setPromoted] = useState<'Yes' | 'No' | ''>(gc.manager_promoted || '');
   const [promotedJustification, setPromotedJustification] = useState(gc.manager_promoted_justification || '');
@@ -137,34 +141,47 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
     setTimeout(() => setMsg(null), 4000);
   };
 
-  const setRating = (gi: number, ki: number, val: string) => {
-    setRatings(prev => ({ ...prev, [`${gi}_${ki}`]: val }));
-  };
-
-  const buildUpdatedGoals = () =>
-    goals.map((g: any, gi: number) => ({
-      ...g,
-      kpis: (g.kpis || []).map((k: any, ki: number) => ({
-        ...k,
-        manager_score: ratings[`${gi}_${ki}`] ?? k.manager_score,
-      })),
-    }));
+  const setRating  = (gi: number, ki: number, val: string) =>
+    setRatings(prev  => ({ ...prev, [`${gi}_${ki}`]: val }));
+  const setComment = (gi: number, ki: number, val: string) =>
+    setComments(prev => ({ ...prev, [`${gi}_${ki}`]: val }));
 
   const saveRatings = async (): Promise<boolean> => {
-    setSaving(true);
+    const kpiScores: any[] = [];
+    goals.forEach((g: any, gi: number) => {
+      (g.kpis || []).forEach((k: any, ki: number) => {
+        if (k.id) {
+          const scoreVal = ratings[`${gi}_${ki}`];
+          kpiScores.push({
+            kpi_id: k.id,
+            manager_score: scoreVal !== '' ? parseFloat(scoreVal) : null,
+            manager_comments: comments[`${gi}_${ki}`] || '',
+          });
+        }
+      });
+    });
     try {
-      const updatedGoals = buildUpdatedGoals();
-      const res = await fetch(`${PERF_API}/goal-cards/${card.employee_id}/${card.cycle_id}/`, {
-        method: 'POST',
+      const res = await fetch(`${PERF_API}/goal-cards/${gc.id}/manager-kpi-scores/`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goals: updatedGoals }),
+        body: JSON.stringify({ kpi_scores: kpiScores }),
       });
       return res.ok;
     } catch { return false; }
-    finally { setSaving(false); }
   };
 
   const submitManagerRating = async () => {
+    // Validate all KPI scores are filled
+    const missingScore = goals.some((g: any, gi: number) =>
+      (g.kpis || []).some((_: any, ki: number) => {
+        const v = ratings[`${gi}_${ki}`];
+        return v === '' || v === null || v === undefined;
+      })
+    );
+    if (missingScore) {
+      showMsg('Please fill Wt% (Manager) for all KPIs before approving.', false);
+      return;
+    }
     if (!promotedJustification.trim()) {
       showMsg('Promotion justification is mandatory. Please fill it in.', false);
       return;
@@ -176,7 +193,7 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
     setSaving(true);
     try {
       const saved = await saveRatings();
-      if (!saved) { showMsg('Failed to save ratings. Try again.', false); return; }
+      if (!saved) { showMsg('Failed to save KPI scores. Try again.', false); setSaving(false); return; }
       const res = await fetch(`${PERF_API}/goal-cards/${gc.id}/manager-review/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -200,9 +217,11 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
   };
 
   const emp = card;
-  const totalManagerScore = goals.reduce((s, g, gi) =>
+  const totalManagerScore = goals.reduce((s: number, g: any, gi: number) =>
     s + (g.kpis || []).reduce((ks: number, _: any, ki: number) =>
       ks + Number(ratings[`${gi}_${ki}`] || 0), 0), 0);
+  const allScoresFilled = goals.every((g: any, gi: number) =>
+    (g.kpis || []).every((_: any, ki: number) => ratings[`${gi}_${ki}`] !== '' && ratings[`${gi}_${ki}`] !== undefined));
 
   return (
     <div className="space-y-4">
@@ -267,8 +286,9 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
                         {/* System-calculated */}
                         <th className="px-3 py-2.5 text-center text-[9px] font-black text-amber-700 uppercase tracking-wider w-[7%] bg-amber-50 border-l border-amber-200">Score Ach%</th>
                         <th className="px-3 py-2.5 text-center text-[9px] font-black text-amber-700 uppercase tracking-wider w-[7%] bg-amber-50">Wt% (System)</th>
-                        {/* Manager column */}
-                        <th className="px-3 py-2.5 text-center text-[9px] font-black text-blue-700 uppercase tracking-wider w-[8%] bg-blue-50 border-l-2 border-blue-200">Wt% (Manager)</th>
+                        {/* Manager columns */}
+                        <th className="px-3 py-2.5 text-center text-[9px] font-black text-blue-700 uppercase tracking-wider w-[7%] bg-blue-50 border-l-2 border-blue-200">Wt% (Manager)</th>
+                        <th className="px-3 py-2.5 text-left text-[9px] font-black text-blue-700 uppercase tracking-wider w-[14%] bg-blue-50">Manager Comments</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -297,14 +317,24 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
                             <td className="px-2 py-2 bg-amber-50/60">
                               <CalcCell value={wtSys} />
                             </td>
-                            {/* Manager editable */}
+                            {/* Manager score editable */}
                             <td className="px-2 py-2 bg-blue-50/60 border-l-2 border-blue-100">
                               <input
                                 type="number"
                                 value={managerScore}
                                 onChange={e => setRating(gi, ki, e.target.value)}
                                 placeholder="%"
-                                className="w-full bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-slate-800 text-xs font-bold text-center focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 placeholder-slate-300 transition-all"
+                                className={`w-full bg-white border rounded-lg px-2.5 py-1.5 text-slate-800 text-xs font-bold text-center focus:outline-none focus:ring-1 placeholder-slate-300 transition-all ${managerScore === '' ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : 'border-blue-200 focus:border-blue-400 focus:ring-blue-100'}`}
+                              />
+                            </td>
+                            {/* Manager comments editable */}
+                            <td className="px-2 py-2 bg-blue-50/40">
+                              <textarea
+                                rows={2}
+                                value={comments[`${gi}_${ki}`] || ''}
+                                onChange={e => setComment(gi, ki, e.target.value)}
+                                placeholder="Comment on this KPI…"
+                                className="w-full bg-white border border-blue-200 rounded-lg px-2 py-1.5 text-slate-700 text-xs font-medium focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 placeholder-slate-300 resize-none transition-all leading-snug"
                               />
                             </td>
                           </tr>
@@ -318,6 +348,11 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
 
             {/* Total manager score */}
             <div className="flex items-center justify-end gap-4 px-2">
+              {!allScoresFilled && (
+                <span className="text-xs font-semibold text-rose-500 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                  Fill Wt% (Manager) for all KPIs before approving
+                </span>
+              )}
               <span className="text-sm text-slate-500">Total Wt% (Manager):</span>
               <span className={`text-base font-black ${totalManagerScore === 100 ? 'text-emerald-600' : totalManagerScore > 100 ? 'text-rose-600' : 'text-blue-600'}`}>
                 {totalManagerScore}% {totalManagerScore === 100 ? '✓' : ''}

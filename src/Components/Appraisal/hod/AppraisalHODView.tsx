@@ -115,6 +115,20 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
   const keySkills: string[] = gc.key_skills || [];
   const trainingPrograms: string = gc.training_programs || '';
 
+  // HOD per-KPI scores
+  const buildInitialHODScores = () => {
+    const s: Record<string, string> = {};
+    goals.forEach((g: any, gi: number) => {
+      (g.kpis || []).forEach((k: any, ki: number) => {
+        s[`${gi}_${ki}`] = k.hod_score != null ? String(k.hod_score) : '';
+      });
+    });
+    return s;
+  };
+  const [hodScores, setHodScores] = useState<Record<string, string>>(buildInitialHODScores);
+  const setHodScore = (gi: number, ki: number, val: string) =>
+    setHodScores(prev => ({ ...prev, [`${gi}_${ki}`]: val }));
+
   const [hodSpecialAch, setHodSpecialAch] = useState(gc.hod_special_achievements || '');
   const [hodPromoted, setHodPromoted] = useState<'Yes' | 'No' | ''>(gc.hod_promoted || '');
   const [hodPromotedJust, setHodPromotedJust] = useState(gc.hod_promoted_justification || '');
@@ -123,12 +137,25 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
+  const totalHODScore = goals.reduce((s: number, g: any, gi: number) =>
+    s + (g.kpis || []).reduce((ks: number, _: any, ki: number) =>
+      ks + Number(hodScores[`${gi}_${ki}`] || 0), 0), 0);
+  const allHODScoresFilled = goals.every((g: any, gi: number) =>
+    (g.kpis || []).every((_: any, ki: number) => {
+      const v = hodScores[`${gi}_${ki}`];
+      return v !== '' && v !== null && v !== undefined;
+    }));
+
   const showMsg = (text: string, ok: boolean) => {
     setMsg({ text, ok });
     setTimeout(() => setMsg(null), 4000);
   };
 
   const submitHODReview = async () => {
+    if (!allHODScoresFilled) {
+      showMsg('Please fill Wt% (HOD) for all KPIs before submitting.', false);
+      return;
+    }
     if (!hodPromotedJust.trim()) {
       showMsg('Promotion justification is mandatory. Please fill it in.', false);
       return;
@@ -139,6 +166,22 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
     }
     setSaving(true);
     try {
+      // Save per-KPI HOD scores first
+      const kpiScores: any[] = [];
+      goals.forEach((g: any, gi: number) => {
+        (g.kpis || []).forEach((k: any, ki: number) => {
+          if (k.id) {
+            const v = hodScores[`${gi}_${ki}`];
+            kpiScores.push({ kpi_id: k.id, hod_score: v !== '' ? parseFloat(v) : null });
+          }
+        });
+      });
+      await fetch(`${PERF_API}/goal-cards/${gc.id}/hod-kpi-scores/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kpi_scores: kpiScores }),
+      });
+
       const res = await fetch(`${PERF_API}/goal-cards/${gc.id}/hod-review/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -223,6 +266,7 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
                         <th className="px-3 py-2.5 text-center text-[9px] font-black text-amber-700 uppercase tracking-wider w-[7%] bg-amber-50 border-l border-amber-200">Score Ach%</th>
                         <th className="px-3 py-2.5 text-center text-[9px] font-black text-amber-700 uppercase tracking-wider w-[7%] bg-amber-50">Wt% (System)</th>
                         <th className="px-3 py-2.5 text-center text-[9px] font-black text-blue-700 uppercase tracking-wider w-[7%] bg-blue-50 border-l-2 border-blue-200">Wt% (Mgr)</th>
+                        <th className="px-3 py-2.5 text-center text-[9px] font-black text-violet-700 uppercase tracking-wider w-[7%] bg-violet-50 border-l-2 border-violet-200">Wt% (HOD) *</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -247,6 +291,20 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
                             <td className="px-2 py-2 bg-blue-50/60 border-l-2 border-blue-100">
                               <CalcCell value={kpi.manager_score !== null && kpi.manager_score !== undefined ? parseFloat(kpi.manager_score) : null} accent="blue" />
                             </td>
+                            {/* HOD editable score */}
+                            <td className="px-2 py-2 bg-violet-50/60 border-l-2 border-violet-100">
+                              {gc.status === 'manager_approved' ? (
+                                <input
+                                  type="number"
+                                  value={hodScores[`${gi}_${ki}`] || ''}
+                                  onChange={e => setHodScore(gi, ki, e.target.value)}
+                                  placeholder="%"
+                                  className={`w-full bg-white border rounded-lg px-2 py-1.5 text-slate-800 text-xs font-bold text-center focus:outline-none focus:ring-1 placeholder-slate-300 transition-all ${hodScores[`${gi}_${ki}`] === '' || hodScores[`${gi}_${ki}`] === undefined ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : 'border-violet-300 focus:border-violet-400 focus:ring-violet-100'}`}
+                                />
+                              ) : (
+                                <CalcCell value={kpi.hod_score != null ? parseFloat(kpi.hod_score) : null} accent="blue" />
+                              )}
+                            </td>
                           </tr>
                         );
                       })}
@@ -255,6 +313,20 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
                 </div>
               </div>
             ))}
+          {/* HOD total score */}
+          {gc.status === 'manager_approved' && goals.length > 0 && (
+            <div className="flex items-center justify-end gap-4 px-2 mt-2">
+              {!allHODScoresFilled && (
+                <span className="text-xs font-semibold text-rose-500 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                  Fill Wt% (HOD) for all KPIs
+                </span>
+              )}
+              <span className="text-sm text-slate-500">Total Wt% (HOD):</span>
+              <span className={`text-base font-black ${totalHODScore === 100 ? 'text-emerald-600' : totalHODScore > 100 ? 'text-rose-600' : 'text-violet-600'}`}>
+                {totalHODScore}% {totalHODScore === 100 ? '✓' : ''}
+              </span>
+            </div>
+          )}
           </div>
         )}
       </SectionCard>

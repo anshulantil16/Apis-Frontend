@@ -386,7 +386,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                 <div className="relative mb-5">
                   <input
                     type="text"
-                    placeholder={role === 'hr' ? 'e.g. HR001' : role === 'manager' ? 'e.g. MGR001' : 'e.g. EMP001'}
+                    placeholder={role === 'hr' ? 'e.g. HR001' : role === 'manager' ? 'e.g. MGR001' : role === 'hod' ? 'e.g. HOD001' : 'e.g. EMP001'}
                     value={inputId}
                     onChange={e => setInputId(e.target.value.toUpperCase())}
                     onKeyDown={e => e.key === 'Enter' && handleSendOtp()}

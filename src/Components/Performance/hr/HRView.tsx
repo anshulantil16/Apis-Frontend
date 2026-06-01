@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import {
   Upload, Trophy, BarChart3, CheckCircle, Calendar,
   Users, AlertTriangle, TrendingUp, FileText, Settings,
-  ChevronDown, ChevronUp, Award, Clock, Lock, Unlock,
+  ChevronDown, ChevronUp, Award, Clock, Lock, Unlock, Download,
 } from 'lucide-react';
 import { PERF_API } from '../../../Pages/PerformancePage';
+import { downloadScorecard } from '../../../utils/downloadScorecard';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -460,9 +461,12 @@ export function HRView({ hrUser }: { hrUser: any }) {
                   submitted:        'bg-blue-50 text-blue-700 border-blue-200',
                   manager_approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
                   manager_rejected: 'bg-rose-50 text-rose-700 border-rose-200',
+                  hod_approved:     'bg-violet-50 text-violet-700 border-violet-200',
+                  hod_rejected:     'bg-orange-50 text-orange-700 border-orange-200',
                   hr_approved:      'bg-purple-50 text-purple-700 border-purple-200',
                   finalized:        'bg-amber-50 text-amber-700 border-amber-200',
                 };
+                const canDownload = ['hod_approved', 'hr_approved', 'finalized'].includes(gc?.status);
                 const isExp = expandedCard === gc?.id;
                 const goals = gc?.goals || [];
                 const selfAnswers = gc?.self_review_answers || [];
@@ -487,6 +491,13 @@ export function HRView({ hrUser }: { hrUser: any }) {
                           <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${statusCfg[gc.status] || statusCfg.draft}`}>
                             {gc.status.replace(/_/g, ' ')}
                           </span>
+                        )}
+                        {canDownload && (
+                          <button
+                            onClick={e => { e.stopPropagation(); downloadScorecard(gc, selectedCycle?.name); }}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold transition-all shadow-sm">
+                            <Download className="w-3 h-3" /> Scorecard
+                          </button>
                         )}
                         {isExp ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                       </div>
