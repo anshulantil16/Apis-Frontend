@@ -50,12 +50,14 @@ const CATEGORY_DOT: Record<string, string> = {
 };
 
 const STATUS_CFG: Record<string, { badge: string; dot: string; label: string }> = {
-  draft:            { badge: 'bg-slate-100 text-slate-600 border-slate-200',         dot: 'bg-slate-400',              label: 'Draft' },
-  submitted:        { badge: 'bg-blue-50 text-blue-700 border-blue-200',             dot: 'bg-blue-500 animate-pulse', label: 'Awaiting Review' },
-  manager_approved: { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',    dot: 'bg-emerald-500',            label: 'Approved' },
-  manager_rejected: { badge: 'bg-rose-50 text-rose-700 border-rose-200',             dot: 'bg-rose-500',               label: 'Changes Requested' },
-  hr_approved:      { badge: 'bg-purple-50 text-purple-700 border-purple-200',       dot: 'bg-purple-500',             label: 'HR Approved' },
-  finalized:        { badge: 'bg-amber-50 text-amber-700 border-amber-200',          dot: 'bg-amber-500',              label: 'Finalized' },
+  draft:            { badge: 'bg-slate-100 text-slate-600 border-slate-200',         dot: 'bg-slate-400',                label: 'Draft' },
+  submitted:        { badge: 'bg-blue-50 text-blue-700 border-blue-200',             dot: 'bg-blue-500 animate-pulse',   label: 'Awaiting Review' },
+  manager_approved: { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',    dot: 'bg-emerald-500',              label: 'Mgr Approved' },
+  manager_rejected: { badge: 'bg-rose-50 text-rose-700 border-rose-200',             dot: 'bg-rose-500',                 label: 'Changes Requested' },
+  hod_approved:     { badge: 'bg-violet-50 text-violet-700 border-violet-200',       dot: 'bg-violet-500',               label: 'HOD Approved' },
+  hod_rejected:     { badge: 'bg-orange-50 text-orange-700 border-orange-200',       dot: 'bg-orange-500',               label: 'HOD Rejected' },
+  hr_approved:      { badge: 'bg-purple-50 text-purple-700 border-purple-200',       dot: 'bg-purple-500',               label: 'HR Approved' },
+  finalized:        { badge: 'bg-amber-50 text-amber-700 border-amber-200',          dot: 'bg-amber-500',                label: 'Finalized' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -585,8 +587,8 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
   }
 
   const submitted  = teamCards.filter(m => (m.goal_card || m)?.status === 'submitted');
-  const approved   = teamCards.filter(m => ['manager_approved','hr_approved','finalized'].includes((m.goal_card || m)?.status));
-  const others     = teamCards.filter(m => !['submitted','manager_approved','hr_approved','finalized'].includes((m.goal_card || m)?.status));
+  const approved   = teamCards.filter(m => ['manager_approved','hod_approved','hod_rejected','hr_approved','finalized'].includes((m.goal_card || m)?.status));
+  const others     = teamCards.filter(m => !['submitted','manager_approved','hod_approved','hod_rejected','hr_approved','finalized'].includes((m.goal_card || m)?.status));
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 lg:p-6">

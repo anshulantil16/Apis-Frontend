@@ -73,12 +73,13 @@ export function HRView({ hrUser }: { hrUser: any }) {
   };
 
   const downloadTemplate = () => {
-    const headers = ['Employee ID','Name','Email','Phone','Designation','Department','Zone','Sub Zone','Reporting Manager ID','User Type','Joined Date'];
+    const headers = ['Employee ID','Name','Email','Phone','Designation','Department','Zone','Sub Zone','Reporting Manager ID','HOD ID','User Type','Joined Date'];
     const sample = [
-      ['EMP001','Rahul Sharma','rahul@company.com','9876543210','Sales Executive','Sales','North Zone','Delhi Sub Zone','MGR001','field_force','2024-01-15'],
-      ['EMP002','Priya Singh','priya@company.com','9876543211','Area Manager','Sales','South Zone','Hyderabad Sub Zone','MGR002','manager','2023-06-01'],
-      ['MGR001','Amit Verma','amit@company.com','9876543212','Zonal Manager','Management','North Zone','','','manager','2022-03-10'],
-      ['HR001','Sneha Patel','sneha@company.com','9876543213','HR Manager','Human Resources','','','','hr','2022-01-01'],
+      ['EMP001','Rahul Sharma','rahul@company.com','9876543210','Sales Executive','Sales','North Zone','Delhi Sub Zone','MGR001','HOD001','field_force','2024-01-15'],
+      ['EMP002','Priya Singh','priya@company.com','9876543211','Area Manager','Sales','South Zone','Hyderabad Sub Zone','MGR002','HOD001','manager','2023-06-01'],
+      ['MGR001','Amit Verma','amit@company.com','9876543212','Zonal Manager','Management','North Zone','','','HOD001','manager','2022-03-10'],
+      ['HOD001','Ravi Kumar','ravi@company.com','9876543214','Head of Department','Management','North Zone','','','','hod','2021-06-01'],
+      ['HR001','Sneha Patel','sneha@company.com','9876543213','HR Manager','Human Resources','','','','','hr','2022-01-01'],
     ];
     const csv = [headers.join(','), ...sample.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -145,10 +146,11 @@ export function HRView({ hrUser }: { hrUser: any }) {
   ];
 
   const statCards = [
-    { label: 'Total Employees', value: overview?.total_employees,               icon: Users,      color: 'text-blue-600',    bg: 'bg-blue-50 border-blue-200' },
-    { label: 'Submitted',       value: overview?.goal_card_status?.submitted,   icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-    { label: 'Approved',        value: overview?.goal_card_status?.manager_approved, icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
-    { label: 'Pending',         value: overview?.goal_card_status?.draft,       icon: Clock,      color: 'text-slate-500',   bg: 'bg-slate-50 border-slate-200' },
+    { label: 'Total Employees', value: overview?.total_employees,                    icon: Users,       color: 'text-blue-600',    bg: 'bg-blue-50 border-blue-200' },
+    { label: 'Submitted',       value: overview?.goal_card_status?.submitted,        icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+    { label: 'Mgr Approved',    value: overview?.goal_card_status?.manager_approved, icon: TrendingUp,  color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200' },
+    { label: 'HOD Approved',    value: overview?.goal_card_status?.hod_approved,     icon: Award,       color: 'text-violet-600',  bg: 'bg-violet-50 border-violet-200' },
+    { label: 'Pending',         value: overview?.goal_card_status?.draft,            icon: Clock,       color: 'text-slate-500',   bg: 'bg-slate-50 border-slate-200' },
   ];
 
   return (

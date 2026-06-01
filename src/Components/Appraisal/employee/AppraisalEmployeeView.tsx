@@ -80,7 +80,7 @@ function getJourneyStep(gc: any): number {
   const rev = gc.review_data;
   if (rev?.status === 'published') return 4;
   if (rev?.status === 'manager_reviewed' || rev?.status === 'hr_finalized') return 3;
-  if (gc.status === 'manager_approved' || gc.status === 'hr_approved') return 2;
+  if (['manager_approved', 'hod_approved', 'hr_approved'].includes(gc.status)) return 2;
   if (gc.status === 'submitted') return 1;
   return 0;
 }
@@ -93,7 +93,9 @@ function StatusBadge({ status }: { status: string }) {
     submitted:        { cls: 'bg-blue-50 text-blue-700 border-blue-200',              label: 'Pending Review',    dot: 'bg-blue-500 animate-pulse' },
     manager_approved: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200',     label: 'Manager Approved',  dot: 'bg-emerald-500' },
     manager_rejected: { cls: 'bg-rose-50 text-rose-700 border-rose-200',              label: 'Changes Requested', dot: 'bg-rose-500' },
-    hr_approved:      { cls: 'bg-blue-50 text-blue-700 border-blue-200',              label: 'HR Approved',       dot: 'bg-blue-500' },
+    hod_approved:     { cls: 'bg-violet-50 text-violet-700 border-violet-200',        label: 'HOD Approved',      dot: 'bg-violet-500' },
+    hod_rejected:     { cls: 'bg-orange-50 text-orange-700 border-orange-200',        label: 'HOD Rejected',      dot: 'bg-orange-500' },
+    hr_approved:      { cls: 'bg-purple-50 text-purple-700 border-purple-200',        label: 'HR Approved',       dot: 'bg-purple-500' },
     finalized:        { cls: 'bg-amber-50 text-amber-700 border-amber-200',           label: 'Finalized',         dot: 'bg-amber-500' },
   };
   const s = map[status] || { cls: 'bg-slate-100 text-slate-600 border-slate-200', label: status, dot: 'bg-slate-400' };
