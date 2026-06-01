@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
 import { AppraisalEmployeeView } from '../Components/Appraisal/employee/AppraisalEmployeeView';
 import { AppraisalManagerView } from '../Components/Appraisal/manager/AppraisalManagerView';
+import { AppraisalHODView } from '../Components/Appraisal/hod/AppraisalHODView';
 import { HRView } from '../Components/Performance/hr/HRView';
 import { ProgressReportDashboard } from '../Components/ProgressReport/ProgressReportDashboard';
 import { PERF_API } from './PerformancePage';
@@ -10,7 +11,7 @@ interface AppraisalPageProps {
   onNavigateBack: () => void;
 }
 
-type Role = 'employee' | 'manager' | 'hr';
+type Role = 'employee' | 'manager' | 'hod' | 'hr';
 
 // Appraisal uses the same backend as Performance for now.
 // When a dedicated appraisal backend is ready, update this constant.
@@ -26,15 +27,18 @@ function AppraisalHub({
   const [section, setSection] = useState<HubSection>('goals');
 
   const roleConfig = {
-    hr:       { label: 'Admin',    badge: 'bg-rose-50 text-rose-600 border-rose-200',    dot: 'bg-rose-500' },
-    manager:  { label: 'Manager',  badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
-    employee: { label: 'Employee', badge: 'bg-blue-50 text-blue-700 border-blue-200',    dot: 'bg-blue-500' },
+    hr:       { label: 'Admin',    badge: 'bg-rose-50 text-rose-600 border-rose-200',       dot: 'bg-rose-500' },
+    hod:      { label: 'HOD',      badge: 'bg-violet-50 text-violet-700 border-violet-200', dot: 'bg-violet-500' },
+    manager:  { label: 'Manager',  badge: 'bg-amber-50 text-amber-700 border-amber-200',    dot: 'bg-amber-500' },
+    employee: { label: 'Employee', badge: 'bg-blue-50 text-blue-700 border-blue-200',       dot: 'bg-blue-500' },
   }[role];
 
   const tabs = role === 'employee'
     ? ['Appraisal Form', 'Progress & Reports']
     : role === 'manager'
     ? ['Goal Approvals & Ratings', 'Team Progress']
+    : role === 'hod'
+    ? ['HOD Review', 'Team Analytics']
     : ['HR Controls', 'Org Analytics'];
 
   const initial = (employee.name || 'U')[0].toUpperCase();
@@ -114,6 +118,7 @@ function AppraisalHub({
         <>
           {role === 'employee' && <AppraisalEmployeeView employee={employee} />}
           {role === 'manager' && <AppraisalManagerView manager={employee} />}
+          {role === 'hod' && <AppraisalHODView hod={employee} />}
           {role === 'hr' && <HRView hrUser={employee} />}
         </>
       ) : (
@@ -147,10 +152,19 @@ const ROLE_CONFIG = [
     iconBg: 'bg-amber-100 text-amber-600',
   },
   {
+    id: 'hod' as Role,
+    label: 'HOD',
+    sub: 'Department head review',
+    icon: BarChart3,
+    active: 'from-violet-50 to-purple-50 border-violet-400 text-violet-700',
+    inactive: 'border-slate-200 hover:border-violet-300 hover:bg-violet-50/50',
+    iconBg: 'bg-violet-100 text-violet-600',
+  },
+  {
     id: 'hr' as Role,
     label: 'Admin',
     sub: 'Full access & analytics',
-    icon: BarChart3,
+    icon: LineChart,
     active: 'from-rose-50 to-red-50 border-rose-400 text-rose-700',
     inactive: 'border-slate-200 hover:border-rose-300 hover:bg-rose-50/50',
     iconBg: 'bg-rose-100 text-rose-600',
@@ -203,6 +217,8 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
       if (!res.ok) throw new Error(data.error || 'OTP verification failed.');
       if (role === 'manager' && data.user_type !== 'manager')
         throw new Error(`${data.name} is not registered as a Manager.`);
+      if (role === 'hod' && data.user_type !== 'hod')
+        throw new Error(`${data.name} is not registered as a HOD.`);
       if (role === 'hr' && data.user_type !== 'hr')
         throw new Error(`${data.name} is not registered as an Admin.`);
       setEmployee(data);
