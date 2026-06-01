@@ -3,7 +3,7 @@ import { TeamProgressView } from './manager/TeamProgressView';
 import { OrgAnalyticsView } from './hr/OrgAnalyticsView';
 
 interface Props {
-  role: 'employee' | 'manager' | 'hr';
+  role: 'employee' | 'manager' | 'hod' | 'hr';
   user: any;
 }
 

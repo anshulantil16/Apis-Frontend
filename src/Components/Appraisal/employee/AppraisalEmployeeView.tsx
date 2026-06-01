@@ -323,8 +323,8 @@ const KPI_COLS = [
   { label: '',                       width: 'w-[36px]' },
 ];
 
-function KpiTableRow({ kpi, j, goalIdx, canEdit, onChange, onRemove, showRemove }: {
-  kpi: any; j: number; goalIdx: number; canEdit: boolean;
+function KpiTableRow({ kpi, j, canEdit, onChange, onRemove, showRemove }: {
+  kpi: any; j: number; canEdit: boolean;
   onChange: (field: string, val: any) => void;
   onRemove: () => void;
   showRemove: boolean;
@@ -781,7 +781,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                                 {(g.kpis || []).map((kpi: any, j: number) => (
                                   <KpiTableRow
                                     key={kpi._id || kpi.id || j}
-                                    kpi={kpi} j={j} goalIdx={i}
+                                    kpi={kpi} j={j}
                                     canEdit={canEdit}
                                     onChange={(field, val) => updateKPI(i, j, field, val)}
                                     onRemove={() => removeKPI(i, j)}

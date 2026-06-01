@@ -629,7 +629,6 @@ export function AppraisalHODView({ hod }: { hod: any }) {
   const renderCard = (member: any) => {
     const gc = member.goal_card;
     const st = gc?.status || 'none';
-    const cfg = STATUS_CFG[st] || STATUS_CFG.draft;
     return (
       <div key={member.employee_id}
         onClick={() => gc ? setSelectedCard(member) : undefined}

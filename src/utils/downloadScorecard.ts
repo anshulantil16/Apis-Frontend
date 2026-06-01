@@ -43,7 +43,7 @@ function navyCell(ws: any, row: number, col: number) {
   };
 }
 
-function tintCell(ws: any, row: number, col: number, fgColor: typeof AMBER) {
+function tintCell(ws: any, row: number, col: number, fgColor: { argb: string }) {
   const cell = ws.getCell(row, col);
   cell.fill = { type: 'pattern', pattern: 'solid', fgColor };
   cell.alignment = { vertical: 'middle', horizontal: 'center' };

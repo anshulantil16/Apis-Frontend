@@ -697,7 +697,6 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
               {[...submitted, ...others, ...approved].map((member, mi) => {
                 const gc = member.goal_card || member;
                 const status = gc?.status;
-                const cfg = STATUS_CFG[status] || STATUS_CFG.draft;
                 const avatarColors = ['from-blue-500 to-indigo-600', 'from-amber-500 to-orange-600', 'from-emerald-500 to-teal-600', 'from-rose-500 to-pink-600', 'from-purple-500 to-violet-600'];
                 const avatarGrad = avatarColors[(member.name?.charCodeAt(0) || mi) % avatarColors.length];
                 const canReview = status === 'submitted';
