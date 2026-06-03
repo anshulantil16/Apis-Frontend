@@ -128,11 +128,13 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
   const initial = buildInitialRatings();
   const [ratings,  setRatings]  = useState<Record<string, string>>(initial.scores);
   const [comments, setComments] = useState<Record<string, string>>(initial.comments);
+  const [managerSkills, setManagerSkills] = useState<string[]>(
+    gc.manager_suggested_skills?.length ? gc.manager_suggested_skills : ['']
+  );
   const [specialAchievements, setSpecialAchievements] = useState(gc.manager_special_achievements || '');
   const [promoted, setPromoted] = useState<'Yes' | 'No' | ''>(gc.manager_promoted || '');
   const [promotedJustification, setPromotedJustification] = useState(gc.manager_promoted_justification || '');
   const [salaryCorrection, setSalaryCorrection] = useState(gc.manager_salary_correction || '');
-  const [salaryJustification, setSalaryJustification] = useState(gc.manager_salary_justification || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -186,10 +188,6 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
       showMsg('Promotion justification is mandatory. Please fill it in.', false);
       return;
     }
-    if (!salaryJustification.trim()) {
-      showMsg('Salary/market correction justification is mandatory. Please fill it in.', false);
-      return;
-    }
     setSaving(true);
     try {
       const saved = await saveRatings();
@@ -201,11 +199,11 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
           action: 'approved',
           remarks: '',
           manager_name: manager.name,
+          manager_suggested_skills: managerSkills.filter(s => s.trim()),
           manager_special_achievements: specialAchievements,
           manager_promoted: promoted,
           manager_promoted_justification: promotedJustification,
           manager_salary_correction: salaryCorrection,
-          manager_salary_justification: salaryJustification,
         }),
       });
       if (res.ok) {
@@ -414,11 +412,59 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
           </div>
           <div className="p-5 space-y-5">
 
+            {/* Manager-Suggested Additional Skills */}
+            <div>
+              <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-1">
+                Training / Skill Recommendations
+              </label>
+              <p className="text-[11px] text-slate-400 mb-2">
+                Employee's filled skills shown below. Add any additional skill recommendations you think are important.
+              </p>
+              {/* Employee skills — read-only */}
+              {keySkills.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {keySkills.map((s, i) => s.trim() && (
+                    <span key={i} className="px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-xs font-semibold text-slate-600">{s}</span>
+                  ))}
+                </div>
+              )}
+              {/* Manager additions */}
+              <div className="space-y-2">
+                {managerSkills.map((skill, si) => (
+                  <div key={si} className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                      <span className="text-[10px] font-black text-amber-500">{si + 1}</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={skill}
+                      onChange={e => {
+                        const updated = [...managerSkills];
+                        updated[si] = e.target.value;
+                        setManagerSkills(updated);
+                      }}
+                      placeholder={`Additional recommendation ${si + 1}…`}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-sm font-medium focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 placeholder-slate-300 transition-all"
+                    />
+                    {managerSkills.length > 1 && (
+                      <button onClick={() => setManagerSkills(managerSkills.filter((_, j) => j !== si))}
+                        className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all text-sm">✕</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setManagerSkills([...managerSkills, ''])}
+                className="mt-2 flex items-center gap-1.5 text-amber-600 hover:text-amber-800 text-xs font-bold transition-all">
+                <span className="w-5 h-5 rounded-md bg-amber-100 border border-amber-200 flex items-center justify-center text-base leading-none">+</span>
+                Add recommendation
+              </button>
+            </div>
+
             {/* Special Achievements */}
             <div>
               <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-1.5">
                 Special Achievements
-                <span className="ml-1 text-slate-400 normal-case font-medium">(mention in Rs &amp; in Lacs)</span>
+                <span className="ml-1 text-slate-400 normal-case font-medium">(measurable and quantifiable task performed by the appraisee)</span>
               </label>
               <textarea
                 rows={3}
@@ -467,33 +513,18 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
             </div>
 
             {/* Salary / Market Correction */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-1.5">
-                  Salary / Market Correction
-                </label>
-                <input
-                  type="text"
-                  value={salaryCorrection}
-                  onChange={e => setSalaryCorrection(e.target.value)}
-                  placeholder="e.g. 10% increment, market correction…"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 text-sm font-medium focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 placeholder-slate-300 transition-all"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-1.5">
-                  Justification <span className="text-rose-500">* Mandatory</span>
-                </label>
-                <textarea
-                  rows={2}
-                  value={salaryJustification}
-                  onChange={e => setSalaryJustification(e.target.value)}
-                  placeholder="Justify the salary/market correction recommendation…"
-                  className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 placeholder-slate-300 resize-none transition-all leading-relaxed ${
-                    !salaryJustification.trim() ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : 'border-slate-200 focus:border-amber-400 focus:ring-amber-100'
-                  }`}
-                />
-              </div>
+            <div>
+              <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-0.5">
+                Salary / Market Correction
+              </label>
+              <p className="text-[11px] text-slate-400 mb-2">Recommendation, if any</p>
+              <textarea
+                rows={3}
+                value={salaryCorrection}
+                onChange={e => setSalaryCorrection(e.target.value)}
+                placeholder="e.g. 10% increment recommended based on market benchmarking and performance rating…"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm font-medium focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 placeholder-slate-300 resize-none transition-all leading-relaxed"
+              />
             </div>
 
           </div>

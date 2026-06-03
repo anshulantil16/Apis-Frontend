@@ -129,11 +129,13 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
   const setHodScore = (gi: number, ki: number, val: string) =>
     setHodScores(prev => ({ ...prev, [`${gi}_${ki}`]: val }));
 
+  const [hodManagerSkills, setHodManagerSkills] = useState<string[]>(
+    gc.manager_suggested_skills?.length ? gc.manager_suggested_skills : ['']
+  );
   const [hodSpecialAch, setHodSpecialAch] = useState(gc.hod_special_achievements || '');
   const [hodPromoted, setHodPromoted] = useState<'Yes' | 'No' | ''>(gc.hod_promoted || '');
   const [hodPromotedJust, setHodPromotedJust] = useState(gc.hod_promoted_justification || '');
   const [hodSalary, setHodSalary] = useState(gc.hod_salary_correction || '');
-  const [hodSalaryJust, setHodSalaryJust] = useState(gc.hod_salary_justification || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -160,10 +162,6 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
       showMsg('Promotion justification is mandatory. Please fill it in.', false);
       return;
     }
-    if (!hodSalaryJust.trim()) {
-      showMsg('Salary/market correction justification is mandatory. Please fill it in.', false);
-      return;
-    }
     setSaving(true);
     try {
       // Save per-KPI HOD scores first
@@ -187,11 +185,11 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hod_name: hod.name,
+          manager_suggested_skills: hodManagerSkills.filter(s => s.trim()),
           hod_special_achievements: hodSpecialAch,
           hod_promoted: hodPromoted,
           hod_promoted_justification: hodPromotedJust,
           hod_salary_correction: hodSalary,
-          hod_salary_justification: hodSalaryJust,
         }),
       });
       if (res.ok) {
@@ -419,11 +417,57 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
           </div>
           <div className="p-5 space-y-5">
 
+            {/* Manager-Suggested Skills (editable by HOD too) */}
+            <div>
+              <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-1">
+                Training / Skill Recommendations
+              </label>
+              <p className="text-[11px] text-slate-400 mb-2">
+                Employee's filled skills shown below. Add or update skill recommendations.
+              </p>
+              {keySkills.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {keySkills.map((s, i) => s.trim() && (
+                    <span key={i} className="px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-xs font-semibold text-slate-600">{s}</span>
+                  ))}
+                </div>
+              )}
+              <div className="space-y-2">
+                {hodManagerSkills.map((skill, si) => (
+                  <div key={si} className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-md bg-violet-50 border border-violet-200 flex items-center justify-center shrink-0">
+                      <span className="text-[10px] font-black text-violet-500">{si + 1}</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={skill}
+                      onChange={e => {
+                        const updated = [...hodManagerSkills];
+                        updated[si] = e.target.value;
+                        setHodManagerSkills(updated);
+                      }}
+                      placeholder={`Additional recommendation ${si + 1}…`}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-sm font-medium focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 placeholder-slate-300 transition-all"
+                    />
+                    {hodManagerSkills.length > 1 && (
+                      <button onClick={() => setHodManagerSkills(hodManagerSkills.filter((_, j) => j !== si))}
+                        className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all text-sm">✕</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setHodManagerSkills([...hodManagerSkills, ''])}
+                className="mt-2 flex items-center gap-1.5 text-violet-600 hover:text-violet-800 text-xs font-bold transition-all">
+                <span className="w-5 h-5 rounded-md bg-violet-100 border border-violet-200 flex items-center justify-center text-base leading-none">+</span>
+                Add recommendation
+              </button>
+            </div>
+
             {/* Special Achievements */}
             <div>
               <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-1.5">
                 Special Achievements
-                <span className="ml-1 text-slate-400 normal-case font-medium">(mention in Rs &amp; in Lacs)</span>
+                <span className="ml-1 text-slate-400 normal-case font-medium">(measurable and quantifiable task performed by the appraisee)</span>
               </label>
               <textarea
                 rows={3}
@@ -472,33 +516,18 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
             </div>
 
             {/* Salary / Market Correction */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-1.5">
-                  Salary / Market Correction
-                </label>
-                <input
-                  type="text"
-                  value={hodSalary}
-                  onChange={e => setHodSalary(e.target.value)}
-                  placeholder="e.g. 10% increment, market correction…"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 text-sm font-medium focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 placeholder-slate-300 transition-all"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-1.5">
-                  Justification <span className="text-rose-500">* Mandatory</span>
-                </label>
-                <textarea
-                  rows={2}
-                  value={hodSalaryJust}
-                  onChange={e => setHodSalaryJust(e.target.value)}
-                  placeholder="Justify the salary/market correction recommendation…"
-                  className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 placeholder-slate-300 resize-none transition-all leading-relaxed ${
-                    !hodSalaryJust.trim() ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : 'border-slate-200 focus:border-violet-400 focus:ring-violet-100'
-                  }`}
-                />
-              </div>
+            <div>
+              <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-0.5">
+                Salary / Market Correction
+              </label>
+              <p className="text-[11px] text-slate-400 mb-2">Recommendation, if any</p>
+              <textarea
+                rows={3}
+                value={hodSalary}
+                onChange={e => setHodSalary(e.target.value)}
+                placeholder="e.g. 10% increment recommended based on market benchmarking and performance rating…"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm font-medium focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 placeholder-slate-300 resize-none transition-all leading-relaxed"
+              />
             </div>
 
           </div>
