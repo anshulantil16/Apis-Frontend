@@ -35,10 +35,6 @@ const WHITE    = { argb: 'FFFFFFFF' } as const;
 const LIGHT    = { argb: 'FFF0F4FF' } as const;
 const AMBER    = { argb: 'FFFFF3CD' } as const;
 const MGRTINT  = { argb: 'FFE8F0FF' } as const;
-const VIOLTINT = { argb: 'FFF3E8FF' } as const;
-const ROSETINT = { argb: 'FFFFF0F4' } as const;
-const GREENTINT = { argb: 'FFF0FFF4' } as const;
-
 function navyCell(ws: any, row: number, col: number) {
   const cell = ws.getCell(row, col);
   cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: NAVY };
@@ -81,7 +77,7 @@ function sectionHeader(ws: any, rowNum: number, cols: number, label: string, col
   return rowNum + 1;
 }
 
-function sectionRow(ws: any, rowNum: number, cols: number, label: string, value: string, labelColor = NAVY) {
+function sectionRow(ws: any, rowNum: number, cols: number, label: string, value: string, labelColor: { argb: string } = NAVY) {
   ws.mergeCells(rowNum, 1, rowNum, 3);
   const lbl = ws.getCell(rowNum, 1);
   lbl.value     = label;
