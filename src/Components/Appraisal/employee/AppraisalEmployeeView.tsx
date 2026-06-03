@@ -514,6 +514,10 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       }),
     });
     const data = await res.json();
+    if (!res.ok) {
+      showMsg(data?.error || 'Failed to save. Please try again.', 'error');
+      throw new Error(data?.error || 'Save failed');
+    }
     setGoalCard(data);
     return data;
   };
