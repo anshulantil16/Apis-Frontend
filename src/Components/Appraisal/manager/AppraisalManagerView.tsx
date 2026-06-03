@@ -186,6 +186,12 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
       showMsg('Please fill Wt% (Manager) for all KPIs before approving.', false);
       return;
     }
+    const UPLIFT_KEYS = ['U', 'P', 'L', 'I', 'F', 'T'];
+    const missingUplift = UPLIFT_KEYS.some(k => !upliftRatings[k]);
+    if (missingUplift) {
+      showMsg('Please rate all 6 UPLIFT values before submitting.', false);
+      return;
+    }
     if (!promotedJustification.trim()) {
       showMsg('Promotion justification is mandatory. Please fill it in.', false);
       return;

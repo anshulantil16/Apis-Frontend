@@ -159,6 +159,12 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
       showMsg('Please fill Wt% (HOD) for all KPIs before submitting.', false);
       return;
     }
+    const COMP_KEYS = ['1', '2', '3', '4', '5', '6', '7'];
+    const missingComp = COMP_KEYS.some(k => !hodCompetencyRatings[k]);
+    if (missingComp) {
+      showMsg('Please rate all 7 competencies before submitting.', false);
+      return;
+    }
     if (!hodPromotedJust.trim()) {
       showMsg('Promotion justification is mandatory. Please fill it in.', false);
       return;
