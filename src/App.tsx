@@ -5,8 +5,14 @@ import { DataExtractorPage } from './Pages/DataExtractorPage';
 
 type AppView = 'extractor' | 'performance' | 'appraisal';
 
+const APPRAISAL_ONLY = import.meta.env.VITE_APP_MODE === 'appraisal';
+
 export default function App() {
-  const [view, setView] = useState<AppView>('extractor');
+  const [view, setView] = useState<AppView>(APPRAISAL_ONLY ? 'appraisal' : 'extractor');
+
+  if (APPRAISAL_ONLY) {
+    return <AppraisalPage onNavigateBack={() => {}} />;
+  }
 
   return (
     <div>
