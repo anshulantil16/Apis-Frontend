@@ -249,7 +249,9 @@ export function HRView({ hrUser }: { hrUser: any }) {
                   <div className="space-y-3">
                     {Object.entries(overview.goal_card_status || {}).map(([s, count]: any) => (
                       <div key={s} className="flex items-center gap-4">
-                        <span className="text-slate-600 text-sm w-44 capitalize font-semibold">{s.replace(/_/g, ' ')}</span>
+                        <span className="text-slate-600 text-sm w-44 capitalize font-semibold">
+                          {s === 'draft' ? 'Pending' : s.replace(/_/g, ' ')}
+                        </span>
                         <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-700"
