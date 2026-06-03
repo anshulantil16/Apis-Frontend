@@ -558,6 +558,13 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   };
 
   const handleNextFromStep2 = async () => {
+    const unanswered = SELF_REVIEW_QUESTIONS.findIndex((_, qi) =>
+      !selfAnswers[qi].some(p => p.trim())
+    );
+    if (unanswered !== -1) {
+      showMsg(`Please add at least one point for Question ${unanswered + 1} before proceeding.`, 'warn');
+      return;
+    }
     setSaving(true);
     try {
       await saveDraftGoals();
@@ -568,6 +575,14 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   };
 
   const handleNextFromStep3 = async () => {
+    if (!keySkills.some(s => s.trim())) {
+      showMsg('Please fill at least 1 key skill before proceeding.', 'warn');
+      return;
+    }
+    if (!trainingPrograms.trim()) {
+      showMsg('Please fill in the Technical Training Programs field before proceeding.', 'warn');
+      return;
+    }
     setSaving(true);
     try {
       await saveDraftGoals();
@@ -578,6 +593,14 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   };
 
   const handleSubmitToManager = async () => {
+    if (!feedbackManager.trim()) {
+      showMsg('Please fill in your Feedback about Manager before submitting.', 'warn');
+      return;
+    }
+    if (!feedbackOrganization.trim()) {
+      showMsg('Please fill in your Feedback about Organization before submitting.', 'warn');
+      return;
+    }
     setSaving(true);
     try {
       const data = await saveDraftGoals();
