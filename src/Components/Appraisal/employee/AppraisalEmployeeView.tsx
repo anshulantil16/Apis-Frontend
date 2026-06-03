@@ -406,7 +406,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' | 'warn' } | null>(null);
   const [formStep, setFormStep] = useState<1 | 2 | 3 | 4>(1);
-  const [selfAnswers, setSelfAnswers] = useState<string[]>(['', '', '']);
+  const [selfAnswers, setSelfAnswers] = useState<string[][]>([[''], [''], ['']]);
   const [keySkills, setKeySkills] = useState<string[]>(['', '', '', '', '']);
   const [trainingPrograms, setTrainingPrograms] = useState('');
   const [feedbackManager, setFeedbackManager] = useState('');
@@ -432,8 +432,26 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
     fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data) { setGoalCard(data); setGoals(data.goals || []); }
-        else { setGoalCard(null); setGoals([]); }
+        if (data) {
+          setGoalCard(data);
+          setGoals(data.goals || []);
+          // Normalize existing self_review_answers: old format is string[], new is string[][]
+          const raw: any[] = data.self_review_answers || [];
+          setSelfAnswers([0, 1, 2].map(i => {
+            const v = raw[i];
+            if (Array.isArray(v)) return v.length ? v : [''];
+            if (typeof v === 'string' && v.trim()) return [v];
+            return [''];
+          }));
+          setKeySkills(
+            Array.isArray(data.key_skills) && data.key_skills.length
+              ? data.key_skills.concat(Array(Math.max(0, 5 - data.key_skills.length)).fill(''))
+              : ['', '', '', '', '']
+          );
+          setTrainingPrograms(data.training_programs || '');
+          setFeedbackManager(data.feedback_manager || '');
+          setFeedbackOrganization(data.feedback_organization || '');
+        } else { setGoalCard(null); setGoals([]); }
       }).catch(() => {});
   }, [selectedCycle, employee.employee_id]);
 
@@ -700,7 +718,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                   <Target className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold text-base">{selectedCycle.name} — Annual Appraisal Goal Setting</h3>
+                  <h3 className="text-white font-bold text-base">Performance Appraisal Form FY 25-26</h3>
                   <p className="text-blue-100 text-xs mt-0.5 opacity-80">Step 1 of 4 · Fill all KRA/KPI details across 4 goal categories · Total weightage must equal 100%</p>
                 </div>
               </div>
@@ -866,24 +884,61 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                       <span className="text-indigo-700 font-black text-sm">{qi + 1}</span>
                     </div>
                     <div className="flex-1">
-                      <p className="text-slate-800 font-semibold text-sm mb-3">{question}</p>
-                      <textarea
-                        rows={5}
-                        disabled={!canEditFreeText}
-                        value={selfAnswers[qi]}
-                        onChange={e => {
-                          const updated = [...selfAnswers];
-                          updated[qi] = e.target.value;
-                          setSelfAnswers(updated);
-                        }}
-                        placeholder="Type your answer here…"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm font-medium focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 placeholder-slate-300 disabled:opacity-60 resize-none transition-all leading-relaxed"
-                      />
-                      <div className="flex justify-end mt-1">
-                        <span className="text-[11px] text-slate-400 font-medium">
-                          {selfAnswers[qi].length} characters
-                        </span>
+                      <p className="text-slate-800 font-semibold text-sm mb-4">{question}</p>
+
+                      {/* Bullet point inputs */}
+                      <div className="space-y-2.5">
+                        {selfAnswers[qi].map((point, pi) => (
+                          <div key={pi} className="flex items-center gap-2.5">
+                            <div className="shrink-0 w-5 h-5 rounded-md bg-indigo-50 border border-indigo-200 flex items-center justify-center">
+                              <span className="text-[10px] font-black text-indigo-500">{pi + 1}</span>
+                            </div>
+                            <input
+                              type="text"
+                              disabled={!canEditFreeText}
+                              value={point}
+                              onChange={e => {
+                                const updated = selfAnswers.map((arr, i) =>
+                                  i === qi ? arr.map((p, j) => j === pi ? e.target.value : p) : arr
+                                );
+                                setSelfAnswers(updated);
+                              }}
+                              placeholder={`Point ${pi + 1}…`}
+                              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 text-sm font-medium focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 placeholder-slate-300 disabled:opacity-60 transition-all"
+                            />
+                            {canEditFreeText && selfAnswers[qi].length > 1 && (
+                              <button
+                                onClick={() => {
+                                  const updated = selfAnswers.map((arr, i) =>
+                                    i === qi ? arr.filter((_, j) => j !== pi) : arr
+                                  );
+                                  setSelfAnswers(updated);
+                                }}
+                                className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
                       </div>
+
+                      {canEditFreeText && (
+                        <button
+                          onClick={() => {
+                            const updated = selfAnswers.map((arr, i) =>
+                              i === qi ? [...arr, ''] : arr
+                            );
+                            setSelfAnswers(updated);
+                          }}
+                          className="mt-3 flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 text-xs font-bold transition-all">
+                          <span className="w-5 h-5 rounded-md bg-indigo-100 border border-indigo-200 flex items-center justify-center text-base leading-none">+</span>
+                          Add point
+                        </button>
+                      )}
+
+                      <p className="text-[11px] text-slate-400 font-medium mt-2">
+                        {selfAnswers[qi].filter(p => p.trim()).length} point{selfAnswers[qi].filter(p => p.trim()).length !== 1 ? 's' : ''} filled
+                      </p>
                     </div>
                   </div>
                 </div>
