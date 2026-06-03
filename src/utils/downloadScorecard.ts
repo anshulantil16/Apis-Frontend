@@ -22,12 +22,6 @@ function calcWtSystem(kpi: any): number | null {
   return parseFloat(((score / 100) * wt).toFixed(2));
 }
 
-function starLabel(n: number): string {
-  if (!n) return '';
-  const labels = ['', 'Poor', 'Below Average', 'Average', 'Good', 'Excellent'];
-  return `${'★'.repeat(n)}${'☆'.repeat(5 - n)} ${labels[n] || ''}`;
-}
-
 // ─── Style helpers ─────────────────────────────────────────────────────────────
 
 const NAVY     = { argb: 'FF0D1B4B' } as const;
@@ -189,7 +183,7 @@ export async function downloadScorecard(goalCard: any, cycleName?: string) {
         kpi.final_score   != null ? parseFloat(String(kpi.final_score)).toFixed(2) : '',
         [kpi.self_comments, kpi.achievement_description].filter(Boolean).join('\n') || '',
         kpi.manager_comments || '',
-        kpi.data_source || '',
+        '',  // Base File — no base_file field in model; left blank intentionally
       ];
 
       values.forEach((v, ci) => {
@@ -240,61 +234,6 @@ export async function downloadScorecard(goalCard: any, cycleName?: string) {
   ws.getRow(R).height = 22;
   R++;
   R = spacer(ws, R);
-
-  // ── Section 2: Self-Review Answers ─────────────────────────────────────────
-  const selfAnswers: any[] = goalCard.self_review_answers || [];
-  const SELF_QUESTIONS = [
-    'What do you consider to be your most important achievement of FY 25-26?',
-    'Where did you experience difficulties or constraints which affected your performance in FY 25-26?',
-    'List the training programs attended in FY 25-26.',
-  ];
-  if (selfAnswers.length > 0) {
-    R = sectionHeader(ws, R, COLS, 'SECTION 2 — SELF-REVIEW ANSWERS', NAVY);
-    selfAnswers.forEach((ans: any, qi: number) => {
-      const points: string[] = Array.isArray(ans) ? ans.filter((p: string) => p?.trim()) : (ans?.trim() ? [ans] : []);
-      if (!points.length) return;
-      const questionText = SELF_QUESTIONS[qi] || `Question ${qi + 1}`;
-      const answersText  = points.map((p: string, i: number) => `${i + 1}. ${p}`).join('\n');
-      R = sectionRow(ws, R, COLS, `Q${qi + 1}`, `${questionText}\n${answersText}`);
-    });
-    R = spacer(ws, R);
-  }
-
-  // ── Section 3: Skills & Training ───────────────────────────────────────────
-  const keySkills: string[]        = (goalCard.key_skills || []).filter((s: string) => s?.trim());
-  const suggestedSkills: string[]  = (goalCard.manager_suggested_skills || []).filter((s: string) => s?.trim());
-  const trainingPrograms: string   = goalCard.training_programs || '';
-
-  if (keySkills.length || suggestedSkills.length || trainingPrograms) {
-    R = sectionHeader(ws, R, COLS, 'SECTION 3 — SKILLS & TRAINING', NAVY);
-    if (keySkills.length) {
-      R = sectionRow(ws, R, COLS, 'Key Skills (Employee)', keySkills.join('  |  '));
-    }
-    if (suggestedSkills.length) {
-      R = sectionRow(ws, R, COLS, 'Recommended Skills\n(Manager / HOD)', suggestedSkills.join('  |  '));
-    }
-    if (trainingPrograms) {
-      R = sectionRow(ws, R, COLS, 'Training Programs', trainingPrograms);
-    }
-    R = spacer(ws, R);
-  }
-
-  // ── Section 4: Employee Feedback ───────────────────────────────────────────
-  const fbMgr  = goalCard.feedback_manager || '';
-  const fbOrg  = goalCard.feedback_organization || '';
-  const fbMgrR = goalCard.feedback_manager_rating;
-  const fbOrgR = goalCard.feedback_organization_rating;
-
-  if (fbMgr || fbOrg) {
-    R = sectionHeader(ws, R, COLS, 'SECTION 4 — EMPLOYEE FEEDBACK', NAVY);
-    if (fbMgr) {
-      R = sectionRow(ws, R, COLS, 'Feedback — Manager', `${fbMgrR ? starLabel(fbMgrR) + '\n' : ''}${fbMgr}`);
-    }
-    if (fbOrg) {
-      R = sectionRow(ws, R, COLS, 'Feedback — Organization', `${fbOrgR ? starLabel(fbOrgR) + '\n' : ''}${fbOrg}`);
-    }
-    R = spacer(ws, R);
-  }
 
   // ── Manager Remarks ────────────────────────────────────────────────────────
   const hasMgrRemarks = goalCard.manager_special_achievements || goalCard.manager_promoted || goalCard.manager_salary_correction;
