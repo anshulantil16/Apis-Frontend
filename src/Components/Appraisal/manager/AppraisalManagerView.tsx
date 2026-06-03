@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Users, CheckCircle, Clock, ChevronDown, ChevronUp, AlertCircle,
-  Target, MessageSquare, BookOpen, Send, ArrowLeft, User,
+  Target, MessageSquare, BookOpen, Send, ArrowLeft,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -723,39 +723,70 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
               <p className="text-slate-400 text-sm mt-1">Team members appear here once they start their appraisal.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* Submitted (Awaiting Review) first */}
-              {[...submitted, ...others, ...approved].map((member, mi) => {
-                const gc = member.goal_card || member;
-                const status = gc?.status;
-                const avatarColors = ['from-blue-500 to-indigo-600', 'from-amber-500 to-orange-600', 'from-emerald-500 to-teal-600', 'from-rose-500 to-pink-600', 'from-purple-500 to-violet-600'];
-                const avatarGrad = avatarColors[(member.name?.charCodeAt(0) || mi) % avatarColors.length];
-                const canReview = status === 'submitted';
-
-                return (
-                  <div key={mi}
-                    className={`bg-white border rounded-2xl shadow-sm transition-all ${canReview ? 'border-blue-200 hover:border-blue-400 cursor-pointer' : 'border-slate-200 hover:border-slate-300 cursor-pointer'}`}
-                    onClick={() => gc && setSelectedCard({ ...member, goal_card: gc, cycle_id: selectedCycle.id })}>
-                    <div className="px-5 py-4 flex items-center gap-4">
-                      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${avatarGrad} flex items-center justify-center font-black text-white text-base shadow-sm shrink-0`}>
-                        {member.name?.[0] || <User className="w-5 h-5" />}
+            <div className="space-y-4">
+              {(() => {
+                const renderCard = (member: any, idx: number) => {
+                  const gc = member.goal_card;
+                  const status = gc?.status;
+                  const canReview = status === 'submitted';
+                  const avatarColors = ['from-blue-500 to-indigo-600', 'from-amber-500 to-orange-600', 'from-emerald-500 to-teal-600', 'from-rose-500 to-pink-600', 'from-purple-500 to-violet-600'];
+                  const avatarGrad = avatarColors[(member.name?.charCodeAt(0) || idx) % avatarColors.length];
+                  return (
+                    <div key={member.employee_id || idx}
+                      onClick={() => gc ? setSelectedCard({ ...member, goal_card: gc, cycle_id: selectedCycle.id }) : undefined}
+                      className={`bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm transition-all ${gc ? (canReview ? 'hover:border-blue-300 hover:shadow-md cursor-pointer' : 'hover:border-slate-300 hover:shadow-md cursor-pointer') : 'opacity-60'}`}>
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGrad} flex items-center justify-center font-black text-white shrink-0`}>
+                        {member.name?.[0] || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-slate-900 font-bold text-sm">{member.name}</p>
-                        <p className="text-slate-500 text-xs">{member.designation}{member.zone && ` · ${member.zone}`}</p>
+                        <p className="font-bold text-slate-900 text-sm truncate">{member.name}</p>
+                        <p className="text-amber-600 text-xs font-medium truncate">{member.designation}</p>
+                        {member.zone && <p className="text-slate-400 text-[11px] mt-0.5">📍 {member.zone}</p>}
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <StatusBadge status={status || 'draft'} />
-                        {canReview && (
-                          <span className="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
-                            <Send className="w-3 h-3" /> Give Rating
-                          </span>
-                        )}
+                      <div className="shrink-0 flex items-center gap-2">
+                        {gc
+                          ? <>
+                              <StatusBadge status={status || 'draft'} />
+                              {canReview && (
+                                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                                  <Send className="w-3 h-3" /> Give Rating
+                                </span>
+                              )}
+                            </>
+                          : <span className="text-slate-400 text-xs font-medium">No submission</span>}
                       </div>
                     </div>
-                  </div>
+                  );
+                };
+                return (
+                  <>
+                    {submitted.length > 0 && (
+                      <div>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                          Awaiting Review ({submitted.length})
+                        </p>
+                        <div className="space-y-2">{submitted.map(renderCard)}</div>
+                      </div>
+                    )}
+                    {approved.length > 0 && (
+                      <div>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                          Approved ({approved.length})
+                        </p>
+                        <div className="space-y-2">{approved.map(renderCard)}</div>
+                      </div>
+                    )}
+                    {others.length > 0 && (
+                      <div>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                          Not Submitted ({others.length})
+                        </p>
+                        <div className="space-y-2">{others.map(renderCard)}</div>
+                      </div>
+                    )}
+                  </>
                 );
-              })}
+              })()}
             </div>
           )
         ) : (
