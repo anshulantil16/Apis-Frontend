@@ -60,38 +60,6 @@ function dataCell(ws: any, row: number, col: number, light: boolean) {
   };
 }
 
-function sectionHeader(ws: any, rowNum: number, cols: number, label: string, color: { argb: string }, textColor = WHITE) {
-  ws.mergeCells(rowNum, 1, rowNum, cols);
-  const cell = ws.getCell(rowNum, 1);
-  cell.value     = label;
-  cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: color };
-  cell.font      = { bold: true, color: textColor, size: 9 };
-  cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-  ws.getRow(rowNum).height = 16;
-  return rowNum + 1;
-}
-
-function sectionRow(ws: any, rowNum: number, cols: number, label: string, value: string, labelColor: { argb: string } = NAVY) {
-  ws.mergeCells(rowNum, 1, rowNum, 3);
-  const lbl = ws.getCell(rowNum, 1);
-  lbl.value     = label;
-  lbl.fill      = { type: 'pattern', pattern: 'solid', fgColor: labelColor };
-  lbl.font      = { bold: true, color: WHITE, size: 8 };
-  lbl.alignment = { vertical: 'middle', indent: 1 };
-
-  ws.mergeCells(rowNum, 4, rowNum, cols);
-  const val = ws.getCell(rowNum, 4);
-  val.value     = value;
-  val.font      = { size: 9 };
-  val.alignment = { vertical: 'middle', horizontal: 'left', indent: 1, wrapText: true };
-  val.border    = {
-    top: { style: 'hair' }, bottom: { style: 'hair' },
-    left: { style: 'hair' }, right: { style: 'hair' },
-  };
-  ws.getRow(rowNum).height = value.length > 80 ? 32 : 18;
-  return rowNum + 1;
-}
-
 function spacer(ws: any, rowNum: number) {
   ws.getRow(rowNum).height = 6;
   return rowNum + 1;
@@ -234,39 +202,6 @@ export async function downloadScorecard(goalCard: any, cycleName?: string) {
   ws.getRow(R).height = 22;
   R++;
   R = spacer(ws, R);
-
-  // ── Manager Remarks ────────────────────────────────────────────────────────
-  const hasMgrRemarks = goalCard.manager_special_achievements || goalCard.manager_promoted || goalCard.manager_salary_correction;
-  if (hasMgrRemarks) {
-    R = sectionHeader(ws, R, COLS, 'MANAGER REMARKS', { argb: 'FF1A4B8C' });
-    if (goalCard.manager_special_achievements) {
-      R = sectionRow(ws, R, COLS, 'Special Achievements', goalCard.manager_special_achievements, { argb: 'FF1A4B8C' });
-    }
-    if (goalCard.manager_promoted) {
-      const promText = `${goalCard.manager_promoted}${goalCard.manager_promoted_justification ? '  —  ' + goalCard.manager_promoted_justification : ''}`;
-      R = sectionRow(ws, R, COLS, 'Promoted', promText, { argb: 'FF1A4B8C' });
-    }
-    if (goalCard.manager_salary_correction) {
-      R = sectionRow(ws, R, COLS, 'Salary / Market Correction', goalCard.manager_salary_correction, { argb: 'FF1A4B8C' });
-    }
-    R = spacer(ws, R);
-  }
-
-  // ── HOD Remarks ────────────────────────────────────────────────────────────
-  const hasHODRemarks = goalCard.hod_special_achievements || goalCard.hod_promoted || goalCard.hod_salary_correction;
-  if (hasHODRemarks) {
-    R = sectionHeader(ws, R, COLS, 'HOD REMARKS', { argb: 'FF4B0082' });
-    if (goalCard.hod_special_achievements) {
-      R = sectionRow(ws, R, COLS, 'Special Achievements', goalCard.hod_special_achievements, { argb: 'FF4B0082' });
-    }
-    if (goalCard.hod_promoted) {
-      const promText = `${goalCard.hod_promoted}${goalCard.hod_promoted_justification ? '  —  ' + goalCard.hod_promoted_justification : ''}`;
-      R = sectionRow(ws, R, COLS, 'Promoted', promText, { argb: 'FF4B0082' });
-    }
-    if (goalCard.hod_salary_correction) {
-      R = sectionRow(ws, R, COLS, 'Salary / Market Correction', goalCard.hod_salary_correction, { argb: 'FF4B0082' });
-    }
-  }
 
   // ── Download ───────────────────────────────────────────────────────────────
   const buffer   = await wb.xlsx.writeBuffer();
