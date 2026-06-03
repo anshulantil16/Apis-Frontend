@@ -136,6 +136,7 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
   const [hodPromoted, setHodPromoted] = useState<'Yes' | 'No' | ''>(gc.hod_promoted || '');
   const [hodPromotedJust, setHodPromotedJust] = useState(gc.hod_promoted_justification || '');
   const [hodSalary, setHodSalary] = useState(gc.hod_salary_correction || '');
+  const [hodCompetencyRatings, setHodCompetencyRatings] = useState<Record<string, string>>(gc.hod_competency_ratings || {});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -190,6 +191,7 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
           hod_promoted: hodPromoted,
           hod_promoted_justification: hodPromotedJust,
           hod_salary_correction: hodSalary,
+          hod_competency_ratings: hodCompetencyRatings,
         }),
       });
       if (res.ok) {
@@ -563,6 +565,63 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
           </div>
         </div>
       )}
+
+      {/* ── HOD Competencies Assessment ── */}
+      {gc.status === 'manager_approved' && (() => {
+        const COMPETENCIES = [
+          { key: '1', label: 'STRATEGIC BUSINESS ORIENTATION',           desc: 'The courage to think beyond… Ability of an individual to create breakthrough business impact.' },
+          { key: '2', label: 'LEADERSHIP THROUGH SUSTAINABILITY',         desc: 'Focus on triple bottom line (People, profit and planet). Ability to leverage the forces of economic growth and viability in order to apply them to the business environment.' },
+          { key: '3', label: 'BUSINESS FOCUS / CUSTOMER SATISFACTION',   desc: 'Business at the core… Co-creates and continuously enhances value for customers in order to create business continuity.' },
+          { key: '4', label: 'INNOVATION LED TRANSFORMATION',            desc: 'Using a "whole brain" approach… Ability of an individual to use new paradigms to create sustained and exponential growth.' },
+          { key: '5', label: 'RESULT ORIENTATION WITH EXECUTION EXCELLENCE', desc: 'First time right, every time. Delivers results with sustained commitment to quality and on-time performance, leading to the next level of stakeholder delight.' },
+          { key: '6', label: 'LEVERAGING HUMAN CAPITAL',                 desc: 'Transforming potential to performance… Builds on capabilities, capacities and diversity of people to create a multiplier effect.' },
+          { key: '7', label: 'WEAVING PASSION AND ENERGY AT WORK',       desc: 'Joy of work… The ability to transform the work environment by blending passion & fun at work, creating synergy towards employer branding & sustainability goals achievement.' },
+        ];
+        const OPTS = ['Always', 'Most Often', 'Sometimes', 'Seldom', 'Never'];
+        return (
+          <div className="bg-white border border-violet-200 shadow-sm rounded-2xl overflow-hidden">
+            <div className="bg-violet-50 border-b border-violet-200 px-5 py-3.5">
+              <p className="font-bold text-violet-800 text-sm">Competencies Assessment by HOD</p>
+              <p className="text-violet-600 text-[11px] mt-0.5">Please rate the employee on the following competencies</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs min-w-[680px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider w-8">#</th>
+                    <th className="px-3 py-2.5 text-left text-[9px] font-black text-slate-500 uppercase tracking-wider">Competency</th>
+                    {OPTS.map(o => (
+                      <th key={o} className="px-2 py-2.5 text-center text-[9px] font-black text-slate-500 uppercase tracking-wider w-20">{o}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPETENCIES.map(({ key, label, desc }, idx) => (
+                    <tr key={key} className={`border-b border-slate-100 ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}`}>
+                      <td className="px-3 py-3 text-slate-400 font-bold text-center">{idx + 1}</td>
+                      <td className="px-3 py-3">
+                        <p className="font-bold text-slate-800 text-[11px]">{label}</p>
+                        <p className="text-slate-400 text-[10px] mt-0.5 leading-relaxed">{desc}</p>
+                      </td>
+                      {OPTS.map(o => (
+                        <td key={o} className="px-2 py-3 text-center">
+                          <input
+                            type="radio"
+                            name={`hod_comp_${key}`}
+                            checked={hodCompetencyRatings[key] === o}
+                            onChange={() => setHodCompetencyRatings(prev => ({ ...prev, [key]: o }))}
+                            className="w-4 h-4 accent-violet-600 cursor-pointer"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Submit HOD Review ── */}
       {gc.status === 'manager_approved' && (

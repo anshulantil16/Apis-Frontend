@@ -135,6 +135,8 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
   const [promoted, setPromoted] = useState<'Yes' | 'No' | ''>(gc.manager_promoted || '');
   const [promotedJustification, setPromotedJustification] = useState(gc.manager_promoted_justification || '');
   const [salaryCorrection, setSalaryCorrection] = useState(gc.manager_salary_correction || '');
+  const [upliftRatings,  setUpliftRatings]  = useState<Record<string, string>>(gc.manager_uplift_ratings  || {});
+  const [upliftComments, setUpliftComments] = useState<Record<string, string>>(gc.manager_uplift_comments || {});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -204,6 +206,8 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
           manager_promoted: promoted,
           manager_promoted_justification: promotedJustification,
           manager_salary_correction: salaryCorrection,
+          manager_uplift_ratings: upliftRatings,
+          manager_uplift_comments: upliftComments,
         }),
       });
       if (res.ok) {
@@ -563,6 +567,74 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
           </div>
         </div>
       )}
+
+      {/* ── UPLIFT Values Competency Assessment ── */}
+      {gc.status === 'submitted' && (() => {
+        const UPLIFT = [
+          { key: 'U', label: 'U – Unwavering Integrity', desc: 'Integrity, accountability, trustworthiness, compliance orientation, ethical decision-making.' },
+          { key: 'P', label: 'P – People First',         desc: 'Collaboration, teamwork, respect, communication, stakeholder management.' },
+          { key: 'L', label: 'L – Lifelong Learning',    desc: 'Learning agility, adaptability, self-development, knowledge sharing, growth mindset.' },
+          { key: 'I', label: 'I – Innovative Thinking',  desc: 'Creativity, initiative, problem-solving, innovation, process improvement.' },
+          { key: 'F', label: 'F – Futuristic Focus',     desc: 'Digital mindset, adaptability, quality orientation, forward thinking, efficiency.' },
+          { key: 'T', label: 'T – Trusted Excellence',   desc: 'Performance excellence, reliability, customer focus, ownership, consistency.' },
+        ];
+        const OPTS = ['Always', 'Most Often', 'Sometimes', 'Seldom', 'Never'];
+        return (
+          <div className="bg-white border border-blue-200 shadow-sm rounded-2xl overflow-hidden">
+            <div className="bg-blue-50 border-b border-blue-200 px-5 py-3.5 flex items-start gap-3">
+              <div className="flex-1">
+                <p className="font-bold text-blue-800 text-sm">Competencies Assessment by Reporting Manager</p>
+                <p className="text-blue-600 text-[11px] mt-0.5">UPLIFT Values — strengthening culture and reinforcing expected behaviors</p>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs min-w-[700px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider w-8">#</th>
+                    <th className="px-3 py-2.5 text-left text-[9px] font-black text-slate-500 uppercase tracking-wider">Values @ UPLIFT</th>
+                    {OPTS.map(o => (
+                      <th key={o} className="px-2 py-2.5 text-center text-[9px] font-black text-slate-500 uppercase tracking-wider w-20">{o}</th>
+                    ))}
+                    <th className="px-3 py-2.5 text-left text-[9px] font-black text-slate-500 uppercase tracking-wider w-40">Comments</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {UPLIFT.map(({ key, label, desc }, idx) => (
+                    <tr key={key} className={`border-b border-slate-100 ${idx % 2 === 0 ? '' : 'bg-slate-50/50'}`}>
+                      <td className="px-3 py-3 text-slate-400 font-bold text-center">{idx + 1}</td>
+                      <td className="px-3 py-3">
+                        <p className="font-bold text-slate-800 text-[11px]">{label}</p>
+                        <p className="text-slate-400 text-[10px] mt-0.5 leading-relaxed">{desc}</p>
+                      </td>
+                      {OPTS.map(o => (
+                        <td key={o} className="px-2 py-3 text-center">
+                          <input
+                            type="radio"
+                            name={`uplift_${key}`}
+                            checked={upliftRatings[key] === o}
+                            onChange={() => setUpliftRatings(prev => ({ ...prev, [key]: o }))}
+                            className="w-4 h-4 accent-blue-600 cursor-pointer"
+                          />
+                        </td>
+                      ))}
+                      <td className="px-3 py-3">
+                        <textarea
+                          rows={2}
+                          placeholder="Optional comment…"
+                          value={upliftComments[key] || ''}
+                          onChange={e => setUpliftComments(prev => ({ ...prev, [key]: e.target.value }))}
+                          className="w-full text-[11px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-300 resize-none"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Submit Manager Rating ── */}
       {gc.status === 'submitted' && (
