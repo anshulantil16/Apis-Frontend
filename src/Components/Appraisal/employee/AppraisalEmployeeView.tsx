@@ -68,6 +68,35 @@ const DIRECTION_OPTIONS = [
 
 // ─── Journey Steps ────────────────────────────────────────────────────────────
 
+const STAR_LABELS = ['', 'Poor', 'Below Average', 'Average', 'Good', 'Excellent'];
+
+function StarRating({ value, onChange }: { value: number; onChange?: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0);
+  const active = hovered || value;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map(s => (
+          <button
+            key={s}
+            type="button"
+            disabled={!onChange}
+            onClick={() => onChange?.(s)}
+            onMouseEnter={() => onChange && setHovered(s)}
+            onMouseLeave={() => onChange && setHovered(0)}
+            className="text-2xl transition-transform hover:scale-110 disabled:cursor-default leading-none"
+          >
+            <span className={s <= active ? 'text-amber-400' : 'text-slate-200'}>★</span>
+          </button>
+        ))}
+      </div>
+      {active > 0 && (
+        <span className="text-sm font-bold text-slate-600">{STAR_LABELS[active]}</span>
+      )}
+    </div>
+  );
+}
+
 const JOURNEY_STEPS = [
   { key: 'goal_setting',   label: 'Set Goals',   icon: Target },
   { key: 'mgr_review',     label: 'Mgr Review',  icon: Clock },
@@ -410,7 +439,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   const [keySkills, setKeySkills] = useState<string[]>(['', '', '', '', '']);
   const [trainingPrograms, setTrainingPrograms] = useState('');
   const [feedbackManager, setFeedbackManager] = useState('');
+  const [feedbackManagerRating, setFeedbackManagerRating] = useState<number>(0);
   const [feedbackOrganization, setFeedbackOrganization] = useState('');
+  const [feedbackOrganizationRating, setFeedbackOrganizationRating] = useState<number>(0);
 
   const showMsg = (text: string, type: 'success' | 'error' | 'warn' = 'success') => {
     setMsg({ text, type });
@@ -450,7 +481,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
           );
           setTrainingPrograms(data.training_programs || '');
           setFeedbackManager(data.feedback_manager || '');
+          setFeedbackManagerRating(data.feedback_manager_rating || 0);
           setFeedbackOrganization(data.feedback_organization || '');
+          setFeedbackOrganizationRating(data.feedback_organization_rating || 0);
         } else { setGoalCard(null); setGoals([]); }
       }).catch(() => {});
   }, [selectedCycle, employee.employee_id]);
@@ -510,7 +543,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
         key_skills: keySkills.filter(s => s.trim()),
         training_programs: trainingPrograms,
         feedback_manager: feedbackManager,
+        feedback_manager_rating: feedbackManagerRating || null,
         feedback_organization: feedbackOrganization,
+        feedback_organization_rating: feedbackOrganizationRating || null,
       }),
     });
     const data = await res.json();
@@ -597,8 +632,16 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   };
 
   const handleSubmitToManager = async () => {
+    if (!feedbackManagerRating) {
+      showMsg('Please give a star rating for your Manager before submitting.', 'warn');
+      return;
+    }
     if (!feedbackManager.trim()) {
       showMsg('Please fill in your Feedback about Manager before submitting.', 'warn');
+      return;
+    }
+    if (!feedbackOrganizationRating) {
+      showMsg('Please give a star rating for the Organization before submitting.', 'warn');
       return;
     }
     if (!feedbackOrganization.trim()) {
@@ -1132,6 +1175,13 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                   <div className="flex-1">
                     <p className="text-slate-800 font-bold text-sm mb-0.5">Feedback about Manager</p>
                     <p className="text-slate-400 text-xs mb-4">Share your thoughts on your manager's leadership, support, and communication during this appraisal period.</p>
+
+                    {/* Star Rating */}
+                    <div className="mb-4">
+                      <p className="text-slate-600 text-xs font-semibold mb-2">Overall Rating <span className="text-rose-500">*</span></p>
+                      <StarRating value={feedbackManagerRating} onChange={canEditFreeText ? setFeedbackManagerRating : undefined} />
+                    </div>
+
                     <textarea
                       rows={5}
                       disabled={!canEditFreeText}
@@ -1156,6 +1206,13 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                   <div className="flex-1">
                     <p className="text-slate-800 font-bold text-sm mb-0.5">Feedback about Organization</p>
                     <p className="text-slate-400 text-xs mb-4">Share your thoughts on the organization's culture, processes, work environment, and overall support provided to you.</p>
+
+                    {/* Star Rating */}
+                    <div className="mb-4">
+                      <p className="text-slate-600 text-xs font-semibold mb-2">Overall Rating <span className="text-rose-500">*</span></p>
+                      <StarRating value={feedbackOrganizationRating} onChange={canEditFreeText ? setFeedbackOrganizationRating : undefined} />
+                    </div>
+
                     <textarea
                       rows={5}
                       disabled={!canEditFreeText}
