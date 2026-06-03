@@ -528,6 +528,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
                                         <th className="px-3 py-2 text-right text-[9px] font-black text-slate-400 uppercase tracking-wider">Plan</th>
                                         <th className="px-3 py-2 text-right text-[9px] font-black text-slate-400 uppercase tracking-wider">Actual</th>
                                         <th className="px-3 py-2 text-right text-[9px] font-black text-amber-600 uppercase tracking-wider">Wt% (Mgr)</th>
+                                        <th className="px-3 py-2 text-right text-[9px] font-black text-violet-600 uppercase tracking-wider">Wt% (HOD)</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -539,6 +540,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
                                           <td className="px-3 py-2.5 text-right text-slate-700 font-semibold">{k.target_value || '—'}</td>
                                           <td className="px-3 py-2.5 text-right text-slate-700 font-semibold">{k.actual_achievement || '—'}</td>
                                           <td className="px-3 py-2.5 text-right text-amber-700 font-black">{k.manager_score ?? '—'}</td>
+                                          <td className="px-3 py-2.5 text-right text-violet-700 font-black">{k.hod_score ?? '—'}</td>
                                         </tr>
                                       ))}
                                     </tbody>
@@ -549,23 +551,100 @@ export function HRView({ hrUser }: { hrUser: any }) {
                           </div>
                         )}
 
-                        {/* Self Review */}
+                        {/* Self Review — bullet points */}
                         {selfAnswers.length > 0 && (
                           <div>
                             <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Self-Review Answers</p>
                             <div className="space-y-2">
-                              {selfAnswers.map((ans: string, qi: number) => ans && (
-                                <div key={qi} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                                  <p className="text-[10px] font-bold text-slate-400 mb-1">Q{qi + 1}</p>
-                                  <p className="text-slate-700 text-sm">{ans}</p>
+                              {selfAnswers.map((ans: any, qi: number) => {
+                                const points: string[] = Array.isArray(ans) ? ans : (ans ? [ans] : []);
+                                const filled = points.filter((p: string) => p?.trim());
+                                if (!filled.length) return null;
+                                return (
+                                  <div key={qi} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                    <p className="text-[10px] font-bold text-slate-400 mb-2">Q{qi + 1}</p>
+                                    <ul className="space-y-1">
+                                      {filled.map((p: string, pi: number) => (
+                                        <li key={pi} className="flex gap-2 text-slate-700 text-sm">
+                                          <span className="text-slate-400 shrink-0">{pi + 1}.</span>{p}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Key Skills & Training */}
+                        {(gc?.key_skills?.length > 0 || gc?.training_programs || gc?.manager_suggested_skills?.length > 0) && (
+                          <div>
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Skills & Training</p>
+                            <div className="space-y-3">
+                              {gc?.key_skills?.length > 0 && (
+                                <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                  <p className="text-[10px] font-bold text-slate-400 mb-2">Employee Key Skills</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {gc.key_skills.filter((s: string) => s?.trim()).map((s: string, i: number) => (
+                                      <span key={i} className="px-2.5 py-0.5 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-600">{s}</span>
+                                    ))}
+                                  </div>
                                 </div>
-                              ))}
+                              )}
+                              {gc?.manager_suggested_skills?.filter((s: string) => s?.trim()).length > 0 && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                  <p className="text-[10px] font-bold text-amber-500 mb-2">Manager / HOD Recommended Skills</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {gc.manager_suggested_skills.filter((s: string) => s?.trim()).map((s: string, i: number) => (
+                                      <span key={i} className="px-2.5 py-0.5 bg-white border border-amber-200 rounded-full text-xs font-semibold text-amber-700">{s}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {gc?.training_programs && (
+                                <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                  <p className="text-[10px] font-bold text-slate-400 mb-1">Training Programs</p>
+                                  <p className="text-slate-700 text-sm">{gc.training_programs}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Feedback */}
+                        {(gc?.feedback_manager || gc?.feedback_organization) && (
+                          <div>
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Employee Feedback</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {gc.feedback_manager && (
+                                <div className="bg-rose-50 border border-rose-100 rounded-xl px-4 py-3">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="text-[10px] font-bold text-rose-400">Feedback — Manager</p>
+                                    {gc.feedback_manager_rating && (
+                                      <span className="text-xs font-bold text-amber-500">{'★'.repeat(gc.feedback_manager_rating)}{'☆'.repeat(5 - gc.feedback_manager_rating)} <span className="text-slate-400">{['','Poor','Below Avg','Average','Good','Excellent'][gc.feedback_manager_rating]}</span></span>
+                                    )}
+                                  </div>
+                                  <p className="text-slate-700 text-sm">{gc.feedback_manager}</p>
+                                </div>
+                              )}
+                              {gc.feedback_organization && (
+                                <div className="bg-pink-50 border border-pink-100 rounded-xl px-4 py-3">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="text-[10px] font-bold text-pink-400">Feedback — Organization</p>
+                                    {gc.feedback_organization_rating && (
+                                      <span className="text-xs font-bold text-amber-500">{'★'.repeat(gc.feedback_organization_rating)}{'☆'.repeat(5 - gc.feedback_organization_rating)} <span className="text-slate-400">{['','Poor','Below Avg','Average','Good','Excellent'][gc.feedback_organization_rating]}</span></span>
+                                    )}
+                                  </div>
+                                  <p className="text-slate-700 text-sm">{gc.feedback_organization}</p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
 
                         {/* Manager Remarks */}
-                        {gc?.manager_special_achievements && (
+                        {(gc?.manager_special_achievements || gc?.manager_promoted || gc?.manager_salary_correction) && (
                           <div>
                             <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Manager Remarks</p>
                             <div className="grid grid-cols-3 gap-3">
@@ -584,9 +663,36 @@ export function HRView({ hrUser }: { hrUser: any }) {
                               )}
                               {gc.manager_salary_correction && (
                                 <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                                  <p className="text-[10px] font-bold text-slate-400 mb-1">Salary/Market Correction</p>
+                                  <p className="text-[10px] font-bold text-slate-400 mb-1">Salary / Market Correction</p>
                                   <p className="text-slate-700 text-sm">{gc.manager_salary_correction}</p>
-                                  {gc.manager_salary_justification && <p className="text-slate-500 text-xs mt-1">{gc.manager_salary_justification}</p>}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* HOD Remarks */}
+                        {(gc?.hod_special_achievements || gc?.hod_promoted || gc?.hod_salary_correction) && (
+                          <div>
+                            <p className="text-xs font-black text-violet-400 uppercase tracking-widest mb-2">HOD Remarks</p>
+                            <div className="grid grid-cols-3 gap-3">
+                              {gc.hod_special_achievements && (
+                                <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
+                                  <p className="text-[10px] font-bold text-violet-400 mb-1">Special Achievements</p>
+                                  <p className="text-slate-700 text-sm">{gc.hod_special_achievements}</p>
+                                </div>
+                              )}
+                              {gc.hod_promoted && (
+                                <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
+                                  <p className="text-[10px] font-bold text-violet-400 mb-1">Promoted</p>
+                                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold border ${gc.hod_promoted === 'Yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>{gc.hod_promoted}</span>
+                                  {gc.hod_promoted_justification && <p className="text-slate-500 text-xs mt-1">{gc.hod_promoted_justification}</p>}
+                                </div>
+                              )}
+                              {gc.hod_salary_correction && (
+                                <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
+                                  <p className="text-[10px] font-bold text-violet-400 mb-1">Salary / Market Correction</p>
+                                  <p className="text-slate-700 text-sm">{gc.hod_salary_correction}</p>
                                 </div>
                               )}
                             </div>
