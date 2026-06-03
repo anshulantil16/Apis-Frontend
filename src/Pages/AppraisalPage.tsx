@@ -282,6 +282,23 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
         Data Tools
       </button>
 
+      {/* Instructions panel — bottom-left */}
+      <div className="absolute bottom-5 left-5 max-w-[260px] z-10">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Instructions</p>
+        <div className="space-y-2">
+          {[
+            { n: 1, text: 'The performance review booklet consists of 2 Sections — Section I: Performance Assessment, Section II: Development Action Plan.' },
+            { n: 2, text: 'Section I is based on achievement against KRA formulated at the beginning of the financial year, forming the basis of performance review.' },
+            { n: 3, text: 'Section II focuses on the development action plan — a summary of strengths, areas of improvement, commitment to learning and ability to take on additional responsibilities.' },
+          ].map(({ n, text }) => (
+            <div key={n} className="flex gap-2">
+              <span className="w-4 h-4 rounded-full bg-blue-100 border border-blue-200 text-blue-600 text-[9px] font-black flex items-center justify-center shrink-0 mt-px">{n}</span>
+              <p className="text-[10px] text-slate-400 leading-relaxed">{text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="w-full max-w-md relative z-10">
         {/* Brand */}
         <div className="text-center mb-4">
