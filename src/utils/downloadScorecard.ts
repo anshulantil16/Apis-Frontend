@@ -330,12 +330,32 @@ export async function downloadScorecard(goalCard: any, cycleName?: string) {
   }
 
   // ── Download ───────────────────────────────────────────────────────────────
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url    = URL.createObjectURL(blob);
-  const a      = document.createElement('a');
-  a.href       = url;
-  a.download   = `${empName}_${fy}_Scorecard.xlsx`;
+  const buffer   = await wb.xlsx.writeBuffer();
+  const blob     = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const fileName = `${empName}_${fy}_Scorecard.xlsx`;
+
+  // Use native Save File dialog (avoids Chrome's HTTP insecure-download warning)
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: 'Excel Workbook', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch {
+      // User cancelled the picker — do nothing
+      return;
+    }
+  }
+
+  // Fallback for browsers without File System Access API
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href    = url;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
