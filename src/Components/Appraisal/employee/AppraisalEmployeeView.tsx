@@ -307,11 +307,11 @@ function calcScoreAchievement(kpi: any): number | null {
   if (isNaN(plan) || isNaN(actual) || plan === 0) return null;
   const dir = (kpi.parameter_type || '').toLowerCase();
   if (dir.includes('higher'))
-    return Math.min((actual / plan) * 100, 100);
+    return (actual / plan) * 100;
   if (dir.includes('lower'))
-    return actual === 0 ? null : Math.min((plan / actual) * 100, 100);
+    return actual === 0 ? null : (plan / actual) * 100;
   if (dir.includes('target'))
-    return actual >= plan ? 100 : Math.max(0, (1 - Math.abs(actual - plan) / plan) * 100);
+    return Math.max(0, (actual / plan) * 100);
   return null;
 }
 
