@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  ChevronDown, ChevronUp, CheckCircle2, XCircle,
+  ChevronDown, ChevronUp, CheckCircle2,
   Loader2, AlertCircle, Users, Clock, CheckCircle, Award,
 } from 'lucide-react';
 import { EOM_API } from '../../../Pages/EOMPage';
@@ -80,8 +80,8 @@ function Section({ title }: { title: string }) {
 
 // ─── Nomination card ───────────────────────────────────────────────────────────
 
-function NominationCard({ entry, manager, cycle, onUpdate }: {
-  entry: any; manager: any; cycle: any; onUpdate: (nom: any) => void;
+function NominationCard({ entry, cycle, onUpdate }: {
+  entry: any; cycle: any; onUpdate: (nom: any) => void;
 }) {
   const nom  = entry.nomination;
   const [open,     setOpen]     = useState(false);
@@ -590,7 +590,7 @@ export function EOMManagerView({ manager }: Props) {
             <p className="text-sm font-black text-slate-700 uppercase tracking-wide">Awaiting Your Review ({awaiting.length})</p>
           </div>
           {awaiting.map(e => (
-            <NominationCard key={e.employee_id} entry={e} manager={manager} cycle={selectedCycle} onUpdate={updateNom} />
+            <NominationCard key={e.employee_id} entry={e} cycle={selectedCycle} onUpdate={updateNom} />
           ))}
         </div>
       )}
@@ -603,7 +603,7 @@ export function EOMManagerView({ manager }: Props) {
             <p className="text-sm font-black text-slate-700 uppercase tracking-wide">Reviewed ({reviewed.length})</p>
           </div>
           {reviewed.map(e => (
-            <NominationCard key={e.employee_id} entry={e} manager={manager} cycle={selectedCycle} onUpdate={updateNom} />
+            <NominationCard key={e.employee_id} entry={e} cycle={selectedCycle} onUpdate={updateNom} />
           ))}
         </div>
       )}
