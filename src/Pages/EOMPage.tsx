@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Shield, BarChart3, LineChart, Mail, Zap, Award } from 'lucide-react';
 import { EOMEmployeeView }  from '../Components/EOM/employee/EOMEmployeeView';
 import { EOMManagerView }   from '../Components/EOM/manager/EOMManagerView';
@@ -111,9 +111,13 @@ function EOMHub({ user, role, onLogout, onNavigateBack }: {
 // ─── Login screen ──────────────────────────────────────────────────────────────
 
 export function EOMPage({ onNavigateBack }: EOMPageProps) {
-  const [role, setRole]             = useState<Role | null>(null);
+  const [role, setRole]             = useState<Role | null>(() =>
+    localStorage.getItem('eom_role') as Role | null
+  );
   const [inputId, setInputId]       = useState('');
-  const [user, setUser]             = useState<any>(null);
+  const [user, setUser]             = useState<any>(() => {
+    try { return JSON.parse(localStorage.getItem('eom_user') || 'null'); } catch { return null; }
+  });
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState('');
   const [step, setStep]             = useState<LoginStep>('id');
@@ -188,7 +192,21 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
     finally { setLoading(false); }
   };
 
-  const reset = () => { setUser(null); setRole(null); setInputId(''); setStep('id'); setOtpInput(''); setError(''); };
+  useEffect(() => {
+    if (user) localStorage.setItem('eom_user', JSON.stringify(user));
+    else localStorage.removeItem('eom_user');
+  }, [user]);
+
+  useEffect(() => {
+    if (role && user) localStorage.setItem('eom_role', role);
+    else if (!user) localStorage.removeItem('eom_role');
+  }, [role, user]);
+
+  const reset = () => {
+    setUser(null); setRole(null); setInputId(''); setStep('id'); setOtpInput(''); setError('');
+    localStorage.removeItem('eom_user');
+    localStorage.removeItem('eom_role');
+  };
   const backToId = () => { setStep('id'); setOtpInput(''); setMaskedEmail(''); setError(''); };
 
   if (user && role) {

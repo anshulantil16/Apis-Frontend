@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
 import { AppraisalEmployeeView } from '../Components/Appraisal/employee/AppraisalEmployeeView';
 import { AppraisalManagerView } from '../Components/Appraisal/manager/AppraisalManagerView';
@@ -172,14 +172,28 @@ const ROLE_CONFIG = [
 ] as const;
 
 export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
-  const [role, setRole] = useState<Role | null>(null);
+  const [role, setRole] = useState<Role | null>(() =>
+    localStorage.getItem('appraisal_role') as Role | null
+  );
   const [inputId, setInputId] = useState('');
-  const [employee, setEmployee] = useState<any>(null);
+  const [employee, setEmployee] = useState<any>(() => {
+    try { return JSON.parse(localStorage.getItem('appraisal_employee') || 'null'); } catch { return null; }
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<LoginStep>('id');
   const [maskedEmail, setMaskedEmail] = useState('');
   const [otpInput, setOtpInput] = useState('');
+
+  useEffect(() => {
+    if (employee) localStorage.setItem('appraisal_employee', JSON.stringify(employee));
+    else localStorage.removeItem('appraisal_employee');
+  }, [employee]);
+
+  useEffect(() => {
+    if (role && employee) localStorage.setItem('appraisal_role', role);
+    else if (!employee) localStorage.removeItem('appraisal_role');
+  }, [role, employee]);
 
   const parseJsonSafe = async (res: Response) => {
     const ct = res.headers.get('content-type') || '';
@@ -263,7 +277,11 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
     return (
       <AppraisalHub
         employee={employee} role={role}
-        onLogout={() => { setEmployee(null); setRole(null); setInputId(''); setStep('id'); setOtpInput(''); }}
+        onLogout={() => {
+          setEmployee(null); setRole(null); setInputId(''); setStep('id'); setOtpInput('');
+          localStorage.removeItem('appraisal_employee');
+          localStorage.removeItem('appraisal_role');
+        }}
         onNavigateBack={onNavigateBack}
       />
     );

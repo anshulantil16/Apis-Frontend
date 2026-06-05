@@ -8,8 +8,18 @@ type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom';
 
 const APPRAISAL_ONLY = import.meta.env.VITE_APP_MODE === 'appraisal';
 
+const VIEW_KEY = 'apis_app_view';
+
+function saveView(v: AppView) { localStorage.setItem(VIEW_KEY, v); }
+
 export default function App() {
-  const [view, setView] = useState<AppView>(APPRAISAL_ONLY ? 'appraisal' : 'extractor');
+  const [view, setView] = useState<AppView>(() => {
+    if (APPRAISAL_ONLY) return 'appraisal';
+    const saved = localStorage.getItem(VIEW_KEY) as AppView | null;
+    return saved || 'extractor';
+  });
+
+  const navigate = (v: AppView) => { setView(v); saveView(v); };
 
   if (APPRAISAL_ONLY) {
     return <AppraisalPage onNavigateBack={() => {}} />;
@@ -19,16 +29,16 @@ export default function App() {
     <div>
       {view === 'extractor' ? (
         <DataExtractorPage
-          onNavigateToPerformance={() => setView('performance')}
-          onNavigateToAppraisal={() => setView('appraisal')}
-          onNavigateToEOM={() => setView('eom')}
+          onNavigateToPerformance={() => navigate('performance')}
+          onNavigateToAppraisal={() => navigate('appraisal')}
+          onNavigateToEOM={() => navigate('eom')}
         />
       ) : view === 'performance' ? (
-        <PerformancePage onNavigateBack={() => setView('extractor')} />
+        <PerformancePage onNavigateBack={() => navigate('extractor')} />
       ) : view === 'eom' ? (
-        <EOMPage onNavigateBack={() => setView('extractor')} />
+        <EOMPage onNavigateBack={() => navigate('extractor')} />
       ) : (
-        <AppraisalPage onNavigateBack={() => setView('extractor')} />
+        <AppraisalPage onNavigateBack={() => navigate('extractor')} />
       )}
     </div>
   );
