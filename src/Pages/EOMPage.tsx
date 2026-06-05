@@ -7,7 +7,6 @@ import { EOMHrView }        from '../Components/EOM/hr/EOMHrView';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const EOM_API = `${API_BASE}/api/eom`;
-export const PERF_AUTH_API = `${API_BASE}/api/performance`; // reuse same OTP auth
 
 type Role = 'employee' | 'manager' | 'hod' | 'hr';
 type LoginStep = 'id' | 'otp' | 'admin_otp';
@@ -131,7 +130,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
     if (!inputId.trim() || !role) return;
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${PERF_AUTH_API}/auth/send-otp/`, {
+      const res  = await fetch(`${EOM_API}/auth/send-otp/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: inputId.trim() }),
       });
@@ -147,7 +146,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
     if (!otpInput.trim()) return;
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${PERF_AUTH_API}/auth/verify-otp/`, {
+      const res  = await fetch(`${EOM_API}/auth/verify-otp/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: inputId.trim(), otp: otpInput.trim() }),
       });
@@ -164,7 +163,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
   const handleAdminOtp = async () => {
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${PERF_AUTH_API}/auth/admin-otp/`, { method: 'POST' });
+      const res  = await fetch(`${EOM_API}/auth/admin-otp/`, { method: 'POST' });
       const data = await parseJson(res);
       if (!res.ok) throw new Error(data.error || 'Failed.');
       setMaskedEmail(data.masked_email);
@@ -177,7 +176,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
     if (!otpInput.trim()) return;
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${PERF_AUTH_API}/auth/admin-verify/`, {
+      const res  = await fetch(`${EOM_API}/auth/admin-verify/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp: otpInput.trim() }),
       });
