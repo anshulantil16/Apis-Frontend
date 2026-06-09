@@ -372,7 +372,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
               </div>
               <div className="relative mb-4">
                 <input type="text"
-                  placeholder={role === 'hr' ? 'e.g. HR001' : role === 'hod' ? 'e.g. HOD001' : 'e.g. EMP001'}
+                  placeholder={role === 'hr' ? 'e.g. HR001' : role === 'hod' ? 'e.g. HOD001' : role === 'panel' ? 'e.g. PANEL001' : 'e.g. EMP001'}
                   value={inputId}
                   onChange={e => setInputId(e.target.value.toUpperCase())}
                   onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
