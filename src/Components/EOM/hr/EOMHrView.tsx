@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronUp, Star, RefreshCw,
 } from 'lucide-react';
 import { EOM_API } from '../../../Pages/EOMPage';
+import { generateEOMCertificate } from '../../../utils/generateEOMCertificate';
 
 const MONTH_NAMES = ['','January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -489,6 +490,13 @@ export function EOMHrView({ hrUser }: Props) {
                       <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${STATUS_BADGE[nom.status]||STATUS_BADGE.draft}`}>
                         {nom.status.replace(/_/g,' ')}
                       </span>
+                      {hodTotal > 0 && (
+                        <button
+                          onClick={e => { e.stopPropagation(); generateEOMCertificate(nom, selectedCycle); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-700 text-[11px] font-bold hover:bg-amber-100 transition-all shrink-0">
+                          <Award className="w-3 h-3" /> Certificate
+                        </button>
+                      )}
                       {isExp ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                     </div>
                   </div>
