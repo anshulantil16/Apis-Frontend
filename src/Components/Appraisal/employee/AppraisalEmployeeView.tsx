@@ -816,8 +816,8 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                     </div>
                     {canEdit && (
                       <button onClick={() => addGoal(cat)}
-                        className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-white border transition-all ${col.addBtn}`}>
-                        <Plus className="w-3 h-3" /> Add KRA
+                        className={`flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-white border-2 shadow-sm hover:shadow-md transition-all ${col.addBtn}`}>
+                        <Plus className="w-4 h-4" /> Add KRA
                       </button>
                     )}
                   </div>
@@ -881,10 +881,10 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
                           {/* Add KPI row */}
                           {canEdit && (
-                            <div className="px-6 py-2.5 border-t border-slate-100 bg-slate-50/50">
+                            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50">
                               <button onClick={() => addKPI(i)}
-                                className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-700 px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-all">
-                                <Plus className="w-3 h-3" /> Add KPI row
+                                className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 px-4 py-2 rounded-xl border-2 border-blue-200 hover:border-blue-400 bg-white hover:bg-blue-50 shadow-sm hover:shadow-md transition-all">
+                                <Plus className="w-4 h-4" /> Add KPI Row
                               </button>
                             </div>
                           )}
