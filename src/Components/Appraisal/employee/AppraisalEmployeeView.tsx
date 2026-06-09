@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { downloadScorecard } from '../../../utils/downloadScorecard';
 
-import { APPRAISAL_API as PERF_API } from '../../../Pages/AppraisalPage';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const PERF_API = `${API_BASE}/api/performance`;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

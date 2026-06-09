@@ -11,8 +11,8 @@ interface AppraisalPageProps {
 
 type Role = 'employee' | 'manager' | 'hod' | 'hr';
 
-const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-export const APPRAISAL_API = `${_API_BASE}/api/appraisal`;
+import { PERF_API } from './PerformancePage';
+export const APPRAISAL_API = PERF_API;
 
 // ─── Inner hub wrapper ────────────────────────────────────────────────────────
 
@@ -116,7 +116,7 @@ function AppraisalHub({
           {role === 'employee' && <AppraisalEmployeeView employee={employee} />}
           {role === 'manager' && <AppraisalManagerView manager={employee} />}
           {role === 'hod' && <AppraisalHODView hod={employee} />}
-          {role === 'hr' && <HRView hrUser={employee} apiBase={APPRAISAL_API} />}
+          {role === 'hr' && <HRView hrUser={employee} />}
         </>
       ) : (
         <ProgressReportDashboard role={role} user={employee} />

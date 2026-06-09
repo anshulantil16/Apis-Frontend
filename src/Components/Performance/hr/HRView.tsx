@@ -4,8 +4,8 @@ import {
   Users, AlertTriangle, TrendingUp, FileText, Settings,
   ChevronDown, ChevronUp, Award, Clock, Lock, Unlock, Download,
 } from 'lucide-react';
+import { PERF_API } from '../../../Pages/PerformancePage';
 import { downloadScorecard } from '../../../utils/downloadScorecard';
-import { PERF_API as _DEFAULT_API } from '../../../Pages/PerformancePage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,7 +26,8 @@ const PHASE_BADGE: Record<string, string> = {
 
 // ─── Main HR View ─────────────────────────────────────────────────────────────
 
-export function HRView({ hrUser, apiBase = _DEFAULT_API }: { hrUser: any; apiBase?: string }) {
+export function HRView({ hrUser }: { hrUser: any }) {
+  const apiBase = PERF_API;
   const [tab, setTab] = useState<'overview' | 'import' | 'cycle' | 'appraisals' | 'leaderboard'>('overview');
   const [cycles, setCycles] = useState<any[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<any>(null);
