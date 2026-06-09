@@ -452,8 +452,25 @@ export function EOMHrView({ hrUser }: Props) {
             { key: 'hr_finalized',  label: 'HR Finalized',   style: 'bg-amber-500 text-white border-amber-500',            inactive: 'bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-400' },
           ];
 
+          // Cumulative stage membership — a nomination appears in every stage it passed through
+          const stageMatch = (status: string, filter: string): boolean => {
+            const order = ['submitted','hod_approved','hod_rejected','panel_approved','panel_rejected','hr_finalized'];
+            if (!order.includes(status)) return false;
+            switch (filter) {
+              case 'submitted':      return true; // any non-draft = was submitted
+              case 'hod_approved':   return ['hod_approved','panel_approved','panel_rejected','hr_finalized'].includes(status);
+              case 'hod_rejected':   return status === 'hod_rejected';
+              case 'panel_approved': return ['panel_approved','hr_finalized'].includes(status);
+              case 'panel_rejected': return status === 'panel_rejected';
+              case 'hr_finalized':   return status === 'hr_finalized';
+              default: return false;
+            }
+          };
+
           const counts: Record<string, number> = { all: nominations.length };
-          nominations.forEach(n => { counts[n.status] = (counts[n.status] || 0) + 1; });
+          ['submitted','hod_approved','hod_rejected','panel_approved','panel_rejected','hr_finalized'].forEach(f => {
+            counts[f] = nominations.filter(n => stageMatch(n.status, f)).length;
+          });
 
           const scored = [...nominations]
             .map(n => ({
@@ -467,7 +484,7 @@ export function EOMHrView({ hrUser }: Props) {
 
           const visible = statusFilter === 'all'
             ? scored
-            : scored.filter(n => n.status === statusFilter);
+            : scored.filter(n => stageMatch(n.status, statusFilter));
 
           return (
           <div className="space-y-4">
