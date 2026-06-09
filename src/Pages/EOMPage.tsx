@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, BarChart3, LineChart, Mail, Zap } from 'lucide-react';
 import { EOMEmployeeView }  from '../Components/EOM/employee/EOMEmployeeView';
 import { EOMHodView }       from '../Components/EOM/hod/EOMHodView';
+import { EOMPanelView }     from '../Components/EOM/panel/EOMPanelView';
 import { EOMHrView }        from '../Components/EOM/hr/EOMHrView';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const EOM_API = `${API_BASE}/api/eom`;
 
-type Role = 'employee' | 'hod' | 'hr';
+type Role = 'employee' | 'hod' | 'panel' | 'hr';
 type LoginStep = 'id' | 'otp' | 'admin_otp';
 
 interface EOMPageProps { onNavigateBack: () => void; }
@@ -23,15 +24,23 @@ const ROLE_CONFIG = [
   },
   {
     id: 'hod' as Role,
-    label: 'HOD', sub: 'Review & score nominations',
+    label: 'HOD', sub: 'Review dimension 1 (50 pts)',
     active:   'from-violet-50 to-purple-50 border-violet-400 text-violet-700',
     inactive: 'border-slate-200 hover:border-violet-300 hover:bg-violet-50/50',
     iconBg:   'bg-violet-100 text-violet-600',
     icon: BarChart3,
   },
   {
+    id: 'panel' as Role,
+    label: 'Panel', sub: 'Review dimensions 2-5 (50 pts)',
+    active:   'from-indigo-50 to-blue-50 border-indigo-400 text-indigo-700',
+    inactive: 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50',
+    iconBg:   'bg-indigo-100 text-indigo-600',
+    icon: BarChart3,
+  },
+  {
     id: 'hr' as Role,
-    label: 'Admin', sub: 'Full access & finalise winner',
+    label: 'Admin', sub: 'Full access & finalize winner',
     active:   'from-rose-50 to-red-50 border-rose-400 text-rose-700',
     inactive: 'border-slate-200 hover:border-rose-300 hover:bg-rose-50/50',
     iconBg:   'bg-rose-100 text-rose-600',
@@ -44,10 +53,11 @@ const ROLE_CONFIG = [
 function EOMHub({ user, role, onLogout, onNavigateBack }: {
   user: any; role: Role; onLogout: () => void; onNavigateBack: () => void;
 }) {
-  const roleLabel = { employee: 'Employee', hod: 'HOD', hr: 'Admin' }[role];
+  const roleLabel = { employee: 'Employee', hod: 'HOD', panel: 'Panel Member', hr: 'Admin' }[role];
   const roleBadge = {
     employee: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     hod:      'bg-violet-50 text-violet-700 border-violet-200',
+    panel:    'bg-indigo-50 text-indigo-700 border-indigo-200',
     hr:       'bg-rose-50 text-rose-700 border-rose-200',
   }[role];
 
@@ -86,6 +96,7 @@ function EOMHub({ user, role, onLogout, onNavigateBack }: {
       </header>
       {role === 'employee' && <EOMEmployeeView employee={user} />}
       {role === 'hod'      && <EOMHodView      hod={user}      />}
+      {role === 'panel'    && <EOMPanelView    panelUser={user} />}
       {role === 'hr'       && <EOMHrView       hrUser={user}   />}
     </div>
   );
@@ -94,7 +105,7 @@ function EOMHub({ user, role, onLogout, onNavigateBack }: {
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 export function EOMPage({ onNavigateBack }: EOMPageProps) {
-  const VALID_ROLES: Role[] = ['employee', 'hod', 'hr'];
+  const VALID_ROLES: Role[] = ['employee', 'hod', 'panel', 'hr'];
 
   const [role, setRole]     = useState<Role | null>(() => {
     const saved = localStorage.getItem('eom_role') as Role | null;
@@ -153,8 +164,9 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
       });
       const data = await parseJson(res);
       if (!res.ok) throw new Error(data.error || 'OTP verification failed.');
-      if (role === 'hod' && data.user_type !== 'hod') throw new Error(`${data.name} is not registered as a HOD.`);
-      if (role === 'hr'  && data.user_type !== 'hr')  throw new Error(`${data.name} is not registered as an Admin.`);
+      if (role === 'hod'   && data.user_type !== 'hod')   throw new Error(`${data.name} is not registered as a HOD.`);
+      if (role === 'panel' && data.user_type !== 'panel') throw new Error(`${data.name} is not registered as a Panel Member.`);
+      if (role === 'hr'    && data.user_type !== 'hr')    throw new Error(`${data.name} is not registered as an Admin.`);
       setUser(data);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }

@@ -5,17 +5,8 @@ import {
 } from 'lucide-react';
 import { EOM_API } from '../../../Pages/EOMPage';
 
-// ─── Constants ─────────────────────────────────────────────────────────────────
-
 const MONTH_NAMES = ['','January','February','March','April','May','June',
   'July','August','September','October','November','December'];
-
-const DIMS = [
-  { key: 'dim1', label: 'Business Impact & Measurable Outcome',                                                                  max: 50 },
-  { key: 'dim2', label: 'APIS Values, Survey Participation, Compliance & Conduct, Fun Club Activities Participation',            max: 20 },
-  { key: 'dim3', label: 'Initiative & Entrepreneurial Problem-Solving',                                                          max: 10 },
-  { key: 'dim4', label: 'Efficiency, Cost & Resource Optimisation',                                                              max: 10 },
-] as const;
 
 const SMART_META = [
   { key: 'smart_specific',   letter: 'S', label: 'Specific'   },
@@ -26,48 +17,30 @@ const SMART_META = [
 ] as const;
 
 const STATUS_BADGE: Record<string, string> = {
-  draft:        'bg-slate-100 text-slate-500 border-slate-200',
-  submitted:    'bg-blue-50 text-blue-700 border-blue-200',
-  hod_approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  hod_rejected: 'bg-rose-50 text-rose-700 border-rose-200',
-  hr_finalized: 'bg-amber-50 text-amber-700 border-amber-200',
+  draft:          'bg-slate-100 text-slate-500 border-slate-200',
+  submitted:      'bg-blue-50 text-blue-700 border-blue-200',
+  hod_approved:   'bg-emerald-50 text-emerald-700 border-emerald-200',
+  hod_rejected:   'bg-rose-50 text-rose-700 border-rose-200',
+  panel_approved: 'bg-violet-50 text-violet-700 border-violet-200',
+  panel_rejected: 'bg-orange-50 text-orange-700 border-orange-200',
+  hr_finalized:   'bg-amber-50 text-amber-700 border-amber-200',
 };
 
-// ─── Score state ───────────────────────────────────────────────────────────────
-
 interface ScoreState {
-  dim1_score: string; dim1_comments: string;
-  dim2_score: string; dim2_comments: string;
-  dim3_score: string; dim3_comments: string;
-  dim4_score: string; dim4_comments: string;
-  sustainability_desc: string;
-  sustainability_bonus: string;
-  sustainability_just: string;
+  dim1_score: string;
+  dim1_comments: string;
   recommendation: string;
   panel_name: string;
 }
 
 function initScore(nom: any): ScoreState {
   return {
-    dim1_score:          nom?.hod_dim1_score  != null ? String(nom.hod_dim1_score)  : '',
-    dim1_comments:       nom?.hod_dim1_comments  || '',
-    dim2_score:          nom?.hod_dim2_score  != null ? String(nom.hod_dim2_score)  : '',
-    dim2_comments:       nom?.hod_dim2_comments  || '',
-    dim3_score:          nom?.hod_dim3_score  != null ? String(nom.hod_dim3_score)  : '',
-    dim3_comments:       nom?.hod_dim3_comments  || '',
-    dim4_score:          nom?.hod_dim4_score  != null ? String(nom.hod_dim4_score)  : '',
-    dim4_comments:       nom?.hod_dim4_comments  || '',
-    sustainability_desc:  nom?.hod_sustainability_desc  || '',
-    sustainability_bonus: nom?.hod_sustainability_bonus != null ? String(nom.hod_sustainability_bonus) : '',
-    sustainability_just:  nom?.hod_sustainability_just  || '',
-    recommendation:       nom?.hod_recommendation  || '',
-    panel_name:           nom?.hod_panel_name  || '',
+    dim1_score:     nom?.hod_dim1_score != null ? String(nom.hod_dim1_score) : '',
+    dim1_comments:  nom?.hod_dim1_comments || '',
+    recommendation: nom?.hod_recommendation || '',
+    panel_name:     nom?.hod_panel_name || '',
   };
 }
-
-const totalScore = (s: ScoreState) =>
-  (Number(s.dim1_score)||0)+(Number(s.dim2_score)||0)+
-  (Number(s.dim3_score)||0)+(Number(s.dim4_score)||0);
 
 function SectionTitle({ title }: { title: string }) {
   return <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-3">{title}</p>;
@@ -94,29 +67,21 @@ function NominationCard({ entry, cycle, onUpdate }: {
 
   const buildPayload = useCallback((action?: string) => {
     const p: Record<string, any> = {
-      hod_dim1_score:           scores.dim1_score   !== '' ? Number(scores.dim1_score)   : null,
-      hod_dim1_comments:        scores.dim1_comments,
-      hod_dim2_score:           scores.dim2_score   !== '' ? Number(scores.dim2_score)   : null,
-      hod_dim2_comments:        scores.dim2_comments,
-      hod_dim3_score:           scores.dim3_score   !== '' ? Number(scores.dim3_score)   : null,
-      hod_dim3_comments:        scores.dim3_comments,
-      hod_dim4_score:           scores.dim4_score   !== '' ? Number(scores.dim4_score)   : null,
-      hod_dim4_comments:        scores.dim4_comments,
-      hod_sustainability_desc:  scores.sustainability_desc,
-      hod_sustainability_bonus: scores.sustainability_bonus !== '' ? Number(scores.sustainability_bonus) : null,
-      hod_sustainability_just:  scores.sustainability_just,
-      hod_recommendation:       scores.recommendation,
-      hod_panel_name:           scores.panel_name,
+      hod_dim1_score:    scores.dim1_score !== '' ? Number(scores.dim1_score) : null,
+      hod_dim1_comments: scores.dim1_comments,
+      hod_recommendation: scores.recommendation,
+      hod_panel_name:    scores.panel_name,
     };
     if (action) p.action = action;
     return p;
   }, [scores]);
 
   const validate = () => {
-    if (DIMS.some(d => scores[`${d.key}_score` as keyof ScoreState] === '')) return 'Please fill all 4 dimension scores.';
-    if (totalScore(scores) > 100) return `Total score ${totalScore(scores)} exceeds 100.`;
+    if (scores.dim1_score === '') return 'Please enter the Business Impact score.';
+    const s = Number(scores.dim1_score);
+    if (s > 50) return `Score ${s} exceeds max 50.`;
     if (!scores.recommendation) return 'Please select a recommendation.';
-    if (!scores.panel_name.trim()) return 'Please enter your name as Panel Member.';
+    if (!scores.panel_name.trim()) return 'Please enter your name as HOD Signature.';
     return null;
   };
 
@@ -130,7 +95,7 @@ function NominationCard({ entry, cycle, onUpdate }: {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed.');
       onUpdate(data);
-      showMsg(action ? (action === 'approved' ? 'Nomination endorsed!' : 'Nomination not recommended.') : 'Draft saved.', true);
+      showMsg(action ? (action === 'approved' ? 'Nomination forwarded to Panel!' : 'Nomination not recommended.') : 'Draft saved.', true);
       if (action) setOpen(false);
     } catch (e: any) { showMsg(e.message, false); }
     finally { setSaving(false); setSubmitting(false); }
@@ -144,7 +109,7 @@ function NominationCard({ entry, cycle, onUpdate }: {
 
   const isReviewed = nom?.status && nom.status !== 'submitted';
   const canReview  = nom?.status === 'submitted';
-  const ts = totalScore(scores);
+  const s1 = Number(scores.dim1_score) || 0;
 
   return (
     <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
@@ -183,7 +148,7 @@ function NominationCard({ entry, cycle, onUpdate }: {
       {open && nom && (
         <div className="border-t border-slate-100 px-5 py-5 space-y-6">
 
-          {/* Nominee details */}
+          {/* Employee details */}
           <div>
             <SectionTitle title="Nominee Details" />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -193,7 +158,7 @@ function NominationCard({ entry, cycle, onUpdate }: {
                 ['Designation', nom.employee_designation],
                 ['Department',  nom.employee_department],
                 ['Zone',        nom.employee_zone],
-                ['Track',       nom.track?.replace('_','-') || '—'],
+                ['Track',       (nom.track||'—').replace('_','-')],
                 ['Cycle',       cycle?.name],
                 ['Submitted',   nom.submitted_at ? new Date(nom.submitted_at).toLocaleDateString('en-IN') : '—'],
               ].map(([l,v]) => (
@@ -256,11 +221,10 @@ function NominationCard({ entry, cycle, onUpdate }: {
             </div>
           )}
 
-          {/* Annexure B Scorecard */}
+          {/* HOD Scorecard — Dimension 1 only */}
           <div>
-            <SectionTitle title="Annexure B — Panel Evaluation Scorecard (HR-EOM-PS-01)" />
+            <SectionTitle title="HOD Evaluation — Dimension 1 (Business Impact)" />
 
-            {/* Scoring table */}
             <div className="rounded-xl border border-slate-200 overflow-hidden mb-4">
               <div className="grid grid-cols-[2rem_1fr_3rem_7rem_1fr] bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 <div className="px-3 py-2.5">#</div>
@@ -270,97 +234,57 @@ function NominationCard({ entry, cycle, onUpdate }: {
                 <div className="px-3 py-2.5">Comments</div>
               </div>
 
-              {DIMS.map((d, i) => {
-                const sk = `${d.key}_score`   as keyof ScoreState;
-                const ck = `${d.key}_comments` as keyof ScoreState;
-                const sv = scores[sk];
-                const over = sv !== '' && Number(sv) > d.max;
-                return (
-                  <div key={d.key} className={`grid grid-cols-[2rem_1fr_3rem_7rem_1fr] border-b border-slate-100 last:border-0 ${i%2===0?'bg-white':'bg-slate-50/50'}`}>
-                    <div className="px-3 pt-3.5 text-sm font-black text-slate-400">{i+1}</div>
-                    <div className="px-3 py-3 text-sm text-slate-700 font-medium leading-snug">{d.label}</div>
-                    <div className="px-3 pt-3.5 text-sm font-black text-slate-600 text-center">{d.max}</div>
-                    <div className="px-3 py-2.5 flex items-start pt-3">
-                      <input type="number" min={0} max={d.max}
-                        value={sv} onChange={e => set(sk, e.target.value)}
-                        disabled={isReviewed} placeholder="0"
-                        className={`w-full h-9 rounded-lg border px-3 text-sm font-bold text-center focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500
-                          ${over ? 'border-rose-400 bg-rose-50 text-rose-700 focus:ring-rose-300' : 'border-slate-200 focus:ring-violet-300 focus:border-violet-400'}`}
-                      />
-                    </div>
-                    <div className="px-3 py-2.5">
-                      <textarea rows={2} value={scores[ck]} onChange={e => set(ck, e.target.value)}
-                        disabled={isReviewed} placeholder="Comments..."
-                        className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none disabled:bg-slate-50"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+              {/* Row 1 */}
+              <div className="grid grid-cols-[2rem_1fr_3rem_7rem_1fr] bg-white">
+                <div className="px-3 pt-3.5 text-sm font-black text-slate-400">1</div>
+                <div className="px-3 py-3 text-sm text-slate-700 font-medium leading-snug">Business Impact &amp; Measurable Outcome</div>
+                <div className="px-3 pt-3.5 text-sm font-black text-slate-600 text-center">50</div>
+                <div className="px-3 py-2.5">
+                  <input type="number" min={0} max={50}
+                    value={scores.dim1_score}
+                    onChange={e => set('dim1_score', e.target.value)}
+                    disabled={!!isReviewed} placeholder="0"
+                    className={`w-full h-9 rounded-lg border px-3 text-sm font-bold text-center focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500
+                      ${Number(scores.dim1_score) > 50 ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-slate-200 focus:ring-violet-300 focus:border-violet-400'}`}
+                  />
+                </div>
+                <div className="px-3 py-2.5">
+                  <textarea rows={2} value={scores.dim1_comments}
+                    onChange={e => set('dim1_comments', e.target.value)}
+                    disabled={!!isReviewed} placeholder="Comments..."
+                    className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none disabled:bg-slate-50"
+                  />
+                </div>
+              </div>
 
-              {/* Total */}
+              {/* HOD Score total */}
               <div className="grid grid-cols-[2rem_1fr_3rem_7rem_1fr] bg-violet-50 border-t-2 border-violet-200">
                 <div className="px-3 py-3" />
-                <div className="px-3 py-3 text-sm font-black text-slate-700">TOTAL SCORE</div>
-                <div className="px-3 py-3 text-sm font-black text-slate-700 text-center">100</div>
+                <div className="px-3 py-3 text-sm font-black text-slate-700">HOD SCORE</div>
+                <div className="px-3 py-3 text-sm font-black text-slate-600 text-center">50</div>
                 <div className="px-3 py-3 text-center">
-                  <span className={`text-xl font-black ${ts>100?'text-rose-600':ts>=80?'text-emerald-600':ts>=60?'text-amber-600':'text-slate-600'}`}>{ts}</span>
-                  {ts > 100 && <p className="text-[10px] text-rose-500 font-bold">Exceeds 100!</p>}
+                  <span className={`text-xl font-black ${s1 > 50 ? 'text-rose-600' : s1 >= 40 ? 'text-emerald-600' : 'text-slate-600'}`}>{s1}</span>
+                  {s1 > 50 && <p className="text-[10px] text-rose-500 font-bold">Exceeds 50!</p>}
                 </div>
-                <div className="px-3 py-3" />
-              </div>
-            </div>
-
-            {/* Sustainability bonus */}
-            <div className="rounded-xl border border-slate-200 overflow-hidden mb-4">
-              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sustainability Bonus (if applicable)</p>
-              </div>
-              <div className="grid grid-cols-3 gap-4 px-4 py-4">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">ESG / Sustainability / CSR Contribution</p>
-                  <textarea rows={3} value={scores.sustainability_desc}
-                    onChange={e => set('sustainability_desc', e.target.value)}
-                    disabled={isReviewed} placeholder="Describe contribution..."
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none disabled:bg-slate-50" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Bonus (0 or 5)</p>
-                  <div className="flex gap-4 mt-2">
-                    {['0','5'].map(v => (
-                      <label key={v} className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name={`bonus_${nom.id}`} value={v}
-                          checked={scores.sustainability_bonus === v}
-                          onChange={() => set('sustainability_bonus', v)}
-                          disabled={isReviewed} className="accent-violet-500 w-4 h-4" />
-                        <span className="text-sm font-bold text-slate-700">{v}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Justification</p>
-                  <textarea rows={3} value={scores.sustainability_just}
-                    onChange={e => set('sustainability_just', e.target.value)}
-                    disabled={isReviewed} placeholder="Justification..."
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none disabled:bg-slate-50" />
+                <div className="px-3 py-3 text-xs text-slate-400 flex items-center">
+                  Panel will score the remaining 50 pts (Dims 2–5)
                 </div>
               </div>
             </div>
 
             {/* Recommendation */}
             <div className="rounded-xl border border-slate-200 px-5 py-4 mb-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Recommendation</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">HOD Recommendation</p>
               <div className="flex gap-6">
                 {[
-                  { value: 'recommend',     label: 'Recommend for Award' },
-                  { value: 'not_recommend', label: 'Do Not Recommend'    },
+                  { value: 'recommend',     label: 'Forward to Panel for Award Consideration' },
+                  { value: 'not_recommend', label: 'Do Not Forward (Reject)'                  },
                 ].map(opt => (
                   <label key={opt.value} className="flex items-center gap-2.5 cursor-pointer">
                     <input type="radio" name={`rec_${nom.id}`} value={opt.value}
                       checked={scores.recommendation === opt.value}
                       onChange={() => set('recommendation', opt.value)}
-                      disabled={isReviewed}
+                      disabled={!!isReviewed}
                       className="accent-violet-600 w-4 h-4" />
                     <span className="text-sm font-semibold text-slate-700">{opt.label}</span>
                   </label>
@@ -368,12 +292,12 @@ function NominationCard({ entry, cycle, onUpdate }: {
               </div>
             </div>
 
-            {/* Signature */}
+            {/* HOD Signature */}
             <div className="grid grid-cols-2 gap-4 mb-5">
               <div>
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">HOD Name / Signature <span className="text-rose-500">*</span></p>
                 <input value={scores.panel_name} onChange={e => set('panel_name', e.target.value)}
-                  disabled={isReviewed} placeholder="Type your full name"
+                  disabled={!!isReviewed} placeholder="Type your full name"
                   className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm italic text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 disabled:bg-slate-50" />
               </div>
               <div>
@@ -384,13 +308,13 @@ function NominationCard({ entry, cycle, onUpdate }: {
               </div>
             </div>
 
-            {/* Already reviewed info */}
+            {/* Already reviewed */}
             {isReviewed && (
               <div className={`rounded-xl border px-4 py-3 mb-4
                 ${nom.status === 'hod_approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
                 <p className="text-sm font-bold">
-                  {nom.status === 'hod_approved' ? '✅ You have endorsed this nomination.' :
-                   nom.status === 'hod_rejected'  ? '❌ You marked this as not recommended.' :
+                  {nom.status === 'hod_approved' ? '✅ Forwarded to Panel for evaluation.' :
+                   nom.status === 'hod_rejected'  ? '❌ Nomination rejected — will not go to Panel.' :
                    `Status: ${nom.status.replace(/_/g,' ')}`}
                 </p>
                 {nom.hod_reviewed_at && (
@@ -412,7 +336,7 @@ function NominationCard({ entry, cycle, onUpdate }: {
                 <button onClick={handleSubmit} disabled={saving || submitting}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold transition-all disabled:opacity-40 shadow-sm shadow-violet-200">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                  {submitting ? 'Submitting…' : 'Submit Evaluation'}
+                  {submitting ? 'Submitting…' : 'Submit HOD Evaluation'}
                 </button>
               </div>
             )}
@@ -450,8 +374,8 @@ export function EOMHodView({ hod }: { hod: any }) {
       e.nomination?.id === nomData.id ? { ...e, nomination: nomData } : e
     ));
 
-  const awaiting    = team.filter(e => e.nomination?.status === 'submitted');
-  const reviewed    = team.filter(e => e.nomination?.status && !['submitted','draft'].includes(e.nomination.status));
+  const awaiting     = team.filter(e => e.nomination?.status === 'submitted');
+  const reviewed     = team.filter(e => e.nomination?.status && !['submitted','draft'].includes(e.nomination.status));
   const notSubmitted = team.filter(e => !e.nomination || e.nomination.status === 'draft');
 
   if (loading) return (
@@ -486,14 +410,13 @@ export function EOMHodView({ hod }: { hod: any }) {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
 
-      {/* Header */}
       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200 flex items-center justify-center font-black text-violet-700 text-lg shrink-0">
           {hod.name?.[0]}
         </div>
         <div className="flex-1">
           <h2 className="text-base font-extrabold text-slate-900">{hod.name}</h2>
-          <p className="text-violet-600 text-xs font-semibold mt-0.5">HOD · EOM Panel Evaluation — {selectedCycle.name}</p>
+          <p className="text-violet-600 text-xs font-semibold mt-0.5">HOD · Dim 1 Evaluation (50 pts) — {selectedCycle.name}</p>
         </div>
         <div className="flex items-center gap-2 text-xs font-bold flex-wrap">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700">
@@ -511,23 +434,19 @@ export function EOMHodView({ hod }: { hod: any }) {
         </div>
       </div>
 
-      {/* Cycle switcher */}
       {cycles.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Cycle:</span>
           {cycles.map(c => (
             <button key={c.id} onClick={() => setSelectedCycle(c)}
               className={`px-3 py-1.5 rounded-xl font-bold text-xs border transition-all
-                ${selectedCycle?.id === c.id
-                  ? 'bg-violet-600 border-violet-600 text-white'
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-violet-300 hover:text-violet-600'}`}>
+                ${selectedCycle?.id === c.id ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-violet-300 hover:text-violet-600'}`}>
               {c.name}
             </button>
           ))}
         </div>
       )}
 
-      {/* Awaiting */}
       {awaiting.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -538,7 +457,6 @@ export function EOMHodView({ hod }: { hod: any }) {
         </div>
       )}
 
-      {/* Reviewed */}
       {reviewed.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -549,7 +467,6 @@ export function EOMHodView({ hod }: { hod: any }) {
         </div>
       )}
 
-      {/* Not submitted */}
       {notSubmitted.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">

@@ -11,11 +11,13 @@ const MONTH_NAMES = ['','January','February','March','April','May','June',
   'July','August','September','October','November','December'];
 
 const STATUS_BADGE: Record<string, string> = {
-  draft:        'bg-slate-100 text-slate-600 border-slate-200',
-  submitted:    'bg-blue-50 text-blue-700 border-blue-200',
-  hod_approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  hod_rejected: 'bg-rose-50 text-rose-700 border-rose-200',
-  hr_finalized: 'bg-amber-50 text-amber-700 border-amber-200',
+  draft:          'bg-slate-100 text-slate-600 border-slate-200',
+  submitted:      'bg-blue-50 text-blue-700 border-blue-200',
+  hod_approved:   'bg-emerald-50 text-emerald-700 border-emerald-200',
+  hod_rejected:   'bg-rose-50 text-rose-700 border-rose-200',
+  panel_approved: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  panel_rejected: 'bg-orange-50 text-orange-700 border-orange-200',
+  hr_finalized:   'bg-amber-50 text-amber-700 border-amber-200',
 };
 
 const SMART_META = [
@@ -169,6 +171,7 @@ export function EOMHrView({ hrUser }: Props) {
     { label: 'Total Employees', value: overview?.total_employees, icon: Users,       color: 'text-blue-600',    bg: 'bg-blue-50 border-blue-200'    },
     { label: 'Submitted',       value: overview?.submitted,       icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
     { label: 'HOD Approved',    value: overview?.hod_approved,    icon: TrendingUp,  color: 'text-violet-600',  bg: 'bg-violet-50 border-violet-200' },
+    { label: 'Panel Approved',  value: overview?.panel_approved,  icon: CheckCircle, color: 'text-indigo-600',  bg: 'bg-indigo-50 border-indigo-200' },
     { label: 'HR Finalized',    value: overview?.hr_finalized,    icon: CheckCircle, color: 'text-rose-600',    bg: 'bg-rose-50 border-rose-200'    },
     { label: 'Winners',         value: overview?.winners,         icon: Trophy,      color: 'text-yellow-600',  bg: 'bg-yellow-50 border-yellow-200' },
     { label: 'Pending',         value: overview?.pending,         icon: Clock,       color: 'text-slate-500',   bg: 'bg-slate-50 border-slate-200'  },
@@ -259,10 +262,11 @@ export function EOMHrView({ hrUser }: Props) {
                   </div>
                   <div className="space-y-3">
                     {[
-                      { label: 'Submitted',    v: overview.submitted    },
-                      { label: 'HOD Approved', v: overview.hod_approved },
-                      { label: 'HR Finalized', v: overview.hr_finalized },
-                      { label: 'Pending',      v: overview.pending      },
+                      { label: 'Submitted',      v: overview.submitted      },
+                      { label: 'HOD Approved',   v: overview.hod_approved   },
+                      { label: 'Panel Approved', v: overview.panel_approved },
+                      { label: 'HR Finalized',   v: overview.hr_finalized   },
+                      { label: 'Pending',        v: overview.pending        },
                     ].map(({ label, v }) => (
                       <div key={label} className="flex items-center gap-4">
                         <span className="text-slate-600 text-sm w-32 font-semibold shrink-0">{label}</span>
@@ -585,7 +589,7 @@ export function EOMHrView({ hrUser }: Props) {
                         </label>
                         {nom.status !== 'hr_finalized' && (
                           <button onClick={() => handleFinalize(nom.id)}
-                            disabled={finalizing[nom.id] || !['hod_approved','submitted'].includes(nom.status)}
+                            disabled={finalizing[nom.id] || !['hod_approved','panel_approved','submitted'].includes(nom.status)}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                             {finalizing[nom.id]
                               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Finalizing...</>
