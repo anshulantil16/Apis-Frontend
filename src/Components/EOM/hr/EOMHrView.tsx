@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Upload, Trophy, BarChart3, CheckCircle, Calendar,
   Users, TrendingUp, FileText, Award, Clock,
-  ChevronDown, ChevronUp, Star,
+  ChevronDown, ChevronUp, Star, RefreshCw,
 } from 'lucide-react';
 import { EOM_API } from '../../../Pages/EOMPage';
 
@@ -201,6 +201,26 @@ export function EOMHrView({ hrUser }: Props) {
         {/* Overview */}
         {tab === 'overview' && (
           <div className="space-y-5">
+            {/* Refresh button */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  if (!selectedCycle) return;
+                  fetch(`${EOM_API}/org/overview/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setOverview).catch(() => {});
+                  fetch(`${EOM_API}/all-nominations/?cycle_id=${selectedCycle.id}`)
+                    .then(r => r.json())
+                    .then((data: any[]) => {
+                      setNominations(data);
+                      const rem: Record<number,string>  = {};
+                      const win: Record<number,boolean> = {};
+                      data.forEach(n => { rem[n.id] = n.hr_remarks || ''; win[n.id] = n.is_winner || false; });
+                      setHrRemarks(rem); setIsWinner(win);
+                    }).catch(() => {});
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all">
+                <RefreshCw className="w-3.5 h-3.5" /> Refresh
+              </button>
+            </div>
             {cycles.length > 1 && (
               <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-5 py-3 flex items-center gap-3 flex-wrap">
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0">Cycle</span>
