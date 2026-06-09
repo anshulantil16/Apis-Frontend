@@ -9,10 +9,11 @@ const MONTH_NAMES = ['','January','February','March','April','May','June',
   'July','August','September','October','November','December'];
 
 const PANEL_DIMS = [
-  { key: 'dim2', label: 'APIS Values (UPLIFT), Survey Participation, Compliance & Conduct, Fun Club Activities Participation', max: 20 },
-  { key: 'dim3', label: 'Initiative & Entrepreneurial Problem-Solving',                                                        max: 10 },
-  { key: 'dim4', label: 'Efficiency, Cost & Resource Optimisation',                                                            max: 10 },
-  { key: 'dim5', label: 'Teamwork, Collaboration & People Development, Learning & Values Creation',                           max: 10 },
+  { key: 'dim2', label: 'APIS Values (UPLIFT)',                                                                          max: 10 },
+  { key: 'dim3', label: 'Survey Participation, Compliance & Conduct, Fun Club Activities Participation',                max: 10 },
+  { key: 'dim4', label: 'Initiative & Entrepreneurial Problem-Solving',                                                  max: 10 },
+  { key: 'dim5', label: 'Efficiency, Cost & Resource Optimisation',                                                     max: 10 },
+  { key: 'dim6', label: 'Teamwork, Collaboration & People Development, Learning & Values Creation',                    max: 10 },
 ] as const;
 
 const SMART_META = [
@@ -35,6 +36,7 @@ interface ScoreState {
   dim3_score: string; dim3_comments: string;
   dim4_score: string; dim4_comments: string;
   dim5_score: string; dim5_comments: string;
+  dim6_score: string; dim6_comments: string;
   sustainability_desc: string;
   sustainability_bonus: string;
   sustainability_just: string;
@@ -52,6 +54,8 @@ function initScore(nom: any): ScoreState {
     dim4_comments:       nom?.panel_dim4_comments || '',
     dim5_score:          nom?.panel_dim5_score != null ? String(nom.panel_dim5_score) : '',
     dim5_comments:       nom?.panel_dim5_comments || '',
+    dim6_score:          nom?.panel_dim6_score != null ? String(nom.panel_dim6_score) : '',
+    dim6_comments:       nom?.panel_dim6_comments || '',
     sustainability_desc:  nom?.panel_sustainability_desc  || '',
     sustainability_bonus: nom?.panel_sustainability_bonus != null ? String(nom.panel_sustainability_bonus) : '',
     sustainability_just:  nom?.panel_sustainability_just  || '',
@@ -62,7 +66,8 @@ function initScore(nom: any): ScoreState {
 
 const panelTotal = (s: ScoreState) =>
   (Number(s.dim2_score)||0)+(Number(s.dim3_score)||0)+
-  (Number(s.dim4_score)||0)+(Number(s.dim5_score)||0);
+  (Number(s.dim4_score)||0)+(Number(s.dim5_score)||0)+
+  (Number(s.dim6_score)||0);
 
 // ─── Nomination card ───────────────────────────────────────────────────────────
 
@@ -92,6 +97,8 @@ function NominationCard({ nom, cycle, onUpdate }: {
       panel_dim4_comments:        scores.dim4_comments,
       panel_dim5_score:           scores.dim5_score !== '' ? Number(scores.dim5_score) : null,
       panel_dim5_comments:        scores.dim5_comments,
+      panel_dim6_score:           scores.dim6_score !== '' ? Number(scores.dim6_score) : null,
+      panel_dim6_comments:        scores.dim6_comments,
       panel_sustainability_desc:  scores.sustainability_desc,
       panel_sustainability_bonus: scores.sustainability_bonus !== '' ? Number(scores.sustainability_bonus) : null,
       panel_sustainability_just:  scores.sustainability_just,
@@ -103,7 +110,7 @@ function NominationCard({ nom, cycle, onUpdate }: {
   }, [scores]);
 
   const validate = () => {
-    if (PANEL_DIMS.some(d => scores[`${d.key}_score` as keyof ScoreState] === '')) return 'Please fill all 4 dimension scores.';
+    if (PANEL_DIMS.some(d => scores[`${d.key}_score` as keyof ScoreState] === '')) return 'Please fill all 5 dimension scores.';
     const t = panelTotal(scores);
     if (t > 50) return `Panel total ${t} exceeds 50.`;
     if (!scores.recommendation) return 'Please select a recommendation.';
