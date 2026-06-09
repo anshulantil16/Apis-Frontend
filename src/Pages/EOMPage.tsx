@@ -100,9 +100,11 @@ function EOMHub({ user, role, onLogout, onNavigateBack }: {
 // ─── Login screen ──────────────────────────────────────────────────────────────
 
 export function EOMPage({ onNavigateBack }: EOMPageProps) {
-  const [role, setRole]             = useState<Role | null>(() =>
-    localStorage.getItem('eom_role') as Role | null
-  );
+  const VALID_ROLES: Role[] = ['employee', 'hod', 'hr'];
+  const [role, setRole]             = useState<Role | null>(() => {
+    const saved = localStorage.getItem('eom_role') as Role | null;
+    return saved && VALID_ROLES.includes(saved) ? saved : null;
+  });
   const [inputId, setInputId]       = useState('');
   const [user, setUser]             = useState<any>(() => {
     try { return JSON.parse(localStorage.getItem('eom_user') || 'null'); } catch { return null; }
@@ -258,9 +260,13 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
               )}
 
               {role === 'hr' && (
-                <div className="pt-2 border-t border-slate-100">
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-2.5">
+                    <p className="text-[11px] font-bold text-rose-700">First-time / Admin Bootstrap</p>
+                    <p className="text-[10px] text-rose-500 mt-0.5">Works even before any employees are uploaded. OTP is sent to the admin email.</p>
+                  </div>
                   <button onClick={handleAdminOtp} disabled={loading}
-                    className="w-full h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-all">
+                    className="w-full h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-all shadow-sm shadow-rose-200">
                     {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Zap className="w-4 h-4" />}
                     Send Admin OTP
                   </button>
