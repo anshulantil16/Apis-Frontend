@@ -267,8 +267,17 @@ function NominationCard({ nom, cycle, onUpdate }: {
                     <div className="px-3 py-3 text-sm text-slate-700 font-medium leading-snug">{d.label}</div>
                     <div className="px-3 pt-3.5 text-sm font-black text-slate-600 text-center">{d.max}</div>
                     <div className="px-3 py-2.5">
-                      <input type="number" min={0} max={d.max} value={sv}
-                        onChange={e => set(sk, e.target.value)}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        min={0} max={d.max}
+                        value={sv}
+                        onChange={e => set(sk, e.target.value.replace(/[^0-9]/g, ''))}
+                        onKeyDown={e => {
+                          const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Enter'];
+                          if (!/^[0-9]$/.test(e.key) && !allowed.includes(e.key)) e.preventDefault();
+                        }}
                         disabled={isReviewed} placeholder="0"
                         className={`w-full h-9 rounded-lg border px-3 text-sm font-bold text-center focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-500
                           ${over ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-slate-200 focus:ring-indigo-300 focus:border-indigo-400'}`}
@@ -311,17 +320,40 @@ function NominationCard({ nom, cycle, onUpdate }: {
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none disabled:bg-slate-50" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Bonus (0 or 5)</p>
-                  <div className="flex gap-4 mt-2">
-                    {['0','5'].map(v => (
-                      <label key={v} className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name={`panelbonus_${nom.id}`} value={v}
-                          checked={scores.sustainability_bonus === v}
-                          onChange={() => set('sustainability_bonus', v)}
-                          disabled={isReviewed} className="accent-indigo-500 w-4 h-4" />
-                        <span className="text-sm font-bold text-slate-700">{v}</span>
-                      </label>
-                    ))}
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                    Bonus Stars (0–5 pts)
+                  </p>
+                  <div className="flex items-center gap-1 mt-2">
+                    {[1,2,3,4,5].map(star => {
+                      const current = Number(scores.sustainability_bonus) || 0;
+                      const filled  = star <= current;
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          disabled={isReviewed}
+                          onClick={() => set('sustainability_bonus', current === star ? '0' : String(star))}
+                          className={`text-3xl leading-none transition-all select-none
+                            ${isReviewed ? 'cursor-default' : 'cursor-pointer hover:scale-125 active:scale-110'}
+                            ${filled ? 'text-amber-400 drop-shadow-sm' : 'text-slate-300 hover:text-amber-300'}`}
+                          title={`${star} star${star > 1 ? 's' : ''} = ${star} bonus pt${star > 1 ? 's' : ''}`}
+                        >
+                          {filled ? '★' : '☆'}
+                        </button>
+                      );
+                    })}
+                    <span className="ml-2 text-sm font-black text-amber-600">
+                      {Number(scores.sustainability_bonus) || 0} pts
+                    </span>
+                    {!isReviewed && Number(scores.sustainability_bonus) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => set('sustainability_bonus', '0')}
+                        className="ml-1 text-[10px] text-slate-400 hover:text-rose-500 underline"
+                      >
+                        clear
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div>
