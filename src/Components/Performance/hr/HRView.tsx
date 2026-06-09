@@ -4,8 +4,8 @@ import {
   Users, AlertTriangle, TrendingUp, FileText, Settings,
   ChevronDown, ChevronUp, Award, Clock, Lock, Unlock, Download,
 } from 'lucide-react';
-import { PERF_API } from '../../../Pages/PerformancePage';
 import { downloadScorecard } from '../../../utils/downloadScorecard';
+import { PERF_API as _DEFAULT_API } from '../../../Pages/PerformancePage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ const PHASE_BADGE: Record<string, string> = {
 
 // ─── Main HR View ─────────────────────────────────────────────────────────────
 
-export function HRView({ hrUser }: { hrUser: any }) {
+export function HRView({ hrUser, apiBase = _DEFAULT_API }: { hrUser: any; apiBase?: string }) {
   const [tab, setTab] = useState<'overview' | 'import' | 'cycle' | 'appraisals' | 'leaderboard'>('overview');
   const [cycles, setCycles] = useState<any[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<any>(null);
@@ -44,7 +44,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
 
   // Load all cycles
   useEffect(() => {
-    fetch(`${PERF_API}/cycles/`)
+    fetch(`${apiBase}/cycles/`)
       .then(r => r.json())
       .then(data => {
         setCycles(data);
@@ -55,9 +55,9 @@ export function HRView({ hrUser }: { hrUser: any }) {
   // Load cycle data when selected
   useEffect(() => {
     if (!selectedCycle) return;
-    fetch(`${PERF_API}/org/overview/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setOverview).catch(() => {});
-    fetch(`${PERF_API}/all-goal-cards/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setAllCards).catch(() => {});
-    fetch(`${PERF_API}/leaderboard/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setLeaderboard).catch(() => {});
+    fetch(`${apiBase}/org/overview/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setOverview).catch(() => {});
+    fetch(`${apiBase}/all-goal-cards/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setAllCards).catch(() => {});
+    fetch(`${apiBase}/leaderboard/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setLeaderboard).catch(() => {});
   }, [selectedCycle]);
 
   const handleImport = async () => {
@@ -65,7 +65,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
     setImporting(true); setImportMsg('');
     const fd = new FormData(); fd.append('file', importFile);
     try {
-      const res = await fetch(`${PERF_API}/employees/import/`, { method: 'POST', body: fd });
+      const res = await fetch(`${apiBase}/employees/import/`, { method: 'POST', body: fd });
       const data = await res.json();
       setImportMsg(`✅ ${data.message}${data.errors?.length ? ` · ${data.errors.length} errors` : ''}`);
       setImportFile(null);
@@ -93,7 +93,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
     if (!cycleName.trim()) return;
     setCreatingCycle(true); setCycleMsg('');
     try {
-      const res = await fetch(`${PERF_API}/cycles/`, {
+      const res = await fetch(`${apiBase}/cycles/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: cycleName.trim(),
@@ -119,7 +119,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
   };
 
   const updateCyclePhase = async (id: number, status: string) => {
-    await fetch(`${PERF_API}/cycles/${id}/`, {
+    await fetch(`${apiBase}/cycles/${id}/`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
@@ -131,7 +131,7 @@ export function HRView({ hrUser }: { hrUser: any }) {
     if (!window.confirm('⚠️ WARNING: This will permanently delete ALL data (employees, cycles, appraisals). This CANNOT be undone.\n\nAre you sure?')) return;
     setResetting(true);
     try {
-      const res = await fetch(`${PERF_API}/org/reset/`, { method: 'POST' });
+      const res = await fetch(`${apiBase}/org/reset/`, { method: 'POST' });
       if (res.ok) { alert('✅ Database reset successfully!'); window.location.reload(); }
       else alert('❌ Reset failed.');
     } catch { alert('❌ Failed to connect.'); }

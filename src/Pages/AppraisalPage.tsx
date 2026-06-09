@@ -5,17 +5,14 @@ import { AppraisalManagerView } from '../Components/Appraisal/manager/AppraisalM
 import { AppraisalHODView } from '../Components/Appraisal/hod/AppraisalHODView';
 import { HRView } from '../Components/Performance/hr/HRView';
 import { ProgressReportDashboard } from '../Components/ProgressReport/ProgressReportDashboard';
-import { PERF_API } from './PerformancePage';
-
 interface AppraisalPageProps {
   onNavigateBack: () => void;
 }
 
 type Role = 'employee' | 'manager' | 'hod' | 'hr';
 
-// Appraisal uses the same backend as Performance for now.
-// When a dedicated appraisal backend is ready, update this constant.
-export const APPRAISAL_API = PERF_API;
+const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export const APPRAISAL_API = `${_API_BASE}/api/appraisal`;
 
 // ─── Inner hub wrapper ────────────────────────────────────────────────────────
 
@@ -119,7 +116,7 @@ function AppraisalHub({
           {role === 'employee' && <AppraisalEmployeeView employee={employee} />}
           {role === 'manager' && <AppraisalManagerView manager={employee} />}
           {role === 'hod' && <AppraisalHODView hod={employee} />}
-          {role === 'hr' && <HRView hrUser={employee} />}
+          {role === 'hr' && <HRView hrUser={employee} apiBase={APPRAISAL_API} />}
         </>
       ) : (
         <ProgressReportDashboard role={role} user={employee} />
