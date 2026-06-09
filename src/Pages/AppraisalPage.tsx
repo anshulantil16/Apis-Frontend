@@ -11,8 +11,8 @@ interface AppraisalPageProps {
 
 type Role = 'employee' | 'manager' | 'hod' | 'hr';
 
-import { PERF_API } from './PerformancePage';
-export const APPRAISAL_API = PERF_API;
+const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export const APPRAISAL_API = `${_API_BASE}/api/appraisal`;
 
 // ─── Inner hub wrapper ────────────────────────────────────────────────────────
 
