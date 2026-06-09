@@ -433,15 +433,28 @@ export function EOMHrView({ hrUser }: Props) {
                 <Award className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                 <p className="text-slate-600 font-bold">No nominations yet.</p>
               </div>
-            ) : nominations.map((nom: any) => {
+            ) : [...nominations]
+                .map(n => ({ ...n, _total: (n.hod_dim1_score||0)+(n.hod_dim2_score||0)+(n.hod_dim3_score||0)+(n.hod_dim4_score||0)+(n.hod_sustainability_bonus||0) }))
+                .sort((a, b) => b._total - a._total)
+                .map((nom: any, rank: number) => {
               const isExp = expanded === nom.id;
-              const hodTotal =
-                (nom.hod_dim1_score||0)+(nom.hod_dim2_score||0)+
-                (nom.hod_dim3_score||0)+(nom.hod_dim4_score||0);
+              const hodTotal = nom._total;
+              const isTopScorer = rank === 0 && hodTotal > 0;
               return (
-                <div key={nom.id} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                <div key={nom.id} className={`bg-white shadow-sm rounded-2xl overflow-hidden border ${isTopScorer ? 'border-yellow-300' : 'border-slate-200'}`}>
+                  {isTopScorer && (
+                    <div className="h-1 bg-gradient-to-r from-yellow-400 to-amber-400" />
+                  )}
                   <div className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-slate-50 transition-all" onClick={() => setExpanded(isExp ? null : nom.id)}>
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center font-black text-emerald-700 text-sm shrink-0">
+                    {/* Rank badge */}
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0
+                      ${rank === 0 && hodTotal > 0 ? 'bg-yellow-100 text-yellow-700 border border-yellow-300' :
+                        rank === 1 && hodTotal > 0 ? 'bg-slate-100 text-slate-500 border border-slate-200' :
+                        rank === 2 && hodTotal > 0 ? 'bg-orange-50 text-orange-600 border border-orange-200' :
+                        'bg-slate-50 text-slate-400 border border-slate-100 text-xs'}`}>
+                      {hodTotal > 0 ? (rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `#${rank+1}`) : '—'}
+                    </div>
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center font-black text-emerald-700 text-sm shrink-0">
                       {(nom.employee_name||'E')?.[0]}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -455,9 +468,10 @@ export function EOMHrView({ hrUser }: Props) {
                       </p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      {nom.hod_dim1_score != null && (
-                        <span className="text-xs font-black text-violet-700 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-full">
-                          Score: {hodTotal}/100
+                      {hodTotal > 0 && (
+                        <span className={`text-xs font-black px-2.5 py-1 rounded-full border
+                          ${isTopScorer ? 'bg-yellow-50 border-yellow-300 text-yellow-800' : 'bg-violet-50 border-violet-200 text-violet-700'}`}>
+                          {hodTotal}/100{nom.hod_sustainability_bonus ? ` +${nom.hod_sustainability_bonus}` : ''}
                         </span>
                       )}
                       {nom.is_winner && (
@@ -585,3 +599,4 @@ export function EOMHrView({ hrUser }: Props) {
     </div>
   );
 }
+

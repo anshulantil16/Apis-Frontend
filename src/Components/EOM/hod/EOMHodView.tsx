@@ -495,14 +495,17 @@ export function EOMHodView({ hod }: { hod: any }) {
           <h2 className="text-base font-extrabold text-slate-900">{hod.name}</h2>
           <p className="text-violet-600 text-xs font-semibold mt-0.5">HOD · EOM Panel Evaluation — {selectedCycle.name}</p>
         </div>
-        <div className="flex items-center gap-3 text-xs font-bold">
+        <div className="flex items-center gap-2 text-xs font-bold flex-wrap">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700">
-            <Clock className="w-3 h-3" /> {awaiting.length} Pending
+            <Clock className="w-3 h-3" /> {awaiting.length} Pending Review
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">
             <CheckCircle className="w-3 h-3" /> {reviewed.length} Reviewed
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-500">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-400">
+            <Clock className="w-3 h-3" /> {notSubmitted.length} Not Submitted
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-50 border border-violet-200 text-violet-700">
             <Users className="w-3 h-3" /> {team.length} Total
           </div>
         </div>
