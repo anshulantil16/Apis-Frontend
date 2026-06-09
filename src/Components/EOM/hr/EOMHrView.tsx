@@ -112,6 +112,7 @@ export function EOMHrView({ hrUser }: Props) {
       ['EMP001','Rahul Sharma','rahul@company.com','Sales Executive','Sales','North Zone','HOD001','employee'],
       ['EMP002','Priya Singh','priya@company.com','Sr. Executive','Sales','South Zone','HOD001','employee'],
       ['HOD001','Ravi Kumar','ravi@company.com','Head of Department','Sales','','','hod'],
+      ['PANEL001','Arun Gupta','arun@company.com','Director','Operations','','','panel'],
       ['HR001','Sneha Patel','sneha@company.com','HR Manager','HR','','','hr'],
     ];
     const csv  = [headers.join(','), ...sample.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
@@ -318,7 +319,7 @@ export function EOMHrView({ hrUser }: Props) {
                 {[
                   ['Employee ID','Unique ID'],['Name','Full name'],['Email','For OTP login'],
                   ['Designation','Job title'],['Department','Team'],['Zone / Location','Location or unit'],
-                  ['HOD ID','HOD\'s Employee ID'],['User Type','employee / hod / hr'],
+                  ['HOD ID','HOD\'s Employee ID'],['User Type','employee / hod / panel / hr'],
                 ].map(([col, desc]) => (
                   <div key={col} className="bg-white border border-slate-200 rounded-xl p-3">
                     <p className="text-slate-800 text-xs font-bold">{col}</p>
