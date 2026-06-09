@@ -26,8 +26,7 @@ const PHASE_BADGE: Record<string, string> = {
 
 // ─── Main HR View ─────────────────────────────────────────────────────────────
 
-export function HRView({ hrUser }: { hrUser: any }) {
-  const apiBase = PERF_API;
+export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: string }) {
   const [tab, setTab] = useState<'overview' | 'import' | 'cycle' | 'appraisals' | 'leaderboard'>('overview');
   const [cycles, setCycles] = useState<any[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<any>(null);

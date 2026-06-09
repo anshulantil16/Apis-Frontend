@@ -116,7 +116,7 @@ function AppraisalHub({
           {role === 'employee' && <AppraisalEmployeeView employee={employee} />}
           {role === 'manager' && <AppraisalManagerView manager={employee} />}
           {role === 'hod' && <AppraisalHODView hod={employee} />}
-          {role === 'hr' && <HRView hrUser={employee} />}
+          {role === 'hr' && <HRView hrUser={employee} apiBase={APPRAISAL_API} />}
         </>
       ) : (
         <ProgressReportDashboard role={role} user={employee} />
