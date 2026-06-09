@@ -200,6 +200,22 @@ function NominationCard({ nom, cycle, onUpdate }: {
             ))}
           </div>
 
+          {nom.support_document_name && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0 text-sm">📄</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Supporting Document</p>
+                <p className="text-sm font-semibold text-blue-800 truncate">{nom.support_document_name}</p>
+              </div>
+              {nom.support_document_url && (
+                <a href={nom.support_document_url} target="_blank" rel="noreferrer"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all">
+                  ↓ Download
+                </a>
+              )}
+            </div>
+          )}
+
           {nom.part_a_achievement && (
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Part A — Achievement Summary</p>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle2, ChevronRight, ChevronLeft, AlertCircle, Loader2, Award } from 'lucide-react';
+import { CheckCircle2, ChevronRight, ChevronLeft, AlertCircle, Loader2, Award, FileText, Upload } from 'lucide-react';
 import { EOM_API } from '../../../Pages/EOMPage';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -122,6 +122,8 @@ export function EOMEmployeeView({ employee }: Props) {
   const [evidence, setEvidence]               = useState<EvidenceRow[]>([{ desc: '', source: '' }, { desc: '', source: '' }]);
   const [declarationAgreed, setDeclarationAgreed] = useState(false);
   const [signatureName, setSignatureName]     = useState('');
+  const [docFile,        setDocFile]          = useState<File | null>(null);
+  const [docUploading,   setDocUploading]     = useState(false);
 
   const showMsg = (text: string, ok: boolean) => {
     setMsg({ text, ok });
@@ -465,6 +467,90 @@ export function EOMEmployeeView({ employee }: Props) {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Supporting Document Upload */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <h2 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-1">Supporting Document</h2>
+                <p className="text-xs text-slate-400 mb-4">Upload any one document to support your nomination (PDF, image, Excel, Word, etc.). Optional.</p>
+
+                {/* Already uploaded */}
+                {nomination?.support_document_name && !docFile && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-emerald-800 truncate">{nomination.support_document_name}</p>
+                      <p className="text-[10px] text-emerald-600">Uploaded ✓</p>
+                    </div>
+                    {nomination.support_document_url && (
+                      <a href={nomination.support_document_url} target="_blank" rel="noreferrer"
+                        className="shrink-0 text-xs font-bold text-emerald-700 hover:underline px-3 py-1.5 rounded-lg border border-emerald-300 hover:bg-emerald-100 transition-all">
+                        View
+                      </a>
+                    )}
+                    {!isReadonly && (
+                      <button type="button" onClick={async () => {
+                        if (!nomination?.id) return;
+                        await fetch(`${EOM_API}/nominations/${nomination.id}/upload-document/`, { method: 'DELETE' });
+                        setNomination((n: any) => ({ ...n, support_document_name: '', support_document_url: null }));
+                      }} className="shrink-0 text-xs font-bold text-rose-500 hover:text-rose-700 px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 transition-all">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* New file selected (not yet uploaded) */}
+                {docFile && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-blue-800 truncate">{docFile.name}</p>
+                      <p className="text-[10px] text-blue-500">{(docFile.size / 1024).toFixed(0)} KB — ready to upload</p>
+                    </div>
+                    <button type="button" onClick={() => setDocFile(null)}
+                      className="shrink-0 text-xs font-bold text-slate-500 hover:text-rose-500 transition-colors">
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {!isReadonly && (
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-400 hover:bg-emerald-50/50 cursor-pointer transition-all text-sm font-semibold text-slate-500 hover:text-emerald-700">
+                      <Upload className="w-4 h-4" />
+                      {docFile ? 'Change File' : 'Choose File'}
+                      <input type="file" className="hidden" accept="*/*"
+                        onChange={e => setDocFile(e.target.files?.[0] || null)} />
+                    </label>
+                    {docFile && (
+                      <button type="button" disabled={docUploading}
+                        onClick={async () => {
+                          if (!nomination?.id || !docFile) return;
+                          setDocUploading(true);
+                          try {
+                            const fd = new FormData();
+                            fd.append('document', docFile);
+                            const res = await fetch(`${EOM_API}/nominations/${nomination.id}/upload-document/`, { method: 'POST', body: fd });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'Upload failed');
+                            setNomination(data);
+                            setDocFile(null);
+                            showMsg('Document uploaded successfully!', true);
+                          } catch (e: any) { showMsg(e.message, false); }
+                          finally { setDocUploading(false); }
+                        }}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all disabled:opacity-50">
+                        {docUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        {docUploading ? 'Uploading…' : 'Upload'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Declaration */}
