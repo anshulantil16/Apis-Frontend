@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Upload, Trophy, BarChart3, CheckCircle, Calendar,
   Users, TrendingUp, FileText, Award, Clock,
-  ChevronDown, ChevronUp, Star, RefreshCw,
+  ChevronDown, ChevronUp, Star, RefreshCw, AlertCircle, Trash2,
 } from 'lucide-react';
 import { EOM_API } from '../../../Pages/EOMPage';
 import { generateEOMCertificate } from '../../../utils/generateEOMCertificate';
@@ -417,6 +417,37 @@ export function EOMHrView({ hrUser }: Props) {
                 </button>
               </div>
             ))}
+
+            {/* Database Reset */}
+            <div className="bg-white border border-rose-200 shadow-sm rounded-2xl p-8 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-6 h-6 text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="text-slate-900 font-extrabold text-base">Reset Database</h3>
+                  <p className="text-slate-500 text-sm mt-0.5">Clear all nominations &amp; OTP tokens. Keeps employees &amp; cycles.</p>
+                </div>
+              </div>
+              <button onClick={() => {
+                if (window.confirm('⚠️ This will delete ALL nominations and OTP tokens.\n\nThis action cannot be undone. Continue?')) {
+                  const conf = prompt('Type RESET_EOM_DATABASE to confirm:');
+                  if (conf === 'RESET_EOM_DATABASE') {
+                    fetch(`${EOM_API}/admin/reset-database/`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ confirm: 'RESET_EOM_DATABASE' }),
+                    }).then(r => r.json()).then(d => {
+                      alert(`✅ Reset complete!\n${d.deleted_nominations} nominations\n${d.deleted_otp_tokens} OTP tokens deleted`);
+                      window.location.reload();
+                    }).catch(e => alert(`❌ Reset failed: ${e.message}`));
+                  }
+                }
+              }}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold hover:opacity-90 flex items-center justify-center gap-2 transition-all">
+                <Trash2 className="w-4 h-4" /> Reset All Data
+              </button>
+            </div>
           </div>
         )}
 
