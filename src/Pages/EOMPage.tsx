@@ -66,7 +66,7 @@ function EOMHub({ user, role, onLogout, onNavigateBack }: {
       <header className="border-b border-slate-200 bg-white shadow-sm sticky top-0 z-50">
         <div className="px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={onLogout}
+            <button onClick={() => history.back()}
               className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0">
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -87,6 +87,10 @@ function EOMHub({ user, role, onLogout, onNavigateBack }: {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center text-emerald-700 font-black text-sm">
               {(user.name || 'U')[0].toUpperCase()}
             </div>
+            <button onClick={onLogout}
+              className="text-slate-400 hover:text-rose-500 text-xs font-semibold transition-colors px-2 py-1 rounded-lg hover:bg-rose-50">
+              Sign Out
+            </button>
             <button onClick={onNavigateBack}
               className="hidden lg:block text-slate-400 hover:text-slate-700 text-xs font-semibold transition-colors">
               ← Home
@@ -200,13 +204,75 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
     finally { setLoading(false); }
   };
 
-  const handleBackToId = () => { setStep('id'); setOtpInput(''); setMaskedEmail(''); setError(''); };
+  const handleBackToId = () => {
+    history.back(); // let popstate handle the state change
+  };
 
   const reset = () => {
     setUser(null); setRole(null); setInputId(''); setStep('id'); setOtpInput(''); setError('');
     localStorage.removeItem('eom_user');
     localStorage.removeItem('eom_role');
   };
+
+  // ── History API: push state on every navigation ──────────────────────────────
+  // On mount, anchor the history so back-button has something to pop to
+  useEffect(() => {
+    history.replaceState({ eom: 'start' }, '');
+  }, []);
+
+  // Push when login step changes
+  useEffect(() => {
+    if (step === 'otp')       history.pushState({ eom: 'otp' }, '');
+    else if (step === 'admin_otp') history.pushState({ eom: 'admin_otp' }, '');
+    // 'id' is always the base — no push (handled by popstate returning to 'start')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Push when user logs in (hub)
+  useEffect(() => {
+    if (user && role) history.pushState({ eom: 'hub', role }, '');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!user]);
+
+  // Listen for browser back/forward
+  useEffect(() => {
+    const handler = (e: PopStateEvent) => {
+      const s = e.state as any;
+      if (!s || s.eom === 'start') {
+        // Went all the way back — reset to role/id selection
+        setUser(null);
+        setRole(null);
+        setStep('id');
+        setOtpInput('');
+        setError('');
+        localStorage.removeItem('eom_user');
+        localStorage.removeItem('eom_role');
+      } else if (s.eom === 'otp') {
+        setUser(null);
+        setStep('otp');
+        setError('');
+      } else if (s.eom === 'admin_otp') {
+        setUser(null);
+        setStep('admin_otp');
+        setError('');
+      } else if (s.eom === 'hub') {
+        // Popping back from within the hub (employee form going back past step 1)
+        // restore the logged-in state — user is still in localStorage
+        const savedUser = (() => { try { return JSON.parse(localStorage.getItem('eom_user') || 'null'); } catch { return null; } })();
+        const savedRole = localStorage.getItem('eom_role') as Role | null;
+        if (savedUser && savedRole) {
+          setUser(savedUser);
+          setRole(savedRole);
+        } else {
+          setStep('id');
+          setUser(null);
+        }
+      }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (user && role) {
     return <EOMHub user={user} role={role} onLogout={reset} onNavigateBack={onNavigateBack} />;

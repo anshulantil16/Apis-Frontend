@@ -95,6 +95,26 @@ export function EOMEmployeeView({ employee }: Props) {
   const [msg,            setMsg]            = useState<{ text: string; ok: boolean } | null>(null);
   const [step,           setStep]           = useState(1);
 
+  // Push browser history state when form step advances so back button works
+  useEffect(() => {
+    if (step > 1) history.pushState({ eom: 'form', step }, '');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  useEffect(() => {
+    const handler = (e: PopStateEvent) => {
+      const s = e.state as any;
+      if (s?.eom === 'form' && s.step > 1) {
+        setStep(s.step - 1);
+        // stop the bubble — EOMPage's popstate handler would also fire but we
+        // push a 'hub' state when the employee logs in, so popping back
+        // from step 1 will hit the 'hub' state and stay logged-in.
+      }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
+
   // Form state
   const [track, setTrack]                     = useState('');
   const [partA, setPartA]                     = useState('');
@@ -486,7 +506,7 @@ export function EOMEmployeeView({ employee }: Props) {
           {/* Navigation */}
           {!isReadonly && (
             <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
-              <button onClick={() => setStep(s => s - 1)} disabled={step === 1}
+              <button onClick={() => history.back()} disabled={step === 1}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                 <ChevronLeft className="w-4 h-4" /> Previous
               </button>
