@@ -60,6 +60,7 @@ export function EOMHrView({ hrUser }: Props) {
   const [refreshing,    setRefreshing]    = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState('');
   const [resetting,     setResetting]     = useState(false);
+  const [statusFilter,  setStatusFilter]  = useState<string>('all');
 
   useEffect(() => {
     fetch(`${EOM_API}/cycles/`)
@@ -440,18 +441,48 @@ export function EOMHrView({ hrUser }: Props) {
         )}
 
         {/* All Nominations */}
-        {tab === 'nominations' && (
+        {tab === 'nominations' && (() => {
+          const STATUS_FILTERS = [
+            { key: 'all',           label: 'All',            style: 'bg-slate-700 text-white border-slate-700',            inactive: 'bg-white text-slate-600 border-slate-200 hover:border-slate-400' },
+            { key: 'submitted',     label: 'Submitted',      style: 'bg-blue-600 text-white border-blue-600',              inactive: 'bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-400' },
+            { key: 'hod_approved',  label: 'HOD Approved',   style: 'bg-emerald-600 text-white border-emerald-600',        inactive: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-400' },
+            { key: 'hod_rejected',  label: 'HOD Rejected',   style: 'bg-rose-600 text-white border-rose-600',              inactive: 'bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-400' },
+            { key: 'panel_approved',label: 'Panel Approved', style: 'bg-indigo-600 text-white border-indigo-600',          inactive: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:border-indigo-400' },
+            { key: 'panel_rejected',label: 'Panel Rejected', style: 'bg-orange-600 text-white border-orange-600',          inactive: 'bg-orange-50 text-orange-700 border-orange-200 hover:border-orange-400' },
+            { key: 'hr_finalized',  label: 'HR Finalized',   style: 'bg-amber-500 text-white border-amber-500',            inactive: 'bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-400' },
+          ];
+
+          const counts: Record<string, number> = { all: nominations.length };
+          nominations.forEach(n => { counts[n.status] = (counts[n.status] || 0) + 1; });
+
+          const scored = [...nominations]
+            .map(n => ({
+              ...n,
+              _total: (n.hod_dim1_score||0) +
+                      (n.panel_dim2_score||0)+(n.panel_dim3_score||0)+
+                      (n.panel_dim4_score||0)+(n.panel_dim5_score||0)+(n.panel_dim6_score||0)+
+                      (n.panel_sustainability_bonus||0),
+            }))
+            .sort((a, b) => b._total - a._total);
+
+          const visible = statusFilter === 'all'
+            ? scored
+            : scored.filter(n => n.status === statusFilter);
+
+          return (
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Award className="w-4 h-4 text-emerald-500" />
               <h3 className="text-slate-900 font-extrabold">All Nominations — {selectedCycle?.name}</h3>
               <span className="text-xs font-bold text-slate-400 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full">{nominations.length} total</span>
             </div>
+
+            {/* Cycle selector */}
             {cycles.length > 1 && (
               <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-5 py-3 flex items-center gap-3 flex-wrap">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0">Cycle</span>
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0">Month</span>
                 {cycles.map(c => (
-                  <button key={c.id} onClick={() => setSelectedCycle(c)}
+                  <button key={c.id} onClick={() => { setSelectedCycle(c); setStatusFilter('all'); }}
                     className={`px-3 py-1.5 rounded-xl font-bold text-xs border transition-all
                       ${selectedCycle?.id === c.id ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-emerald-300'}`}>
                     {c.name}
@@ -459,15 +490,36 @@ export function EOMHrView({ hrUser }: Props) {
                 ))}
               </div>
             )}
-            {nominations.length === 0 ? (
-              <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
-                <Award className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-600 font-bold">No nominations yet.</p>
+
+            {/* Status filter chips */}
+            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-5 py-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0 mr-1">Filter</span>
+                {STATUS_FILTERS.map(f => {
+                  const count = counts[f.key] ?? 0;
+                  if (f.key !== 'all' && count === 0) return null;
+                  const isActive = statusFilter === f.key;
+                  return (
+                    <button key={f.key} onClick={() => setStatusFilter(f.key)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs border transition-all
+                        ${isActive ? f.style : f.inactive}`}>
+                      {f.label}
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full
+                        ${isActive ? 'bg-white/30' : 'bg-slate-900/10'}`}>
+                        {f.key === 'all' ? nominations.length : count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            ) : [...nominations]
-                .map(n => ({ ...n, _total: (n.hod_dim1_score||0)+(n.hod_dim2_score||0)+(n.hod_dim3_score||0)+(n.hod_dim4_score||0)+(n.hod_sustainability_bonus||0) }))
-                .sort((a, b) => b._total - a._total)
-                .map((nom: any, rank: number) => {
+            </div>
+
+            {visible.length === 0 ? (
+              <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-12 text-center">
+                <Award className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-600 font-bold">No nominations with status "{statusFilter.replace(/_/g,' ')}".</p>
+              </div>
+            ) : visible.map((nom: any, rank: number) => {
               const isExp = expanded === nom.id;
               const hodTotal = nom._total;
               const isTopScorer = rank === 0 && hodTotal > 0;
@@ -502,7 +554,7 @@ export function EOMHrView({ hrUser }: Props) {
                       {hodTotal > 0 && (
                         <span className={`text-xs font-black px-2.5 py-1 rounded-full border
                           ${isTopScorer ? 'bg-yellow-50 border-yellow-300 text-yellow-800' : 'bg-violet-50 border-violet-200 text-violet-700'}`}>
-                          {hodTotal}/100{nom.hod_sustainability_bonus ? ` +${nom.hod_sustainability_bonus}` : ''}
+                          {hodTotal}/100{nom.panel_sustainability_bonus ? ` +${nom.panel_sustainability_bonus}⭐` : ''}
                         </span>
                       )}
                       {nom.is_winner && (
@@ -572,7 +624,7 @@ export function EOMHrView({ hrUser }: Props) {
                               <div className="px-3 py-2.5 text-center font-black text-violet-700 text-base">{hodTotal}</div>
                               <div className="px-3 py-2.5 text-xs text-slate-500">
                                 {nom.hod_recommendation === 'recommend' ? '✅ Recommended' : nom.hod_recommendation === 'not_recommend' ? '❌ Not Recommended' : ''}
-                                {nom.hod_sustainability_bonus != null && ` · Sustainability bonus: ${nom.hod_sustainability_bonus}`}
+                                {nom.panel_sustainability_bonus != null && nom.panel_sustainability_bonus > 0 && ` · ⭐ ${nom.panel_sustainability_bonus} bonus pts`}
                               </div>
                             </div>
                           </div>
@@ -632,7 +684,8 @@ export function EOMHrView({ hrUser }: Props) {
               );
             })}
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
