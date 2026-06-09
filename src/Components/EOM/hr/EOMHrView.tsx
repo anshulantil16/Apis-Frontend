@@ -54,6 +54,8 @@ export function EOMHrView({ hrUser }: Props) {
   const [isWinner,      setIsWinner]      = useState<Record<number, boolean>>({});
   const [finalizing,    setFinalizing]    = useState<Record<number, boolean>>({});
   const [finalMsg,      setFinalMsg]      = useState<Record<number, string>>({});
+  const [refreshing,    setRefreshing]    = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState('');
 
   useEffect(() => {
     fetch(`${EOM_API}/cycles/`)
@@ -62,18 +64,30 @@ export function EOMHrView({ hrUser }: Props) {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!selectedCycle) return;
-    fetch(`${EOM_API}/org/overview/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setOverview).catch(() => {});
-    fetch(`${EOM_API}/all-nominations/?cycle_id=${selectedCycle.id}`)
-      .then(r => r.json())
-      .then((data: any[]) => {
+  const fetchCycleData = (cycle: any, silent = false) => {
+    if (!silent) setRefreshing(true);
+    const h = { headers: { 'Cache-Control': 'no-cache' } };
+    Promise.all([
+      fetch(`${EOM_API}/org/overview/?cycle_id=${cycle.id}`, h).then(r => r.json()).then(setOverview),
+      fetch(`${EOM_API}/all-nominations/?cycle_id=${cycle.id}`, h).then(r => r.json()).then((data: any[]) => {
         setNominations(data);
         const rem: Record<number,string>  = {};
         const win: Record<number,boolean> = {};
         data.forEach(n => { rem[n.id] = n.hr_remarks || ''; win[n.id] = n.is_winner || false; });
         setHrRemarks(rem); setIsWinner(win);
-      }).catch(() => {});
+      }),
+    ]).catch(() => {}).finally(() => {
+      setRefreshing(false);
+      setLastRefreshed(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    });
+  };
+
+  useEffect(() => {
+    if (!selectedCycle) return;
+    fetchCycleData(selectedCycle);
+    const interval = setInterval(() => fetchCycleData(selectedCycle, true), 30000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCycle]);
 
   const handleImport = async () => {
@@ -202,23 +216,16 @@ export function EOMHrView({ hrUser }: Props) {
         {tab === 'overview' && (
           <div className="space-y-5">
             {/* Refresh button */}
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-3">
+              {lastRefreshed && (
+                <span className="text-[11px] text-slate-400">Last updated: {lastRefreshed} · auto-refreshes every 30s</span>
+              )}
               <button
-                onClick={() => {
-                  if (!selectedCycle) return;
-                  fetch(`${EOM_API}/org/overview/?cycle_id=${selectedCycle.id}`).then(r => r.json()).then(setOverview).catch(() => {});
-                  fetch(`${EOM_API}/all-nominations/?cycle_id=${selectedCycle.id}`)
-                    .then(r => r.json())
-                    .then((data: any[]) => {
-                      setNominations(data);
-                      const rem: Record<number,string>  = {};
-                      const win: Record<number,boolean> = {};
-                      data.forEach(n => { rem[n.id] = n.hr_remarks || ''; win[n.id] = n.is_winner || false; });
-                      setHrRemarks(rem); setIsWinner(win);
-                    }).catch(() => {});
-                }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all">
-                <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                onClick={() => selectedCycle && fetchCycleData(selectedCycle)}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all disabled:opacity-50">
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing…' : 'Refresh Now'}
               </button>
             </div>
             {cycles.length > 1 && (
