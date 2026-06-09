@@ -497,7 +497,6 @@ export function EOMHrView({ hrUser }: Props) {
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0 mr-1">Filter</span>
                 {STATUS_FILTERS.map(f => {
                   const count = counts[f.key] ?? 0;
-                  if (f.key !== 'all' && count === 0) return null;
                   const isActive = statusFilter === f.key;
                   return (
                     <button key={f.key} onClick={() => setStatusFilter(f.key)}
