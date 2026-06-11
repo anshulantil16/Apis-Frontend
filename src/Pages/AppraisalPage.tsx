@@ -409,7 +409,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
 
                 <div className="flex items-center gap-2 mb-2">
                   <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">2</span>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Enter your Employee ID</p>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Enter your Employee Code</p>
                 </div>
                 <div className="relative mb-4">
                   <input
