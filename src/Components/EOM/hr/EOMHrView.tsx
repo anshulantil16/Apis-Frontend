@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Upload, Trophy, BarChart3, CheckCircle, Calendar,
   Users, TrendingUp, FileText, Award, Clock,
-  ChevronDown, ChevronUp, Star, RefreshCw, Trash2,
+  ChevronDown, ChevronUp, Star, RefreshCw, Trash2, Download,
 } from 'lucide-react';
 import { EOM_API } from '../../../Pages/EOMPage';
 import { generateEOMCertificate } from '../../../utils/generateEOMCertificate';
@@ -205,6 +205,12 @@ export function EOMHrView({ hrUser }: Props) {
                 <span className="opacity-60">· {selectedCycle.status}</span>
               </div>
             )}
+            <a href={`${EOM_API}/export/${selectedCycle ? `?cycle_id=${selectedCycle.id}` : ''}`}
+              target="_blank" rel="noreferrer"
+              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all">
+              <Download className="w-3.5 h-3.5" />
+              Export Excel
+            </a>
             <button
               onClick={async () => {
                 if (!window.confirm('⚠️ WARNING: This will permanently delete ALL EOM data (employees, cycles, nominations). This CANNOT be undone.\n\nAre you sure?')) return;

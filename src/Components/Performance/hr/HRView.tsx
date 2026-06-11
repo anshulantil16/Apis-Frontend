@@ -180,6 +180,12 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                 <span className="opacity-60">· {selectedCycle.status.replace(/_/g, ' ')}</span>
               </div>
             )}
+            <a href={`${apiBase}/export/${selectedCycle ? `?cycle_id=${selectedCycle.id}` : ''}`}
+              target="_blank" rel="noreferrer"
+              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all">
+              <Download className="w-3.5 h-3.5" />
+              Export Excel
+            </a>
             <button onClick={handleResetDatabase} disabled={resetting}
               className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs transition-all disabled:opacity-40">
               <AlertTriangle className="w-3.5 h-3.5" />
