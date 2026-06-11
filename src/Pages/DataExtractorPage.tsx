@@ -148,6 +148,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
 
           <div className="my-2.5 border-t border-white/[0.06]" />
           <p className="px-2.5 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Performance</p>
+          {onNavigateToPerformance && (
           <button onClick={onNavigateToPerformance}
             className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
             <div className="flex items-center gap-2.5">
@@ -159,6 +160,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
           </button>
+          )}
           <button onClick={onNavigateToAppraisal}
             className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-blue-500/10 hover:text-blue-400 transition-all group">
             <div className="flex items-center gap-2.5">
