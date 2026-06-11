@@ -37,6 +37,8 @@ const TOOL_META: Record<ToolId, { title: string; desc: string; bar: string; badg
   delhi:      { title: 'Delhi / HO Attendance',      desc: 'Pocket HRMS format · department, punch-time and leave analytics',          bar: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
 };
 
+const HUB_MODE = import.meta.env.VITE_APP_MODE === 'hub';
+
 export function DataExtractorPage({ onNavigateToPerformance, onNavigateToAppraisal, onNavigateToEOM }: DataExtractorPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,27 +128,31 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
 
         {/* Nav */}
         <nav className="flex-1 p-2.5 overflow-y-auto">
-          <p className="px-2.5 pt-4 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Data Tools</p>
-          {TOOLS.map(t => {
-            const Icon = t.icon;
-            const active = activeTool === t.id;
-            return (
-              <button key={t.id} onClick={() => switchTool(t.id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-all mb-0.5 ${
-                  active
-                    ? `${t.accentBg} ${t.accentText} border-l-2 ${t.accentBorder} !pl-[8px]`
-                    : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
-                }`}>
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                <div className="text-left min-w-0">
-                  <p className="leading-tight truncate">{t.label}</p>
-                  {t.sub && <p className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${active ? 'opacity-60' : 'text-slate-700'}`}>{t.sub}</p>}
-                </div>
-              </button>
-            );
-          })}
-
-          <div className="my-2.5 border-t border-white/[0.06]" />
+          {!HUB_MODE && (
+            <>
+              <p className="px-2.5 pt-4 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Data Tools</p>
+              {TOOLS.map(t => {
+                const Icon = t.icon;
+                const active = activeTool === t.id;
+                return (
+                  <button key={t.id} onClick={() => switchTool(t.id)}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-all mb-0.5 ${
+                      active
+                        ? `${t.accentBg} ${t.accentText} border-l-2 ${t.accentBorder} !pl-[8px]`
+                        : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+                    }`}>
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                    <div className="text-left min-w-0">
+                      <p className="leading-tight truncate">{t.label}</p>
+                      {t.sub && <p className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${active ? 'opacity-60' : 'text-slate-700'}`}>{t.sub}</p>}
+                    </div>
+                  </button>
+                );
+              })}
+              <div className="my-2.5 border-t border-white/[0.06]" />
+            </>
+          )}
+          {HUB_MODE && <div className="pt-4" />}
           <p className="px-2.5 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Performance</p>
           {onNavigateToPerformance && (
           <button onClick={onNavigateToPerformance}
@@ -198,6 +204,34 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
 
       {/* ── Main area ────────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col overflow-hidden">
+        {HUB_MODE && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-8 bg-gradient-to-br from-slate-50 to-slate-100">
+            <div className="text-center">
+              <img src="/logo.png" alt="APIS" className="w-16 h-16 object-contain mx-auto mb-4 drop-shadow-lg" />
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">APIS INDIA</h1>
+              <p className="text-sm text-slate-500 mt-1">Select a hub from the sidebar to get started</p>
+            </div>
+            <div className="flex gap-4">
+              <button onClick={onNavigateToAppraisal}
+                className="flex flex-col items-center gap-3 px-8 py-6 bg-white rounded-2xl shadow-md border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all group">
+                <TrendingUp className="w-8 h-8 text-blue-500 group-hover:scale-110 transition-transform" />
+                <div className="text-center">
+                  <p className="font-black text-slate-800 text-sm">Appraisal Hub</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Annual Appraisal</p>
+                </div>
+              </button>
+              <button onClick={onNavigateToEOM}
+                className="flex flex-col items-center gap-3 px-8 py-6 bg-white rounded-2xl shadow-md border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all group">
+                <Sparkles className="w-8 h-8 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <div className="text-center">
+                  <p className="font-black text-slate-800 text-sm">EOM Hub</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Employee of the Month</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+        {!HUB_MODE && <>
 
         {/* Compact page header */}
         <header className="bg-white border-b border-slate-100 px-7 py-3.5 flex items-center justify-between flex-shrink-0 shadow-sm">
@@ -306,6 +340,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
 
           </div>
         </div>
+        </>}
       </main>
     </div>
   );
