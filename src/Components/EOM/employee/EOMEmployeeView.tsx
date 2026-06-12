@@ -26,7 +26,7 @@ const SMART_META = [
 
 const TRACK_OPTIONS = [
   { value: 'sales',     label: 'Sales',     color: 'emerald' },
-  { value: 'non_sales', label: 'Non-Sales', color: 'teal'    },
+  { value: 'non_sales', label: 'HO',        color: 'teal'    },
   { value: 'plant',     label: 'Plant',     color: 'cyan'    },
 ];
 

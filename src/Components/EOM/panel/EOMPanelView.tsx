@@ -279,7 +279,7 @@ function NominationCard({ nom, cycle, onUpdate }: {
                 const over = sv !== '' && Number(sv) > d.max;
                 return (
                   <div key={d.key} className={`grid grid-cols-[2rem_1fr_3rem_7rem_1fr] border-b border-slate-100 last:border-0 ${i%2===0?'bg-white':'bg-slate-50/50'}`}>
-                    <div className="px-3 pt-3.5 text-sm font-black text-slate-400">{i+2}</div>
+                    <div className="px-3 pt-3.5 text-sm font-black text-slate-400">{i+1}</div>
                     <div className="px-3 py-3 text-sm text-slate-700 font-medium leading-snug">{d.label}</div>
                     <div className="px-3 pt-3.5 text-sm font-black text-slate-600 text-center">{d.max}</div>
                     <div className="px-3 py-2.5">
