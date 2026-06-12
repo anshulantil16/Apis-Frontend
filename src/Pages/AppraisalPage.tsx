@@ -226,12 +226,17 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
       });
       const data = await parseJsonSafe(res);
       if (!res.ok) throw new Error(data.error || 'OTP verification failed.');
-      if (role === 'manager' && data.user_type !== 'manager')
-        throw new Error(`${data.name} is not registered as a Manager.`);
-      if (role === 'hod' && data.user_type !== 'hod')
-        throw new Error(`${data.name} is not registered as a HOD.`);
-      if (role === 'hr' && data.user_type !== 'hr')
+
+      const detected: string[] = data.detected_roles || [data.user_type || 'employee'];
+
+      // If user selected a role, verify they actually have access to it
+      if (role === 'manager' && !detected.includes('manager'))
+        throw new Error(`${data.name} is not a reporting manager for any employee.`);
+      if (role === 'hod' && !detected.includes('hod'))
+        throw new Error(`${data.name} is not an HOD for any employee.`);
+      if (role === 'hr' && !detected.includes('hr'))
         throw new Error(`${data.name} is not registered as an Admin.`);
+
       setEmployee(data);
     } catch (e: any) {
       setError(e.message);

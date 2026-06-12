@@ -168,9 +168,15 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
       });
       const data = await parseJson(res);
       if (!res.ok) throw new Error(data.error || 'OTP verification failed.');
-      if (role === 'hod'   && data.user_type !== 'hod')   throw new Error(`${data.name} is not registered as a HOD.`);
-      if (role === 'panel' && data.user_type !== 'panel') throw new Error(`${data.name} is not registered as a Panel Member.`);
-      if (role === 'hr'    && data.user_type !== 'hr')    throw new Error(`${data.name} is not registered as an Admin.`);
+
+      const detected: string[] = data.detected_roles || [data.user_type || 'employee'];
+
+      if (role === 'hod'   && !detected.includes('hod'))
+        throw new Error(`${data.name} is not an HOD for any employee.`);
+      if (role === 'panel' && !detected.includes('panel'))
+        throw new Error(`${data.name} is not registered as a Panel Member.`);
+      if (role === 'hr'    && !detected.includes('hr'))
+        throw new Error(`${data.name} is not registered as an Admin.`);
       setUser(data);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
