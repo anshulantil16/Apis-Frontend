@@ -824,7 +824,7 @@ export function EOMHrView({ hrUser }: Props) {
                             <div className="grid grid-cols-[2rem_1fr_4rem_1fr] bg-violet-50 border-t-2 border-violet-200">
                               <div className="px-3 py-2.5" />
                               <div className="px-3 py-2.5 text-xs font-black text-slate-700">HOD Total</div>
-                              <div className="px-3 py-2.5 text-center font-black text-violet-700 text-base">{hodTotal}</div>
+                              <div className="px-3 py-2.5 text-center font-black text-violet-700 text-base">{nom.hod_dim1_score ?? '—'}</div>
                               <div className="px-3 py-2.5 text-xs text-slate-500">
                                 {nom.hod_recommendation === 'recommend' ? '✅ Recommended' : nom.hod_recommendation === 'not_recommend' ? '❌ Not Recommended' : ''}
                               </div>
