@@ -29,10 +29,15 @@ const SMART_META = [
 ] as const;
 
 const HOD_DIMS = [
-  { key: 'hod_dim1', label: 'Business Impact & Measurable Outcome',                                                                  max: 50 },
-  { key: 'hod_dim2', label: 'APIS Values, Survey Participation, Compliance & Conduct, Fun Club Activities',                          max: 20 },
-  { key: 'hod_dim3', label: 'Initiative & Entrepreneurial Problem-Solving',                                                          max: 10 },
-  { key: 'hod_dim4', label: 'Efficiency, Cost & Resource Optimisation',                                                              max: 10 },
+  { key: 'hod_dim1', label: 'Business Impact & Measurable Outcome', max: 50 },
+] as const;
+
+const PANEL_DIMS_RO = [
+  { key: 'panel_dim2', label: 'APIS Values (UPLIFT)',                                                                         max: 10 },
+  { key: 'panel_dim3', label: 'Survey Participation, Compliance & Conduct, Fun Club Activities Participation',                max: 10 },
+  { key: 'panel_dim4', label: 'Initiative & Entrepreneurial Problem-Solving',                                                 max: 10 },
+  { key: 'panel_dim5', label: 'Efficiency, Cost & Resource Optimisation',                                                     max: 10 },
+  { key: 'panel_dim6', label: 'Teamwork, Collaboration & People Development, Learning & Values Creation',                    max: 10 },
 ] as const;
 
 interface Props { hrUser: any; }
@@ -798,35 +803,85 @@ export function EOMHrView({ hrUser }: Props) {
 
                       {/* HOD scorecard */}
                       {nom.hod_dim1_score != null && (
-                        <div>
-                          <p className="text-[10px] font-black text-violet-500 uppercase tracking-widest mb-2">HOD Scorecard (Annexure B)</p>
+                        <div className="space-y-3">
+                          {/* HOD Section */}
+                          <p className="text-[10px] font-black text-violet-500 uppercase tracking-widest">HOD Scorecard (Annexure B)</p>
                           <div className="rounded-xl border border-violet-200 overflow-hidden">
-                            <div className="grid grid-cols-[1fr_4rem_1fr] bg-violet-50 border-b border-violet-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <div className="grid grid-cols-[2rem_1fr_4rem_1fr] bg-violet-50 border-b border-violet-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                              <div className="px-3 py-2">#</div>
                               <div className="px-3 py-2">Dimension</div>
                               <div className="px-3 py-2 text-center">Score</div>
                               <div className="px-3 py-2">Comments</div>
                             </div>
-                            {HOD_DIMS.map((d,i) => (
-                              <div key={d.key} className={`grid grid-cols-[1fr_4rem_1fr] border-b border-slate-100 last:border-0 ${i%2===0?'bg-white':'bg-slate-50/40'}`}>
+                            {HOD_DIMS.map((d, i) => (
+                              <div key={d.key} className="grid grid-cols-[2rem_1fr_4rem_1fr] border-b border-slate-100 bg-white">
+                                <div className="px-3 py-2.5 text-xs font-black text-slate-400">{i+1}</div>
                                 <div className="px-3 py-2.5 text-xs text-slate-700 font-medium">{d.label} <span className="text-slate-400 font-normal">(max {d.max})</span></div>
                                 <div className="px-3 py-2.5 text-center font-black text-violet-700">{nom[`${d.key}_score`] ?? '—'}</div>
                                 <div className="px-3 py-2.5 text-xs text-slate-600">{nom[`${d.key}_comments`] || <span className="text-slate-300 italic">—</span>}</div>
                               </div>
                             ))}
-                            <div className="grid grid-cols-[1fr_4rem_1fr] bg-violet-50 border-t-2 border-violet-200">
-                              <div className="px-3 py-2.5 text-xs font-black text-slate-700">Total</div>
+                            <div className="grid grid-cols-[2rem_1fr_4rem_1fr] bg-violet-50 border-t-2 border-violet-200">
+                              <div className="px-3 py-2.5" />
+                              <div className="px-3 py-2.5 text-xs font-black text-slate-700">HOD Total</div>
                               <div className="px-3 py-2.5 text-center font-black text-violet-700 text-base">{hodTotal}</div>
                               <div className="px-3 py-2.5 text-xs text-slate-500">
                                 {nom.hod_recommendation === 'recommend' ? '✅ Recommended' : nom.hod_recommendation === 'not_recommend' ? '❌ Not Recommended' : ''}
-                                {nom.panel_sustainability_bonus != null && nom.panel_sustainability_bonus > 0 && ` · ⭐ ${nom.panel_sustainability_bonus} bonus pts`}
                               </div>
                             </div>
                           </div>
                           {nom.hod_remarks && (
-                            <div className="mt-2 bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
+                            <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
                               <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-1">HOD Remarks</p>
                               <p className="text-sm text-slate-700">{nom.hod_remarks}</p>
                             </div>
+                          )}
+
+                          {/* Panel Section */}
+                          {nom.panel_dim2_score != null && (
+                            <>
+                              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest pt-1">Panel Scorecard (Annexure C)</p>
+                              <div className="rounded-xl border border-indigo-200 overflow-hidden">
+                                <div className="grid grid-cols-[2rem_1fr_4rem_1fr] bg-indigo-50 border-b border-indigo-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                  <div className="px-3 py-2">#</div>
+                                  <div className="px-3 py-2">Dimension</div>
+                                  <div className="px-3 py-2 text-center">Score</div>
+                                  <div className="px-3 py-2">Comments</div>
+                                </div>
+                                {PANEL_DIMS_RO.map((d, i) => (
+                                  <div key={d.key} className={`grid grid-cols-[2rem_1fr_4rem_1fr] border-b border-slate-100 last:border-0 ${i%2===0?'bg-white':'bg-slate-50/40'}`}>
+                                    <div className="px-3 py-2.5 text-xs font-black text-slate-400">{i+1}</div>
+                                    <div className="px-3 py-2.5 text-xs text-slate-700 font-medium">{d.label} <span className="text-slate-400 font-normal">(max {d.max})</span></div>
+                                    <div className="px-3 py-2.5 text-center font-black text-indigo-700">{nom[`${d.key}_score`] ?? '—'}</div>
+                                    <div className="px-3 py-2.5 text-xs text-slate-600">{nom[`${d.key}_comments`] || <span className="text-slate-300 italic">—</span>}</div>
+                                  </div>
+                                ))}
+                                {nom.panel_sustainability_bonus != null && nom.panel_sustainability_bonus > 0 && (
+                                  <div className="grid grid-cols-[2rem_1fr_4rem_1fr] border-b border-slate-100 bg-amber-50">
+                                    <div className="px-3 py-2.5 text-xs font-black text-slate-400">★</div>
+                                    <div className="px-3 py-2.5 text-xs text-slate-700 font-medium">Sustainability Bonus</div>
+                                    <div className="px-3 py-2.5 text-center font-black text-amber-600">+{nom.panel_sustainability_bonus}</div>
+                                    <div className="px-3 py-2.5 text-xs text-slate-600">{nom.panel_sustainability_desc || <span className="text-slate-300 italic">—</span>}</div>
+                                  </div>
+                                )}
+                                <div className="grid grid-cols-[2rem_1fr_4rem_1fr] bg-indigo-50 border-t-2 border-indigo-200">
+                                  <div className="px-3 py-2.5" />
+                                  <div className="px-3 py-2.5 text-xs font-black text-slate-700">Panel Total</div>
+                                  <div className="px-3 py-2.5 text-center font-black text-indigo-700 text-base">
+                                    {(nom.panel_dim2_score||0)+(nom.panel_dim3_score||0)+(nom.panel_dim4_score||0)+(nom.panel_dim5_score||0)+(nom.panel_dim6_score||0)+(nom.panel_sustainability_bonus||0)}
+                                  </div>
+                                  <div className="px-3 py-2.5 text-xs text-slate-500">
+                                    {nom.panel_recommendation === 'recommend' ? '✅ Recommended' : nom.panel_recommendation === 'not_recommend' ? '❌ Not Recommended' : ''}
+                                  </div>
+                                </div>
+                              </div>
+                              {nom.panel_remarks && (
+                                <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
+                                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Panel Remarks</p>
+                                  <p className="text-sm text-slate-700">{nom.panel_remarks}</p>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
