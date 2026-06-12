@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-const PERF_API = `${API_BASE}/api/performance`;
+const PERF_API = `${API_BASE}/api/appraisal`;
 
 const SELF_REVIEW_QUESTIONS = [
   'What do you consider to be your most important achievement of FY 25-26?',
