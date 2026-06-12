@@ -38,7 +38,7 @@ const HOD_DIMS = [
 interface Props { hrUser: any; }
 
 export function EOMHrView({ hrUser }: Props) {
-  const [tab, setTab] = useState<'overview' | 'import' | 'cycle' | 'nominations'>('overview');
+  const [tab, setTab] = useState<'overview' | 'import' | 'employees' | 'cycle' | 'nominations'>('overview');
 
   const [cycles,        setCycles]        = useState<any[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<any>(null);
@@ -60,6 +60,12 @@ export function EOMHrView({ hrUser }: Props) {
   const [refreshing,    setRefreshing]    = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState('');
   const [resetting,     setResetting]     = useState(false);
+  const [employees,     setEmployees]     = useState<any[]>([]);
+  const [empSearch,     setEmpSearch]     = useState('');
+  const [editingEmp,    setEditingEmp]    = useState<any | null>(null);
+  const [empSaving,     setEmpSaving]     = useState(false);
+  const [showAddEmp,    setShowAddEmp]    = useState(false);
+  const [newEmp,        setNewEmp]        = useState({ employee_id:'', name:'', email:'', designation:'', department:'', zone:'', hod_id:'', user_type:'employee' });
   const [statusFilter,  setStatusFilter]  = useState<string>('all');
 
   useEffect(() => {
@@ -67,7 +73,37 @@ export function EOMHrView({ hrUser }: Props) {
       .then(r => r.json())
       .then(data => { setCycles(data); if (data.length > 0) setSelectedCycle(data[0]); })
       .catch(() => {});
+    fetch(`${EOM_API}/employees/`).then(r => r.json()).then(setEmployees).catch(() => {});
   }, []);
+
+  const fetchEmployees = () =>
+    fetch(`${EOM_API}/employees/`).then(r => r.json()).then(setEmployees).catch(() => {});
+
+  const handleSaveEmp = async (emp: any) => {
+    setEmpSaving(true);
+    await fetch(`${EOM_API}/employees/${emp.employee_id}/`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(emp),
+    });
+    setEditingEmp(null); setEmpSaving(false); fetchEmployees();
+  };
+
+  const handleDeactivateEmp = async (employee_id: string, name: string) => {
+    if (!window.confirm(`Deactivate ${name}? They won't be able to log in or submit nominations.`)) return;
+    await fetch(`${EOM_API}/employees/${employee_id}/`, { method: 'DELETE' });
+    fetchEmployees();
+  };
+
+  const handleAddEmp = async () => {
+    if (!newEmp.employee_id || !newEmp.name) return;
+    setEmpSaving(true);
+    await fetch(`${EOM_API}/employees/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newEmp),
+    });
+    setNewEmp({ employee_id:'', name:'', email:'', designation:'', department:'', zone:'', hod_id:'', user_type:'employee' });
+    setShowAddEmp(false); setEmpSaving(false); fetchEmployees();
+  };
 
   const fetchCycleData = (cycle: any, silent = false) => {
     if (!silent) setRefreshing(true);
@@ -164,10 +200,11 @@ export function EOMHrView({ hrUser }: Props) {
   };
 
   const TABS = [
-    { id: 'overview'    as const, label: 'Overview',      icon: BarChart3 },
-    { id: 'import'      as const, label: 'Import Data',   icon: Upload    },
-    { id: 'cycle'       as const, label: 'Manage Cycles', icon: Calendar  },
-    { id: 'nominations' as const, label: 'All Nominations', icon: Award   },
+    { id: 'overview'    as const, label: 'Overview',         icon: BarChart3 },
+    { id: 'import'      as const, label: 'Import Data',      icon: Upload    },
+    { id: 'employees'   as const, label: 'Manage Employees', icon: Users     },
+    { id: 'cycle'       as const, label: 'Manage Cycles',    icon: Calendar  },
+    { id: 'nominations' as const, label: 'All Nominations',  icon: Award     },
   ];
 
   const statCards = [
@@ -375,6 +412,124 @@ export function EOMHrView({ hrUser }: Props) {
                 {importMsg}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Manage Employees */}
+        {tab === 'employees' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-black text-slate-800">Employee Directory</h3>
+                  <p className="text-sm text-slate-400 mt-0.5">Add individual employees, edit details, or deactivate. Import Excel for bulk changes.</p>
+                </div>
+                <button onClick={() => setShowAddEmp(v => !v)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all">
+                  + Add Employee
+                </button>
+              </div>
+
+              {showAddEmp && (
+                <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
+                  <p className="font-bold text-emerald-800 text-sm">New Employee</p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[['employee_id','Employee Code*'],['name','Name*'],['email','Email'],['designation','Designation'],['department','Department'],['zone','Zone'],['hod_id','HOD Code']].map(([k,l]) => (
+                      <div key={k}>
+                        <label className="text-xs font-bold text-slate-500 block mb-1">{l}</label>
+                        <input value={(newEmp as any)[k]} onChange={e => setNewEmp(p => ({...p,[k]:e.target.value}))}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-400" />
+                      </div>
+                    ))}
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 block mb-1">Role</label>
+                      <select value={newEmp.user_type} onChange={e => setNewEmp(p => ({...p,user_type:e.target.value}))}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-400">
+                        <option value="employee">Employee</option>
+                        <option value="hod">HOD</option>
+                        <option value="panel">Panel</option>
+                        <option value="hr">HR</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={handleAddEmp} disabled={empSaving || !newEmp.employee_id || !newEmp.name}
+                      className="px-4 py-2 bg-emerald-600 text-white font-bold text-sm rounded-xl disabled:opacity-40">
+                      {empSaving ? 'Saving…' : 'Save Employee'}
+                    </button>
+                    <button onClick={() => setShowAddEmp(false)} className="px-4 py-2 text-slate-500 font-bold text-sm">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              <input value={empSearch} onChange={e => setEmpSearch(e.target.value)} placeholder="Search by name, code, department..."
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm mb-4 focus:outline-none focus:border-blue-400" />
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-left">
+                      {['Code','Name','Email','Designation','Department','Zone','HOD Code','Role','Actions'].map(h => (
+                        <th key={h} className="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {employees.filter(e =>
+                      !empSearch || `${e.employee_id} ${e.name} ${e.department} ${e.zone}`.toLowerCase().includes(empSearch.toLowerCase())
+                    ).map(emp => (
+                      <tr key={emp.employee_id} className="hover:bg-slate-50">
+                        {editingEmp?.employee_id === emp.employee_id ? (
+                          <>
+                            <td className="px-3 py-2 font-mono text-xs text-slate-500">{emp.employee_id}</td>
+                            {['name','email','designation','department','zone','hod_id'].map(f => (
+                              <td key={f} className="px-2 py-1">
+                                <input value={editingEmp[f]||''} onChange={e => setEditingEmp((p:any) => ({...p,[f]:e.target.value}))}
+                                  className="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none" />
+                              </td>
+                            ))}
+                            <td className="px-2 py-1">
+                              <select value={editingEmp.user_type} onChange={e => setEditingEmp((p:any) => ({...p,user_type:e.target.value}))}
+                                className="border border-blue-300 rounded px-2 py-1 text-xs">
+                                <option value="employee">Employee</option>
+                                <option value="hod">HOD</option>
+                                <option value="panel">Panel</option>
+                                <option value="hr">HR</option>
+                              </select>
+                            </td>
+                            <td className="px-3 py-2 flex gap-1">
+                              <button onClick={() => handleSaveEmp(editingEmp)} disabled={empSaving}
+                                className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded">Save</button>
+                              <button onClick={() => setEditingEmp(null)} className="px-2 py-1 text-slate-500 text-xs font-bold">Cancel</button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-3 py-2 font-mono text-xs text-slate-600">{emp.employee_id}</td>
+                            <td className="px-3 py-2 font-semibold text-slate-800">{emp.name}</td>
+                            <td className="px-3 py-2 text-slate-500 text-xs">{emp.email}</td>
+                            <td className="px-3 py-2 text-slate-500 text-xs">{emp.designation}</td>
+                            <td className="px-3 py-2 text-slate-500 text-xs">{emp.department}</td>
+                            <td className="px-3 py-2 text-slate-500 text-xs">{emp.zone}</td>
+                            <td className="px-3 py-2 font-mono text-xs text-slate-400">{emp.hod_id}</td>
+                            <td className="px-3 py-2"><span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold">{emp.user_type}</span></td>
+                            <td className="px-3 py-2 flex gap-1">
+                              <button onClick={() => setEditingEmp({...emp})}
+                                className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</button>
+                              <button onClick={() => handleDeactivateEmp(emp.employee_id, emp.name)}
+                                className="px-2 py-1 bg-rose-50 text-rose-600 text-xs font-bold rounded hover:bg-rose-100">Remove</button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {employees.length === 0 && (
+                  <p className="text-center text-slate-400 py-8 text-sm">No employees imported yet.</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
