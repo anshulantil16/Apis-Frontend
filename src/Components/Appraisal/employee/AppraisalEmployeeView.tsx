@@ -331,9 +331,9 @@ function CalcCell({ value, unit = '%' }: { value: number | null; unit?: string }
   );
 }
 
+// Core fields — must be filled to proceed. Frequency, unit, data_source are optional.
 const REQUIRED_KPI_FIELDS: (keyof any)[] = [
-  'metric', 'weightage', 'frequency', 'unit_of_measurement',
-  'parameter_type', 'data_source', 'target_value', 'actual_achievement',
+  'metric', 'weightage', 'parameter_type', 'target_value', 'actual_achievement',
 ];
 
 // ─── KPI Table ────────────────────────────────────────────────────────────────
@@ -404,12 +404,12 @@ function KpiTableRow({ kpi, j, canEdit, onChange, onRemove, showRemove }: {
       <td className="px-2 py-2">
         <TableInput type="number" value={kpi.target_value || ''} onChange={v => onChange('target_value', v)}
           placeholder="Plan value" disabled={!canEdit}
-          className={!kpi.target_value && canEdit ? '!border-rose-300' : ''} />
+          className={!kpi.target_value && kpiHasAnyData && canEdit ? '!border-rose-300' : ''} />
       </td>
       <td className="px-2 py-2">
         <TableInput type="number" value={kpi.actual_achievement || ''} onChange={v => onChange('actual_achievement', v)}
           placeholder="Actual" disabled={!canEdit}
-          className={!kpi.actual_achievement && canEdit ? '!border-rose-300' : ''} />
+          className={!kpi.actual_achievement && kpiHasAnyData && canEdit ? '!border-rose-300' : ''} />
       </td>
       {/* Auto-calculated columns */}
       <td className="px-2 py-2 bg-amber-50/60">
