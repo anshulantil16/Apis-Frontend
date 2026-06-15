@@ -377,8 +377,13 @@ function KpiTableRow({ kpi, j, canEdit, onChange, onRemove, showRemove }: {
           className={!kpi.metric && canEdit ? '!border-rose-300' : ''} />
       </td>
       <td className="px-2 py-2">
-        <TableInput type="number" value={kpi.weightage || ''} onChange={v => onChange('weightage', Number(v))}
-          placeholder="%" disabled={!canEdit} className={`text-center${!kpi.weightage && canEdit ? ' !border-rose-300' : ''}`} />
+        <TableInput type="number" value={kpi.weightage || ''}
+          onChange={v => {
+            const num = Math.max(0, Math.min(100, Number(v) || 0));
+            onChange('weightage', num || '');
+          }}
+          placeholder="%" disabled={!canEdit}
+          className={`text-center${!kpi.weightage && canEdit ? ' !border-rose-300' : ''}`} />
       </td>
       <td className="px-2 py-2">
         <TableSelect value={kpi.frequency || ''} onChange={v => onChange('frequency', v)}
@@ -909,9 +914,19 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                   </span>
                 </span>
                 <span className={`font-bold ${totalWeight === 100 ? 'text-emerald-600' : totalWeight > 100 ? 'text-rose-600' : 'text-amber-600'}`}>
-                  Total Weightage: {totalWeight}% {totalWeight === 100 ? '✓' : ''}
+                  Total Weightage: {totalWeight}% {totalWeight === 100 ? '✓' : totalWeight > 100 ? '⚠ OVER 100%' : ''}
                 </span>
               </div>
+
+              {totalWeight > 100 && (
+                <div className="flex items-start gap-3 bg-rose-50 border border-rose-300 rounded-xl px-4 py-3 text-sm text-rose-700 font-medium">
+                  <span className="text-rose-500 text-base shrink-0">⚠</span>
+                  <span>
+                    <strong>Total weightage is {totalWeight}% — must be exactly 100%.</strong> Please reduce some KPI weights.
+                    Each individual KPI weight is capped at 100. Check for any row with an unusually high value.
+                  </span>
+                </div>
+              )}
 
               <Toast msg={msg} />
 
