@@ -331,9 +331,9 @@ function CalcCell({ value, unit = '%' }: { value: number | null; unit?: string }
   );
 }
 
-// Core fields — must be filled to proceed. Frequency, unit, data_source are optional.
 const REQUIRED_KPI_FIELDS: (keyof any)[] = [
-  'metric', 'weightage', 'parameter_type', 'target_value', 'actual_achievement',
+  'metric', 'weightage', 'frequency', 'unit_of_measurement',
+  'parameter_type', 'data_source', 'target_value', 'actual_achievement',
 ];
 
 // ─── KPI Table ────────────────────────────────────────────────────────────────
