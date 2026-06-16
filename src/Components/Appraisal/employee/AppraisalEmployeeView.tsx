@@ -1084,7 +1084,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                           const res = await fetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/`, { method: 'DELETE' });
                           const data = await res.json();
                           if (!res.ok) throw new Error(data.error || 'Delete failed');
-                          setGoalCard(prev => prev ? { ...prev, support_document_name: '', support_document_url: null } : null);
+                          setGoalCard((prev: any) => prev ? { ...prev, support_document_name: '', support_document_url: null } : null);
                           showMsg('Document removed', 'success');
                         } catch (err: any) {
                           showMsg(err.message, 'error');
