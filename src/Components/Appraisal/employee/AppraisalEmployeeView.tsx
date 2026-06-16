@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Target, Star, CheckCircle, Clock, Plus, Trash2, Send,
   AlertCircle, Award, Lock, Unlock, Download, ChevronDown,
-  ChevronRight, ArrowLeft, MessageSquare, BookOpen, X, ThumbsUp,
+  ChevronRight, ArrowLeft, MessageSquare, BookOpen, X, ThumbsUp, Upload, FileText,
 } from 'lucide-react';
 import { downloadScorecard } from '../../../utils/downloadScorecard';
 
@@ -438,6 +438,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   const [goalCard, setGoalCard] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' | 'warn' } | null>(null);
   const [formStep, setFormStep] = useState<1 | 2 | 3 | 4>(1);
   const [selfAnswers, setSelfAnswers] = useState<string[][]>([[''], [''], ['']]);
@@ -1029,6 +1030,73 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                 </div>
               ))}
             </div>
+
+            {/* Support Document Upload */}
+            {canEditFreeText && (
+              <div className="px-8 py-6 border-t border-slate-100 bg-blue-50">
+                <div className="flex gap-3 mb-4">
+                  <div className="shrink-0 w-8 h-8 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-blue-700" />
+                  </div>
+                  <div>
+                    <p className="text-slate-800 font-bold text-sm">Supporting Evidence Document</p>
+                    <p className="text-slate-500 text-xs mt-1">Upload any supporting document (PDF, Word, Excel) as evidence for your self-review answers</p>
+                  </div>
+                </div>
+                <div className="border-2 border-dashed border-blue-300 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-100/30 transition-all cursor-pointer group"
+                  onClick={() => document.getElementById('appraisal-doc-input')?.click()}>
+                  <input id="appraisal-doc-input" type="file" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !goalCard) return;
+                    setUploading(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append('document', file);
+                      const res = await fetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/`, {
+                        method: 'POST', body: fd,
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || 'Upload failed');
+                      setGoalCard(data);
+                      showMsg('Document uploaded successfully', 'success');
+                    } catch (err: any) {
+                      showMsg(err.message, 'error');
+                    } finally {
+                      setUploading(false);
+                    }
+                  }} />
+                  <Upload className="w-8 h-8 text-blue-500 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                  <p className="text-slate-700 font-semibold text-sm">{uploading ? 'Uploading...' : 'Click to upload document'}</p>
+                  <p className="text-slate-500 text-xs mt-1">PDF, Word, Excel (Max 10MB)</p>
+                </div>
+                {goalCard?.support_document_name && (
+                  <div className="mt-4 flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-200">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-blue-800">{goalCard.support_document_name}</p>
+                      <p className="text-xs text-slate-500">Attached</p>
+                    </div>
+                    {!uploading && (
+                      <button onClick={async () => {
+                        if (!goalCard) return;
+                        setUploading(true);
+                        try {
+                          const res = await fetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/`, { method: 'DELETE' });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error || 'Delete failed');
+                          setGoalCard(prev => prev ? { ...prev, support_document_name: '', support_document_url: null } : null);
+                          showMsg('Document removed', 'success');
+                        } catch (err: any) {
+                          showMsg(err.message, 'error');
+                        } finally {
+                          setUploading(false);
+                        }
+                      }} className="text-rose-500 hover:text-rose-700 text-xs font-bold">Remove</button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Footer */}
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-4">
