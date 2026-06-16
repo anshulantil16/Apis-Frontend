@@ -152,7 +152,7 @@ export function EOMHrView({ hrUser }: Props) {
   const downloadTemplate = () => {
     const headers = [
       'Employee ID', 'Name', 'Email', 'Designation', 'Department',
-      'Zone / Location', 'HOD ID', 'User Type', 'Is Panel Member', 'Is HR',
+      'Zone / Location', 'HOD ID', 'User Type',
     ];
     const notes = [
       '--- INSTRUCTIONS ---',
@@ -164,28 +164,27 @@ export function EOMHrView({ hrUser }: Props) {
       'Zone / Location : Zone, region or HO',
       'HOD ID          : Employee ID of the HOD who reviews this person. Leave blank for HODs / Panel / HR.',
       'User Type       : Primary role — employee | hod | panel | hr',
-      'Is Panel Member : Yes / No — set Yes if this person is also a panel member (works even if User Type = employee or hod)',
-      'Is HR           : Yes / No — set Yes if this person also has HR Admin access',
       '',
-      '--- MULTI-ROLE EXAMPLES ---',
-      'An employee who is also a Panel Member: User Type = employee, Is Panel Member = Yes',
-      'An HOD who is also a Panel Member     : User Type = hod,      Is Panel Member = Yes',
-      'An employee who is also HR Admin      : User Type = employee, Is HR = Yes',
-      'HOD role is auto-detected from HOD ID column — no extra column needed.',
+      '--- USER TYPE VALUES ---',
+      'employee   : Can fill the EOM form. If someone lists them as HOD ID, they also get HOD access.',
+      'hod        : Pure HOD — cannot fill form, only reviews HOD section. Set for those who only review.',
+      'panel      : Pure Panel — cannot fill form, only reviews Panel sections. Set for pure panel members.',
+      'hod+panel  : Can review both HOD and Panel sections. Cannot fill form.',
+      'hr         : HR Admin — manages cycles, views all data, finalizes winners.',
       '',
       '--- SAMPLE DATA (delete these rows before importing) ---',
     ];
     const sample = [
-      ['EMP001',  'Rahul Sharma',  'rahul@company.com',  'Sales Executive',       'Sales',      'North Zone', 'HOD001',  'employee', 'No',  'No'],
-      ['EMP002',  'Priya Singh',   'priya@company.com',  'Sr. Executive',         'Sales',      'South Zone', 'HOD001',  'employee', 'No',  'No'],
-      ['EMP003',  'Amit Verma',    'amit@company.com',   'Area Manager',          'Operations', 'East Zone',  'HOD002',  'employee', 'No',  'No'],
-      ['EMP004',  'Neha Gupta',    'neha@company.com',   'Executive',             'HR',         'HO',         'HOD002',  'employee', 'No',  'No'],
-      ['HOD001',  'Ravi Kumar',    'ravi@company.com',   'Zonal Head',            'Sales',      'North Zone', '',        'hod',      'Yes', 'No'],
-      ['HOD002',  'Meena Joshi',   'meena@company.com',  'Head of Department',    'Operations', 'HO',         '',        'hod',      'No',  'No'],
-      ['PANEL01', 'Arun Gupta',    'arun@company.com',   'Director – Sales',      'Sales',      'HO',         '',        'employee', 'Yes', 'No'],
-      ['PANEL02', 'Sunita Rao',    'sunita@company.com', 'Director – HR',         'HR',         'HO',         '',        'employee', 'Yes', 'No'],
-      ['PANEL03', 'Vikram Nair',   'vikram@company.com', 'Director – Operations', 'Operations', 'HO',         '',        'hod',      'Yes', 'No'],
-      ['HR001',   'Sneha Patel',   'sneha@company.com',  'HR Manager',            'HR',         'HO',         '',        'employee', 'No',  'Yes'],
+      ['EMP001',  'Rahul Sharma',  'rahul@company.com',  'Sales Executive',       'Sales',      'North Zone', 'HOD001',  'employee'],
+      ['EMP002',  'Priya Singh',   'priya@company.com',  'Sr. Executive',         'Sales',      'South Zone', 'HOD001',  'employee'],
+      ['EMP003',  'Amit Verma',    'amit@company.com',   'Area Manager',          'Operations', 'East Zone',  'HOD002',  'employee'],
+      ['EMP004',  'Neha Gupta',    'neha@company.com',   'Executive',             'HR',         'HO',         'HOD002',  'employee'],
+      ['HOD001',  'Ravi Kumar',    'ravi@company.com',   'Zonal Head',            'Sales',      'North Zone', '',        'hod'],
+      ['HOD002',  'Meena Joshi',   'meena@company.com',  'Head of Department',    'Operations', 'HO',         '',        'hod'],
+      ['PANEL01', 'Arun Gupta',    'arun@company.com',   'Director – Sales',      'Sales',      'HO',         '',        'panel'],
+      ['PANEL02', 'Sunita Rao',    'sunita@company.com', 'Director – HR',         'HR',         'HO',         '',        'panel'],
+      ['PANEL03', 'Vikram Nair',   'vikram@company.com', 'Director – Operations', 'Operations', 'HO',         '',        'hod+panel'],
+      ['HR001',   'Sneha Patel',   'sneha@company.com',  'HR Manager',            'HR',         'HO',         '',        'hr'],
     ];
 
     const noteLines = notes.map(n => `# ${n}`);
@@ -423,8 +422,6 @@ export function EOMHrView({ hrUser }: Props) {
                   ['Zone / Location', 'Zone, region or HO'],
                   ['HOD ID',          'HOD\'s Employee ID (blank for HOD/Panel/HR)'],
                   ['User Type',       'employee · hod · panel · hr'],
-                  ['Is Panel Member', 'Yes / No — panel access regardless of User Type'],
-                  ['Is HR',           'Yes / No — HR admin access regardless of User Type'],
                 ].map(([col, desc]) => (
                   <div key={col} className="bg-white border border-slate-200 rounded-xl p-3">
                     <p className="text-slate-800 text-xs font-bold">{col}</p>
@@ -436,10 +433,9 @@ export function EOMHrView({ hrUser }: Props) {
                 <p className="font-black text-amber-700 uppercase tracking-widest text-[10px] mb-2">Multi-Role Support</p>
                 {[
                   ['Employee + HOD',   'Set HOD ID of other employees to this person\'s code — HOD role is auto-detected'],
-                  ['Employee + Panel', 'User Type = employee, Is Panel Member = Yes'],
-                  ['HOD + Panel',      'User Type = hod, Is Panel Member = Yes'],
-                  ['Employee + HR',    'User Type = employee, Is HR = Yes'],
-                  ['All roles',        'User Type = employee, Is Panel Member = Yes, Is HR = Yes + others list them as HOD'],
+                  ['Employee + HOD',   'User Type = employee, others list them as their HOD ID'],
+                  ['HOD + Panel',      'User Type = hod+panel'],
+                  ['Employee +HOD +Panel', 'User Type = employee, others list as HOD ID (gives HOD), then manually change to hod+panel if needed for panel access'],
                 ].map(([combo, desc]) => (
                   <div key={combo} className="flex gap-2">
                     <span className="font-black text-amber-800 w-36 shrink-0">{combo}</span>
@@ -504,23 +500,12 @@ export function EOMHrView({ hrUser }: Props) {
                       <label className="text-xs font-bold text-slate-500 block mb-1">User Type</label>
                       <select value={newEmp.user_type} onChange={e => setNewEmp(p => ({...p,user_type:e.target.value}))}
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-400">
-                        <option value="employee">Employee</option>
-                        <option value="hod">HOD</option>
-                        <option value="panel">Panel</option>
-                        <option value="hr">HR</option>
+                        <option value="employee">Employee — Can fill form</option>
+                        <option value="hod">HOD Only — Reviews HOD</option>
+                        <option value="panel">Panel Only — Reviews Panel</option>
+                        <option value="hod+panel">HOD + Panel — Reviews both</option>
+                        <option value="hr">HR Admin — Manages all</option>
                       </select>
-                    </div>
-                    <div className="col-span-2 flex gap-4 items-center pt-5">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={newEmp.is_panel_member} onChange={e => setNewEmp(p => ({...p, is_panel_member: e.target.checked}))}
-                          className="w-4 h-4 accent-indigo-600" />
-                        <span className="text-sm font-semibold text-slate-700">Also Panel Member</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={newEmp.is_hr} onChange={e => setNewEmp(p => ({...p, is_hr: e.target.checked}))}
-                          className="w-4 h-4 accent-rose-600" />
-                        <span className="text-sm font-semibold text-slate-700">Also HR Admin</span>
-                      </label>
                     </div>
                   </div>
                   <div className="flex gap-2 pt-1">
