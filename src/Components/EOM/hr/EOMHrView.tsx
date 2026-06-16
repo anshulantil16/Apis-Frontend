@@ -150,19 +150,49 @@ export function EOMHrView({ hrUser }: Props) {
   };
 
   const downloadTemplate = () => {
-    const headers = ['Employee ID','Name','Email','Designation','Department','Zone / Location','HOD ID','User Type'];
-    const sample  = [
-      ['EMP001','Rahul Sharma','rahul@company.com','Sales Executive','Sales','North Zone','HOD001','employee'],
-      ['EMP002','Priya Singh','priya@company.com','Sr. Executive','Sales','South Zone','HOD001','employee'],
-      ['HOD001','Ravi Kumar','ravi@company.com','Head of Department','Sales','','','hod'],
-      ['PANEL001','Arun Gupta','arun@company.com','Director','Operations','','','panel'],
-      ['HR001','Sneha Patel','sneha@company.com','HR Manager','HR','','','hr'],
+    const headers = [
+      'Employee ID', 'Name', 'Email', 'Designation', 'Department',
+      'Zone / Location', 'HOD ID', 'User Type',
     ];
-    const csv  = [headers.join(','), ...sample.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const notes = [
+      '--- INSTRUCTIONS ---',
+      'Employee ID : Unique code for each person (e.g. EMP001, HOD001, PANEL001, HR001)',
+      'Name        : Full name of the person',
+      'Email       : Email address used to receive OTP login code',
+      'Designation : Job title',
+      'Department  : Department or team name',
+      'Zone/Location : Zone, location or office unit',
+      'HOD ID      : Employee ID of the HOD who reviews this employee\'s nomination. Leave blank for HODs, Panel Members and HR.',
+      'User Type   : Must be exactly one of:  employee | hod | panel | hr',
+      '',
+      '--- ROLES EXPLAINED ---',
+      'employee : Field employee who fills the EOM nomination form',
+      'hod      : HOD who reviews and scores nominations (Dimension 1, max 50 pts)',
+      'panel    : Panel member who scores nominations (Dimensions 2-6, max 50 pts). Add all 3 panel members with user_type = panel',
+      'hr       : HR Admin who manages cycles, views all nominations and finalizes winners',
+      '',
+      '--- SAMPLE DATA BELOW (delete these rows before importing) ---',
+    ];
+    const sample = [
+      ['EMP001', 'Rahul Sharma',   'rahul@company.com',  'Sales Executive',      'Sales',      'North Zone',  'HOD001',   'employee'],
+      ['EMP002', 'Priya Singh',    'priya@company.com',  'Sr. Executive',        'Sales',      'South Zone',  'HOD001',   'employee'],
+      ['EMP003', 'Amit Verma',     'amit@company.com',   'Area Manager',         'Operations', 'East Zone',   'HOD002',   'employee'],
+      ['EMP004', 'Neha Gupta',     'neha@company.com',   'Executive',            'HR',         'HO',          'HOD002',   'employee'],
+      ['HOD001', 'Ravi Kumar',     'ravi@company.com',   'Zonal Head',           'Sales',      'North Zone',  '',         'hod'],
+      ['HOD002', 'Meena Joshi',    'meena@company.com',  'Head of Department',   'Operations', 'HO',          '',         'hod'],
+      ['PANEL01', 'Arun Gupta',    'arun@company.com',   'Director – Sales',     'Sales',      'HO',          '',         'panel'],
+      ['PANEL02', 'Sunita Rao',    'sunita@company.com', 'Director – HR',        'HR',         'HO',          '',         'panel'],
+      ['PANEL03', 'Vikram Nair',   'vikram@company.com', 'Director – Operations','Operations', 'HO',          '',         'panel'],
+      ['HR001',   'Sneha Patel',   'sneha@company.com',  'HR Manager',           'HR',         'HO',          '',         'hr'],
+    ];
+
+    const noteLines = notes.map(n => `# ${n}`);
+    const dataLines = [headers.join(','), ...sample.map(r => r.map(v => `"${v}"`).join(','))];
+    const csv = [...noteLines, ...dataLines].join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url; a.download = 'EOM_Employee_Template.csv';
+    a.href = url; a.download = 'EOM_Employee_Master_Template.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
@@ -379,17 +409,36 @@ export function EOMHrView({ hrUser }: Props) {
                 <FileText className="w-4 h-4" /> Download Template
               </button>
             </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Columns</p>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Column Guide</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {[
-                  ['Employee ID','Unique ID'],['Name','Full name'],['Email','For OTP login'],
-                  ['Designation','Job title'],['Department','Team'],['Zone / Location','Location or unit'],
-                  ['HOD ID','HOD\'s Employee ID'],['User Type','employee / hod / panel / hr'],
+                  ['Employee ID',    'Unique code — e.g. EMP001, HOD001, PANEL01, HR001'],
+                  ['Name',           'Full name of the person'],
+                  ['Email',          'Used to send OTP for login'],
+                  ['Designation',    'Job title'],
+                  ['Department',     'Team or department name'],
+                  ['Zone / Location','Zone, region or HO'],
+                  ['HOD ID',         'HOD\'s Employee ID (leave blank for HOD / Panel / HR rows)'],
+                  ['User Type',      'employee · hod · panel · hr'],
                 ].map(([col, desc]) => (
                   <div key={col} className="bg-white border border-slate-200 rounded-xl p-3">
                     <p className="text-slate-800 text-xs font-bold">{col}</p>
                     <p className="text-slate-400 text-[10px] mt-0.5">{desc}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1.5 text-xs">
+                <p className="font-black text-amber-700 uppercase tracking-widest text-[10px]">User Type Values</p>
+                {[
+                  ['employee', 'Field employee who fills the EOM nomination form'],
+                  ['hod',      'HOD who scores Dimension 1 (max 50 pts). Set HOD ID blank for their own row.'],
+                  ['panel',    'Panel member who scores Dimensions 2–6 (max 50 pts). Add all 3 panel members with user_type = panel.'],
+                  ['hr',       'HR Admin — manages cycles, views all nominations, finalizes winners.'],
+                ].map(([type, desc]) => (
+                  <div key={type} className="flex gap-2">
+                    <span className="font-black text-amber-800 w-16 shrink-0">{type}</span>
+                    <span className="text-amber-700">{desc}</span>
                   </div>
                 ))}
               </div>
