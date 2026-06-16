@@ -447,6 +447,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   const [feedbackManagerRating, setFeedbackManagerRating] = useState<number>(0);
   const [feedbackOrganization, setFeedbackOrganization] = useState('');
   const [feedbackOrganizationRating, setFeedbackOrganizationRating] = useState<number>(0);
+  const [supportFile, setSupportFile] = useState<File | null>(null);
+  const [supportDocumentName, setSupportDocumentName] = useState('');
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const showMsg = (text: string, type: 'success' | 'error' | 'warn' = 'success') => {
     setMsg({ text, type });
