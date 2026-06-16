@@ -1067,32 +1067,36 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                   }} />
                   <Upload className="w-8 h-8 text-blue-500 mx-auto mb-2 group-hover:scale-110 transition-transform" />
                   <p className="text-slate-700 font-semibold text-sm">{uploading ? 'Uploading...' : 'Click to upload document'}</p>
-                  <p className="text-slate-500 text-xs mt-1">PDF, Word, Excel (Max 10MB)</p>
+                  <p className="text-slate-500 text-xs mt-1">PDF, Word, Excel (Max 10MB each)</p>
                 </div>
-                {goalCard?.support_document_name && (
-                  <div className="mt-4 flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-200">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-blue-800">{goalCard.support_document_name}</p>
-                      <p className="text-xs text-slate-500">Attached</p>
-                    </div>
-                    {!uploading && (
-                      <button onClick={async () => {
-                        if (!goalCard) return;
-                        setUploading(true);
-                        try {
-                          const res = await fetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/`, { method: 'DELETE' });
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data.error || 'Delete failed');
-                          setGoalCard((prev: any) => prev ? { ...prev, support_document_name: '', support_document_url: null } : null);
-                          showMsg('Document removed', 'success');
-                        } catch (err: any) {
-                          showMsg(err.message, 'error');
-                        } finally {
-                          setUploading(false);
-                        }
-                      }} className="text-rose-500 hover:text-rose-700 text-xs font-bold">Remove</button>
-                    )}
+                {goalCard?.support_documents && goalCard.support_documents.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {goalCard.support_documents.map((doc: any) => (
+                      <div key={doc.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-200">
+                        <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-blue-800 truncate">{doc.file_name}</p>
+                          <p className="text-xs text-slate-500">Attached</p>
+                        </div>
+                        {!uploading && (
+                          <button onClick={async () => {
+                            if (!goalCard) return;
+                            setUploading(true);
+                            try {
+                              const res = await fetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/?doc_id=${doc.id}`, { method: 'DELETE' });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Delete failed');
+                              setGoalCard(data);
+                              showMsg('Document removed', 'success');
+                            } catch (err: any) {
+                              showMsg(err.message, 'error');
+                            } finally {
+                              setUploading(false);
+                            }
+                          }} className="text-rose-500 hover:text-rose-700 text-xs font-bold shrink-0">Remove</button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

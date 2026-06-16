@@ -377,24 +377,28 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
         </div>
       </SectionCard>
 
-      {/* ── Section 4: Supporting Document ── */}
-      {gc.support_document_url && (
-        <SectionCard title="Supporting Document" icon={FileText} color="bg-purple-50 text-purple-700">
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 border border-purple-200 flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5 text-purple-600" />
+      {/* ── Section 4: Supporting Documents ── */}
+      {gc.support_documents && gc.support_documents.length > 0 && (
+        <SectionCard title={`Supporting Documents (${gc.support_documents.length})`} icon={FileText} color="bg-purple-50 text-purple-700">
+          <div className="space-y-3">
+            {gc.support_documents.map((doc: any, idx: number) => (
+              <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 border border-purple-200 flex items-center justify-center shrink-0 text-purple-600 font-bold text-sm">
+                    {idx + 1}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{doc.file_name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Uploaded by employee</p>
+                  </div>
+                </div>
+                <a href={doc.document_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm whitespace-nowrap">
+                  <Download className="w-3.5 h-3.5" />
+                  View
+                </a>
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-800">{gc.support_document_name || 'Supporting Document'}</p>
-                <p className="text-xs text-slate-500 mt-0.5">Uploaded by employee for appraisal context</p>
-              </div>
-            </div>
-            <a href={gc.support_document_url} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm">
-              <Download className="w-3.5 h-3.5" />
-              View
-            </a>
+            ))}
           </div>
         </SectionCard>
       )}
