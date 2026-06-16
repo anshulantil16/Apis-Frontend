@@ -1057,6 +1057,8 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                       });
                       const data = await res.json();
                       if (!res.ok) throw new Error(data.error || 'Upload failed');
+                      console.log('Upload response support_documents:', data.support_documents);
+                      console.log('Full response keys:', Object.keys(data));
                       setGoalCard(data);
                       showMsg('Document uploaded successfully', 'success');
                     } catch (err: any) {
