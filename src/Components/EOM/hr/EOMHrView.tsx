@@ -106,7 +106,7 @@ export function EOMHrView({ hrUser }: Props) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newEmp),
     });
-    setNewEmp({ employee_id:'', name:'', email:'', designation:'', department:'', zone:'', hod_id:'', user_type:'employee' });
+    setNewEmp({ employee_id:'', name:'', email:'', designation:'', department:'', zone:'', hod_id:'', user_type:'employee', is_panel_member: false, is_hr: false });
     setShowAddEmp(false); setEmpSaving(false); fetchEmployees();
   };
 
