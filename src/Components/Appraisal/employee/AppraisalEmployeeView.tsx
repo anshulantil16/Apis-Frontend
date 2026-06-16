@@ -1067,7 +1067,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                   }} />
                   <Upload className="w-8 h-8 text-blue-500 mx-auto mb-2 group-hover:scale-110 transition-transform" />
                   <p className="text-slate-700 font-semibold text-sm">{uploading ? 'Uploading...' : goalCard?.support_document_name ? 'Click to replace document' : 'Click to upload document'}</p>
-                  <p className="text-slate-500 text-xs mt-1">PDF, Word, Excel (Max 20MB)</p>
+                  <p className="text-slate-500 text-xs mt-1">PDF, Word, Excel (Max 10MB)</p>
                 </div>
                 {goalCard?.support_document_name && (
                   <div className="mt-3 flex items-center gap-3 p-3 bg-white rounded-xl border border-blue-200">
