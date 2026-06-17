@@ -569,9 +569,10 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
     setSaving(true);
     try {
       await saveDraftGoals();
-      showMsg('Draft saved.');
-    } catch { showMsg('Failed to save. Please try again.', 'error'); }
-    finally { setSaving(false); }
+      showMsg('Draft saved successfully!');
+    } catch {
+      // error already shown inside saveDraftGoals
+    } finally { setSaving(false); }
   };
 
   const handleNextStep = async () => {
@@ -579,11 +580,10 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       showMsg('Please add at least one KRA before proceeding.', 'warn');
       return;
     }
-    // Only validate KPIs that have been started (at least one field filled)
     const incompleteKpi = goals.some(g =>
       (g.kpis || []).some((k: any) => {
         const hasData = REQUIRED_KPI_FIELDS.some(f => k[f] !== '' && k[f] !== undefined && k[f] !== null);
-        if (!hasData) return false; // blank row — skip
+        if (!hasData) return false;
         return REQUIRED_KPI_FIELDS.some(f => k[f] === '' || k[f] === undefined || k[f] === null);
       })
     );
@@ -600,8 +600,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       await saveDraftGoals();
       setFormStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch { showMsg('Failed to save. Please try again.', 'error'); }
-    finally { setSaving(false); }
+    } catch {
+      // error already shown inside saveDraftGoals
+    } finally { setSaving(false); }
   };
 
   const handleNextFromStep2 = async () => {
@@ -617,8 +618,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       await saveDraftGoals();
       setFormStep(3);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch { showMsg('Failed to save. Please try again.', 'error'); }
-    finally { setSaving(false); }
+    } catch {
+      // error already shown inside saveDraftGoals
+    } finally { setSaving(false); }
   };
 
   const handleNextFromStep3 = async () => {
@@ -635,8 +637,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       await saveDraftGoals();
       setFormStep(4);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch { showMsg('Failed to save. Please try again.', 'error'); }
-    finally { setSaving(false); }
+    } catch {
+      // error already shown inside saveDraftGoals
+    } finally { setSaving(false); }
   };
 
   const handleSubmitToManager = async () => {
