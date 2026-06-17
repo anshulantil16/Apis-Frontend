@@ -560,6 +560,8 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       throw new Error(data?.error || 'Save failed');
     }
     setGoalCard(data);
+    // Always sync goals state with DB response so IDs are preserved for next save
+    if (data.goals) setGoals(data.goals);
     return data;
   };
 
