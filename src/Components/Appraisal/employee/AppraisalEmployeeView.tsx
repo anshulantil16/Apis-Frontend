@@ -333,7 +333,8 @@ function CalcCell({ value, unit = '%' }: { value: number | null; unit?: string }
 
 const REQUIRED_KPI_FIELDS: (keyof any)[] = [
   'metric', 'weightage', 'frequency', 'unit_of_measurement',
-  'parameter_type', 'data_source', 'target_value', 'actual_achievement',
+  'parameter_type', 'data_source', 'target_value',
+  // actual_achievement is NOT required at goal-setting stage — filled later during review
 ];
 
 // ─── KPI Table ────────────────────────────────────────────────────────────────
@@ -364,7 +365,7 @@ function KpiTableRow({ kpi, j, canEdit, onChange, onRemove, showRemove }: {
   // Only highlight incomplete fields if the row has been started
   const kpiHasAnyData = REQUIRED_KPI_FIELDS.some(f => kpi[f] !== '' && kpi[f] !== undefined && kpi[f] !== null);
   const missing = canEdit && kpiHasAnyData
-    ? REQUIRED_KPI_FIELDS.filter(f => !kpi[f] && kpi[f] !== 0)
+    ? REQUIRED_KPI_FIELDS.filter(f => kpi[f] === '' || kpi[f] === undefined || kpi[f] === null)
     : [];
   const rowHasError = missing.length > 0;
 
