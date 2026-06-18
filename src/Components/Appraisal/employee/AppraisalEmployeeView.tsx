@@ -494,6 +494,34 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       }).catch(() => {});
   }, [selectedCycle, employee.employee_id]);
 
+  // Auto-save every 30 seconds while form is in draft mode
+  useEffect(() => {
+    if (!selectedCycle || !goalCard || goalCard.status !== 'draft' || saving) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            goals,
+            self_review_answers: selfAnswers,
+            key_skills: keySkills.filter(s => s.trim()),
+            training_programs: trainingPrograms,
+            feedback_manager: feedbackManager,
+            feedback_manager_rating: feedbackManagerRating || null,
+            feedback_organization: feedbackOrganization,
+            feedback_organization_rating: feedbackOrganizationRating || null,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setGoalCard(data);
+          if (data.goals) setGoals(data.goals);
+        }
+      } catch { /* silent auto-save — don't show error to user */ }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [selectedCycle, goalCard?.status, saving, goals, selfAnswers, keySkills, trainingPrograms, feedbackManager, feedbackManagerRating, feedbackOrganization, feedbackOrganizationRating]);
+
   const addGoal = (category: string) => {
     setGoals(prev => [...prev, {
       _id: Date.now(), category, title: '',
