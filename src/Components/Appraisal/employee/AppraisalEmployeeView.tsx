@@ -496,20 +496,21 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   }, [selectedCycle, employee.employee_id]);
 
   // Auto-save every 30 seconds while form is in draft mode
+  // Auto-save: fires 5 seconds after user STOPS editing (debounced)
   useEffect(() => {
     if (!selectedCycle || !goalCard || goalCard.status !== 'draft' || saving) return;
-    const interval = setInterval(async () => {
+    const timer = setTimeout(async () => {
       try {
         const autoPayload: any = {
-            self_review_answers: selfAnswers,
-            key_skills: keySkills.filter(s => s.trim()),
-            training_programs: trainingPrograms,
-            feedback_manager: feedbackManager,
-            feedback_manager_rating: feedbackManagerRating || null,
-            feedback_organization: feedbackOrganization,
-            feedback_organization_rating: feedbackOrganizationRating || null,
-          };
-          if (formStep === 1) autoPayload.goals = goals;
+          self_review_answers: selfAnswers,
+          key_skills: keySkills.filter(s => s.trim()),
+          training_programs: trainingPrograms,
+          feedback_manager: feedbackManager,
+          feedback_manager_rating: feedbackManagerRating || null,
+          feedback_organization: feedbackOrganization,
+          feedback_organization_rating: feedbackOrganizationRating || null,
+        };
+        if (formStep === 1) autoPayload.goals = goals;
         const res = await fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(autoPayload),
@@ -517,11 +518,28 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
         if (res.ok) {
           const data = await res.json();
           setGoalCard(data);
-          if (data.goals) setGoals(data.goals);
+          // Only update goals IDs without disrupting user input — merge IDs only
+          if (data.goals && formStep === 1) {
+            setGoals((prev: any[]) => {
+              if (prev.length !== data.goals.length) return data.goals;
+              return prev.map((g: any, gi: number) => {
+                const saved = data.goals[gi];
+                if (!saved) return g;
+                return {
+                  ...g,
+                  id: saved.id, // update real DB id
+                  kpis: (g.kpis || []).map((k: any, ki: number) => {
+                    const savedKpi = saved.kpis?.[ki];
+                    return savedKpi ? { ...k, id: savedKpi.id } : k;
+                  }),
+                };
+              });
+            });
+          }
         }
-      } catch { /* silent auto-save — don't show error to user */ }
-    }, 10000);
-    return () => clearInterval(interval);
+      } catch { /* silent */ }
+    }, 5000); // 5 seconds after last change
+    return () => clearTimeout(timer);
   }, [selectedCycle, goalCard?.id, saving, goals, selfAnswers, keySkills, trainingPrograms, feedbackManager, feedbackManagerRating, feedbackOrganization, feedbackOrganizationRating]);
 
   const addGoal = (category: string) => {
