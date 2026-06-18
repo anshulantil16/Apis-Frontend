@@ -559,8 +559,10 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
   const removeGoal = (idx: number) => setGoals(prev => prev.filter((_, i) => i !== idx));
 
-  const totalWeight = goals.reduce((s, g) =>
-    s + (g.kpis || []).reduce((ks: number, k: any) => ks + Number(k.weightage || 0), 0), 0);
+  const totalWeight = Math.round(
+    goals.reduce((s, g) =>
+      s + (g.kpis || []).reduce((ks: number, k: any) => ks + Number(k.weightage || 0), 0), 0)
+    * 100) / 100;
 
   const SCORECARD_STATUSES = ['hod_approved', 'hr_approved', 'finalized'];
 
@@ -627,7 +629,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       showMsg('Please fill all required fields for every KPI you have started.', 'warn');
       return;
     }
-    if (totalWeight !== 100) {
+    if (Math.abs(totalWeight - 100) > 0.01) {
       showMsg(`Total weightage is ${totalWeight}%. Must equal 100% before proceeding.`, 'warn');
       return;
     }
@@ -955,8 +957,8 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                     {goals.reduce((s, g) => s + (g.kpis || []).length, 0)}
                   </span>
                 </span>
-                <span className={`font-bold ${totalWeight === 100 ? 'text-emerald-600' : totalWeight > 100 ? 'text-rose-600' : 'text-amber-600'}`}>
-                  Total Weightage: {totalWeight}% {totalWeight === 100 ? '✓' : totalWeight > 100 ? '⚠ OVER 100%' : ''}
+                <span className={`font-bold ${Math.abs(totalWeight - 100) <= 0.01 ? 'text-emerald-600' : totalWeight > 100 ? 'text-rose-600' : 'text-amber-600'}`}>
+                  Total Weightage: {totalWeight}% {Math.abs(totalWeight - 100) <= 0.01 ? '✓' : totalWeight > 100 ? '⚠ OVER 100%' : ''}
                 </span>
               </div>
 
