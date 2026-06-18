@@ -500,10 +500,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
     if (!selectedCycle || !goalCard || goalCard.status !== 'draft' || saving) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            goals,
+        const autoPayload: any = {
             self_review_answers: selfAnswers,
             key_skills: keySkills.filter(s => s.trim()),
             training_programs: trainingPrograms,
@@ -511,7 +508,11 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
             feedback_manager_rating: feedbackManagerRating || null,
             feedback_organization: feedbackOrganization,
             feedback_organization_rating: feedbackOrganizationRating || null,
-          }),
+          };
+          if (formStep === 1) autoPayload.goals = goals;
+        const res = await fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(autoPayload),
         });
         if (res.ok) {
           const data = await res.json();
@@ -570,18 +571,25 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
   const saveDraftGoals = async (): Promise<any | null> => {
     if (!selectedCycle) return null;
+
+    // Only send goals on Step 1 — other steps only save their own data
+    // This prevents stale goal state from accidentally overwriting saved goals
+    const payload: any = {
+      self_review_answers: selfAnswers,
+      key_skills: keySkills.filter(s => s.trim()),
+      training_programs: trainingPrograms,
+      feedback_manager: feedbackManager,
+      feedback_manager_rating: feedbackManagerRating || null,
+      feedback_organization: feedbackOrganization,
+      feedback_organization_rating: feedbackOrganizationRating || null,
+    };
+    if (formStep === 1) {
+      payload.goals = goals;
+    }
+
     const res = await fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        goals,
-        self_review_answers: selfAnswers,
-        key_skills: keySkills.filter(s => s.trim()),
-        training_programs: trainingPrograms,
-        feedback_manager: feedbackManager,
-        feedback_manager_rating: feedbackManagerRating || null,
-        feedback_organization: feedbackOrganization,
-        feedback_organization_rating: feedbackOrganizationRating || null,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -589,7 +597,6 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       throw new Error(data?.error || 'Save failed');
     }
     setGoalCard(data);
-    // Always sync goals state with DB response so IDs are preserved for next save
     if (data.goals) setGoals(data.goals);
     return data;
   };
