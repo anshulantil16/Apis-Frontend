@@ -520,9 +520,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
           if (data.goals) setGoals(data.goals);
         }
       } catch { /* silent auto-save — don't show error to user */ }
-    }, 30000);
+    }, 10000);
     return () => clearInterval(interval);
-  }, [selectedCycle, goalCard?.status, saving, goals, selfAnswers, keySkills, trainingPrograms, feedbackManager, feedbackManagerRating, feedbackOrganization, feedbackOrganizationRating]);
+  }, [selectedCycle, goalCard?.id, saving, goals, selfAnswers, keySkills, trainingPrograms, feedbackManager, feedbackManagerRating, feedbackOrganization, feedbackOrganizationRating]);
 
   const addGoal = (category: string) => {
     setGoals(prev => [...prev, {
@@ -635,7 +635,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
     }
     setSaving(true);
     try {
-      await saveDraftGoals();
+      // Save first — even if something fails after, data is in DB
+      const saved = await saveDraftGoals();
+      if (!saved) return;
       setFormStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
