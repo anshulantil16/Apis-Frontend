@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import {
   Download, AlertCircle, Building2, FileSpreadsheet, HeartPulse, Users,
-  TrendingUp, LayoutDashboard, LogOut, Settings, Sparkles, ChevronRight,
+  TrendingUp, LayoutDashboard, LogOut, Settings, Sparkles, ChevronRight, BarChart3,
 } from 'lucide-react';
 import { FileUploadZone } from '../Components/FileUploadZone';
 import { ColumnPills } from '../Components/ColumnPills';
@@ -15,6 +15,7 @@ interface DataExtractorPageProps {
   onNavigateToPerformance?: () => void;
   onNavigateToAppraisal?: () => void;
   onNavigateToEOM?: () => void;
+  onNavigateToPMS?: () => void;
 }
 
 const TOOLS: {
@@ -39,7 +40,7 @@ const TOOL_META: Record<ToolId, { title: string; desc: string; bar: string; badg
 
 const HUB_MODE = import.meta.env.VITE_APP_MODE === 'hub';
 
-export function DataExtractorPage({ onNavigateToPerformance, onNavigateToAppraisal, onNavigateToEOM }: DataExtractorPageProps) {
+export function DataExtractorPage({ onNavigateToPerformance, onNavigateToAppraisal, onNavigateToEOM, onNavigateToPMS }: DataExtractorPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,6 +186,17 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
               <div>
                 <p>EOM Hub</p>
                 <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-emerald-700">Employee of the Month</p>
+              </div>
+            </div>
+            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
+          </button>
+          <button onClick={onNavigateToPMS}
+            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
+            <div className="flex items-center gap-2.5">
+              <BarChart3 className="w-3.5 h-3.5" />
+              <div>
+                <p>PMS Simulator</p>
+                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-violet-700">Performance & Salary Sim</p>
               </div>
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
