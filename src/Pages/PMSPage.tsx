@@ -685,27 +685,26 @@ export default function PMSPage() {
               </div>
             </div>
 
-            {/* Overall metrics for MD */}
-            <div className="col-span-2 bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200">
+            {/* Key Metrics Summary */}
+            <div className="col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
               <div className="flex items-center gap-2 mb-5">
-                <Crown className="w-6 h-6"/>
-                <h3 className="font-black text-xl">Executive Summary — For MD & Promoters</h3>
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md"><BarChart3 className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800 text-lg">Performance Summary</h3>
               </div>
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Workforce',    value: sum.total_employees||0,    sub: 'Active employees' },
-                  { label: 'Avg Performance',    value: `${sum.avg_score||0}`,     sub: 'Organisation score' },
-                  { label: 'High Performers',    value: ((sum.grade_distribution||{})['A+']||0) + ((sum.grade_distribution||{})['A']||0), sub: 'Grade A+ & A' },
-                  { label: 'Needs Attention',    value: ((sum.grade_distribution||{})['C']||0) + ((sum.grade_distribution||{})['D']||0),  sub: 'Grade C & D — PIP' },
-                  { label: 'Total Inc Budget',   value: fmtCr(totalInc),           sub: 'Annual increment cost' },
-                  { label: 'Promotions',         value: sum.promoted_count||0,     sub: 'Cadre change' },
-                  { label: 'Ready to Promote',   value: (sum.promotion_readiness||{}).ready_now||0, sub: 'Internal talent' },
-                  { label: 'On-Time Rewards',    value: sum.reward_count||0,       sub: 'Performance bonuses' },
+                  { label: 'Total Headcount',    value: sum.total_employees||0,    bg: 'from-blue-50 to-indigo-50' },
+                  { label: 'Avg Score',          value: `${sum.avg_score||0}`,     bg: 'from-sky-50 to-blue-50' },
+                  { label: 'Grade A+ & A',       value: ((sum.grade_distribution||{})['A+']||0) + ((sum.grade_distribution||{})['A']||0), bg: 'from-emerald-50 to-teal-50' },
+                  { label: 'Grade C & D',        value: ((sum.grade_distribution||{})['C']||0) + ((sum.grade_distribution||{})['D']||0),  bg: 'from-amber-50 to-orange-50' },
+                  { label: 'Total Increment',    value: fmtCr(totalInc),           bg: 'from-violet-50 to-purple-50' },
+                  { label: 'Promotions',         value: sum.promoted_count||0,     bg: 'from-pink-50 to-rose-50' },
+                  { label: 'Ready to Promote',   value: (sum.promotion_readiness||{}).ready_now||0, bg: 'from-indigo-50 to-violet-50' },
+                  { label: 'On-Time Rewards',    value: sum.reward_count||0,       bg: 'from-slate-50 to-slate-100' },
                 ].map((m,i) => (
-                  <div key={i} className="bg-white/10 backdrop-blur rounded-2xl p-4">
-                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">{m.label}</p>
-                    <p className="text-3xl font-black">{m.value}</p>
-                    <p className="text-white/50 text-xs mt-1">{m.sub}</p>
+                  <div key={i} className={`bg-gradient-to-br ${m.bg} border border-slate-200 rounded-2xl p-4`}>
+                    <p className="text-slate-700 font-black text-2xl mb-2">{m.value}</p>
+                    <p className="text-slate-600 text-xs font-semibold">{m.label}</p>
                   </div>
                 ))}
               </div>
