@@ -214,15 +214,34 @@ export default function PMSPage() {
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !activeSession) return;
+    if (!file) return;
+    setImportMsg(null);
+
+    // Auto-create a session if none exists
+    let sessionId = activeSession?.id;
+    if (!sessionId) {
+      try {
+        const sr = await fetch(`${PMS_API}/sessions/`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Appraisal 2025-26', fiscal_year: '2025-26' }),
+        });
+        const sd = await sr.json();
+        sessionId = sd.id;
+        await fetchSessions();
+      } catch {
+        setImportMsg({ text: 'Could not create session. Please try again.', ok: false });
+        e.target.value = '';
+        return;
+      }
+    }
+
     const fd = new FormData();
     fd.append('file', file);
-    setImportMsg(null);
     try {
-      const res = await fetch(`${PMS_API}/sessions/${activeSession.id}/import/`, { method: 'POST', body: fd });
+      const res = await fetch(`${PMS_API}/sessions/${sessionId}/import/`, { method: 'POST', body: fd });
       const data = await res.json();
       setImportMsg({ text: data.message || data.error, ok: res.ok });
-      if (res.ok) loadSession(activeSession.id);
+      if (res.ok) loadSession(sessionId);
     } catch {
       setImportMsg({ text: 'Import failed. Check file format and try again.', ok: false });
     }
