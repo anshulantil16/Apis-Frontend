@@ -743,24 +743,60 @@ export default function PMSPage() {
               })}
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border-2 border-indigo-100 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md"><Zap className="w-4 h-4 text-white"/></div>
-                <h3 className="font-black text-slate-800">Score Formula</h3>
+            <div className="space-y-4">
+              {/* Score Formula */}
+              <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border-2 border-indigo-100 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md"><Zap className="w-4 h-4 text-white"/></div>
+                  <h3 className="font-black text-slate-800">Performance Score Formula</h3>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-indigo-100 text-center">
+                  <p className="text-slate-500 text-sm mb-3 font-semibold">Final Score =</p>
+                  <div className="flex items-center justify-center gap-3 flex-wrap">
+                    {[
+                      { l: 'Manager Score × 35%', g: 'from-blue-400 to-indigo-500' },
+                      { l: 'HOD Score × 35%',     g: 'from-violet-400 to-purple-500' },
+                      { l: 'Mgmt Score × 30%',    g: 'from-pink-400 to-rose-500' },
+                    ].map((s,i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        {i > 0 && <span className="text-slate-400 font-black text-2xl">+</span>}
+                        <div className={`bg-gradient-to-r ${s.g} text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg`}>{s.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="bg-white rounded-2xl p-5 border border-indigo-100 text-center">
-                <p className="text-slate-500 text-sm mb-3">Final Score =</p>
-                <div className="flex items-center justify-center gap-3 flex-wrap">
-                  {[
-                    { l: 'Manager Score × 35%', g: 'from-blue-400 to-indigo-500' },
-                    { l: 'HOD Score × 35%',     g: 'from-violet-400 to-purple-500' },
-                    { l: 'Mgmt Score × 30%',    g: 'from-pink-400 to-rose-500' },
-                  ].map((s,i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      {i > 0 && <span className="text-slate-400 font-black text-2xl">+</span>}
-                      <div className={`bg-gradient-to-r ${s.g} text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg`}>{s.l}</div>
+
+              {/* CTC Formula */}
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-100 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-md"><DollarSign className="w-4 h-4 text-white"/></div>
+                  <h3 className="font-black text-slate-800">New CTC Calculation Formula</h3>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-emerald-100 text-center space-y-3">
+                  <div>
+                    <p className="text-slate-500 text-sm mb-3 font-semibold">Revised CTC =</p>
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                      <div className="bg-gradient-to-r from-slate-400 to-slate-600 text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg">Current CTC</div>
+                      <span className="text-slate-400 font-black text-2xl">×</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-slate-600 font-semibold">(1 +</span>
+                          <div className="bg-gradient-to-r from-sky-400 to-blue-500 text-white rounded-xl px-3 py-2 text-xs font-black shadow-lg">Inc%</div>
+                          <span className="text-slate-600 font-semibold">+</span>
+                          <div className="bg-gradient-to-r from-violet-400 to-purple-500 text-white rounded-xl px-3 py-2 text-xs font-black shadow-lg">Promo%</div>
+                          <span className="text-slate-600 font-semibold">+</span>
+                          <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl px-3 py-2 text-xs font-black shadow-lg">Mgmt%</div>
+                          <span className="text-slate-600 font-semibold">)</span>
+                        </div>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                  <div className="text-xs text-slate-500 pt-2 border-t border-emerald-100">
+                    <p><strong>Inc%:</strong> Increment based on grade (4%–15%)</p>
+                    <p><strong>Promo%:</strong> Additional % if promoted (varies by grade)</p>
+                    <p><strong>Mgmt%:</strong> Management discretion added directly (%)</p>
+                  </div>
                 </div>
               </div>
             </div>
