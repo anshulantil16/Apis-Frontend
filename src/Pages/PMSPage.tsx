@@ -267,7 +267,7 @@ export default function PMSPage() {
 
   if (!loggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 flex items-center justify-center p-6 overflow-hidden">
+      <div className="h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 flex items-center justify-center p-4 overflow-hidden">
         {/* Animated background shapes */}
         <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-300/15 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-violet-300/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
@@ -295,43 +295,43 @@ export default function PMSPage() {
           .animate-scaleIn { animation: scaleIn 0.6s ease-out; }
         `}</style>
 
-        <div className="relative z-10 w-full max-w-2xl mx-auto">
-          {/* Centered Logo at Top */}
-          <div className="flex justify-center mb-8 animate-slideInLeft">
+        <div className="relative z-10 w-full max-w-lg">
+          {/* Centered Logo */}
+          <div className="flex justify-center mb-4 animate-slideInLeft">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full blur-3xl opacity-25 animate-pulse" />
-              <img src="/logo.png" alt="APIS" className="w-24 h-24 lg:w-28 lg:h-28 object-contain drop-shadow-lg relative z-10" />
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full blur-2xl opacity-25 animate-pulse" />
+              <img src="/logo.png" alt="APIS" className="w-20 h-20 object-contain drop-shadow-lg relative z-10" />
             </div>
           </div>
 
-          {/* Title Below Logo */}
-          <div className="text-center mb-12 animate-slideInLeft space-y-2">
-            <h1 className="text-5xl lg:text-7xl font-black bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
+          {/* Title */}
+          <div className="text-center mb-6 animate-slideInLeft space-y-1">
+            <h1 className="text-4xl font-black bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
               Performance<br />Simulator
             </h1>
-            <p className="text-lg text-slate-600 font-bold">
+            <p className="text-base text-slate-600 font-bold">
               Advanced Salary & Grading Engine
             </p>
           </div>
 
           {/* Login Card */}
           <div className="animate-slideInRight">
-            <div className="bg-white rounded-3xl border-2 border-indigo-100 shadow-2xl overflow-hidden hover:shadow-3xl transition-shadow duration-300">
+            <div className="bg-white rounded-2xl border-2 border-indigo-100 shadow-2xl overflow-hidden">
               {/* Header */}
-              <div className="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-8 py-10 text-white">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
-                <div className="relative space-y-2">
-                  <h2 className="text-3xl font-black">Welcome Back</h2>
-                  <p className="text-indigo-100 text-base font-semibold">Access Your Performance Dashboard</p>
+              <div className="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-6 py-8 text-white">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 animate-pulse" />
+                <div className="relative space-y-1">
+                  <h2 className="text-2xl font-black">Welcome Back</h2>
+                  <p className="text-indigo-100 text-sm font-semibold">Access Your Dashboard</p>
                 </div>
               </div>
 
               {/* Content */}
-              <div className="px-8 py-10">
+              <div className="px-6 py-8">
                 {loginStep === 'email' ? (
-                  <div className="space-y-6 animate-scaleIn">
-                    <div className="space-y-2">
-                      <label className="block text-slate-700 text-sm font-bold">Admin Email</label>
+                  <div className="space-y-4 animate-scaleIn">
+                    <div className="space-y-1.5">
+                      <label className="block text-slate-700 text-xs font-bold">Email</label>
                       <input
                         type="email"
                         placeholder="your@email.com"
@@ -339,15 +339,15 @@ export default function PMSPage() {
                         onChange={e => setAdminEmail(e.target.value)}
                         onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
                         disabled={otpLoading}
-                        className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all disabled:opacity-60 hover:border-slate-300"
+                        className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-60"
                       />
                     </div>
                     <button
                       onClick={handleEmailSubmit}
                       disabled={otpLoading}
-                      className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-xl"
+                      className="w-full px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
                     >
-                      {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                      {otpLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                       {otpLoading ? 'Sending...' : 'Continue'}
                     </button>
 
@@ -359,10 +359,10 @@ export default function PMSPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-6 animate-scaleIn">
-                    <div className="text-center space-y-3">
-                      <p className="text-slate-800 font-bold text-lg">Enter Verification Code</p>
-                      <p className="text-slate-500 text-sm">Check your email for the 4-digit code</p>
+                  <div className="space-y-4 animate-scaleIn">
+                    <div className="text-center space-y-1">
+                      <p className="text-slate-800 font-bold text-sm">Enter OTP</p>
+                      <p className="text-slate-500 text-xs">Check your email</p>
                     </div>
                     <input
                       type="text"
@@ -372,22 +372,22 @@ export default function PMSPage() {
                       onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
                       disabled={otpLoading}
                       maxLength={4}
-                      className="w-full px-4 py-4 h-14 text-center text-3xl font-black border-2 border-indigo-300 rounded-xl text-indigo-600 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300 hover:border-indigo-400"
+                      className="w-full px-3 py-2 h-10 text-center text-2xl font-black border-2 border-indigo-300 rounded-lg text-indigo-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
                     />
                     <button
                       onClick={handleOtpSubmit}
                       disabled={otpLoading || otp.length !== 4}
-                      className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-xl"
+                      className="w-full px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
                     >
-                      {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                      {otpLoading ? 'Verifying...' : 'Verify & Enter'}
+                      {otpLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                      {otpLoading ? 'Verifying...' : 'Verify'}
                     </button>
                     <button
                       onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
                       disabled={otpLoading}
-                      className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm transition-colors disabled:opacity-60 hover:bg-indigo-50 rounded-lg"
+                      className="w-full px-4 py-1 text-indigo-600 hover:text-indigo-700 font-bold text-xs transition-colors disabled:opacity-60"
                     >
-                      ← Try Another Email
+                      ← Back
                     </button>
 
                     {msg && (
@@ -401,9 +401,9 @@ export default function PMSPage() {
               </div>
 
               {/* Footer */}
-              <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-indigo-50 border-t-2 border-indigo-100 text-center">
-                <p className="text-slate-600 text-sm font-semibold">
-                  🔒 Secure • 🚀 Fast • 💼 Enterprise-Grade
+              <div className="px-6 py-3 bg-gradient-to-r from-slate-50 to-indigo-50 border-t border-indigo-100 text-center">
+                <p className="text-slate-600 text-xs font-semibold">
+                  🔒 Secure • 🚀 Fast
                 </p>
               </div>
             </div>
