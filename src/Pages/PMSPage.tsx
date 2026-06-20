@@ -3,7 +3,7 @@ import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
   ChevronUp, Search, X, BarChart3, PieChart, Zap, Star, ArrowUpRight,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
-  Target, RefreshCw, Trash2,
+  Target, RefreshCw, Trash2, Cpu, Sliders, LineChart, TrendingDown,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -126,6 +126,11 @@ function DonutChart({ data, total }: { data: Record<string,number>; total: numbe
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 export default function PMSPage() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [loginStep, setLoginStep] = useState<'email'|'otp'>('email');
+  const [otp, setOtp] = useState('');
+
   const [data, setData]         = useState<any>({ employees: [], summary: {} });
   const [importing, setImporting] = useState(false);
   const [msg, setMsg]         = useState<{text:string;ok:boolean}|null>(null);
@@ -178,6 +183,37 @@ export default function PMSPage() {
     setMsg({ text: 'All data cleared.', ok: true });
   };
 
+  const handleEmailSubmit = () => {
+    if (!adminEmail.includes('@')) {
+      setMsg({ text: 'Please enter a valid email', ok: false });
+      return;
+    }
+    // For now, auto-accept if it's the admin email
+    if (adminEmail.toLowerCase() === 'anshul@apisindia.com') {
+      setLoginStep('otp');
+      setMsg({ text: 'OTP sent to your email (for demo: enter any 4 digits)', ok: true });
+    } else {
+      setMsg({ text: 'Only admin email allowed for PMS Simulator', ok: false });
+    }
+  };
+
+  const handleOtpSubmit = () => {
+    if (otp.length === 4 && /^\d+$/.test(otp)) {
+      setLoggedIn(true);
+      setMsg(null);
+    } else {
+      setMsg({ text: 'Please enter a valid 4-digit OTP', ok: false });
+    }
+  };
+
+  const handleLogout = () => {
+    setLoggedIn(false);
+    setAdminEmail('');
+    setOtp('');
+    setLoginStep('email');
+    setMsg(null);
+  };
+
   const emps: any[] = data.employees || [];
   const sum         = data.summary || {};
   const totalCTC    = sum.total_current_ctc || 0;
@@ -199,6 +235,141 @@ export default function PMSPage() {
     { id: 'guide',      label: 'Grade Guide',     icon: Star,       grad: 'from-violet-500 to-purple-700' },
   ];
 
+  if (!loggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-violet-950 flex items-center justify-center p-4">
+        {/* Animated background elements */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-r from-indigo-500/30 to-violet-500/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-r from-violet-500/30 to-purple-500/30 rounded-full blur-3xl animate-pulse" />
+
+        <div className="relative z-10 w-full max-w-md">
+          {/* Login Card */}
+          <div className="bg-gradient-to-br from-slate-900/95 to-indigo-900/95 backdrop-blur-xl border border-indigo-500/50 rounded-2xl shadow-2xl shadow-indigo-500/20 overflow-hidden">
+            {/* Header */}
+            <div className="relative bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-6 py-8 text-white">
+              <div className="absolute top-4 right-4 w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
+                <Cpu className="w-6 h-6" />
+              </div>
+              <h1 className="text-3xl font-black mb-2">PMS Simulator</h1>
+              <p className="text-white/80 text-sm flex items-center gap-2">
+                <Sliders className="w-4 h-4" />
+                Admin Control Center
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-8 space-y-6">
+              {/* Illustration */}
+              <div className="relative h-40 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/30 flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="grid grid-cols-3 gap-3">
+                    {[0, 1, 2, 3, 4, 5].map(i => (
+                      <div key={i} className={`w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-violet-500 animate-pulse`} style={{ animationDelay: `${i * 0.1}s` }} />
+                    ))}
+                  </div>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <h2 className="text-white font-black text-lg">Performance Management Engine</h2>
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  Access the powerful salary simulation & performance analytics dashboard. Analyze employee performance, calculate increments, and model promotion scenarios.
+                </p>
+              </div>
+
+              {/* Login Form */}
+              <div className="space-y-4">
+                {loginStep === 'email' ? (
+                  <>
+                    <div>
+                      <label className="block text-slate-300 text-xs font-bold mb-2">Admin Email</label>
+                      <input
+                        type="email"
+                        placeholder="anshul@apisindia.com"
+                        value={adminEmail}
+                        onChange={e => setAdminEmail(e.target.value)}
+                        onKeyPress={e => e.key === 'Enter' && handleEmailSubmit()}
+                        className="w-full px-4 py-3 bg-slate-800/50 border border-indigo-500/30 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                    <button
+                      onClick={handleEmailSubmit}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/50 transition-all active:scale-95"
+                    >
+                      Send OTP
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-slate-300 text-xs font-bold mb-2">Enter OTP (sent to email)</label>
+                      <input
+                        type="text"
+                        placeholder="••••"
+                        value={otp}
+                        onChange={e => setOtp(e.target.value.slice(0, 4))}
+                        onKeyPress={e => e.key === 'Enter' && handleOtpSubmit()}
+                        maxLength={4}
+                        className="w-full px-4 py-3 bg-slate-800/50 border border-indigo-500/30 rounded-xl text-white text-center text-2xl font-black tracking-widest placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                      <p className="text-slate-400 text-xs mt-2">Demo: Enter any 4 digits</p>
+                    </div>
+                    <button
+                      onClick={handleOtpSubmit}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/50 transition-all active:scale-95"
+                    >
+                      Verify & Access
+                    </button>
+                    <button
+                      onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); }}
+                      className="w-full px-4 py-2 text-slate-300 hover:text-slate-100 font-semibold text-sm transition-colors"
+                    >
+                      ← Change Email
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Message */}
+              {msg && (
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${msg.ok ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-200' : 'bg-rose-500/10 border-rose-500/50 text-rose-200'}`}>
+                  {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                  <p className="text-sm font-semibold">{msg.text}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-900/50 border-t border-indigo-500/30 text-center">
+              <p className="text-slate-400 text-xs">
+                <Sparkles className="w-3 h-3 inline mr-1" />
+                Secure Admin Access Only
+              </p>
+            </div>
+          </div>
+
+          {/* Features */}
+          <div className="mt-8 grid grid-cols-3 gap-4">
+            {[
+              { icon: LineChart, label: 'Analytics', color: 'from-blue-500 to-indigo-600' },
+              { icon: Sliders, label: 'Simulate', color: 'from-violet-500 to-purple-600' },
+              { icon: TrendingDown, label: 'Forecast', color: 'from-pink-500 to-rose-600' },
+            ].map((f, i) => (
+              <div key={i} className="text-center">
+                <div className={`w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br ${f.color} flex items-center justify-center`}>
+                  <f.icon className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-slate-300 text-xs font-semibold">{f.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-violet-50/30">
 
@@ -216,6 +387,10 @@ export default function PMSPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <button onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-bold transition-all">
+              <ArrowLeft className="w-3.5 h-3.5" /> Logout
+            </button>
             <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 rounded-xl text-xs font-bold transition-all">
               <FileSpreadsheet className="w-3.5 h-3.5" /> Template
