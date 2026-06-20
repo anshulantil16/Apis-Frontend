@@ -3,7 +3,7 @@ import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
   ChevronUp, Search, X, BarChart3, PieChart, Zap, Star, ArrowUpRight, ArrowLeft,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
-  Target, RefreshCw, Trash2, Cpu, Sliders, LineChart, TrendingDown,
+  Target, RefreshCw, Trash2,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
