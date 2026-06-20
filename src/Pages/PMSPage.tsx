@@ -315,20 +315,22 @@ export default function PMSPage() {
             </div>
 
             {/* Right Side - Login */}
-            <div className="w-full max-w-sm mx-auto">
-              <div className="bg-white rounded-2xl border-2 border-indigo-100 shadow-xl overflow-hidden flex flex-col h-96">
+            <div className="w-full max-w-md mx-auto">
+              <div className="bg-white rounded-3xl border-2 border-indigo-100 shadow-2xl overflow-hidden">
 
-                {/* Header */}
-                <div className="relative bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 px-8 py-10 text-white text-center flex-shrink-0">
-                  <div className="absolute top-3 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center animate-spin" style={{ animationDuration: '3s' }}>
-                    <Sparkles className="w-5 h-5" />
+                {/* Header with Logo */}
+                <div className="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-8 py-12 text-white text-center">
+                  <div className="flex justify-center mb-4">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center animate-bounce" style={{ animationDuration: '2s' }}>
+                      <img src="/logo.png" alt="APIS" className="w-10 h-10 object-contain" />
+                    </div>
                   </div>
-                  <h2 className="text-3xl font-black mb-1">Welcome</h2>
-                  <p className="text-white/90 text-sm">Admin Access Portal</p>
+                  <h2 className="text-4xl font-black mb-2">PMS Simulator</h2>
+                  <p className="text-white/90 text-sm font-semibold">Advanced Performance Analytics</p>
                 </div>
 
-                {/* Content - Scrollable */}
-                <div className="px-8 py-8 overflow-y-auto flex-1">
+                {/* Content */}
+                <div className="px-8 py-10">
                   {loginStep === 'email' ? (
                     <div className="space-y-5 animate-fadeIn">
                       <div>
@@ -443,8 +445,8 @@ export default function PMSPage() {
       <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+              <img src="/logo.png" alt="APIS" className="w-7 h-7 object-contain drop-shadow-sm" />
             </div>
             <div>
               <h1 className="text-slate-900 font-black text-lg">PMS Simulator</h1>
