@@ -130,6 +130,7 @@ export default function PMSPage() {
   const [adminEmail, setAdminEmail] = useState('');
   const [loginStep, setLoginStep] = useState<'email'|'otp'>('email');
   const [otp, setOtp] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
 
   const [data, setData]         = useState<any>({ employees: [], summary: {} });
   const [importing, setImporting] = useState(false);
@@ -188,6 +189,7 @@ export default function PMSPage() {
       setMsg({ text: 'Please enter a valid email', ok: false });
       return;
     }
+    setOtpLoading(true);
     try {
       const res = await fetch(`${PMS}/login/`, {
         method: 'POST',
@@ -206,6 +208,7 @@ export default function PMSPage() {
       setMsg({ text: 'Network error. Demo mode: enter 1234', ok: false });
       setLoginStep('otp');
     }
+    setOtpLoading(false);
   };
 
   const handleOtpSubmit = async () => {
@@ -213,6 +216,7 @@ export default function PMSPage() {
       setMsg({ text: 'Please enter a valid 4-digit OTP', ok: false });
       return;
     }
+    setOtpLoading(true);
     try {
       const res = await fetch(`${PMS}/login/`, {
         method: 'POST',
@@ -229,6 +233,7 @@ export default function PMSPage() {
     } catch (e) {
       setMsg({ text: 'Verification failed. Try again.', ok: false });
     }
+    setOtpLoading(false);
   };
 
   const handleLogout = () => {
@@ -323,7 +328,7 @@ export default function PMSPage() {
                 </div>
 
                 {/* Content */}
-                <div className="px-8 py-8">
+                <div className="px-8 py-8 min-h-[400px] flex flex-col justify-center">
                   {loginStep === 'email' ? (
                     <div className="space-y-6 animate-fadeIn">
                       <div>
@@ -333,16 +338,18 @@ export default function PMSPage() {
                           placeholder="Enter your email"
                           value={adminEmail}
                           onChange={e => setAdminEmail(e.target.value)}
-                          onKeyPress={e => e.key === 'Enter' && handleEmailSubmit()}
-                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all font-semibold"
+                          onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
+                          disabled={otpLoading}
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all font-semibold disabled:opacity-60"
                         />
                       </div>
                       <button
                         onClick={handleEmailSubmit}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-black rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        disabled={otpLoading}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-black rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait"
                       >
-                        <Zap className="w-4 h-4" />
-                        Continue
+                        {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                        {otpLoading ? 'Sending OTP...' : 'Continue'}
                       </button>
                       <p className="text-center text-xs text-slate-500">
                         Enter your admin email to proceed
@@ -350,29 +357,34 @@ export default function PMSPage() {
                     </div>
                   ) : (
                     <div className="space-y-6 animate-fadeIn">
-                      <div className="text-center">
-                        <p className="text-slate-600 text-sm font-semibold mb-2">Verification Code</p>
-                        <p className="text-xs text-slate-500 mb-6">For demo, enter any 4 digits</p>
+                      <div className="text-center space-y-4">
+                        <div>
+                          <p className="text-slate-600 text-sm font-semibold mb-1">Verification Code</p>
+                          <p className="text-xs text-slate-500">Check your email for the 4-digit code</p>
+                        </div>
                         <input
                           type="text"
                           placeholder="0000"
                           value={otp}
                           onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                          onKeyPress={e => e.key === 'Enter' && handleOtpSubmit()}
+                          onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
+                          disabled={otpLoading}
                           maxLength={4}
-                          className="w-full max-w-xs h-32 mx-auto text-center text-7xl font-black border-3 border-indigo-300 rounded-3xl text-indigo-600 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all tracking-widest"
+                          className="w-full px-4 py-4 h-20 mx-auto text-center text-6xl font-black border-3 border-indigo-300 rounded-2xl text-indigo-600 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
                         />
                       </div>
                       <button
                         onClick={handleOtpSubmit}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        disabled={otpLoading || otp.length !== 4}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        <CheckCircle className="w-4 h-4" />
-                        Verify & Enter
+                        {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                        {otpLoading ? 'Verifying...' : 'Verify & Enter'}
                       </button>
                       <button
                         onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
-                        className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm transition-colors bg-indigo-50 hover:bg-indigo-100 rounded-lg"
+                        disabled={otpLoading}
+                        className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm transition-colors bg-indigo-50 hover:bg-indigo-100 rounded-lg disabled:opacity-60"
                       >
                         ← Try Another Email
                       </button>
