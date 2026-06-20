@@ -610,14 +610,14 @@ export default function PMSPage() {
                         {[
                           { l: 'Manager Score', v: emp.manager_score,    w: 35, g: 'from-blue-400 to-indigo-500' },
                           { l: 'HOD Score',     v: emp.hod_score,        w: 35, g: 'from-violet-400 to-purple-500' },
-                          { l: 'Mgmt Score',    v: emp.management_score, w: 30, g: 'from-pink-400 to-rose-500' },
+                          { l: 'Mgmt Score',    v: emp.management_score !== null ? emp.management_score : undefined, w: 30, g: 'from-pink-400 to-rose-500' },
                         ].map(s => (
                           <div key={s.l}>
                             <div className="flex justify-between text-xs mb-1.5">
                               <span className="text-slate-500">{s.l} <span className="text-slate-300">({s.w}%)</span></span>
-                              <span className={`font-black bg-gradient-to-r ${s.g} bg-clip-text text-transparent`}>{s.v??'—'}/100</span>
+                              <span className={`font-black bg-gradient-to-r ${s.g} bg-clip-text text-transparent`}>{(s.v !== undefined && s.v !== null) ? s.v : '—'}/100</span>
                             </div>
-                            <Bar value={s.v??0} max={100} gradient={s.g}/>
+                            <Bar value={(s.v !== undefined && s.v !== null) ? s.v : 0} max={100} gradient={s.g}/>
                           </div>
                         ))}
                         {(emp.fy_prev1_score || emp.fy_prev2_score) && (
