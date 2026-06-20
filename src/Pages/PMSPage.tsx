@@ -188,13 +188,9 @@ export default function PMSPage() {
       setMsg({ text: 'Please enter a valid email', ok: false });
       return;
     }
-    // For now, auto-accept if it's the admin email
-    if (adminEmail.toLowerCase() === 'anshul@apisindia.com') {
-      setLoginStep('otp');
-      setMsg({ text: 'OTP sent to your email (for demo: enter any 4 digits)', ok: true });
-    } else {
-      setMsg({ text: 'Only admin email allowed for PMS Simulator', ok: false });
-    }
+    // Accept any email for now (OTP system to be implemented)
+    setLoginStep('otp');
+    setMsg({ text: '✓ Demo Mode: Enter any 4 digits to proceed', ok: true });
   };
 
   const handleOtpSubmit = () => {
@@ -327,7 +323,7 @@ export default function PMSPage() {
                     <div className="space-y-6 animate-fadeIn">
                       <div className="text-center">
                         <p className="text-slate-600 text-sm font-semibold mb-2">Verification Code</p>
-                        <p className="text-xs text-slate-500 mb-4">For demo, enter any 4 digits</p>
+                        <p className="text-xs text-slate-500 mb-6">For demo, enter any 4 digits</p>
                         <input
                           type="text"
                           placeholder="0000"
@@ -335,7 +331,7 @@ export default function PMSPage() {
                           onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
                           onKeyPress={e => e.key === 'Enter' && handleOtpSubmit()}
                           maxLength={4}
-                          className="w-24 h-24 mx-auto text-center text-5xl font-black border-3 border-indigo-300 rounded-2xl text-indigo-600 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all tracking-widest"
+                          className="w-full max-w-xs h-32 mx-auto text-center text-7xl font-black border-3 border-indigo-300 rounded-3xl text-indigo-600 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all tracking-widest"
                         />
                       </div>
                       <button
