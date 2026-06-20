@@ -327,80 +327,81 @@ export default function PMSPage() {
                   <p className="text-white/90 text-sm">Admin Access Portal</p>
                 </div>
 
-                {/* Content - Fixed height container */}
-                <div className="px-8 py-8 h-80">
-                  <div className="h-full flex flex-col justify-between">
-                    {/* Form Section */}
-                    <div>
-                      {loginStep === 'email' ? (
-                        <div className="space-y-5 animate-fadeIn">
-                          <div>
-                            <label className="block text-slate-700 text-sm font-black mb-2">Email Address</label>
-                            <input
-                              type="email"
-                              placeholder="Enter your email"
-                              value={adminEmail}
-                              onChange={e => setAdminEmail(e.target.value)}
-                              onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
-                              disabled={otpLoading}
-                              className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all font-semibold disabled:opacity-60"
-                            />
-                          </div>
-                          <button
-                            onClick={handleEmailSubmit}
-                            disabled={otpLoading}
-                            className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-black rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait"
-                          >
-                            {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                            {otpLoading ? 'Sending OTP...' : 'Continue'}
-                          </button>
-                          <p className="text-center text-xs text-slate-500">
-                            Enter your admin email to proceed
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-5 animate-fadeIn">
-                          <div className="text-center space-y-2">
-                            <p className="text-slate-600 text-sm font-semibold">Verification Code</p>
-                            <p className="text-xs text-slate-500">Check your email for the 4-digit code</p>
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="0000"
-                            value={otp}
-                            onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
-                            disabled={otpLoading}
-                            maxLength={4}
-                            className="w-full px-4 py-3 h-16 text-center text-5xl font-black border-3 border-indigo-300 rounded-2xl text-indigo-600 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
-                          />
-                          <button
-                            onClick={handleOtpSubmit}
-                            disabled={otpLoading || otp.length !== 4}
-                            className="w-full px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                          >
-                            {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                            {otpLoading ? 'Verifying...' : 'Verify & Enter'}
-                          </button>
-                          <button
-                            onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
-                            disabled={otpLoading}
-                            className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm transition-colors bg-indigo-50 hover:bg-indigo-100 rounded-lg disabled:opacity-60"
-                          >
-                            ← Try Another Email
-                          </button>
+                {/* Content */}
+                <div className="px-8 py-8">
+                  {loginStep === 'email' ? (
+                    <div className="space-y-5 animate-fadeIn">
+                      <div>
+                        <label className="block text-slate-700 text-sm font-black mb-2">Email Address</label>
+                        <input
+                          type="email"
+                          placeholder="Enter your email"
+                          value={adminEmail}
+                          onChange={e => setAdminEmail(e.target.value)}
+                          onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
+                          disabled={otpLoading}
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all font-semibold disabled:opacity-60"
+                        />
+                      </div>
+                      <button
+                        onClick={handleEmailSubmit}
+                        disabled={otpLoading}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-black rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait"
+                      >
+                        {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                        {otpLoading ? 'Sending OTP...' : 'Continue'}
+                      </button>
+                      <p className="text-center text-xs text-slate-500">
+                        Enter your admin email to proceed
+                      </p>
+
+                      {msg && (
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'}`}>
+                          {msg.ok ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+                          <p className="text-sm font-bold">{msg.text}</p>
                         </div>
                       )}
                     </div>
-
-                    {/* Message Section - Always at bottom */}
-                    {msg && (
-                      <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'}`}>
-                        {msg.ok ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-                        <p className="text-sm font-bold">{msg.text}</p>
+                  ) : (
+                    <div className="space-y-5 animate-fadeIn">
+                      <div className="text-center space-y-2">
+                        <p className="text-slate-600 text-sm font-semibold">Verification Code</p>
+                        <p className="text-xs text-slate-500">Check your email for the 4-digit code</p>
                       </div>
-                    )}
-                  </div>
+                      <input
+                        type="text"
+                        placeholder="0000"
+                        value={otp}
+                        onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
+                        disabled={otpLoading}
+                        maxLength={4}
+                        className="w-full px-4 py-3 h-16 text-center text-5xl font-black border-3 border-indigo-300 rounded-2xl text-indigo-600 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
+                      />
+                      <button
+                        onClick={handleOtpSubmit}
+                        disabled={otpLoading || otp.length !== 4}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                        {otpLoading ? 'Verifying...' : 'Verify & Enter'}
+                      </button>
+                      <button
+                        onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
+                        disabled={otpLoading}
+                        className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm transition-colors bg-indigo-50 hover:bg-indigo-100 rounded-lg disabled:opacity-60"
+                      >
+                        ← Try Another Email
+                      </button>
+
+                      {msg && (
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'}`}>
+                          {msg.ok ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+                          <p className="text-sm font-bold">{msg.text}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer */}
