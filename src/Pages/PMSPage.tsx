@@ -543,7 +543,15 @@ export default function PMSPage() {
               <span className="ml-auto text-slate-400 text-xs">{filtered.length} of {emps.length}</span>
             </div>
 
-            {filtered.map(emp => {
+            {filtered.length === 0 ? (
+              <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-slate-400" />
+                </div>
+                <p className="text-slate-600 font-bold text-lg mb-1">No Employees Found</p>
+                <p className="text-slate-400 text-sm">Try adjusting your search or filters to see results</p>
+              </div>
+            ) : filtered.map(emp => {
               const isExp = expanded === emp.id;
               const cfg = GRADES[emp.effective_grade];
               return (
