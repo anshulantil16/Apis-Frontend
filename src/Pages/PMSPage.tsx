@@ -401,13 +401,13 @@ export default function PMSPage() {
                   )}
                 </div>
 
-                {/* Footer */}
-                <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-indigo-50 border-t-2 border-indigo-100 text-center">
-                  <p className="text-slate-600 text-sm font-semibold">
-                    🔒 Secure • 🚀 Fast • 💼 Enterprise-Grade
-                  </p>
-                </div>
+              {/* Footer */}
+              <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-indigo-50 border-t-2 border-indigo-100 text-center">
+                <p className="text-slate-600 text-sm font-semibold">
+                  🔒 Secure • 🚀 Fast • 💼 Enterprise-Grade
+                </p>
               </div>
+            </div>
 
             </div>
           </div>
