@@ -305,7 +305,7 @@ export default function PMSPage() {
                         <label className="block text-slate-700 text-sm font-black mb-3">Email Address</label>
                         <input
                           type="email"
-                          placeholder="anshul@apisindia.com"
+                          placeholder="Enter your email"
                           value={adminEmail}
                           onChange={e => setAdminEmail(e.target.value)}
                           onKeyPress={e => e.key === 'Enter' && handleEmailSubmit()}
