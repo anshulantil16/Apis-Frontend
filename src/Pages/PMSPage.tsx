@@ -282,45 +282,28 @@ export default function PMSPage() {
 
         <div className="relative z-10 w-full max-w-2xl">
           {/* Main Container */}
-          <div className="grid grid-cols-2 gap-8 items-center">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-8 items-center">
 
             {/* Left Side - Visual */}
-            <div className="hidden lg:block space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-xl shadow-indigo-200 flex-shrink-0">
-                  <img src="/logo.png" alt="APIS" className="w-12 h-12 object-contain drop-shadow-sm" />
+            <div className="hidden lg:block space-y-8">
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-32 h-32 flex items-center justify-center mb-8">
+                  <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-lg" />
                 </div>
-                <div className="space-y-2">
-                  <h1 className="text-4xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                <div className="text-center space-y-3">
+                  <h1 className="text-5xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
                     Performance Simulator
                   </h1>
-                  <p className="text-lg text-slate-600 font-bold">
+                  <p className="text-xl text-slate-700 font-bold">
                     Advanced Salary & Grading Engine
                   </p>
                 </div>
               </div>
 
-              {/* Feature Cards */}
-              <div className="space-y-3">
-                {[
-                  { icon: '📊', label: 'Real-time Analytics', desc: 'Track performance metrics' },
-                  { icon: '💰', label: 'Salary Simulation', desc: 'Calculate increments & promotions' },
-                  { icon: '🎯', label: 'Grade Modeling', desc: 'Predict performance outcomes' },
-                  { icon: '⚡', label: 'Instant Reports', desc: 'Generate insights on demand' },
-                ].map((f, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group">
-                    <span className="text-2xl group-hover:scale-110 transition-transform">{f.icon}</span>
-                    <div>
-                      <p className="font-bold text-slate-900">{f.label}</p>
-                      <p className="text-xs text-slate-500">{f.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Right Side - Login */}
-            <div className="w-full max-w-md mx-auto">
+            <div className="w-full max-w-md mx-auto lg:order-2">
               <div className="bg-white rounded-3xl border-2 border-indigo-100 shadow-2xl overflow-hidden">
 
                 {/* Header with Logo */}
