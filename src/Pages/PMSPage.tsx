@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
-  ChevronUp, Search, X, BarChart3, PieChart, Zap, Star, ArrowUpRight, ArrowLeft,
+  ChevronUp, Search, X, BarChart3, PieChart, Zap, Star, ArrowUpRight,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
   Target, RefreshCw, Trash2, LogOut,
 } from 'lucide-react';
