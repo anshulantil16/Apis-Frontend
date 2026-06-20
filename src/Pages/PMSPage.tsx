@@ -427,15 +427,8 @@ export default function PMSPage() {
 
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-2">
-          {/* Logout on far left */}
-          <button onClick={handleLogout}
-            className="p-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg transition-all flex-shrink-0"
-            aria-label="Logout">
-            <LogOut className="w-4 h-4" />
-          </button>
-
-          {/* Logo and title right after button */}
+        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-3">
+          {/* Logo and title FIRST on left */}
           <div className="flex items-center gap-2 flex-1">
             <img src="/logo.png" alt="APIS" className="w-10 h-10 object-contain flex-shrink-0" />
             <div className="min-w-0">
@@ -444,7 +437,14 @@ export default function PMSPage() {
             </div>
           </div>
 
-          {/* Other buttons on right */}
+          {/* Logout button after logo */}
+          <button onClick={handleLogout}
+            className="p-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg transition-all flex-shrink-0"
+            aria-label="Logout">
+            <LogOut className="w-4 h-4" />
+          </button>
+
+          {/* Action buttons on right */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 rounded-xl text-xs font-bold transition-all">
