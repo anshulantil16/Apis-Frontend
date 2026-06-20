@@ -3,7 +3,7 @@ import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
   ChevronUp, Search, X, BarChart3, PieChart, Zap, Star, ArrowUpRight, ArrowLeft,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
-  Target, RefreshCw, Trash2,
+  Target, RefreshCw, Trash2, LogOut,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -439,7 +439,7 @@ export default function PMSPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={handleLogout} title="Logout"
               className="p-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg transition-all">
-              <ArrowLeft className="w-4 h-4" />
+              <LogOut className="w-4 h-4" />
             </button>
             <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 rounded-xl text-xs font-bold transition-all">
