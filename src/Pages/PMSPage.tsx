@@ -417,12 +417,10 @@ export default function PMSPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-violet-50/30">
 
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-              <img src="/logo.png" alt="APIS" className="w-7 h-7 object-contain drop-shadow-sm" />
-            </div>
+            <img src="/logo.png" alt="APIS" className="w-10 h-10 object-contain" />
             <div>
               <h1 className="text-slate-900 font-black text-lg">PMS Simulator</h1>
               <p className="text-slate-400 text-[11px]">{emps.length} employees loaded · FY 2025-26</p>
