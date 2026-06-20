@@ -267,47 +267,77 @@ export default function PMSPage() {
 
   if (!loggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-100 flex items-center justify-center p-6">
-        {/* Subtle background shapes */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-200/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-violet-200/10 rounded-full blur-3xl" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 flex items-center justify-center p-6 overflow-hidden">
+        {/* Animated background shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-300/15 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-violet-300/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-blue-300/10 rounded-full blur-3xl" style={{ animation: 'float 8s ease-in-out infinite' }} />
+
+        <style>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            50% { transform: translateY(-30px) translateX(20px); }
+          }
+          @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-40px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-slideInLeft { animation: slideInLeft 0.6s ease-out; }
+          .animate-slideInRight { animation: slideInRight 0.6s ease-out; }
+          .animate-scaleIn { animation: scaleIn 0.6s ease-out; }
+        `}</style>
 
         <div className="relative z-10 w-full max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 items-center">
 
             {/* Left Side - Logo and Title */}
-            <div className="lg:col-span-1 text-center lg:text-left space-y-6">
-              <div className="flex lg:block justify-center">
-                <div className="w-24 h-24 lg:w-28 lg:h-28">
-                  <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-md" />
+            <div className="lg:col-span-1 animate-slideInLeft space-y-8">
+              <div className="flex justify-center lg:justify-start">
+                <div className="relative">
+                  {/* Animated glow background */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-violet-400 rounded-3xl blur-2xl opacity-30 animate-pulse" />
+                  <div className="relative w-28 h-28 lg:w-32 lg:h-32 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-3xl flex items-center justify-center shadow-xl border border-indigo-100">
+                    <img src="/logo.png" alt="APIS" className="w-20 h-20 lg:w-24 lg:h-24 object-contain drop-shadow-lg" />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-3">
-                <h1 className="text-4xl lg:text-5xl font-black text-slate-900">
-                  Performance Simulator
+              <div className="text-center lg:text-left space-y-3">
+                <h1 className="text-5xl lg:text-6xl font-black bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
+                  Performance<br />Simulator
                 </h1>
-                <p className="text-base lg:text-lg text-slate-600 font-semibold">
+                <p className="text-lg text-slate-600 font-bold">
                   Advanced Salary & Grading Engine
                 </p>
               </div>
             </div>
 
             {/* Right Side - Login Card */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
+            <div className="lg:col-span-2 animate-slideInRight">
+              <div className="bg-white rounded-3xl border-2 border-indigo-100 shadow-2xl overflow-hidden hover:shadow-3xl transition-shadow duration-300">
 
-                {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-8 py-8 text-white">
-                  <h2 className="text-3xl font-black">Welcome</h2>
-                  <p className="text-indigo-100 text-sm mt-1">Admin Access Portal</p>
+                {/* Header with animation */}
+                <div className="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-8 py-12 text-white">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
+                  <div className="relative space-y-2">
+                    <h2 className="text-4xl font-black">Welcome Back</h2>
+                    <p className="text-indigo-100 text-base font-semibold">Access Your Performance Dashboard</p>
+                  </div>
                 </div>
 
                 {/* Content */}
                 <div className="px-8 py-10">
                   {loginStep === 'email' ? (
-                    <div className="space-y-5 animate-fadeIn">
-                      <div>
-                        <label className="block text-slate-700 text-sm font-bold mb-2">Email</label>
+                    <div className="space-y-6 animate-scaleIn">
+                      <div className="space-y-2">
+                        <label className="block text-slate-700 text-sm font-bold">Admin Email</label>
                         <input
                           type="email"
                           placeholder="your@email.com"
@@ -315,30 +345,30 @@ export default function PMSPage() {
                           onChange={e => setAdminEmail(e.target.value)}
                           onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
                           disabled={otpLoading}
-                          className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all disabled:opacity-60"
+                          className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all disabled:opacity-60 hover:border-slate-300"
                         />
                       </div>
                       <button
                         onClick={handleEmailSubmit}
                         disabled={otpLoading}
-                        className="w-full px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
+                        className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-xl"
                       >
                         {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                         {otpLoading ? 'Sending...' : 'Continue'}
                       </button>
 
                       {msg && (
-                        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm animate-slideDown ${msg.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
                           {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-                          <p className="font-medium">{msg.text}</p>
+                          {msg.text}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="space-y-5 animate-fadeIn">
-                      <div className="text-center space-y-2">
-                        <p className="text-slate-700 font-bold">Enter OTP</p>
-                        <p className="text-slate-500 text-sm">We sent a 4-digit code to your email</p>
+                    <div className="space-y-6 animate-scaleIn">
+                      <div className="text-center space-y-3">
+                        <p className="text-slate-800 font-bold text-lg">Enter Verification Code</p>
+                        <p className="text-slate-500 text-sm">Check your email for the 4-digit code</p>
                       </div>
                       <input
                         type="text"
@@ -348,28 +378,28 @@ export default function PMSPage() {
                         onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
                         disabled={otpLoading}
                         maxLength={4}
-                        className="w-full px-4 py-3 h-12 text-center text-2xl font-black border border-indigo-300 rounded-lg text-indigo-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
+                        className="w-full px-4 py-4 h-14 text-center text-3xl font-black border-2 border-indigo-300 rounded-xl text-indigo-600 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300 hover:border-indigo-400"
                       />
                       <button
                         onClick={handleOtpSubmit}
                         disabled={otpLoading || otp.length !== 4}
-                        className="w-full px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
+                        className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-xl"
                       >
                         {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                        {otpLoading ? 'Verifying...' : 'Verify'}
+                        {otpLoading ? 'Verifying...' : 'Verify & Enter'}
                       </button>
                       <button
                         onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
                         disabled={otpLoading}
-                        className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-semibold text-sm transition-colors disabled:opacity-60"
+                        className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm transition-colors disabled:opacity-60 hover:bg-indigo-50 rounded-lg"
                       >
-                        ← Back to Email
+                        ← Try Another Email
                       </button>
 
                       {msg && (
-                        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm animate-slideDown ${msg.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
                           {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-                          <p className="font-medium">{msg.text}</p>
+                          {msg.text}
                         </div>
                       )}
                     </div>
@@ -377,8 +407,10 @@ export default function PMSPage() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 py-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500 font-medium">
-                  🔒 Secure Admin Portal
+                <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-indigo-50 border-t-2 border-indigo-100 text-center">
+                  <p className="text-slate-600 text-sm font-semibold">
+                    🔒 Secure • 🚀 Fast • 💼 Enterprise-Grade
+                  </p>
                 </div>
               </div>
             </div>
