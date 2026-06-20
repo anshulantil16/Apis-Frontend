@@ -295,42 +295,37 @@ export default function PMSPage() {
           .animate-scaleIn { animation: scaleIn 0.6s ease-out; }
         `}</style>
 
-        <div className="relative z-10 w-full max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 items-center">
-
-            {/* Left Side - Logo and Title */}
-            <div className="lg:col-span-1 animate-slideInLeft space-y-8">
-              <div className="flex justify-center lg:justify-start">
-                <div className="relative">
-                  {/* Animated glow background */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-violet-400 rounded-3xl blur-2xl opacity-30 animate-pulse" />
-                  <div className="relative w-28 h-28 lg:w-32 lg:h-32 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-3xl flex items-center justify-center shadow-xl border border-indigo-100">
-                    <img src="/logo.png" alt="APIS" className="w-20 h-20 lg:w-24 lg:h-24 object-contain drop-shadow-lg" />
-                  </div>
-                </div>
-              </div>
-              <div className="text-center lg:text-left space-y-3">
-                <h1 className="text-5xl lg:text-6xl font-black bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
-                  Performance<br />Simulator
-                </h1>
-                <p className="text-lg text-slate-600 font-bold">
-                  Advanced Salary & Grading Engine
-                </p>
-              </div>
+        <div className="relative z-10 w-full max-w-2xl mx-auto">
+          {/* Centered Logo at Top */}
+          <div className="flex justify-center mb-8 animate-slideInLeft">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full blur-3xl opacity-25 animate-pulse" />
+              <img src="/logo.png" alt="APIS" className="w-24 h-24 lg:w-28 lg:h-28 object-contain drop-shadow-lg relative z-10" />
             </div>
+          </div>
 
-            {/* Right Side - Login Card */}
-            <div className="lg:col-span-2 animate-slideInRight">
-              <div className="bg-white rounded-3xl border-2 border-indigo-100 shadow-2xl overflow-hidden hover:shadow-3xl transition-shadow duration-300">
+          {/* Title Below Logo */}
+          <div className="text-center mb-12 animate-slideInLeft space-y-2">
+            <h1 className="text-5xl lg:text-7xl font-black bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
+              Performance<br />Simulator
+            </h1>
+            <p className="text-lg text-slate-600 font-bold">
+              Advanced Salary & Grading Engine
+            </p>
+          </div>
 
-                {/* Header with animation */}
-                <div className="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-8 py-12 text-white">
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
-                  <div className="relative space-y-2">
-                    <h2 className="text-4xl font-black">Welcome Back</h2>
-                    <p className="text-indigo-100 text-base font-semibold">Access Your Performance Dashboard</p>
-                  </div>
+          {/* Login Card - Full Width Below */}
+          <div className="animate-slideInRight">
+            <div className="bg-white rounded-3xl border-2 border-indigo-100 shadow-2xl overflow-hidden hover:shadow-3xl transition-shadow duration-300">
+
+              {/* Header with animation */}
+              <div className="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-8 py-10 text-white">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
+                <div className="relative space-y-2">
+                  <h2 className="text-3xl font-black">Welcome Back</h2>
+                  <p className="text-indigo-100 text-base font-semibold">Access Your Performance Dashboard</p>
                 </div>
+              </div>
 
                 {/* Content */}
                 <div className="px-8 py-10">
