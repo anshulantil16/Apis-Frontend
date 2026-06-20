@@ -418,18 +418,18 @@ export default function PMSPage() {
 
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="APIS" className="w-10 h-10 object-contain" />
-            <div>
+        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1">
+            <img src="/logo.png" alt="APIS" className="w-10 h-10 object-contain flex-shrink-0" />
+            <div className="min-w-0">
               <h1 className="text-slate-900 font-black text-lg">PMS Simulator</h1>
               <p className="text-slate-400 text-[11px]">{emps.length} employees loaded · FY 2025-26</p>
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-bold transition-all">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg text-xs font-bold transition-all whitespace-nowrap">
               <ArrowLeft className="w-3.5 h-3.5" /> Logout
             </button>
             <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
