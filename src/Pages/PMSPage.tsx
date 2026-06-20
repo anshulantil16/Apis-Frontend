@@ -637,11 +637,6 @@ export default function PMSPage() {
                         </div>
                       </div>
 
-                      {/* Debug - show actual value */}
-                      <div className="text-xs text-slate-400 mb-2">
-                        <p>Mgmt Score Value: {emp.management_score} (type: {typeof emp.management_score})</p>
-                      </div>
-
                       {/* Overrides */}
                       <div className="space-y-3">
                         <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-orange-400"/>Override Controls</p>
