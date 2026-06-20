@@ -126,8 +126,8 @@ function DonutChart({ data, total }: { data: Record<string,number>; total: numbe
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 export default function PMSPage() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
+  const [loggedIn, setLoggedIn] = useState(() => localStorage.getItem('pms_logged_in') === 'true');
+  const [adminEmail, setAdminEmail] = useState(() => localStorage.getItem('pms_email') || '');
   const [loginStep, setLoginStep] = useState<'email'|'otp'>('email');
   const [otp, setOtp] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
@@ -150,7 +150,16 @@ export default function PMSPage() {
     } catch {}
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (loggedIn) load();
+  }, [loggedIn]);
+
+  // Persist login state
+  useEffect(() => {
+    localStorage.setItem('pms_logged_in', loggedIn ? 'true' : 'false');
+    if (loggedIn) localStorage.setItem('pms_email', adminEmail);
+    else localStorage.removeItem('pms_email');
+  }, [loggedIn, adminEmail]);
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -428,9 +437,9 @@ export default function PMSPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg text-xs font-bold transition-all whitespace-nowrap">
-              <ArrowLeft className="w-3.5 h-3.5" /> Logout
+            <button onClick={handleLogout} title="Logout"
+              className="p-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg transition-all">
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 rounded-xl text-xs font-bold transition-all">
