@@ -430,13 +430,13 @@ export default function PMSPage() {
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4">
           {/* Logout button on far left */}
           <button onClick={handleLogout}
-            className="p-2 text-slate-600 hover:text-rose-600 transition-all flex-shrink-0 hover:bg-rose-50 rounded-lg"
+            className="p-2 text-slate-600 hover:text-rose-600 transition-all flex-shrink-0 hover:bg-rose-50 rounded-lg -ml-2"
             aria-label="Logout">
             <LogOut className="w-5 h-5" />
           </button>
 
           {/* Logo and title START RIGHT AFTER button ends */}
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1 ml-2">
             <img src="/logo.png" alt="APIS" className="w-10 h-10 object-contain flex-shrink-0" />
             <div className="min-w-0">
               <h1 className="text-slate-900 font-black text-lg">PMS Simulator</h1>
