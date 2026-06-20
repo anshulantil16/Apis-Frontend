@@ -650,9 +650,15 @@ export default function PMSPage() {
                         </div>
                         <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Management Score Override</label>
-                          <input type="number" min="0" max="100" defaultValue={emp.management_score??''}
-                            onBlur={e => update(emp.id, { management_score: e.target.value||null })} placeholder="0–100"
-                            className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400"/>
+                          <div className="flex gap-2">
+                            <input type="number" min="0" max="100" defaultValue={emp.management_score??''}
+                              onBlur={e => update(emp.id, { management_score: e.target.value||null })} placeholder="0–100"
+                              className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400"/>
+                            <button onClick={() => {const val = (event.target.previousSibling).value; update(emp.id, { management_score: val||null });}}
+                              className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition-all">
+                              Save
+                            </button>
+                          </div>
                         </div>
                         <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Promotion Readiness</label>
