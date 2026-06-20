@@ -430,9 +430,9 @@ export default function PMSPage() {
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4">
           {/* Logout button on far left */}
           <button onClick={handleLogout}
-            className="p-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg transition-all flex-shrink-0"
+            className="p-2 text-slate-600 hover:text-rose-600 transition-all flex-shrink-0 hover:bg-rose-50 rounded-lg"
             aria-label="Logout">
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-5 h-5" />
           </button>
 
           {/* Logo and title START RIGHT AFTER button ends */}
