@@ -429,8 +429,9 @@ export default function PMSPage() {
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-2">
           {/* Logout on far left */}
-          <button onClick={handleLogout} title="Logout"
-            className="p-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg transition-all flex-shrink-0">
+          <button onClick={handleLogout}
+            className="p-2 bg-white border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 rounded-lg transition-all flex-shrink-0"
+            aria-label="Logout">
             <LogOut className="w-4 h-4" />
           </button>
 
