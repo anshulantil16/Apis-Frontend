@@ -286,13 +286,18 @@ export default function PMSPage() {
 
             {/* Left Side - Visual */}
             <div className="hidden lg:block space-y-6">
-              <div className="space-y-2">
-                <h1 className="text-5xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                  Performance Simulator
-                </h1>
-                <p className="text-lg text-slate-600 font-bold">
-                  Advanced Salary & Grading Engine
-                </p>
+              <div className="flex items-start gap-4">
+                <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-xl shadow-indigo-200 flex-shrink-0">
+                  <img src="/logo.png" alt="APIS" className="w-12 h-12 object-contain drop-shadow-sm" />
+                </div>
+                <div className="space-y-2">
+                  <h1 className="text-4xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                    Performance Simulator
+                  </h1>
+                  <p className="text-lg text-slate-600 font-bold">
+                    Advanced Salary & Grading Engine
+                  </p>
+                </div>
               </div>
 
               {/* Feature Cards */}
