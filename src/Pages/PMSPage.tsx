@@ -603,7 +603,7 @@ export default function PMSPage() {
                   </div>
 
                   {isExp && (
-                    <div className={`border-t-2 ${cfg.light} bg-gradient-to-br from-slate-50 to-white p-5 grid grid-cols-3 gap-5`}>
+                    <div key={`${emp.id}-${emp.management_score}`} className={`border-t-2 ${cfg.light} bg-gradient-to-br from-slate-50 to-white p-5 grid grid-cols-3 gap-5`}>
                       {/* Score breakdown */}
                       <div className="space-y-3">
                         <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-indigo-400"/>Score Breakdown</p>
@@ -650,10 +650,20 @@ export default function PMSPage() {
                         </div>
                         <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Management Score Override</label>
-                          <input type="number" min="0" max="100" defaultValue={emp.management_score??''}
-                            onBlur={e => update(emp.id, { management_score: e.target.value ? parseInt(e.target.value) : null })}
-                            placeholder="0–100"
-                            className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400"/>
+                          <div className="flex gap-2 items-center">
+                            <input type="number" min="0" max="100" defaultValue={emp.management_score??''}
+                              id={`mgmt-${emp.id}`}
+                              placeholder="0–100"
+                              className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400"/>
+                            <button onClick={() => {
+                              const inp = document.getElementById(`mgmt-${emp.id}`) as HTMLInputElement;
+                              const val = inp?.value ? parseInt(inp.value) : null;
+                              update(emp.id, { management_score: val });
+                            }}
+                              className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all">
+                              ✓ Save
+                            </button>
+                          </div>
                         </div>
                         <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Promotion Readiness</label>
