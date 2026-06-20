@@ -267,91 +267,78 @@ export default function PMSPage() {
 
   if (!loggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4 overflow-hidden">
-        {/* Animated floating shapes */}
-        <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-to-br from-indigo-200/40 to-blue-200/40 rounded-full blur-2xl animate-bounce" style={{ animationDuration: '3s' }} />
-        <div className="absolute bottom-20 right-20 w-40 h-40 bg-gradient-to-br from-violet-200/40 to-indigo-200/40 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/3 right-10 w-28 h-28 bg-gradient-to-br from-blue-300/30 to-cyan-300/30 rounded-full blur-2xl" style={{ animation: 'float 6s ease-in-out infinite' }} />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-100 flex items-center justify-center p-6">
+        {/* Subtle background shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-200/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-violet-200/10 rounded-full blur-3xl" />
 
-        <style>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-          }
-        `}</style>
+        <div className="relative z-10 w-full max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
 
-        <div className="relative z-10 w-full max-w-2xl">
-          {/* Main Container */}
-          <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-8 items-center">
-
-            {/* Left Side - Visual */}
-            <div className="hidden lg:block space-y-8">
-              <div className="flex flex-col items-center justify-center">
-                <div className="w-32 h-32 flex items-center justify-center mb-8">
-                  <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-lg" />
-                </div>
-                <div className="text-center space-y-3">
-                  <h1 className="text-5xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                    Performance Simulator
-                  </h1>
-                  <p className="text-xl text-slate-700 font-bold">
-                    Advanced Salary & Grading Engine
-                  </p>
+            {/* Left Side - Logo and Title */}
+            <div className="lg:col-span-1 text-center lg:text-left space-y-6">
+              <div className="flex lg:block justify-center">
+                <div className="w-24 h-24 lg:w-28 lg:h-28">
+                  <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-md" />
                 </div>
               </div>
-
+              <div className="space-y-3">
+                <h1 className="text-4xl lg:text-5xl font-black text-slate-900">
+                  Performance Simulator
+                </h1>
+                <p className="text-base lg:text-lg text-slate-600 font-semibold">
+                  Advanced Salary & Grading Engine
+                </p>
+              </div>
             </div>
 
-            {/* Right Side - Login */}
-            <div className="w-full max-w-md mx-auto lg:order-2">
-              <div className="bg-white rounded-3xl border-2 border-indigo-100 shadow-2xl overflow-hidden">
+            {/* Right Side - Login Card */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
 
-                {/* Header - Minimal Clean */}
-                <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-8 py-16 text-white text-center">
-                  <h2 className="text-4xl font-black mb-2">PMS Simulator</h2>
-                  <p className="text-white/90 text-sm font-semibold">Advanced Performance Analytics</p>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-8 py-8 text-white">
+                  <h2 className="text-3xl font-black">Welcome</h2>
+                  <p className="text-indigo-100 text-sm mt-1">Admin Access Portal</p>
                 </div>
 
                 {/* Content */}
                 <div className="px-8 py-10">
                   {loginStep === 'email' ? (
-                    <div className="space-y-6 animate-fadeIn">
+                    <div className="space-y-5 animate-fadeIn">
                       <div>
-                        <label className="block text-slate-800 text-sm font-black mb-3">Email Address</label>
+                        <label className="block text-slate-700 text-sm font-bold mb-2">Email</label>
                         <input
                           type="email"
-                          placeholder="Enter your email"
+                          placeholder="your@email.com"
                           value={adminEmail}
                           onChange={e => setAdminEmail(e.target.value)}
                           onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
                           disabled={otpLoading}
-                          className="w-full px-5 py-3 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-semibold disabled:opacity-60 text-base"
+                          className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all disabled:opacity-60"
                         />
                       </div>
                       <button
                         onClick={handleEmailSubmit}
                         disabled={otpLoading}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-black rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait"
+                        className="w-full px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
                       >
                         {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                        {otpLoading ? 'Sending OTP...' : 'Continue'}
+                        {otpLoading ? 'Sending...' : 'Continue'}
                       </button>
-                      <p className="text-center text-xs text-slate-500 font-medium">
-                        Enter your admin email to proceed
-                      </p>
 
                       {msg && (
-                        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'}`}>
+                        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm animate-slideDown ${msg.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
                           {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-                          <p className="text-xs font-bold">{msg.text}</p>
+                          <p className="font-medium">{msg.text}</p>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="space-y-6 animate-fadeIn">
+                    <div className="space-y-5 animate-fadeIn">
                       <div className="text-center space-y-2">
-                        <p className="text-slate-800 text-sm font-black">Verification Code</p>
-                        <p className="text-slate-500 text-xs">Check your email for the 4-digit code</p>
+                        <p className="text-slate-700 font-bold">Enter OTP</p>
+                        <p className="text-slate-500 text-sm">We sent a 4-digit code to your email</p>
                       </div>
                       <input
                         type="text"
@@ -361,28 +348,28 @@ export default function PMSPage() {
                         onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
                         disabled={otpLoading}
                         maxLength={4}
-                        className="w-full px-5 py-3 h-14 text-center text-3xl font-black border-2 border-indigo-300 rounded-xl text-indigo-600 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
+                        className="w-full px-4 py-3 h-12 text-center text-2xl font-black border border-indigo-300 rounded-lg text-indigo-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
                       />
                       <button
                         onClick={handleOtpSubmit}
                         disabled={otpLoading || otp.length !== 4}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-black rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
                       >
                         {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                        {otpLoading ? 'Verifying...' : 'Verify & Enter'}
+                        {otpLoading ? 'Verifying...' : 'Verify'}
                       </button>
                       <button
                         onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
                         disabled={otpLoading}
-                        className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-bold text-xs transition-colors bg-indigo-50 hover:bg-indigo-100 rounded-lg disabled:opacity-60"
+                        className="w-full px-6 py-2 text-indigo-600 hover:text-indigo-700 font-semibold text-sm transition-colors disabled:opacity-60"
                       >
-                        ← Try Another Email
+                        ← Back to Email
                       </button>
 
                       {msg && (
-                        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'}`}>
+                        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm animate-slideDown ${msg.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
                           {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-                          <p className="text-xs font-bold">{msg.text}</p>
+                          <p className="font-medium">{msg.text}</p>
                         </div>
                       )}
                     </div>
@@ -390,16 +377,9 @@ export default function PMSPage() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 py-4 bg-gradient-to-r from-indigo-50 to-violet-50 border-t-2 border-indigo-100 text-center">
-                  <p className="text-slate-600 text-xs font-semibold">
-                    🔒 Secure Admin Portal • Authorized Access Only
-                  </p>
+                <div className="px-8 py-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500 font-medium">
+                  🔒 Secure Admin Portal
                 </div>
-              </div>
-
-              {/* Bottom Stats */}
-              <div className="mt-6 text-center text-slate-600 text-xs font-semibold">
-                <p>⚡ Powering Real-time Performance Management</p>
               </div>
             </div>
           </div>
