@@ -315,11 +315,11 @@ export default function PMSPage() {
             </div>
 
             {/* Right Side - Login */}
-            <div className="w-full max-w-sm mx-auto h-fit">
-              <div className="bg-white rounded-2xl border-2 border-indigo-100 shadow-xl overflow-hidden">
+            <div className="w-full max-w-sm mx-auto">
+              <div className="bg-white rounded-2xl border-2 border-indigo-100 shadow-xl overflow-hidden flex flex-col h-96">
 
                 {/* Header */}
-                <div className="relative bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 px-8 py-10 text-white text-center">
+                <div className="relative bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 px-8 py-10 text-white text-center flex-shrink-0">
                   <div className="absolute top-3 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center animate-spin" style={{ animationDuration: '3s' }}>
                     <Sparkles className="w-5 h-5" />
                   </div>
@@ -327,8 +327,8 @@ export default function PMSPage() {
                   <p className="text-white/90 text-sm">Admin Access Portal</p>
                 </div>
 
-                {/* Content */}
-                <div className="px-8 py-8">
+                {/* Content - Scrollable */}
+                <div className="px-8 py-8 overflow-y-auto flex-1">
                   {loginStep === 'email' ? (
                     <div className="space-y-5 animate-fadeIn">
                       <div>
