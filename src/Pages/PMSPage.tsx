@@ -183,22 +183,51 @@ export default function PMSPage() {
     setMsg({ text: 'All data cleared.', ok: true });
   };
 
-  const handleEmailSubmit = () => {
+  const handleEmailSubmit = async () => {
     if (!adminEmail.includes('@')) {
       setMsg({ text: 'Please enter a valid email', ok: false });
       return;
     }
-    // Accept any email for now (OTP system to be implemented)
-    setLoginStep('otp');
-    setMsg({ text: '✓ Demo Mode: Enter any 4 digits to proceed', ok: true });
+    try {
+      const res = await fetch(`${PMS}/login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_otp', email: adminEmail }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLoginStep('otp');
+        setMsg({ text: data.message || 'OTP sent to your email', ok: true });
+      } else {
+        setMsg({ text: data.note || data.error || 'Failed to send OTP', ok: false });
+        if (data.note) setLoginStep('otp'); // Allow demo mode
+      }
+    } catch (e) {
+      setMsg({ text: 'Network error. Demo mode: enter 1234', ok: false });
+      setLoginStep('otp');
+    }
   };
 
-  const handleOtpSubmit = () => {
-    if (otp.length === 4 && /^\d+$/.test(otp)) {
-      setLoggedIn(true);
-      setMsg(null);
-    } else {
+  const handleOtpSubmit = async () => {
+    if (otp.length !== 4 || !/^\d+$/.test(otp)) {
       setMsg({ text: 'Please enter a valid 4-digit OTP', ok: false });
+      return;
+    }
+    try {
+      const res = await fetch(`${PMS}/login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify_otp', email: adminEmail, otp }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLoggedIn(true);
+        setMsg(null);
+      } else {
+        setMsg({ text: data.error || 'Invalid OTP', ok: false });
+      }
+    } catch (e) {
+      setMsg({ text: 'Verification failed. Try again.', ok: false });
     }
   };
 
