@@ -175,24 +175,34 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
   };
 
   const handleReopenForm = async (gcId: number) => {
+    if (!gcId) {
+      alert('❌ Error: Invalid form ID');
+      return;
+    }
+
     const reason = prompt('Why are you reopening this form?\n(This will be logged in the approval history)', 'Employee requested correction of submitted data');
     if (!reason) return;
 
     try {
-      const res = await fetch(`${apiBase}/goal-cards/${gcId}/reopen/`, {
+      const url = `${apiBase}/goal-cards/${gcId}/reopen/`;
+      console.log('Reopening form at:', url);
+
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason, hr_name: hrUser.name }),
       });
+
       const data = await res.json();
       if (res.ok) {
         alert(`✅ Form reopened! ${data.message}`);
         window.location.reload();
       } else {
-        alert(`❌ Failed to reopen: ${data.error}`);
+        alert(`❌ Failed to reopen: ${data.error || 'Unknown error'}`);
       }
     } catch (e) {
-      alert('❌ Failed to connect to server');
+      console.error('Reopen error:', e);
+      alert(`❌ Failed to connect to server: ${(e as Error).message}`);
     }
   };
 
