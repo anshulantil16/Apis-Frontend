@@ -150,26 +150,7 @@ export function EOMHrView({ hrUser }: Props) {
   };
 
   const downloadTemplate = () => {
-    const headers = [
-      'Employee ID', 'Name', 'Email', 'Designation', 'Department',
-      'Zone/Location', 'HOD ID',
-    ];
-    const notes = [
-      '# --- INSTRUCTIONS ---',
-      '# Employee ID   : Unique code (e.g. EMP001)',
-      '# Name          : Full name',
-      '# Email         : For OTP login',
-      '# Designation   : Job title',
-      '# Department    : Team/Department',
-      '# Zone/Location : Region or location',
-      '# HOD ID        : Employee ID of HOD. Leave blank if no HOD.',
-      '#',
-      '# --- NOTES ---',
-      '# All employees imported with default role.',
-      '# Admin assigns HOD and Panel members via Manage Employees UI (per quarter).',
-      '#',
-      '# --- SAMPLE DATA (delete before importing) ---',
-    ];
+    const headers = ['Employee ID', 'Name', 'Email', 'Designation', 'Department', 'Zone/Location', 'HOD ID'];
     const sample = [
       ['EMP001', 'Rahul Sharma', 'rahul@company.com', 'Sales Executive', 'Sales', 'North Zone', 'HOD001'],
       ['EMP002', 'Priya Singh', 'priya@company.com', 'Sr Executive', 'Sales', 'South Zone', 'HOD001'],
@@ -178,16 +159,11 @@ export function EOMHrView({ hrUser }: Props) {
       ['HOD001', 'Ravi Kumar', 'ravi@company.com', 'Zonal Head', 'Sales', 'North Zone', ''],
       ['HOD002', 'Meena Joshi', 'meena@company.com', 'Head of Dept', 'Operations', 'HO', ''],
     ];
-
-    const noteLines = notes;
-    const dataLines = [headers.join(','), ...sample.map(r => r.map(v => `"${v}"`).join(','))];
-    const csv = [...noteLines, ...dataLines].join('\n');
+    const csv = [headers.join(','), ...sample.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = 'EOM_Employee_Master_Template.csv';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'EOM_Employee_Master_Template.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 
   const handleCreateCycle = async () => {
