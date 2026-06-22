@@ -154,19 +154,26 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
             </>
           )}
           {HUB_MODE && <div className="pt-4" />}
-          <p className="px-2.5 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Performance</p>
-          {onNavigateToPerformance && (
-          <button onClick={onNavigateToPerformance}
-            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
-            <div className="flex items-center gap-2.5">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <div>
-                <p>Performance Hub</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-violet-700">Goals &amp; Reviews</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-          </button>
+          {!HUB_MODE && (
+            <>
+              <p className="px-2.5 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Performance</p>
+              {onNavigateToPerformance && (
+              <button onClick={onNavigateToPerformance}
+                className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
+                <div className="flex items-center gap-2.5">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <div>
+                    <p>Performance Hub</p>
+                    <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-violet-700">Goals &amp; Reviews</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
+              </button>
+              )}
+            </>
+          )}
+          {HUB_MODE && (
+            <p className="px-2.5 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Hubs</p>
           )}
           <button onClick={onNavigateToAppraisal}
             className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-blue-500/10 hover:text-blue-400 transition-all group">
@@ -190,6 +197,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
           </button>
+          {!HUB_MODE && (
           <button onClick={onNavigateToPMS}
             className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
             <div className="flex items-center gap-2.5">
@@ -201,6 +209,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
           </button>
+          )}
         </nav>
 
         {/* Bottom */}
