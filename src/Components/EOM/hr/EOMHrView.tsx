@@ -441,6 +441,37 @@ export function EOMHrView({ hrUser }: Props) {
         {/* Manage Employees */}
         {tab === 'employees' && (
           <div className="space-y-4">
+            {/* Panel Members Selection for Current Cycle */}
+            {selectedCycle && (
+              <div className="bg-white rounded-2xl border border-blue-200 shadow-sm p-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0">
+                    <span className="text-blue-700 font-black text-sm">👥</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-black text-slate-800">Panel Members for {selectedCycle.name}</h3>
+                    <p className="text-sm text-slate-400 mt-0.5">Select 3 employees to review all nominations for this cycle.</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[1, 2, 3].map(num => (
+                    <div key={num}>
+                      <label className="text-xs font-bold text-slate-500 block mb-2">Panel Member {num}</label>
+                      <select className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400 bg-white">
+                        <option value="">-- Select Employee --</option>
+                        {employees.map(e => (
+                          <option key={e.employee_id} value={e.employee_id}>{e.name} ({e.employee_id})</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <button className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg transition-all">
+                  ✓ Save Panel Members
+                </button>
+              </div>
+            )}
+
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -493,7 +524,7 @@ export function EOMHrView({ hrUser }: Props) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 text-left">
-                      {['Code','Name','Email','Designation','Department','Zone','HOD Code','Role','Actions'].map(h => (
+                      {['Code','Name','Email','Designation','Department','Zone','HOD Code','Actions'].map(h => (
                         <th key={h} className="px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -536,7 +567,6 @@ export function EOMHrView({ hrUser }: Props) {
                             <td className="px-3 py-2 text-slate-500 text-xs">{emp.department}</td>
                             <td className="px-3 py-2 text-slate-500 text-xs">{emp.zone}</td>
                             <td className="px-3 py-2 font-mono text-xs text-slate-400">{emp.hod_id}</td>
-                            <td className="px-3 py-2"><span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold">{emp.user_type}</span></td>
                             <td className="px-3 py-2 flex gap-1">
                               <button onClick={() => setEditingEmp({...emp})}
                                 className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded hover:bg-blue-100">Edit</button>
