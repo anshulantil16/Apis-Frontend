@@ -179,7 +179,7 @@ export function EOMHrView({ hrUser }: Props) {
       ['HOD002', 'Meena Joshi', 'meena@company.com', 'Head of Dept', 'Operations', 'HO', ''],
     ];
 
-    const noteLines = notes.map(n => `# ${n}`);
+    const noteLines = notes;
     const dataLines = [headers.join(','), ...sample.map(r => r.map(v => `"${v}"`).join(','))];
     const csv = [...noteLines, ...dataLines].join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
