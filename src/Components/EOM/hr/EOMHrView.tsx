@@ -152,7 +152,7 @@ export function EOMHrView({ hrUser }: Props) {
   const downloadTemplate = () => {
     const headers = [
       'Employee ID', 'Name', 'Email', 'Designation', 'Department',
-      'Zone / Location', 'HOD ID', 'User Type',
+      'Zone / Location', 'HOD ID',
     ];
     const notes = [
       '--- INSTRUCTIONS ---',
@@ -162,29 +162,23 @@ export function EOMHrView({ hrUser }: Props) {
       'Designation     : Job title',
       'Department      : Department or team',
       'Zone / Location : Zone, region or HO',
-      'HOD ID          : Employee ID of the HOD who reviews this person. Leave blank for HODs / Panel / HR.',
-      'User Type       : Primary role — employee | hod | panel | hr',
+      'HOD ID          : Employee ID of the HOD who reviews this person. Leave blank if no HOD.',
       '',
-      '--- USER TYPE VALUES ---',
-      'employee   : Can fill the EOM form. If someone lists them as HOD ID, they also get HOD access.',
-      'hod        : Pure HOD — cannot fill form, only reviews HOD section. Set for those who only review.',
-      'panel      : Pure Panel — cannot fill form, only reviews Panel sections. Set for pure panel members.',
-      'hod+panel  : Can review both HOD and Panel sections. Cannot fill form.',
-      'hr         : HR Admin — manages cycles, views all data, finalizes winners.',
+      '--- NOTES ---',
+      'All employees imported as "employee" type by default.',
+      'Admin assigns HOD, Panel, and HR roles via "Manage Employees" after import.',
+      'Panel members are assigned per quarter via UI (no need to update master data each time).',
       '',
       '--- SAMPLE DATA (delete these rows before importing) ---',
     ];
     const sample = [
-      ['EMP001',  'Rahul Sharma',  'rahul@company.com',  'Sales Executive',       'Sales',      'North Zone', 'HOD001',  'employee'],
-      ['EMP002',  'Priya Singh',   'priya@company.com',  'Sr. Executive',         'Sales',      'South Zone', 'HOD001',  'employee'],
-      ['EMP003',  'Amit Verma',    'amit@company.com',   'Area Manager',          'Operations', 'East Zone',  'HOD002',  'employee'],
-      ['EMP004',  'Neha Gupta',    'neha@company.com',   'Executive',             'HR',         'HO',         'HOD002',  'employee'],
-      ['HOD001',  'Ravi Kumar',    'ravi@company.com',   'Zonal Head',            'Sales',      'North Zone', '',        'hod'],
-      ['HOD002',  'Meena Joshi',   'meena@company.com',  'Head of Department',    'Operations', 'HO',         '',        'hod'],
-      ['PANEL01', 'Arun Gupta',    'arun@company.com',   'Director – Sales',      'Sales',      'HO',         '',        'panel'],
-      ['PANEL02', 'Sunita Rao',    'sunita@company.com', 'Director – HR',         'HR',         'HO',         '',        'panel'],
-      ['PANEL03', 'Vikram Nair',   'vikram@company.com', 'Director – Operations', 'Operations', 'HO',         '',        'hod+panel'],
-      ['HR001',   'Sneha Patel',   'sneha@company.com',  'HR Manager',            'HR',         'HO',         '',        'hr'],
+      ['EMP001',  'Rahul Sharma',  'rahul@company.com',  'Sales Executive',       'Sales',      'North Zone', 'HOD001'],
+      ['EMP002',  'Priya Singh',   'priya@company.com',  'Sr. Executive',         'Sales',      'South Zone', 'HOD001'],
+      ['EMP003',  'Amit Verma',    'amit@company.com',   'Area Manager',          'Operations', 'East Zone',  'HOD002'],
+      ['EMP004',  'Neha Gupta',    'neha@company.com',   'Executive',             'HR',         'HO',         'HOD002'],
+      ['HOD001',  'Ravi Kumar',    'ravi@company.com',   'Zonal Head',            'Sales',      'North Zone', ''],
+      ['HOD002',  'Meena Joshi',   'meena@company.com',  'Head of Department',    'Operations', 'HO',         ''],
+      ['HR001',   'Sneha Patel',   'sneha@company.com',  'HR Manager',            'HR',         'HO',         ''],
     ];
 
     const noteLines = notes.map(n => `# ${n}`);
