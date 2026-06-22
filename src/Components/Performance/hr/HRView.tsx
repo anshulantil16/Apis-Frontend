@@ -174,6 +174,28 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
     finally { setResetting(false); }
   };
 
+  const handleReopenForm = async (gcId: number) => {
+    const reason = prompt('Why are you reopening this form?\n(This will be logged in the approval history)', 'Employee requested correction of submitted data');
+    if (!reason) return;
+
+    try {
+      const res = await fetch(`${apiBase}/goal-cards/${gcId}/reopen/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, hr_name: hrUser.name }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`✅ Form reopened! ${data.message}`);
+        window.location.reload();
+      } else {
+        alert(`❌ Failed to reopen: ${data.error}`);
+      }
+    } catch (e) {
+      alert('❌ Failed to connect to server');
+    }
+  };
+
   const TABS = [
     { id: 'overview'    as const, label: 'Overview',         icon: BarChart3 },
     { id: 'import'      as const, label: 'Import Data',      icon: Upload },
@@ -655,6 +677,13 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                           <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${statusCfg[gc.status] || statusCfg.draft}`}>
                             {gc.status.replace(/_/g, ' ')}
                           </span>
+                        )}
+                        {['submitted', 'manager_rejected'].includes(gc?.status) && (
+                          <button
+                            onClick={e => { e.stopPropagation(); handleReopenForm(gc?.id); }}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold transition-all shadow-sm">
+                            <Unlock className="w-3 h-3" /> Reopen
+                          </button>
                         )}
                         {canDownload && (
                           <button
