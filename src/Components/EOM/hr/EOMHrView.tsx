@@ -72,6 +72,9 @@ export function EOMHrView({ hrUser }: Props) {
   const [showAddEmp,    setShowAddEmp]    = useState(false);
   const [newEmp,        setNewEmp]        = useState({ employee_id:'', name:'', email:'', designation:'', department:'', zone:'', hod_id:'', user_type:'employee', is_panel_member: false, is_hr: false });
   const [statusFilter,  setStatusFilter]  = useState<string>('all');
+  const [panelMembers,  setPanelMembers]  = useState<string[]>(['', '', '']);
+  const [panelSaving,   setPanelSaving]   = useState(false);
+  const [panelMsg,      setPanelMsg]      = useState('');
 
   useEffect(() => {
     fetch(`${EOM_API}/cycles/`)
@@ -108,6 +111,34 @@ export function EOMHrView({ hrUser }: Props) {
     });
     setNewEmp({ employee_id:'', name:'', email:'', designation:'', department:'', zone:'', hod_id:'', user_type:'employee', is_panel_member: false, is_hr: false });
     setShowAddEmp(false); setEmpSaving(false); fetchEmployees();
+  };
+
+  const handleSavePanelMembers = async () => {
+    if (!selectedCycle || panelMembers.every(m => !m)) {
+      setPanelMsg('❌ Please select at least one panel member');
+      setTimeout(() => setPanelMsg(''), 4000);
+      return;
+    }
+
+    setPanelSaving(true);
+    setPanelMsg('');
+    try {
+      const res = await fetch(`${EOM_API}/cycles/${selectedCycle.id}/panel-members/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ panel_members: panelMembers.filter(m => m) }),
+      });
+      if (res.ok) {
+        setPanelMsg('✅ Panel members saved successfully!');
+        setTimeout(() => setPanelMsg(''), 4000);
+      } else {
+        setPanelMsg('❌ Failed to save panel members');
+      }
+    } catch (e) {
+      setPanelMsg('❌ Error saving panel members');
+    } finally {
+      setPanelSaving(false);
+    }
   };
 
   const fetchCycleData = (cycle: any, silent = false) => {
@@ -450,14 +481,21 @@ export function EOMHrView({ hrUser }: Props) {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-black text-slate-800">Panel Members for {selectedCycle.name}</h3>
-                    <p className="text-sm text-slate-400 mt-0.5">Select 3 employees to review all nominations for this cycle.</p>
+                    <p className="text-sm text-slate-400 mt-0.5">Select up to 3 employees to review all nominations for this cycle.</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[1, 2, 3].map(num => (
-                    <div key={num}>
-                      <label className="text-xs font-bold text-slate-500 block mb-2">Panel Member {num}</label>
-                      <select className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400 bg-white">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  {[0, 1, 2].map(idx => (
+                    <div key={idx}>
+                      <label className="text-xs font-bold text-slate-500 block mb-2">Panel Member {idx + 1}</label>
+                      <select
+                        value={panelMembers[idx] || ''}
+                        onChange={e => {
+                          const newPanel = [...panelMembers];
+                          newPanel[idx] = e.target.value;
+                          setPanelMembers(newPanel);
+                        }}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400 bg-white">
                         <option value="">-- Select Employee --</option>
                         {employees.map(e => (
                           <option key={e.employee_id} value={e.employee_id}>{e.name} ({e.employee_id})</option>
@@ -466,9 +504,26 @@ export function EOMHrView({ hrUser }: Props) {
                     </div>
                   ))}
                 </div>
-                <button className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg transition-all">
-                  ✓ Save Panel Members
-                </button>
+                {panelMsg && (
+                  <div className={`mb-4 p-3 rounded-lg border text-sm font-semibold ${
+                    panelMsg.includes('✅')
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : 'bg-rose-50 border-rose-200 text-rose-700'
+                  }`}>
+                    {panelMsg}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSavePanelMembers}
+                    disabled={panelSaving}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm rounded-lg transition-all">
+                    {panelSaving ? 'Saving...' : '✓ Save Panel Members'}
+                  </button>
+                  <span className="text-xs text-slate-400 py-2">
+                    {panelMembers.filter(m => m).length} member{panelMembers.filter(m => m).length !== 1 ? 's' : ''} selected
+                  </span>
+                </div>
               </div>
             )}
 
