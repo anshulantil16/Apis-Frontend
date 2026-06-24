@@ -783,12 +783,6 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                   className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all">
                   🔄 Refresh
                 </button>
-                {SCORECARD_STATUSES.includes(goalCard.status) && (
-                  <button onClick={handleDownloadScorecard}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 border border-blue-600 text-white text-[11px] font-bold transition-all shadow-sm shadow-blue-200">
-                    <Download className="w-3.5 h-3.5" /> Download Scorecard
-                  </button>
-                )}
               </div>
             )}
           </div>
