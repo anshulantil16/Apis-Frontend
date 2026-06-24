@@ -710,7 +710,7 @@ export function AppraisalHODView({ hod }: { hod: any }) {
   const fetchTeam = () => {
     if (!selectedCycle) return;
     setLoading(true);
-    fetch(`${PERF_API}/hod/${hod.employee_id}/team/?cycle_id=${selectedCycle.id}`)
+    fetch(`${PERF_API}/hod/${hod.employee_id}/team/?cycle_id=${selectedCycle.id}&t=${Date.now()}`)
       .then(r => r.json())
       .then(data => {
         const cards = Array.isArray(data) ? data : (data.results || data.team || []);
