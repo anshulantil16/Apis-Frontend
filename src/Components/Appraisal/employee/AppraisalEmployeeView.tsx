@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
   Target, Star, CheckCircle, Clock, Plus, Trash2, Send,
-  AlertCircle, Award, Lock, Unlock, Download, ChevronDown,
+  AlertCircle, Award, Lock, Unlock, ChevronDown,
   ChevronRight, ArrowLeft, MessageSquare, BookOpen, X, ThumbsUp, Upload, FileText,
 } from 'lucide-react';
-import { downloadScorecard } from '../../../utils/downloadScorecard';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PERF_API = `${API_BASE}/api/appraisal`;
@@ -582,12 +581,6 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       s + (g.kpis || []).reduce((ks: number, k: any) => ks + Number(k.weightage || 0), 0), 0)
     * 100) / 100;
 
-  const SCORECARD_STATUSES = ['hod_approved', 'hr_approved', 'finalized'];
-
-  const handleDownloadScorecard = () => {
-    if (!goalCard) return;
-    downloadScorecard(goalCard, selectedCycle?.name);
-  };
 
   const saveDraftGoals = async (): Promise<any | null> => {
     if (!selectedCycle) return null;
