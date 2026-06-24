@@ -582,7 +582,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       s + (g.kpis || []).reduce((ks: number, k: any) => ks + Number(k.weightage || 0), 0), 0)
     * 100) / 100;
 
-  const SCORECARD_STATUSES = ['manager_approved', 'hod_approved', 'hr_approved', 'finalized'];
+  const SCORECARD_STATUSES = ['hod_approved', 'hr_approved', 'finalized'];
 
   const handleDownloadScorecard = () => {
     if (!goalCard) return;
