@@ -467,7 +467,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
   useEffect(() => {
     if (!selectedCycle) return;
-    fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`)
+    fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/?t=${Date.now()}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {
@@ -731,6 +731,20 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
     finally { setSaving(false); }
   };
 
+  const refreshData = () => {
+    if (!selectedCycle) return;
+    fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/?t=${Date.now()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setGoalCard(data);
+          setGoals(data.goals || []);
+          showMsg('Data refreshed', 'success');
+        }
+      })
+      .catch(() => showMsg('Failed to refresh', 'error'));
+  };
+
   const cycleStatus = selectedCycle?.status;
   const canEdit = cycleStatus === 'goal_setting' &&
     (!goalCard || goalCard.status === 'draft' || goalCard.status === 'manager_rejected');
@@ -765,6 +779,10 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
             {goalCard && (
               <div className="shrink-0 flex flex-col items-end gap-2">
                 <StatusBadge status={goalCard.status} />
+                <button onClick={refreshData}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all">
+                  🔄 Refresh
+                </button>
                 {SCORECARD_STATUSES.includes(goalCard.status) && (
                   <button onClick={handleDownloadScorecard}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 border border-blue-600 text-white text-[11px] font-bold transition-all shadow-sm shadow-blue-200">
