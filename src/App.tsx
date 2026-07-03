@@ -4,8 +4,9 @@ import { AppraisalPage } from './Pages/AppraisalPage';
 import { DataExtractorPage } from './Pages/DataExtractorPage';
 import { EOMPage } from './Pages/EOMPage';
 import PMSPage from './Pages/PMSPage';
+import { OfferLetterSimplePage } from './Pages/OfferLetterSimplePage';
 
-type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms';
+type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters';
 
 // 'appraisal' = appraisal only (legacy), 'hub' = appraisal + eom only, anything else = all
 const APP_MODE = import.meta.env.VITE_APP_MODE;
@@ -36,6 +37,7 @@ export default function App() {
           onNavigateToAppraisal={() => navigate('appraisal')}
           onNavigateToEOM={() => navigate('eom')}
           onNavigateToPMS={() => navigate('pms')}
+          onNavigateToOfferLetters={() => navigate('offer-letters')}
         />
       ) : view === 'performance' ? (
         <PerformancePage onNavigateBack={() => navigate('extractor')} />
@@ -50,6 +52,16 @@ export default function App() {
             </button>
           </div>
           <PMSPage />
+        </div>
+      ) : view === 'offer-letters' ? (
+        <div>
+          <div className="fixed top-3 left-3 z-50">
+            <button onClick={() => navigate('extractor')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 backdrop-blur border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all">
+              ← Back
+            </button>
+          </div>
+          <OfferLetterSimplePage />
         </div>
       ) : (
         <AppraisalPage onNavigateBack={() => navigate('extractor')} />
