@@ -8,8 +8,9 @@ import { ColumnPills } from '../Components/ColumnPills';
 import { PreviewTable } from '../Components/PreviewTable';
 import { AttendanceDashboard } from '../Components/AttendanceDashboard';
 import { DelhiAttendanceDashboard } from '../Components/DelhiAttendanceDashboard';
+import { TerritoryManagementDashboard } from '../Components/TerritoryManagementDashboard';
 
-type ToolId = 'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi';
+type ToolId = 'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi' | 'territory';
 
 interface DataExtractorPageProps {
   onNavigateToPerformance?: () => void;
@@ -24,19 +25,21 @@ const TOOLS: {
   accentBg: string; accentText: string; accentBorder: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { id: 'joining',    label: 'Joining Forms',    sub: null,          icon: Users,           accentBg: 'bg-amber-500/10',  accentText: 'text-amber-400',  accentBorder: 'border-amber-500'  },
-  { id: 'medical',    label: 'Medical Reports',   sub: null,          icon: HeartPulse,      accentBg: 'bg-rose-500/10',   accentText: 'text-rose-400',   accentBorder: 'border-rose-500'   },
-  { id: 'payroll',    label: 'Payroll Exports',   sub: null,          icon: FileSpreadsheet, accentBg: 'bg-sky-500/10',    accentText: 'text-sky-400',    accentBorder: 'border-sky-500'    },
-  { id: 'attendance', label: 'Field Attendance',  sub: 'BIZOM',       icon: LayoutDashboard, accentBg: 'bg-amber-500/10',  accentText: 'text-amber-400',  accentBorder: 'border-amber-500'  },
-  { id: 'delhi',      label: 'Delhi / HO',        sub: 'Pocket HRMS', icon: Building2,       accentBg: 'bg-violet-500/10', accentText: 'text-violet-400', accentBorder: 'border-violet-500' },
+  { id: 'joining',    label: 'Joining Forms',      sub: null,              icon: Users,           accentBg: 'bg-amber-500/10',  accentText: 'text-amber-400',  accentBorder: 'border-amber-500'  },
+  { id: 'medical',    label: 'Medical Reports',    sub: null,              icon: HeartPulse,      accentBg: 'bg-rose-500/10',   accentText: 'text-rose-400',   accentBorder: 'border-rose-500'   },
+  { id: 'payroll',    label: 'Payroll Exports',    sub: null,              icon: FileSpreadsheet, accentBg: 'bg-sky-500/10',    accentText: 'text-sky-400',    accentBorder: 'border-sky-500'    },
+  { id: 'attendance', label: 'Field Attendance',   sub: 'BIZOM',           icon: LayoutDashboard, accentBg: 'bg-amber-500/10',  accentText: 'text-amber-400',  accentBorder: 'border-amber-500'  },
+  { id: 'delhi',      label: 'Delhi / HO',         sub: 'Pocket HRMS',     icon: Building2,       accentBg: 'bg-violet-500/10', accentText: 'text-violet-400', accentBorder: 'border-violet-500' },
+  { id: 'territory',  label: 'Territory Mgmt',     sub: 'Sales Org Chart', icon: Users,           accentBg: 'bg-indigo-500/10', accentText: 'text-indigo-400', accentBorder: 'border-indigo-500' },
 ];
 
 const TOOL_META: Record<ToolId, { title: string; desc: string; bar: string; badge: string }> = {
-  joining:    { title: 'Joining Form Processor',     desc: 'Extract employee profiles from raw HR joining forms',                      bar: 'bg-amber-500',  badge: 'bg-amber-50  text-amber-700  border-amber-200'  },
-  medical:    { title: 'Medical Report Extractor',   desc: 'Parse batch medical examination responses',                                bar: 'bg-rose-500',   badge: 'bg-rose-50   text-rose-700   border-rose-200'   },
-  payroll:    { title: 'Payroll Data Manager',       desc: 'Filter and consolidate monthly payroll exports',                           bar: 'bg-sky-500',    badge: 'bg-sky-50    text-sky-700    border-sky-200'    },
-  attendance: { title: 'Field Attendance Dashboard', desc: 'BIZOM format · aggregate by zone, sub-zone, manager, or location',         bar: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' },
-  delhi:      { title: 'Delhi / HO Attendance',      desc: 'Pocket HRMS format · department, punch-time and leave analytics',          bar: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
+  joining:    { title: 'Joining Form Processor',       desc: 'Extract employee profiles from raw HR joining forms',                      bar: 'bg-amber-500',  badge: 'bg-amber-50  text-amber-700  border-amber-200'  },
+  medical:    { title: 'Medical Report Extractor',     desc: 'Parse batch medical examination responses',                                bar: 'bg-rose-500',   badge: 'bg-rose-50   text-rose-700   border-rose-200'   },
+  payroll:    { title: 'Payroll Data Manager',         desc: 'Filter and consolidate monthly payroll exports',                           bar: 'bg-sky-500',    badge: 'bg-sky-50    text-sky-700    border-sky-200'    },
+  attendance: { title: 'Field Attendance Dashboard',   desc: 'BIZOM format · aggregate by zone, sub-zone, manager, or location',         bar: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' },
+  delhi:      { title: 'Delhi / HO Attendance',        desc: 'Pocket HRMS format · department, punch-time and leave analytics',          bar: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
+  territory:  { title: 'Territory Management',         desc: 'Sales team org chart · zone, designation, RM, and state distribution',     bar: 'bg-indigo-500', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
 };
 
 const HUB_MODE = import.meta.env.VITE_APP_MODE === 'hub';
@@ -107,7 +110,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
   };
 
   const meta = TOOL_META[activeTool];
-  const isDashboard = activeTool === 'attendance' || activeTool === 'delhi';
+  const isDashboard = activeTool === 'attendance' || activeTool === 'delhi' || activeTool === 'territory';
 
   return (
     <div className="flex h-screen bg-[#f5f7fa] font-sans overflow-hidden">
@@ -357,6 +360,8 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                       </div>
                       {activeTool === 'delhi'
                         ? <DelhiAttendanceDashboard rawData={data} />
+                        : activeTool === 'territory'
+                        ? <TerritoryManagementDashboard rawData={data as any} />
                         : <AttendanceDashboard rawData={data} />
                       }
                     </div>

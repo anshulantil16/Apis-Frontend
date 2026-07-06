@@ -5,8 +5,9 @@ import { DataExtractorPage } from './Pages/DataExtractorPage';
 import { EOMPage } from './Pages/EOMPage';
 import PMSPage from './Pages/PMSPage';
 import { OfferLetterSimplePage } from './Pages/OfferLetterSimplePage';
+import OfferLetterApprovalDashboard from './Pages/OfferLetterApprovalDashboard';
 
-type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters';
+type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals';
 
 // 'appraisal' = appraisal only (legacy), 'hub' = appraisal + eom only, anything else = all
 const APP_MODE = import.meta.env.VITE_APP_MODE;
@@ -55,13 +56,27 @@ export default function App() {
         </div>
       ) : view === 'offer-letters' ? (
         <div>
-          <div className="fixed top-3 left-3 z-50">
+          <div className="fixed top-3 left-3 z-50 flex gap-2">
+            <button onClick={() => navigate('offer-approvals')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-green-600/80 backdrop-blur border border-green-700 text-white hover:bg-green-700 rounded-lg text-xs font-bold transition-all">
+              📊 Approvals
+            </button>
             <button onClick={() => navigate('extractor')}
               className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 backdrop-blur border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all">
               ← Back
             </button>
           </div>
           <OfferLetterSimplePage />
+        </div>
+      ) : view === 'offer-approvals' ? (
+        <div>
+          <div className="fixed top-3 left-3 z-50">
+            <button onClick={() => navigate('offer-letters')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 backdrop-blur border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all">
+              ← Back
+            </button>
+          </div>
+          <OfferLetterApprovalDashboard />
         </div>
       ) : (
         <AppraisalPage onNavigateBack={() => navigate('extractor')} />
