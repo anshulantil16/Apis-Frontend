@@ -52,6 +52,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
   const [data, setData] = useState<unknown[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
   const [activeTool, setActiveTool] = useState<ToolId>('joining');
+  const [territoryDashData, setTerritoryDashData] = useState<any>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const handleFileSelect = (f: File | null) => {
@@ -63,13 +64,28 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
     if (!file) return;
     setLoading(true); setError(null);
     abortRef.current = new AbortController();
-    const fd = new FormData(); fd.append('file', file); fd.append('tool', activeTool);
+    const fd = new FormData(); fd.append('file', file);
     const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
     try {
-      const res = await fetch(`${API}/api/user_management/upload-excel/`, { method: 'POST', body: fd, signal: abortRef.current.signal });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Failed to process file');
-      setHeaders(result.headers); setData(result.data); setSelectedColumns(new Set(result.headers));
+      // Territory tool uses its own upload endpoint
+      if (activeTool === 'territory') {
+        const res = await fetch(`${API}/api/territory/upload/`, { method: 'POST', body: fd, signal: abortRef.current.signal });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Failed to upload file');
+        // Fetch dashboard data after upload
+        const dashRes = await fetch(`${API}/api/territory/dashboard/`, { signal: abortRef.current.signal });
+        const dashData = await dashRes.json();
+        if (!dashRes.ok) throw new Error('Failed to fetch dashboard');
+        setTerritoryDashData(dashData);
+        setData([{ uploaded: true }]); // Mark as uploaded
+      } else {
+        fd.append('tool', activeTool);
+        const res = await fetch(`${API}/api/user_management/upload-excel/`, { method: 'POST', body: fd, signal: abortRef.current.signal });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Failed to process file');
+        setHeaders(result.headers); setData(result.data); setSelectedColumns(new Set(result.headers));
+      }
     } catch (err: unknown) {
       if ((err as { name?: string })?.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : String(err));
@@ -106,7 +122,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
   };
 
   const switchTool = (id: ToolId) => {
-    setActiveTool(id); setFile(null); setData([]); setHeaders([]); setSelectedColumns(new Set()); setError(null);
+    setActiveTool(id); setFile(null); setData([]); setHeaders([]); setSelectedColumns(new Set()); setError(null); setTerritoryDashData(null);
   };
 
   const meta = TOOL_META[activeTool];
@@ -323,7 +339,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => { setFile(null); setData([]); setHeaders([]); }}
+                          <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); }}
                             className="px-3.5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all border border-slate-200">
                             ← Re-upload
                           </button>
@@ -353,7 +369,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                           <span className="text-sm font-bold text-slate-700">{file?.name}</span>
                           <span className="text-xs text-slate-400">· {data.length} rows</span>
                         </div>
-                        <button onClick={() => { setFile(null); setData([]); setHeaders([]); }}
+                        <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); }}
                           className="px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-rose-200">
                           New Sheet
                         </button>
@@ -361,7 +377,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                       {activeTool === 'delhi'
                         ? <DelhiAttendanceDashboard rawData={data} />
                         : activeTool === 'territory'
-                        ? <TerritoryManagementDashboard rawData={data as any} />
+                        ? <TerritoryManagementDashboard rawData={territoryDashData} />
                         : <AttendanceDashboard rawData={data} />
                       }
                     </div>
