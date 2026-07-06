@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
 import {
-  Users, Briefcase, User, Search,
-  ChevronDown, ChevronUp, SlidersHorizontal, Map, Navigation,
+  Users, Briefcase, Search, ChevronDown, ChevronUp, SlidersHorizontal,
+  Map, Navigation, Download, TrendingUp, Activity,
 } from 'lucide-react';
 
 export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
@@ -18,9 +18,14 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
   // Validate data structure
   if (!rawData || !rawData.filter_options || !rawData.summary) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-gray-500">Waiting for data...</p>
-        <p className="text-xs text-gray-400 mt-2">rawData: {rawData ? JSON.stringify(rawData).substring(0, 100) : 'null'}</p>
+      <div className="p-12 text-center">
+        <div className="inline-block">
+          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+            <Users className="w-8 h-8 text-slate-400" />
+          </div>
+          <p className="text-lg font-bold text-slate-900">No Data</p>
+          <p className="text-sm text-slate-500 mt-2">Upload employee data to get started</p>
+        </div>
       </div>
     );
   }
@@ -74,79 +79,60 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
     return newSet;
   };
 
+  const toggleExpand = (key: string, type: string) => {
+    if (type === 'rm') setExpandedRM(p => ({ ...p, [key]: !p[key] }));
+    else if (type === 'zone') setExpandedZone(p => ({ ...p, [key]: !p[key] }));
+    else if (type === 'designation') setExpandedDesignation(p => ({ ...p, [key]: !p[key] }));
+  };
+
   return (
-    <div className="space-y-6 p-6 bg-white">
+    <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="space-y-2">
-        <h2 className="text-3xl font-bold text-gray-900">Territory Management</h2>
-        <p className="text-gray-600">Organizational structure · Sales team distribution · Zone and RM analytics</p>
+      <div className="space-y-1">
+        <h2 className="text-3xl font-black text-slate-900">Territory Management</h2>
+        <p className="text-sm text-slate-500">Sales organization structure · Regional distribution · Team analytics</p>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-700">Total Employees</p>
-              <p className="text-3xl font-bold text-blue-900 mt-2">{filtered.length}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Employees', value: filtered.length, icon: Users, border: 'border-t-2 border-blue-400', iconCls: 'bg-blue-50 text-blue-500' },
+          { label: 'Unique Designations', value: Object.keys(stats.designationCount).length, icon: Briefcase, border: 'border-t-2 border-purple-400', iconCls: 'bg-purple-50 text-purple-500' },
+          { label: 'Zones', value: Object.keys(stats.zoneCount).length, icon: Map, border: 'border-t-2 border-green-400', iconCls: 'bg-green-50 text-green-500' },
+          { label: 'Managers', value: Object.keys(stats.rmCount).length, icon: Navigation, border: 'border-t-2 border-orange-400', iconCls: 'bg-orange-50 text-orange-500' },
+        ].map(c => (
+          <div key={c.label} className={`bg-white rounded-2xl border border-slate-100 ${c.border} p-4 shadow-sm hover:shadow-md transition-all`}>
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${c.iconCls}`}>
+              <c.icon className="w-5 h-5" />
             </div>
-            <Users className="w-8 h-8 text-blue-500 opacity-50" />
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{c.label}</p>
+            <p className="text-3xl font-black text-slate-900 mt-1">{c.value}</p>
           </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-purple-700">Unique Designations</p>
-              <p className="text-3xl font-bold text-purple-900 mt-2">{Object.keys(stats.designationCount).length}</p>
-            </div>
-            <Briefcase className="w-8 h-8 text-purple-500 opacity-50" />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-700">Zones</p>
-              <p className="text-3xl font-bold text-green-900 mt-2">{Object.keys(stats.zoneCount).length}</p>
-            </div>
-            <Map className="w-8 h-8 text-green-500 opacity-50" />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-orange-700">Reporting Managers</p>
-              <p className="text-3xl font-bold text-orange-900 mt-2">{Object.keys(stats.rmCount).length}</p>
-            </div>
-            <Navigation className="w-8 h-8 text-orange-500 opacity-50" />
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Filters */}
-      <div className="bg-gray-50 rounded-lg p-4 space-y-4 border border-gray-200">
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
           <SlidersHorizontal className="w-4 h-4" />
           Multi-Select Filters
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Designation Filter */}
           <div>
-            <label className="text-xs font-semibold text-gray-600 uppercase">Designation</label>
-            <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">Designation</label>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {rawData.filter_options.designations.map(d => (
-                <label key={d} className="flex items-center gap-2 cursor-pointer">
+                <label key={d} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-50 rounded-lg transition-colors">
                   <input
                     type="checkbox"
                     checked={selectedDesignations.has(d)}
                     onChange={() => setSelectedDesignations(toggleFilter(selectedDesignations, d))}
-                    className="w-4 h-4 rounded"
+                    className="w-4 h-4 rounded accent-blue-500"
                   />
-                  <span className="text-sm text-gray-700">{d}</span>
-                  <span className="text-xs text-gray-400">({(rawData.breakdown.by_designation[d] || 0)})</span>
+                  <span className="text-sm text-slate-700 flex-1 truncate">{d}</span>
+                  <span className="text-xs text-slate-400 font-semibold">({rawData.breakdown.by_designation[d] || 0})</span>
                 </label>
               ))}
             </div>
@@ -154,18 +140,18 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
 
           {/* State Filter */}
           <div>
-            <label className="text-xs font-semibold text-gray-600 uppercase">State</label>
-            <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">State</label>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {rawData.filter_options.states.map(s => (
-                <label key={s} className="flex items-center gap-2 cursor-pointer">
+                <label key={s} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-50 rounded-lg transition-colors">
                   <input
                     type="checkbox"
                     checked={selectedStates.has(s)}
                     onChange={() => setSelectedStates(toggleFilter(selectedStates, s))}
-                    className="w-4 h-4 rounded"
+                    className="w-4 h-4 rounded accent-green-500"
                   />
-                  <span className="text-sm text-gray-700">{s}</span>
-                  <span className="text-xs text-gray-400">({(rawData.breakdown.by_state[s] || 0)})</span>
+                  <span className="text-sm text-slate-700 flex-1 truncate">{s}</span>
+                  <span className="text-xs text-slate-400 font-semibold">({rawData.breakdown.by_state[s] || 0})</span>
                 </label>
               ))}
             </div>
@@ -173,37 +159,37 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
 
           {/* Zone Filter */}
           <div>
-            <label className="text-xs font-semibold text-gray-600 uppercase">Zone</label>
-            <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">Zone</label>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {rawData.filter_options.zones.map(z => (
-                <label key={z} className="flex items-center gap-2 cursor-pointer">
+                <label key={z} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-50 rounded-lg transition-colors">
                   <input
                     type="checkbox"
                     checked={selectedZones.has(z)}
                     onChange={() => setSelectedZones(toggleFilter(selectedZones, z))}
-                    className="w-4 h-4 rounded"
+                    className="w-4 h-4 rounded accent-purple-500"
                   />
-                  <span className="text-sm text-gray-700">{z}</span>
-                  <span className="text-xs text-gray-400">({(rawData.breakdown.by_zone[z] || 0)})</span>
+                  <span className="text-sm text-slate-700 flex-1 truncate">{z}</span>
+                  <span className="text-xs text-slate-400 font-semibold">({rawData.breakdown.by_zone[z] || 0})</span>
                 </label>
               ))}
             </div>
           </div>
 
-          {/* RM Filter */}
+          {/* Manager Filter */}
           <div>
-            <label className="text-xs font-semibold text-gray-600 uppercase">Reporting Manager</label>
-            <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
-              {rawData.filter_options.rms.map(rm => (
-                <label key={rm} className="flex items-center gap-2 cursor-pointer">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">Manager</label>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {rawData.filter_options.rms.filter(rm => rm).map(rm => (
+                <label key={rm} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-50 rounded-lg transition-colors">
                   <input
                     type="checkbox"
                     checked={selectedRMs.has(rm)}
                     onChange={() => setSelectedRMs(toggleFilter(selectedRMs, rm))}
-                    className="w-4 h-4 rounded"
+                    className="w-4 h-4 rounded accent-orange-500"
                   />
-                  <span className="text-sm text-gray-700">{rm}</span>
-                  <span className="text-xs text-gray-400">({(rawData.breakdown.by_rm[rm] || 0)})</span>
+                  <span className="text-sm text-slate-700 flex-1 truncate">{rm}</span>
+                  <span className="text-xs text-slate-400 font-semibold">({rawData.breakdown.by_rm[rm] || 0})</span>
                 </label>
               ))}
             </div>
@@ -211,188 +197,140 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
         </div>
 
         {/* Search */}
-        <div className="flex items-center gap-2 bg-white border border-gray-300 rounded px-3 py-2">
-          <Search className="w-4 h-4 text-gray-400" />
+        <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+          <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
           <input
             type="text"
-            placeholder="Search by name, code, designation, RM..."
+            placeholder="Search by name, code, designation, manager..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 outline-none text-sm"
+            className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-800 placeholder-slate-400"
           />
         </div>
       </div>
 
-      {/* Analytics Sections */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* By Reporting Manager */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="bg-orange-50 px-4 py-3 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <User className="w-4 h-4 text-orange-600" />
-              Employees by Reporting Manager
-            </h3>
-          </div>
-          <div className="space-y-2 p-4">
-            {Object.entries(stats.rmCount)
-              .sort((a, b) => b[1] - a[1])
-              .map(([rm, count]) => (
-                <div
-                  key={rm}
-                  onClick={() => setExpandedRM({ ...expandedRM, [rm]: !expandedRM[rm] })}
-                  className="cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-100"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm text-gray-900">{rm}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-1 rounded">
-                        {count} employees
-                      </span>
-                      {expandedRM[rm] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </div>
-                  </div>
-                  {expandedRM[rm] && (
-                    <div className="mt-2 text-xs text-gray-600 space-y-1">
-                      {filtered
-                        .filter(r => r.rm === rm)
-                        .map(r => (
-                          <div key={r.id} className="flex justify-between">
-                            <span>{r.name}</span>
-                            <span className="text-gray-400">{r.designation}</span>
-                          </div>
-                        ))}
-                    </div>
-                  )}
+      {/* Breakdown Sections */}
+      <div className="space-y-3">
+        {/* By Manager */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <button
+            onClick={() => toggleExpand('rm', 'rm')}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors border-b border-slate-50"
+          >
+            <div className="flex items-center gap-3">
+              <Navigation className="w-4 h-4 text-orange-500" />
+              <div className="text-left">
+                <p className="text-sm font-bold text-slate-800">By Manager</p>
+                <p className="text-xs text-slate-400 mt-0.5">{Object.keys(stats.rmCount).length} reporting managers</p>
+              </div>
+            </div>
+            {expandedRM.rm ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+          {expandedRM.rm && (
+            <div className="px-6 py-4 space-y-2">
+              {Object.entries(stats.rmCount).map(([rm, count]) => (
+                <div key={rm} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-sm font-semibold text-slate-700">{rm || '(Unassigned)'}</span>
+                  <span className="px-3 py-1 bg-orange-50 text-orange-700 text-xs font-bold rounded-full border border-orange-200">{count}</span>
                 </div>
               ))}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* By Zone */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="bg-green-50 px-4 py-3 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Map className="w-4 h-4 text-green-600" />
-              Employees by Zone
-            </h3>
-          </div>
-          <div className="space-y-2 p-4">
-            {Object.entries(stats.zoneCount)
-              .sort((a, b) => b[1] - a[1])
-              .map(([zone, count]) => (
-                <div
-                  key={zone}
-                  onClick={() => setExpandedZone({ ...expandedZone, [zone]: !expandedZone[zone] })}
-                  className="cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-100"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm text-gray-900">{zone}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">
-                        {count} employees
-                      </span>
-                      {expandedZone[zone] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </div>
-                  </div>
-                  {expandedZone[zone] && (
-                    <div className="mt-2 text-xs text-gray-600 space-y-1">
-                      {filtered
-                        .filter(r => r.zone === zone)
-                        .map(r => (
-                          <div key={r.id} className="flex justify-between">
-                            <span>{r.name}</span>
-                            <span className="text-gray-400">{r.state}</span>
-                          </div>
-                        ))}
-                    </div>
-                  )}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <button
+            onClick={() => toggleExpand('zone', 'zone')}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors border-b border-slate-50"
+          >
+            <div className="flex items-center gap-3">
+              <Map className="w-4 h-4 text-green-500" />
+              <div className="text-left">
+                <p className="text-sm font-bold text-slate-800">By Zone</p>
+                <p className="text-xs text-slate-400 mt-0.5">{Object.keys(stats.zoneCount).length} zones</p>
+              </div>
+            </div>
+            {expandedZone.zone ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+          {expandedZone.zone && (
+            <div className="px-6 py-4 space-y-2">
+              {Object.entries(stats.zoneCount).map(([zone, count]) => (
+                <div key={zone} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-sm font-semibold text-slate-700">{zone}</span>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-200">{count}</span>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* By Designation */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <button
+            onClick={() => toggleExpand('designation', 'designation')}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors border-b border-slate-50"
+          >
+            <div className="flex items-center gap-3">
+              <Briefcase className="w-4 h-4 text-purple-500" />
+              <div className="text-left">
+                <p className="text-sm font-bold text-slate-800">By Designation</p>
+                <p className="text-xs text-slate-400 mt-0.5">{Object.keys(stats.designationCount).length} designations</p>
+              </div>
+            </div>
+            {expandedDesignation.designation ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+          {expandedDesignation.designation && (
+            <div className="px-6 py-4 space-y-2">
+              {Object.entries(stats.designationCount).map(([designation, count]) => (
+                <div key={designation} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <span className="text-sm font-semibold text-slate-700">{designation}</span>
+                  <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-bold rounded-full border border-purple-200">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Employee Directory */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Employee Directory</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Showing {Math.min(filtered.length, 50)} of {filtered.length} employees</p>
+            </div>
+            <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-200">{filtered.length} total</span>
           </div>
         </div>
-      </div>
 
-      {/* By Designation */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="bg-purple-50 px-4 py-3 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-purple-600" />
-            Employees by Designation
-          </h3>
-        </div>
-        <div className="space-y-2 p-4">
-          {Object.entries(stats.designationCount)
-            .sort((a, b) => b[1] - a[1])
-            .map(([designation, count]) => (
-              <div
-                key={designation}
-                onClick={() => setExpandedDesignation({ ...expandedDesignation, [designation]: !expandedDesignation[designation] })}
-                className="cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-100"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm text-gray-900">{designation}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">
-                      {count} employees
-                    </span>
-                    {expandedDesignation[designation] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </div>
-                </div>
-                {expandedDesignation[designation] && (
-                  <div className="mt-2 text-xs text-gray-600 space-y-1 grid grid-cols-3 gap-2">
-                    {filtered
-                      .filter(r => r.designation === designation)
-                      .map(r => (
-                        <div key={r.id}>
-                          <span>{r.name}</span>
-                          <div className="text-gray-400">{r.zone} · {r.rm}</div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            ))}
-        </div>
-      </div>
-
-      {/* Data Table */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="bg-blue-50 px-4 py-3 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-900">Employee Directory ({filtered.length} records)</h3>
-        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-4 py-2 text-left font-semibold text-gray-900">Name</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-900">Code</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-900">Designation</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-900">Zone</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-900">State</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-900">RM</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-900">HQ</th>
+            <thead>
+              <tr className="border-b border-slate-50 bg-slate-50/50">
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Code</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Designation</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">HQ</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Zone</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Manager</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-50">
               {filtered.slice(0, 50).map(r => (
-                <tr key={r.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-900">{r.name}</td>
-                  <td className="px-4 py-2 text-gray-600">{r.code}</td>
-                  <td className="px-4 py-2 text-gray-600">{r.designation}</td>
-                  <td className="px-4 py-2"><span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">{r.zone}</span></td>
-                  <td className="px-4 py-2 text-gray-600">{r.state}</td>
-                  <td className="px-4 py-2 text-gray-600 font-medium">{r.rm}</td>
-                  <td className="px-4 py-2 text-gray-600">{r.hq}</td>
+                <tr key={r.id} className="hover:bg-slate-50/60 transition-colors">
+                  <td className="px-6 py-3.5 text-xs font-semibold text-slate-700">{r.code}</td>
+                  <td className="px-6 py-3.5 text-xs font-semibold text-slate-800">{r.name}</td>
+                  <td className="px-6 py-3.5"><span className="text-xs font-bold px-2 py-1 bg-purple-50 text-purple-700 rounded-full border border-purple-200">{r.designation}</span></td>
+                  <td className="px-6 py-3.5 text-xs text-slate-600">{r.hq}</td>
+                  <td className="px-6 py-3.5"><span className="text-xs font-bold px-2 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">{r.zone}</span></td>
+                  <td className="px-6 py-3.5 text-xs text-slate-700">{r.rm || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {filtered.length > 50 && (
-          <div className="px-4 py-3 text-sm text-gray-600 bg-gray-50 border-t">
-            Showing 50 of {filtered.length} records
-          </div>
-        )}
       </div>
     </div>
   );
