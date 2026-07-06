@@ -73,12 +73,8 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
         const res = await fetch(`${API}/api/territory/upload/`, { method: 'POST', body: fd, signal: abortRef.current.signal });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Failed to upload file');
-        // Fetch dashboard data after upload
-        const dashRes = await fetch(`${API}/api/territory/dashboard/`, { signal: abortRef.current.signal });
-        const dashData = await dashRes.json();
-        if (!dashRes.ok) throw new Error('Failed to fetch dashboard');
-        setTerritoryDashData(dashData);
-        setData([{ uploaded: true }]); // Mark as uploaded
+        setTerritoryDashData(result); // Result already has summary, breakdown, filter_options, data
+        setData([{ uploaded: true }]); // Mark as uploaded to show dashboard
       } else {
         fd.append('tool', activeTool);
         const res = await fetch(`${API}/api/user_management/upload-excel/`, { method: 'POST', body: fd, signal: abortRef.current.signal });
