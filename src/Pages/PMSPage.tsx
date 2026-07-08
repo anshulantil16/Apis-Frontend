@@ -570,6 +570,7 @@ export default function PMSPage() {
                     <div className="col-span-2 flex items-center gap-3">
                       <ScoreRing score={emp.final_score} />
                       <div className="text-[10px] text-slate-400 space-y-0.5">
+                        <div>EMP: <span className="font-black text-slate-600">{emp.emp_score??'—'}</span></div>
                         <div>Mgr: <span className="font-black text-slate-600">{emp.manager_score??'—'}</span></div>
                         <div>HOD: <span className="font-black text-slate-600">{emp.hod_score??'—'}</span></div>
                         <div>Mgt: <span className="font-black text-slate-600">{emp.management_score??'—'}</span></div>
@@ -608,9 +609,10 @@ export default function PMSPage() {
                       <div className="space-y-3">
                         <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-indigo-400"/>Score Breakdown</p>
                         {[
-                          { l: 'Manager Score', v: emp.manager_score,    w: 35, g: 'from-blue-400 to-indigo-500' },
-                          { l: 'HOD Score',     v: emp.hod_score,        w: 35, g: 'from-violet-400 to-purple-500' },
-                          { l: 'Mgmt Score',    v: emp.management_score !== null ? emp.management_score : undefined, w: 30, g: 'from-pink-400 to-rose-500' },
+                          { l: 'EMP Score',     v: emp.emp_score,                                                   w: 25, g: 'from-green-400 to-emerald-500' },
+                          { l: 'Manager Score', v: emp.manager_score,                                               w: 25, g: 'from-blue-400 to-indigo-500' },
+                          { l: 'HOD Score',     v: emp.hod_score,                                                   w: 25, g: 'from-violet-400 to-purple-500' },
+                          { l: 'Mgmt Score',    v: emp.management_score !== null ? emp.management_score : undefined, w: 25, g: 'from-pink-400 to-rose-500' },
                         ].map(s => (
                           <div key={s.l}>
                             <div className="flex justify-between text-xs mb-1.5">
@@ -1000,9 +1002,10 @@ export default function PMSPage() {
                   <p className="text-slate-500 text-sm mb-3 font-semibold">Final Score =</p>
                   <div className="flex items-center justify-center gap-3 flex-wrap">
                     {[
-                      { l: 'Manager Score × 35%', g: 'from-blue-400 to-indigo-500' },
-                      { l: 'HOD Score × 35%',     g: 'from-violet-400 to-purple-500' },
-                      { l: 'Mgmt Score × 30%',    g: 'from-pink-400 to-rose-500' },
+                      { l: 'EMP Score × 25%',     g: 'from-green-400 to-emerald-500' },
+                      { l: 'Manager Score × 25%', g: 'from-blue-400 to-indigo-500' },
+                      { l: 'HOD Score × 25%',     g: 'from-violet-400 to-purple-500' },
+                      { l: 'Mgmt Score × 25%',    g: 'from-pink-400 to-rose-500' },
                     ].map((s,i) => (
                       <div key={i} className="flex items-center gap-3">
                         {i > 0 && <span className="text-slate-400 font-black text-2xl">+</span>}
