@@ -140,6 +140,8 @@ export default function PMSPage() {
   const [fGrade, setFGrade]   = useState('');
   const [fDept, setFDept]     = useState('');
   const [expanded, setExpanded] = useState<number|null>(null);
+  const [mgmtScore, setMgmtScore] = useState<string>('');
+  const [savingMgmt, setSavingMgmt] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -148,6 +150,23 @@ export default function PMSPage() {
       const d = await res.json();
       setData(d);
     } catch {}
+    try {
+      const sres = await fetch(`${PMS}/settings/`);
+      const s = await sres.json();
+      setMgmtScore(s.management_score != null ? String(s.management_score) : '');
+    } catch {}
+  };
+
+  const saveMgmt = async () => {
+    setSavingMgmt(true);
+    try {
+      const res = await fetch(`${PMS}/settings/`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ management_score: mgmtScore === '' ? null : Number(mgmtScore) }),
+      });
+      if (res.ok) { setMsg({ text: 'Management score applied to all employees.', ok: true }); load(); }
+    } catch { setMsg({ text: 'Failed to save management score.', ok: false }); }
+    setSavingMgmt(false);
   };
 
   useEffect(() => {
@@ -449,6 +468,17 @@ export default function PMSPage() {
               {importing ? 'Importing…' : 'Import Data'}
             </button>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-50 border border-pink-200 rounded-xl" title="Company-wide Management Score — applies equally to every employee">
+              <span className="text-[11px] font-bold text-pink-600 whitespace-nowrap">Mgmt Score</span>
+              <input type="number" min={0} max={100} value={mgmtScore}
+                onChange={e => setMgmtScore(e.target.value)}
+                placeholder="0-100"
+                className="w-16 px-2 py-1 rounded-lg border border-pink-200 text-xs font-bold text-slate-700 focus:outline-none focus:border-pink-400" />
+              <button onClick={saveMgmt} disabled={savingMgmt}
+                className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-lg text-[11px] font-bold transition-all disabled:opacity-60">
+                {savingMgmt ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Apply to All'}
+              </button>
+            </div>
             {emps.length > 0 && (
               <a href={`${PMS}/export/`} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-200">
