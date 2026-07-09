@@ -37,6 +37,43 @@ function Bar({ value, max, gradient }: { value: number; max: number; gradient: s
   );
 }
 
+function MultiSelect({ label, options, selected, onChange, renderOption }: {
+  label: string; options: string[]; selected: string[];
+  onChange: (v: string[]) => void; renderOption?: (o: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  const toggle = (o: string) => onChange(selected.includes(o) ? selected.filter(x => x !== o) : [...selected, o]);
+  const summary = selected.length === 0 ? label : selected.length === 1 ? (renderOption ? renderOption(selected[0]) : selected[0]) : `${selected.length} selected`;
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(!open)}
+        className={`flex items-center gap-2 border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:outline-none min-w-[160px] ${selected.length ? 'border-indigo-300 text-indigo-700 font-semibold' : 'border-slate-200 text-slate-600'}`}>
+        <span className="truncate flex-1 text-left">{summary}</span>
+        <ChevronDown className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 w-60 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl p-1.5">
+          {selected.length > 0 && (
+            <button onClick={() => onChange([])} className="w-full flex items-center gap-1 px-2 py-1.5 text-xs text-rose-500 font-bold hover:bg-rose-50 rounded-lg mb-0.5"><X className="w-3 h-3"/>Clear selection</button>
+          )}
+          {options.map(o => (
+            <label key={o} className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-indigo-50 rounded-lg cursor-pointer">
+              <input type="checkbox" checked={selected.includes(o)} onChange={() => toggle(o)} className="accent-indigo-500 w-3.5 h-3.5" />
+              <span className="truncate">{renderOption ? renderOption(o) : o}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScoreRing({ score, size = 50 }: { score: number; size?: number }) {
   const g = score >= 106 ? 'A+' : score >= 95 ? 'A' : score >= 85 ? 'B+' : score >= 65 ? 'B' : score >= 51 ? 'C' : 'D';
   const color = GRADES[g]?.color || '#94a3b8';
@@ -137,8 +174,8 @@ export default function PMSPage() {
   const [msg, setMsg]         = useState<{text:string;ok:boolean}|null>(null);
   const [tab, setTab]         = useState<'simulator'|'org'|'salary'|'leadership'|'guide'>('simulator');
   const [search, setSearch]   = useState('');
-  const [fGrade, setFGrade]   = useState('');
-  const [fDept, setFDept]     = useState('');
+  const [fGrade, setFGrade]   = useState<string[]>([]);
+  const [fDept, setFDept]     = useState<string[]>([]);
   const [expanded, setExpanded] = useState<number|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -263,7 +300,7 @@ export default function PMSPage() {
 
   const filtered = emps.filter(e => {
     const s = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.employee_id.toLowerCase().includes(search.toLowerCase());
-    return s && (!fGrade || e.effective_grade === fGrade) && (!fDept || e.department === fDept);
+    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department));
   });
 
   const TABS = [
@@ -529,17 +566,10 @@ export default function PMSPage() {
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…"
                   className="border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-indigo-400 w-48 bg-slate-50" />
               </div>
-              <select value={fGrade} onChange={e => setFGrade(e.target.value)}
-                className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400">
-                <option value="">All Grades</option>
-                {GO.map(g => <option key={g} value={g}>Grade {g} — {GRADES[g].label}</option>)}
-              </select>
-              <select value={fDept} onChange={e => setFDept(e.target.value)}
-                className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400">
-                <option value="">All Departments</option>
-                {depts.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              {(search||fGrade||fDept) && <button onClick={() => {setSearch('');setFGrade('');setFDept('');}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
+              <MultiSelect label="All Grades" options={GO} selected={fGrade} onChange={setFGrade}
+                renderOption={g => `Grade ${g} — ${GRADES[g].label}`} />
+              <MultiSelect label="All Departments" options={depts} selected={fDept} onChange={setFDept} />
+              {(search||fGrade.length||fDept.length) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
               <span className="ml-auto text-slate-400 text-xs">{filtered.length} of {emps.length}</span>
             </div>
 
