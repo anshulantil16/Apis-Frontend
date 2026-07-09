@@ -19,6 +19,16 @@ const GRADES: Record<string, { label: string; color: string; gradient: string; g
 };
 const GO = ['A+', 'A', 'B+', 'B', 'C', 'D'];
 
+// Policy merit-increment matrix (mirrors backend INCREMENT_MATRIX) for the Grade Guide reference.
+const POLICY: Record<string, { staff1: number; staff2: number; worker: number; wpromo: number; promo: number; sustained: number; ptarget: string }> = {
+  'A+': { staff1: 14, staff2: 10, worker: 800, wpromo: 400, promo: 5, sustained: 1,   ptarget: '≥ 106%' },
+  'A':  { staff1: 12, staff2: 9,  worker: 600, wpromo: 300, promo: 4, sustained: 1,   ptarget: '95–100%' },
+  'B+': { staff1: 10, staff2: 8,  worker: 400, wpromo: 200, promo: 3, sustained: 0.5, ptarget: '85–94%' },
+  'B':  { staff1: 8,  staff2: 7,  worker: 200, wpromo: 100, promo: 2, sustained: 0.5, ptarget: '65–84%' },
+  'C':  { staff1: 4,  staff2: 3,  worker: 100, wpromo: 0,   promo: 0, sustained: 0,   ptarget: '51–64%' },
+  'D':  { staff1: 0,  staff2: 0,  worker: 0,   wpromo: 0,   promo: 0, sustained: 0,   ptarget: '< 50%' },
+};
+
 const fmt   = (n: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n);
 const fmtCr = (n: number) => n >= 10000000 ? `₹${(n/10000000).toFixed(2)}Cr` : n >= 100000 ? `₹${(n/100000).toFixed(2)}L` : `₹${fmt(n)}`;
 
@@ -872,6 +882,102 @@ export default function PMSPage() {
                 ))}
               </div>
             </div>
+
+            {/* Cadre & Band Distribution */}
+            <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 rounded-2xl border-2 border-blue-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md"><Users className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Cadre &amp; Band Distribution</h3>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(sum.cadre_distribution||{}).map(([k,v]:any) => (
+                  <div key={k} className="flex items-center gap-3">
+                    <div className="w-16 text-xs font-bold text-slate-600 truncate">{k}</div>
+                    <div className="flex-1"><Bar value={v as number} max={sum.total_employees||1} gradient="from-blue-400 to-indigo-500"/></div>
+                    <span className="text-sm font-black text-slate-700 w-8 text-right">{v as number}</span>
+                  </div>
+                ))}
+                {Object.keys(sum.cadre_distribution||{}).length===0 && <span className="text-xs text-slate-300">No data</span>}
+              </div>
+            </div>
+
+            {/* Workforce by Location */}
+            <div className="bg-gradient-to-br from-teal-50 via-white to-cyan-50 rounded-2xl border-2 border-teal-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-md"><BarChart3 className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Workforce by Location</h3>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(sum.location_distribution||{}).slice(0,9).map(([k,v]:any) => (
+                  <div key={k} className="flex items-center gap-3">
+                    <div className="w-28 text-xs font-bold text-slate-600 truncate">{k}</div>
+                    <div className="flex-1"><Bar value={v as number} max={sum.total_employees||1} gradient="from-teal-400 to-cyan-500"/></div>
+                    <span className="text-sm font-black text-slate-700 w-8 text-right">{v as number}</span>
+                  </div>
+                ))}
+                {Object.keys(sum.location_distribution||{}).length===0 && <span className="text-xs text-slate-300">No data</span>}
+              </div>
+            </div>
+
+            {/* Org CTC Growth Trend */}
+            <div className="bg-gradient-to-br from-emerald-50 via-white to-green-50 rounded-2xl border-2 border-emerald-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-md"><TrendingUp className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Org CTC Growth Trend</h3>
+              </div>
+              {(() => {
+                const yr = (f:string) => emps.reduce((s:number,e:any)=>s+(Number(e[f])||0),0);
+                const series = [
+                  { l: 'FY 22-23', v: yr('fy_2223_ctc') },
+                  { l: 'FY 23-24', v: yr('fy_2324_ctc') },
+                  { l: 'FY 24-25', v: yr('fy_2425_ctc') },
+                  { l: 'FY 25-26', v: totalCTC },
+                  { l: 'FY 26-27*', v: newCTC },
+                ];
+                const mx = Math.max(...series.map(s=>s.v),1);
+                return (
+                  <div className="space-y-2">
+                    {series.map(s => (
+                      <div key={s.l} className="flex items-center gap-3">
+                        <div className="w-20 text-xs font-bold text-slate-600">{s.l}</div>
+                        <div className="flex-1"><Bar value={s.v} max={mx} gradient="from-emerald-400 to-green-500"/></div>
+                        <span className="text-xs font-black text-slate-700 w-16 text-right">{fmtCr(s.v)}</span>
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-slate-400 mt-1">*Projected after this appraisal cycle</p>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Increment Category Split */}
+            <div className="bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 rounded-2xl border-2 border-violet-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl flex items-center justify-center shadow-md"><Zap className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Increment Category Split</h3>
+              </div>
+              {(() => {
+                const groups:any = { staff1: 0, staff2: 0, worker: 0, special: 0 };
+                emps.forEach((e:any) => { groups[e.increment_group] = (groups[e.increment_group]||0)+1; });
+                const items = [
+                  { k:'staff1', l:'Staff O1–M3', g:'from-blue-400 to-indigo-500' },
+                  { k:'staff2', l:'Staff M4–C3', g:'from-violet-400 to-purple-500' },
+                  { k:'worker', l:'Workers (W)', g:'from-orange-400 to-red-500' },
+                  { k:'special', l:'CXO / Director', g:'from-slate-400 to-slate-600' },
+                ];
+                return (
+                  <div className="space-y-2">
+                    {items.map(it => (
+                      <div key={it.k} className="flex items-center gap-3">
+                        <div className="w-28 text-xs font-bold text-slate-600">{it.l}</div>
+                        <div className="flex-1"><Bar value={groups[it.k]||0} max={emps.length||1} gradient={it.g}/></div>
+                        <span className="text-sm font-black text-slate-700 w-8 text-right">{groups[it.k]||0}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 
@@ -985,12 +1091,14 @@ export default function PMSPage() {
                   { l: 'Median Score', v: sum.median_score??'—' },
                   { l: 'Median CTC', v: sum.median_ctc?fmtCr(sum.median_ctc):'—' },
                   { l: 'Departments', v: (sum.department_breakdown||[]).length },
-                ].map(s => (
-                  <div key={s.l} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-2xl p-3 text-center">
-                    <p className="text-xl font-black text-slate-800 truncate">{s.v}</p>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{s.l}</p>
+                ].map((s,i) => {
+                  const pal = ['from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-violet-500 to-purple-600','from-amber-500 to-orange-600','from-pink-500 to-rose-600','from-cyan-500 to-sky-600','from-fuchsia-500 to-pink-600','from-lime-500 to-green-600','from-rose-500 to-red-600','from-indigo-500 to-blue-600','from-teal-500 to-cyan-600','from-orange-500 to-amber-600'];
+                  return (
+                  <div key={s.l} className={`bg-gradient-to-br ${pal[i%pal.length]} rounded-2xl p-3 text-center text-white shadow-md`}>
+                    <p className="text-xl font-black truncate">{s.v}</p>
+                    <p className="text-[10px] text-white/75 font-semibold mt-0.5">{s.l}</p>
                   </div>
-                ))}
+                )})}
               </div>
               <div className="grid grid-cols-3 gap-4 mt-4">
                 {[
@@ -1103,13 +1211,16 @@ export default function PMSPage() {
                         <div className="text-right"><p className="text-white font-black text-4xl">{gradeEmps.length}</p><p className="text-white/60 text-xs">employees</p></div>
                       </div>
                     </div>
-                    <div className="p-4 space-y-2">
+                    <div className={`p-4 space-y-2 bg-gradient-to-br ${cfg.light}`}>
                       <p className={`font-black ${cfg.text}`}>{cfg.label}</p>
-                      <p className="text-slate-400 text-xs">Score: <span className={`font-black ${cfg.text}`}>{cfg.range}</span></p>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between"><span className="text-slate-500">Increment</span><span className={`font-black ${cfg.text}`}>{cfg.inc_min}–{cfg.inc_max}%</span></div>
-                        <div className="flex justify-between"><span className="text-slate-500">Promotion %</span><span className="font-bold text-violet-600">{cfg.promo_pct}%</span></div>
-                        {gradeEmps.length > 0 && <div className="flex justify-between"><span className="text-slate-500">Total Inc</span><span className="font-bold text-emerald-600">{fmtCr(gradeEmps.reduce((s:number,e:any)=>s+e.increment_amount,0))}</span></div>}
+                      <p className="text-slate-500 text-xs">Score of Target: <span className={`font-black ${cfg.text}`}>{POLICY[grade].ptarget}</span></p>
+                      <div className="space-y-1.5 text-sm pt-1">
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Staff O1–M3</span><span className="font-black text-white bg-gradient-to-r from-blue-500 to-indigo-600 px-2 py-0.5 rounded-lg text-xs">{POLICY[grade].staff1}%</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Staff M4–C3</span><span className="font-black text-white bg-gradient-to-r from-violet-500 to-purple-600 px-2 py-0.5 rounded-lg text-xs">{POLICY[grade].staff2}%</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Worker (W)</span><span className="font-black text-white bg-gradient-to-r from-orange-500 to-red-500 px-2 py-0.5 rounded-lg text-xs">₹{POLICY[grade].worker}/mo</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Promotion</span><span className="font-black text-white bg-gradient-to-r from-pink-500 to-rose-600 px-2 py-0.5 rounded-lg text-xs">{POLICY[grade].promo}%</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Sustained</span><span className="font-black text-white bg-gradient-to-r from-teal-500 to-cyan-600 px-2 py-0.5 rounded-lg text-xs">{POLICY[grade].sustained}%</span></div>
+                        {gradeEmps.length > 0 && <div className="flex justify-between pt-1 border-t border-white/50"><span className="text-slate-600 font-semibold text-xs">Total Increment</span><span className="font-black text-emerald-700">{fmtCr(gradeEmps.reduce((s:number,e:any)=>s+e.increment_amount,0))}</span></div>}
                       </div>
                       <Bar value={gradeEmps.length} max={emps.length||1} gradient={cfg.gradient}/>
                     </div>
