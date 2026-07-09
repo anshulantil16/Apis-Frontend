@@ -884,19 +884,30 @@ export default function PMSPage() {
                 <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-xl flex items-center justify-center shadow-md"><DollarSign className="w-4 h-4 text-white"/></div>
                 <h3 className="font-black text-slate-800">Salary Impact Dashboard</h3>
               </div>
-              <div className="space-y-3">
-                {[
-                  { label: 'Current Payroll Cost', value: fmtCr(totalCTC), color: 'text-slate-700' },
-                  { label: 'Total Increment Cost', value: fmtCr(totalInc), color: 'text-emerald-600' },
-                  { label: 'Promotion Cost',       value: fmtCr(emps.filter(e=>e.promoted).reduce((s:number,e:any)=>s+e.increment_amount,0)), color: 'text-violet-600' },
-                  { label: 'New Payroll Cost',     value: fmtCr(newCTC), color: 'text-indigo-700' },
-                  { label: 'Budget Variance',      value: `${incPct.toFixed(2)}% increase`, color: 'text-rose-600' },
-                ].map(r => (
-                  <div key={r.label} className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-                    <span className="text-slate-500 text-sm">{r.label}</span>
-                    <span className={`font-black text-lg ${r.color}`}>{r.value}</span>
-                  </div>
-                ))}
+              <div className="space-y-1.5">
+                {(() => {
+                  const pctOf = (v:number) => totalCTC ? `${(v/totalCTC*100).toFixed(2)}%` : '—';
+                  const rows = [
+                    { label: 'Current Payroll Cost', value: fmtCr(totalCTC), pct: '', color: 'text-slate-700', big: true },
+                    { label: 'Merit Increment',       value: `+${fmtCr(sum.cost_increment||0)}`,       pct: pctOf(sum.cost_increment||0),       color: 'text-emerald-600' },
+                    { label: 'Promotion',             value: `+${fmtCr(sum.cost_promotion||0)}`,       pct: pctOf(sum.cost_promotion||0),       color: 'text-violet-600' },
+                    { label: 'Sustained Performance', value: `+${fmtCr(sum.cost_sustained||0)}`,       pct: pctOf(sum.cost_sustained||0),       color: 'text-teal-600' },
+                    { label: 'Salary Correction',     value: `+${fmtCr(sum.cost_correction||0)}`,      pct: pctOf(sum.cost_correction||0),      color: 'text-sky-600' },
+                    { label: 'Special Reward',        value: `+${fmtCr(sum.cost_reward||0)}`,          pct: pctOf(sum.cost_reward||0),          color: 'text-orange-600' },
+                    { label: 'Management Discretion', value: `+${fmtCr(sum.cost_mgmt_discretion||0)}`, pct: pctOf(sum.cost_mgmt_discretion||0), color: 'text-amber-600' },
+                    { label: 'Total Hike Cost', value: `+${fmtCr(totalInc)}`, pct: `${incPct.toFixed(2)}%`, color: 'text-rose-600', divide: true, big: true },
+                    { label: 'New Payroll Cost', value: fmtCr(newCTC), pct: '', color: 'text-indigo-700', big: true },
+                  ];
+                  return rows.map(r => (
+                    <div key={r.label} className={`flex justify-between items-center py-2 ${r.divide ? 'border-t-2 border-slate-200 mt-1 pt-2.5' : 'border-b border-slate-50'}`}>
+                      <span className="text-slate-500 text-sm">{r.label}</span>
+                      <span className="flex items-baseline gap-2">
+                        {r.pct && <span className="text-[11px] text-slate-400 font-semibold">{r.pct}</span>}
+                        <span className={`font-black ${r.big ? 'text-lg' : 'text-base'} ${r.color}`}>{r.value}</span>
+                      </span>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
 
@@ -951,6 +962,55 @@ export default function PMSPage() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Workforce Overview */}
+            <div className="col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md"><Users className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Workforce Overview</h3>
+              </div>
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                {[
+                  { l: 'Total', v: sum.total_employees||0 },
+                  { l: 'Workers', v: sum.worker_count||0 },
+                  { l: 'Staff', v: (sum.total_employees||0)-(sum.worker_count||0) },
+                  { l: 'Promoted', v: sum.promoted_count||0 },
+                  { l: 'Sustained', v: sum.sustained_count||0 },
+                  { l: 'Rewarded', v: sum.reward_count||0 },
+                  { l: 'Avg Score', v: sum.avg_score||0 },
+                  { l: 'Avg Age', v: sum.avg_age??'—' },
+                  { l: 'Avg Tenure', v: sum.avg_tenure??'—' },
+                  { l: 'Median Score', v: sum.median_score??'—' },
+                  { l: 'Median CTC', v: sum.median_ctc?fmtCr(sum.median_ctc):'—' },
+                  { l: 'Departments', v: (sum.department_breakdown||[]).length },
+                ].map(s => (
+                  <div key={s.l} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-2xl p-3 text-center">
+                    <p className="text-xl font-black text-slate-800 truncate">{s.v}</p>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{s.l}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                {[
+                  { t: 'By Cadre / Band', d: sum.cadre_distribution },
+                  { t: 'By Location', d: sum.location_distribution },
+                  { t: 'By Category', d: sum.category_distribution },
+                ].map(col => (
+                  <div key={col.t}>
+                    <p className="text-[11px] font-black text-slate-500 uppercase tracking-wide mb-2">{col.t}</p>
+                    <div className="space-y-1">
+                      {Object.entries(col.d||{}).slice(0,6).map(([k,v]:any) => (
+                        <div key={k} className="flex justify-between text-xs">
+                          <span className="text-slate-500 truncate mr-2">{k}</span>
+                          <span className="font-bold text-slate-700 shrink-0">{v as number}</span>
+                        </div>
+                      ))}
+                      {Object.keys(col.d||{}).length === 0 && <span className="text-xs text-slate-300">No data</span>}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
