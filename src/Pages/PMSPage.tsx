@@ -59,18 +59,18 @@ function ScoreRing({ score, size = 50 }: { score: number; size?: number }) {
 function Slider({ emp, onUpdate }: { emp: any; onUpdate: (id: number, d: any) => void }) {
   const cfg = GRADES[emp.effective_grade];
   const [val, setVal] = useState<number>(emp.effective_increment_pct);
-  const min = cfg?.inc_min ?? 0, max = cfg?.inc_max ?? 15;
-  const pct = max > min ? ((val-min)/(max-min))*100 : 100;
+  const max = 20;
+  const pct = Math.min(100, (val / max) * 100);
+  const groupLabel = emp.is_worker ? 'Worker · ₹ fixed' : emp.increment_group === 'staff2' ? 'Staff M4–C3' : emp.increment_group === 'special' ? 'MD discretion' : 'Staff O1–M3';
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-center">
-        <span className="text-[10px] text-slate-400">{min}%</span>
+        <span className="text-[9px] text-slate-400 truncate">{groupLabel}</span>
         <span className={`text-base font-black bg-gradient-to-r ${cfg?.gradient} bg-clip-text text-transparent`}>{val.toFixed(1)}%</span>
-        <span className="text-[10px] text-slate-400">{max}%</span>
       </div>
       <div className="relative h-3 rounded-full bg-slate-100 overflow-hidden">
         <div className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${cfg?.gradient} transition-all duration-100`} style={{ width: `${pct}%` }} />
-        <input type="range" min={min} max={max} step={0.5} value={val}
+        <input type="range" min={0} max={max} step={0.5} value={val}
           onChange={e => { const v = parseFloat(e.target.value); setVal(v); onUpdate(emp.id, { override_increment_pct: v }); }}
           className="absolute inset-0 w-full opacity-0 cursor-pointer" />
       </div>
