@@ -650,10 +650,10 @@ export default function PMSPage() {
                             <span className="text-teal-600 font-bold">+₹{fmt(emp.sustained_amount)}</span>
                           </div>
                         )}
-                        {emp.salary_correction > 0 && (
+                        {emp.salary_correction_amount > 0 && (
                           <div className="flex justify-between text-xs mb-0.5">
                             <span className="text-slate-400">Correction</span>
-                            <span className="text-sky-600 font-bold">+₹{fmt(emp.salary_correction)}</span>
+                            <span className="text-sky-600 font-bold">+₹{fmt(emp.salary_correction_amount)}</span>
                           </div>
                         )}
                         {emp.on_time_reward && emp.reward_amount > 0 && (
@@ -696,6 +696,11 @@ export default function PMSPage() {
                           <GradePill grade={emp.effective_grade} size="md"/>
                         </div>
                         <p className="text-[10px] text-slate-400">Grade is derived automatically from the Final Score using the standard ranges.</p>
+                        {!emp.merit_eligible && <div className="flex items-center gap-1.5 text-[11px] text-rose-600 font-bold bg-rose-50 border border-rose-200 rounded-lg px-2 py-1.5"><AlertCircle className="w-3.5 h-3.5 shrink-0"/>Not merit-eligible per policy (joined after 01-Oct)</div>}
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-2 py-1.5">
+                          <span className="font-bold text-slate-600">Category:</span>
+                          {emp.is_worker ? 'Worker — fixed ₹ increment' : emp.increment_group === 'staff2' ? 'Staff M4–C3' : emp.increment_group === 'special' ? 'CXO/Director — MD discretion' : 'Staff O1–M3'}
+                        </div>
                       </div>
 
                       {/* Management Discretion */}
@@ -717,6 +722,7 @@ export default function PMSPage() {
                               className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
                           </div>
                         </div>
+                        {!emp.salary_correction_allowed && emp.salary_correction > 0 && <p className="text-[10px] text-amber-600 -mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Policy: correction is for A+/A/B+/B &amp; not when promoted — override applied.</p>}
 
                         <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1 flex items-center justify-between">
@@ -732,6 +738,7 @@ export default function PMSPage() {
                               {emp.on_time_reward ? '✓ Applied' : 'Apply'}
                             </button>
                           </div>
+                          {emp.special_reward_range && emp.reward_amount > 0 && (emp.reward_amount < emp.special_reward_range[0] || emp.reward_amount > emp.special_reward_range[1]) && <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Outside {emp.band} band range (₹{fmt(emp.special_reward_range[0])}–₹{fmt(emp.special_reward_range[1])}) — override applied.</p>}
                         </div>
 
                         <div>
@@ -779,6 +786,7 @@ export default function PMSPage() {
                             </button>
                           ))}
                         </div>
+                        {emp.redesignation && emp.promoted && <p className="text-[10px] text-amber-600 -mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Policy: redesignation should be without promotion % — override applied.</p>}
                       </div>
 
                       {/* Remarks */}
