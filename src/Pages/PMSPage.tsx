@@ -735,6 +735,19 @@ export default function PMSPage() {
                         </div>
 
                         <div>
+                          <label className="text-xs text-slate-500 font-semibold mb-1 flex items-center justify-between">
+                            <span>Sustained Performance</span>
+                            <span className="text-[10px] text-teal-600 font-bold">Grade {emp.effective_grade}: +{POLICY[emp.effective_grade]?.sustained ?? 0}%</span>
+                          </label>
+                          <button onClick={() => update(emp.id, { sustained_performance: !emp.sustained_performance })}
+                            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${emp.sustained_performance ? 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white border-transparent shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300'}`}>
+                            <Sparkles className="w-3.5 h-3.5"/>
+                            {emp.sustained_performance ? `Eligible — adds +${emp.sustained_pct}% (₹${fmt(emp.sustained_amount)})` : 'Mark as Eligible'}
+                          </button>
+                          {(POLICY[emp.effective_grade]?.sustained ?? 0) === 0 && <p className="text-[10px] text-slate-400 mt-1">Grade {emp.effective_grade} has no sustained % as per policy.</p>}
+                        </div>
+
+                        <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1 block">Override Grade</label>
                           <select value={emp.override_grade||''} onChange={e => update(emp.id, { override_grade: e.target.value })}
                             className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
@@ -758,7 +771,7 @@ export default function PMSPage() {
                         <div className="flex gap-2 flex-wrap">
                           {[
                             { k: 'promoted', l: 'Promoted', v: emp.promoted, g: 'from-violet-500 to-purple-600', I: Crown },
-                            { k: 'sustained_performance', l: 'Sustained', v: emp.sustained_performance, g: 'from-teal-500 to-cyan-600', I: Sparkles },
+                            { k: 'redesignation', l: 'Redesignation', v: emp.redesignation, g: 'from-sky-500 to-blue-600', I: Star },
                           ].map(t => (
                             <button key={t.k} onClick={() => update(emp.id, { [t.k]: !t.v })}
                               className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${t.v ? `bg-gradient-to-r ${t.g} text-white border-transparent shadow-md` : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
