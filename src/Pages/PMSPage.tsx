@@ -610,6 +610,18 @@ export default function PMSPage() {
                             <span className="text-teal-600 font-bold">+₹{fmt(emp.sustained_amount)}</span>
                           </div>
                         )}
+                        {emp.salary_correction > 0 && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Correction</span>
+                            <span className="text-sky-600 font-bold">+₹{fmt(emp.salary_correction)}</span>
+                          </div>
+                        )}
+                        {emp.on_time_reward && emp.reward_amount > 0 && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Special Reward</span>
+                            <span className="text-orange-500 font-bold">+₹{fmt(emp.reward_amount)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-xs mb-1 pt-1 border-t border-slate-200">
                           <span className="text-slate-500 font-semibold">Total Hike <span className="font-black">{emp.total_impact_pct}%</span></span>
                           <span className="text-slate-600 font-bold">+₹{fmt(emp.new_ctc - emp.current_ctc)}</span>
@@ -646,19 +658,53 @@ export default function PMSPage() {
                         <p className="text-[10px] text-slate-400">Grade is derived automatically from the Final Score using the standard ranges.</p>
                       </div>
 
-                      {/* Overrides */}
+                      {/* Management Discretion */}
                       <div className="space-y-3">
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-orange-400"/>Override Controls</p>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-orange-400"/>Management Discretion</p>
+                        <p className="text-[10px] text-slate-400 -mt-1.5">Management can add any % or amount — beyond standard limits.</p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-slate-500 font-semibold mb-1 block">Discretion %</label>
+                            <input type="number" min={0} step="0.5" defaultValue={emp.management_discretion_pct || ''} placeholder="0"
+                              onBlur={e => update(emp.id, { management_discretion_pct: e.target.value || 0 })}
+                              className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
+                          </div>
+                          <div>
+                            <label className="text-xs text-slate-500 font-semibold mb-1 block">Correction ₹</label>
+                            <input type="number" min={0} step="1000" defaultValue={emp.salary_correction || ''} placeholder="0"
+                              onBlur={e => update(emp.id, { salary_correction: e.target.value || 0 })}
+                              className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
+                          </div>
+                        </div>
+
                         <div>
-                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Override Grade</label>
+                          <label className="text-xs text-slate-500 font-semibold mb-1 flex items-center justify-between">
+                            <span>Special Reward ₹</span>
+                            <span className="text-[10px] text-slate-400 font-normal">{emp.special_reward_range ? `${emp.band}: ₹${fmt(emp.special_reward_range[0])}–₹${fmt(emp.special_reward_range[1])}` : 'Director/MD discretion'}</span>
+                          </label>
+                          <div className="flex gap-2 items-center">
+                            <input type="number" min={0} step="1000" defaultValue={emp.reward_amount || ''} placeholder="0"
+                              onBlur={e => update(emp.id, { reward_amount: e.target.value || 0 })}
+                              className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
+                            <button onClick={() => update(emp.id, { on_time_reward: !emp.on_time_reward })}
+                              className={`px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all whitespace-nowrap ${emp.on_time_reward ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white border-transparent shadow-md' : 'bg-white border-slate-200 text-slate-500'}`}>
+                              {emp.on_time_reward ? '✓ Applied' : 'Apply'}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-xs text-slate-500 font-semibold mb-1 block">Override Grade</label>
                           <select value={emp.override_grade||''} onChange={e => update(emp.id, { override_grade: e.target.value })}
                             className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
                             <option value="">Auto — Grade {emp.auto_grade}</option>
                             {GO.map(g => <option key={g} value={g}>Grade {g} — {GRADES[g].label}</option>)}
                           </select>
                         </div>
+
                         <div>
-                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Promotion Readiness</label>
+                          <label className="text-xs text-slate-500 font-semibold mb-1 block">Promotion Readiness</label>
                           <select value={emp.promotion_readiness||''} onChange={e => update(emp.id, { promotion_readiness: e.target.value })}
                             className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
                             <option value="">Not Set</option>
@@ -668,10 +714,10 @@ export default function PMSPage() {
                             <option value="not_ready">Not Ready</option>
                           </select>
                         </div>
+
                         <div className="flex gap-2 flex-wrap">
                           {[
                             { k: 'promoted', l: 'Promoted', v: emp.promoted, g: 'from-violet-500 to-purple-600', I: Crown },
-                            { k: 'on_time_reward', l: 'Reward', v: emp.on_time_reward, g: 'from-amber-400 to-orange-500', I: Star },
                             { k: 'sustained_performance', l: 'Sustained', v: emp.sustained_performance, g: 'from-teal-500 to-cyan-600', I: Sparkles },
                           ].map(t => (
                             <button key={t.k} onClick={() => update(emp.id, { [t.k]: !t.v })}
