@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
-  ChevronUp, Search, X, BarChart3, PieChart, Zap, Star, ArrowUpRight,
+  ChevronUp, Search, X, BarChart3, PieChart, Zap, Star,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
   Target, RefreshCw, Trash2, LogOut,
 } from 'lucide-react';
@@ -140,8 +140,6 @@ export default function PMSPage() {
   const [fGrade, setFGrade]   = useState('');
   const [fDept, setFDept]     = useState('');
   const [expanded, setExpanded] = useState<number|null>(null);
-  const [mgmtScore, setMgmtScore] = useState<string>('');
-  const [savingMgmt, setSavingMgmt] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -150,23 +148,6 @@ export default function PMSPage() {
       const d = await res.json();
       setData(d);
     } catch {}
-    try {
-      const sres = await fetch(`${PMS}/settings/`);
-      const s = await sres.json();
-      setMgmtScore(s.management_score != null ? String(s.management_score) : '');
-    } catch {}
-  };
-
-  const saveMgmt = async () => {
-    setSavingMgmt(true);
-    try {
-      const res = await fetch(`${PMS}/settings/`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ management_score: mgmtScore === '' ? null : Number(mgmtScore) }),
-      });
-      if (res.ok) { setMsg({ text: 'Management score applied to all employees.', ok: true }); load(); }
-    } catch { setMsg({ text: 'Failed to save management score.', ok: false }); }
-    setSavingMgmt(false);
   };
 
   useEffect(() => {
@@ -468,17 +449,6 @@ export default function PMSPage() {
               {importing ? 'Importing…' : 'Import Data'}
             </button>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-50 border border-pink-200 rounded-xl" title="Company-wide Management Score — applies equally to every employee">
-              <span className="text-[11px] font-bold text-pink-600 whitespace-nowrap">Mgmt Score</span>
-              <input type="number" min={0} max={100} value={mgmtScore}
-                onChange={e => setMgmtScore(e.target.value)}
-                placeholder="0-100"
-                className="w-16 px-2 py-1 rounded-lg border border-pink-200 text-xs font-bold text-slate-700 focus:outline-none focus:border-pink-400" />
-              <button onClick={saveMgmt} disabled={savingMgmt}
-                className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-lg text-[11px] font-bold transition-all disabled:opacity-60">
-                {savingMgmt ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Apply to All'}
-              </button>
-            </div>
             {emps.length > 0 && (
               <a href={`${PMS}/export/`} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-200">
@@ -600,10 +570,9 @@ export default function PMSPage() {
                     <div className="col-span-2 flex items-center gap-3">
                       <ScoreRing score={emp.final_score} />
                       <div className="text-[10px] text-slate-400 space-y-0.5">
-                        <div>EMP: <span className="font-black text-slate-600">{emp.emp_score??'—'}</span></div>
-                        <div>Mgr: <span className="font-black text-slate-600">{emp.manager_score??'—'}</span></div>
-                        <div>HOD: <span className="font-black text-slate-600">{emp.hod_score??'—'}</span></div>
-                        <div>Mgt: <span className="font-black text-slate-600">{emp.management_score??'—'}</span></div>
+                        <div className="text-slate-400">Final Score</div>
+                        <div className="font-black text-slate-700 text-sm">{emp.final_score}<span className="text-slate-300 text-[10px]">/120</span></div>
+                        <div>Grade <span className="font-black" style={{ color: cfg.color }}>{emp.effective_grade}</span></div>
                       </div>
                     </div>
                     {/* Grade */}
@@ -634,39 +603,22 @@ export default function PMSPage() {
                   </div>
 
                   {isExp && (
-                    <div key={`${emp.id}-${emp.management_score}`} className={`border-t-2 ${cfg.light} bg-gradient-to-br from-slate-50 to-white p-5 grid grid-cols-3 gap-5`}>
-                      {/* Score breakdown */}
+                    <div key={`${emp.id}-${emp.final_score}`} className={`border-t-2 ${cfg.light} bg-gradient-to-br from-slate-50 to-white p-5 grid grid-cols-3 gap-5`}>
+                      {/* Final Score */}
                       <div className="space-y-3">
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-indigo-400"/>Score Breakdown</p>
-                        {[
-                          { l: 'EMP Score',     v: emp.emp_score,                                                   w: 25, g: 'from-green-400 to-emerald-500' },
-                          { l: 'Manager Score', v: emp.manager_score,                                               w: 25, g: 'from-blue-400 to-indigo-500' },
-                          { l: 'HOD Score',     v: emp.hod_score,                                                   w: 25, g: 'from-violet-400 to-purple-500' },
-                          { l: 'Mgmt Score',    v: emp.management_score !== null ? emp.management_score : undefined, w: 25, g: 'from-pink-400 to-rose-500' },
-                        ].map(s => (
-                          <div key={s.l}>
-                            <div className="flex justify-between text-xs mb-1.5">
-                              <span className="text-slate-500">{s.l} <span className="text-slate-300">({s.w}%)</span></span>
-                              <span className={`font-black bg-gradient-to-r ${s.g} bg-clip-text text-transparent`}>{(s.v !== undefined && s.v !== null) ? s.v : '—'}/100</span>
-                            </div>
-                            <Bar value={(s.v !== undefined && s.v !== null) ? s.v : 0} max={100} gradient={s.g}/>
-                          </div>
-                        ))}
-                        {(emp.fy_prev1_score || emp.fy_prev2_score) && (
-                          <div className="pt-2 border-t border-slate-200">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1.5">Performance Trend</p>
-                            <div className="flex items-center gap-3 text-xs">
-                              {emp.fy_prev2_score && <div className="text-center"><p className="text-slate-400">FY-2</p><p className="font-black text-slate-600">{emp.fy_prev2_score}</p></div>}
-                              {emp.fy_prev1_score && <><ArrowUpRight className="w-3 h-3 text-slate-300"/><div className="text-center"><p className="text-slate-400">FY-1</p><p className="font-black text-slate-600">{emp.fy_prev1_score}</p></div></>}
-                              <ArrowUpRight className="w-3 h-3 text-emerald-400"/>
-                              <div className="text-center"><p className="text-slate-400">Now</p><p className={`font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>{emp.final_score}</p></div>
-                            </div>
-                          </div>
-                        )}
-                        <div className={`pt-2 border-t-2 ${cfg.light} flex justify-between`}>
-                          <span className="font-bold text-slate-700 text-sm">Final Score</span>
-                          <span className={`font-black text-lg bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>{emp.final_score}</span>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-indigo-400"/>Final Score</p>
+                        <div>
+                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Final Score (0–120)</label>
+                          <input type="number" min={0} max={120} step="0.01" defaultValue={emp.final_score}
+                            onBlur={e => { const v = e.target.value; if (v !== String(emp.final_score)) update(emp.id, { final_score_value: v }); }}
+                            className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
                         </div>
+                        <Bar value={emp.final_score} max={120} gradient={cfg.gradient}/>
+                        <div className={`pt-3 border-t-2 ${cfg.light} flex justify-between items-center`}>
+                          <span className="font-bold text-slate-700 text-sm">Grade (auto)</span>
+                          <GradePill grade={emp.effective_grade} size="md"/>
+                        </div>
+                        <p className="text-[10px] text-slate-400">Grade is derived automatically from the Final Score using the standard ranges.</p>
                       </div>
 
                       {/* Overrides */}
@@ -679,23 +631,6 @@ export default function PMSPage() {
                             <option value="">Auto — Grade {emp.auto_grade}</option>
                             {GO.map(g => <option key={g} value={g}>Grade {g} — {GRADES[g].label}</option>)}
                           </select>
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Management Score Override</label>
-                          <div className="flex gap-2 items-center">
-                            <input type="number" min="0" max="100" defaultValue={emp.management_score??''}
-                              id={`mgmt-${emp.id}`}
-                              placeholder="0–100"
-                              className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400"/>
-                            <button onClick={() => {
-                              const inp = document.getElementById(`mgmt-${emp.id}`) as HTMLInputElement;
-                              const val = inp?.value ? parseInt(inp.value) : null;
-                              update(emp.id, { management_score: val });
-                            }}
-                              className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all">
-                              ✓ Save
-                            </button>
-                          </div>
                         </div>
                         <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Promotion Readiness</label>
@@ -1022,26 +957,23 @@ export default function PMSPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Score Formula */}
+              {/* Score → Grade */}
               <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border-2 border-indigo-100 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md"><Zap className="w-4 h-4 text-white"/></div>
-                  <h3 className="font-black text-slate-800">Performance Score Formula</h3>
+                  <h3 className="font-black text-slate-800">Score &amp; Grade</h3>
                 </div>
-                <div className="bg-white rounded-2xl p-5 border border-indigo-100 text-center">
-                  <p className="text-slate-500 text-sm mb-3 font-semibold">Final Score =</p>
+                <div className="bg-white rounded-2xl p-5 border border-indigo-100 text-center space-y-3">
+                  <p className="text-slate-600 text-sm font-semibold">One <b>Final Score</b> is imported directly per employee — the <b>Grade</b> is derived automatically from it (no weighting or formula).</p>
                   <div className="flex items-center justify-center gap-3 flex-wrap">
-                    {[
-                      { l: 'EMP Score × 25%',     g: 'from-green-400 to-emerald-500' },
-                      { l: 'Manager Score × 25%', g: 'from-blue-400 to-indigo-500' },
-                      { l: 'HOD Score × 25%',     g: 'from-violet-400 to-purple-500' },
-                      { l: 'Mgmt Score × 25%',    g: 'from-pink-400 to-rose-500' },
-                    ].map((s,i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        {i > 0 && <span className="text-slate-400 font-black text-2xl">+</span>}
-                        <div className={`bg-gradient-to-r ${s.g} text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg`}>{s.l}</div>
-                      </div>
-                    ))}
+                    <div className="bg-gradient-to-r from-indigo-400 to-violet-500 text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg">Final Score</div>
+                    <span className="text-slate-400 font-black text-2xl">→</span>
+                    <div className="bg-gradient-to-r from-emerald-400 to-teal-500 text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg">Grade</div>
+                  </div>
+                  <div className="text-xs text-slate-500 pt-2 border-t border-indigo-100 grid grid-cols-2 gap-1 text-left">
+                    <span>A+ : ≥ 106</span><span>A : 95 – 105</span>
+                    <span>B+ : 85 – 94</span><span>B : 65 – 84</span>
+                    <span>C : 51 – 64</span><span>D : &lt; 51</span>
                   </div>
                 </div>
               </div>
