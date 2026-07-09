@@ -588,7 +588,26 @@ export default function PMSPage() {
                     <div className="col-span-3">
                       <div className={`rounded-2xl p-3 border-2 ${cfg.light}`}>
                         <div className="flex justify-between text-xs mb-1"><span className="text-slate-400">Current</span><span className="text-slate-600 font-bold">₹{fmt(emp.current_ctc)}</span></div>
-                        <div className="flex justify-between text-xs mb-2"><span className="text-slate-400">Increment</span><span className="text-emerald-500 font-bold">+₹{fmt(emp.increment_amount)}</span></div>
+                        <div className="flex justify-between text-xs mb-0.5">
+                          <span className="text-slate-400">Increment <span className="text-emerald-600 font-bold">{emp.effective_increment_pct}%</span></span>
+                          <span className="text-emerald-600 font-bold">+₹{fmt(emp.increment_amount)}</span>
+                        </div>
+                        {emp.promoted && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Promotion <span className="text-violet-600 font-bold">{emp.effective_promotion_pct}%</span></span>
+                            <span className="text-violet-600 font-bold">+₹{fmt(emp.promotion_amount)}</span>
+                          </div>
+                        )}
+                        {emp.management_discretion_pct > 0 && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Mgmt Disc. <span className="text-amber-600 font-bold">{emp.management_discretion_pct}%</span></span>
+                            <span className="text-amber-600 font-bold">+₹{fmt(emp.management_discretion_amount)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xs mb-1 pt-1 border-t border-slate-200">
+                          <span className="text-slate-500 font-semibold">Total Hike <span className="font-black">{emp.total_impact_pct}%</span></span>
+                          <span className="text-slate-600 font-bold">+₹{fmt(emp.new_ctc - emp.current_ctc)}</span>
+                        </div>
                         <div className="flex justify-between text-sm"><span className="font-bold text-slate-700">New CTC</span><span className={`font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>₹{fmt(emp.new_ctc)}</span></div>
                       </div>
                     </div>
