@@ -604,6 +604,12 @@ export default function PMSPage() {
                             <span className="text-amber-600 font-bold">+₹{fmt(emp.management_discretion_amount)}</span>
                           </div>
                         )}
+                        {emp.sustained_performance && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Sustained <span className="text-teal-600 font-bold">{emp.sustained_pct}%</span></span>
+                            <span className="text-teal-600 font-bold">+₹{fmt(emp.sustained_amount)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-xs mb-1 pt-1 border-t border-slate-200">
                           <span className="text-slate-500 font-semibold">Total Hike <span className="font-black">{emp.total_impact_pct}%</span></span>
                           <span className="text-slate-600 font-bold">+₹{fmt(emp.new_ctc - emp.current_ctc)}</span>
@@ -662,10 +668,11 @@ export default function PMSPage() {
                             <option value="not_ready">Not Ready</option>
                           </select>
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex gap-2 flex-wrap">
                           {[
                             { k: 'promoted', l: 'Promoted', v: emp.promoted, g: 'from-violet-500 to-purple-600', I: Crown },
                             { k: 'on_time_reward', l: 'Reward', v: emp.on_time_reward, g: 'from-amber-400 to-orange-500', I: Star },
+                            { k: 'sustained_performance', l: 'Sustained', v: emp.sustained_performance, g: 'from-teal-500 to-cyan-600', I: Sparkles },
                           ].map(t => (
                             <button key={t.k} onClick={() => update(emp.id, { [t.k]: !t.v })}
                               className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${t.v ? `bg-gradient-to-r ${t.g} text-white border-transparent shadow-md` : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
