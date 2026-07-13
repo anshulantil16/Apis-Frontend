@@ -960,14 +960,22 @@ export default function PMSPage() {
                 const mx = Math.max(...series.map(s=>s.v),1);
                 return (
                   <div className="space-y-2">
-                    {series.map(s => (
+                    {series.map((s,i) => {
+                      const prev = i>0 ? series[i-1].v : 0;
+                      const growth = i>0 && prev>0 ? ((s.v-prev)/prev*100) : null;
+                      return (
                       <div key={s.l} className="flex items-center gap-3">
                         <div className="w-20 text-xs font-bold text-slate-600">{s.l}</div>
                         <div className="flex-1"><Bar value={s.v} max={mx} gradient="from-emerald-400 to-green-500"/></div>
+                        <span className="w-16 text-right text-[11px] font-black">
+                          {growth!==null
+                            ? <span className={growth>=0 ? 'text-emerald-600' : 'text-rose-500'}>{growth>=0?'▲':'▼'} {Math.abs(growth).toFixed(1)}%</span>
+                            : <span className="text-slate-300">—</span>}
+                        </span>
                         <span className="text-xs font-black text-slate-700 w-16 text-right">{fmtCr(s.v)}</span>
                       </div>
-                    ))}
-                    <p className="text-[10px] text-slate-400 mt-1">*Projected after this appraisal cycle</p>
+                    )})}
+                    <p className="text-[10px] text-slate-400 mt-1">▲ = year-over-year increase %. *FY 26-27 projected after this appraisal cycle</p>
                   </div>
                 );
               })()}
