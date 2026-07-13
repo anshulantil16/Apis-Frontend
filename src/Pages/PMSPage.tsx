@@ -106,6 +106,8 @@ function ScoreRing({ score, size = 50 }: { score: number; size?: number }) {
 function Slider({ emp, onUpdate }: { emp: any; onUpdate: (id: number, d: any) => void }) {
   const cfg = GRADES[emp.effective_grade];
   const [val, setVal] = useState<number>(emp.effective_increment_pct);
+  // Keep the slider in sync when the grade/increment changes elsewhere (e.g. override grade).
+  useEffect(() => { setVal(emp.effective_increment_pct); }, [emp.effective_increment_pct]);
   const max = 20;
   const pct = Math.min(100, (val / max) * 100);
   const groupLabel = emp.is_worker ? 'Worker · ₹ fixed' : emp.increment_group === 'staff2' ? 'Staff M4–C3' : emp.increment_group === 'special' ? 'MD discretion' : 'Staff O1–M3';
