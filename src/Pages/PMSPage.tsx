@@ -656,17 +656,17 @@ export default function PMSPage() {
                             <span className="text-sky-600 font-bold">+₹{fmt(emp.salary_correction_amount)}</span>
                           </div>
                         )}
-                        {emp.on_time_reward && emp.reward_amount > 0 && (
-                          <div className="flex justify-between text-xs mb-0.5">
-                            <span className="text-slate-400">Special Reward</span>
-                            <span className="text-orange-500 font-bold">+₹{fmt(emp.reward_amount)}</span>
-                          </div>
-                        )}
                         <div className="flex justify-between text-xs mb-1 pt-1 border-t border-slate-200">
                           <span className="text-slate-500 font-semibold">Total Hike <span className="font-black">{emp.total_impact_pct}%</span></span>
                           <span className="text-slate-600 font-bold">+₹{fmt(emp.new_ctc - emp.current_ctc)}</span>
                         </div>
                         <div className="flex justify-between text-sm"><span className="font-bold text-slate-700">New CTC</span><span className={`font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>₹{fmt(emp.new_ctc)}</span></div>
+                        {emp.on_time_reward && emp.reward_payout > 0 && (
+                          <div className="flex justify-between text-[11px] mt-1 pt-1 border-t border-dashed border-orange-200">
+                            <span className="text-orange-500 font-semibold">One-Time Reward <span className="text-slate-400 font-normal">(not in CTC)</span></span>
+                            <span className="text-orange-500 font-bold">₹{fmt(emp.reward_payout)}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     {/* Flags */}
@@ -1020,10 +1020,10 @@ export default function PMSPage() {
                     { label: 'Promotion',             value: `+${fmtCr(sum.cost_promotion||0)}`,       pct: pctOf(sum.cost_promotion||0),       color: 'text-violet-600' },
                     { label: 'Sustained Performance', value: `+${fmtCr(sum.cost_sustained||0)}`,       pct: pctOf(sum.cost_sustained||0),       color: 'text-teal-600' },
                     { label: 'Salary Correction',     value: `+${fmtCr(sum.cost_correction||0)}`,      pct: pctOf(sum.cost_correction||0),      color: 'text-sky-600' },
-                    { label: 'Special Reward',        value: `+${fmtCr(sum.cost_reward||0)}`,          pct: pctOf(sum.cost_reward||0),          color: 'text-orange-600' },
                     { label: 'Management Discretion', value: `+${fmtCr(sum.cost_mgmt_discretion||0)}`, pct: pctOf(sum.cost_mgmt_discretion||0), color: 'text-amber-600' },
-                    { label: 'Total Hike Cost', value: `+${fmtCr(totalInc)}`, pct: `${incPct.toFixed(2)}%`, color: 'text-rose-600', divide: true, big: true },
+                    { label: 'Total Hike Cost (recurring)', value: `+${fmtCr(totalInc)}`, pct: `${incPct.toFixed(2)}%`, color: 'text-rose-600', divide: true, big: true },
                     { label: 'New Payroll Cost', value: fmtCr(newCTC), pct: '', color: 'text-indigo-700', big: true },
+                    { label: 'One-Time Rewards (not in payroll)', value: `+${fmtCr(sum.cost_reward||0)}`, pct: '', color: 'text-orange-600', divide: true },
                   ];
                   return rows.map(r => (
                     <div key={r.label} className={`flex justify-between items-center py-2 ${r.divide ? 'border-t-2 border-slate-200 mt-1 pt-2.5' : 'border-b border-slate-50'}`}>
