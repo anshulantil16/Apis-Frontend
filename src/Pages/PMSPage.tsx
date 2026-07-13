@@ -708,7 +708,7 @@ export default function PMSPage() {
                       {/* Management Discretion */}
                       <div className="space-y-3">
                         <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-orange-400"/>Management Discretion</p>
-                        <p className="text-[10px] text-slate-400 -mt-1.5">Management can add any % or amount — beyond standard limits.</p>
+                        <p className="text-[10px] text-slate-400 -mt-1.5"><b>Discretion %</b> is unlimited (warn only). <b>Correction</b> &amp; <b>Special Reward</b> are capped by policy.</p>
 
                         <div className="grid grid-cols-2 gap-2">
                           <div>
@@ -720,11 +720,12 @@ export default function PMSPage() {
                           <div>
                             <label className="text-xs text-slate-500 font-semibold mb-1 block">Correction ₹</label>
                             <input type="number" min={0} step="1000" defaultValue={emp.salary_correction || ''} placeholder="0"
+                              disabled={!emp.salary_correction_allowed}
                               onBlur={e => update(emp.id, { salary_correction: e.target.value || 0 })}
-                              className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
+                              className={`w-full border-2 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none ${emp.salary_correction_allowed ? 'border-slate-200 bg-white focus:border-indigo-400' : 'border-slate-100 bg-slate-100 text-slate-400 cursor-not-allowed'}`}/>
                           </div>
                         </div>
-                        {!emp.salary_correction_allowed && emp.salary_correction > 0 && <p className="text-[10px] text-amber-600 -mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Policy: correction is for A+/A/B+/B &amp; not when promoted — override applied.</p>}
+                        {!emp.salary_correction_allowed && <p className="text-[10px] text-rose-500 -mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Correction not allowed — only A+/A/B+/B grades &amp; not when promoted.</p>}
 
                         <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1 flex items-center justify-between">
@@ -733,14 +734,16 @@ export default function PMSPage() {
                           </label>
                           <div className="flex gap-2 items-center">
                             <input type="number" min={0} step="1000" defaultValue={emp.reward_amount || ''} placeholder="0"
-                              onBlur={e => update(emp.id, { reward_amount: e.target.value || 0 })}
+                              onBlur={e => { let v = Number(e.target.value)||0; const mx = emp.special_reward_range ? emp.special_reward_range[1] : null; if (mx!==null && v>mx) { v = mx; e.target.value = String(mx); } update(emp.id, { reward_amount: v }); }}
                               className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
                             <button onClick={() => update(emp.id, { on_time_reward: !emp.on_time_reward })}
                               className={`px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all whitespace-nowrap ${emp.on_time_reward ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white border-transparent shadow-md' : 'bg-white border-slate-200 text-slate-500'}`}>
                               {emp.on_time_reward ? '✓ Applied' : 'Apply'}
                             </button>
                           </div>
-                          {emp.special_reward_range && emp.reward_amount > 0 && (emp.reward_amount < emp.special_reward_range[0] || emp.reward_amount > emp.special_reward_range[1]) && <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Outside {emp.band} band range (₹{fmt(emp.special_reward_range[0])}–₹{fmt(emp.special_reward_range[1])}) — override applied.</p>}
+                          {emp.special_reward_range
+                            ? <p className="text-[10px] text-slate-400 mt-1">Max ₹{fmt(emp.special_reward_range[1])} for {emp.band} band — auto-capped.</p>
+                            : <p className="text-[10px] text-slate-400 mt-1">{emp.band || 'This'} band: Director/MD discretion — no fixed cap.</p>}
                         </div>
 
                         <div>
