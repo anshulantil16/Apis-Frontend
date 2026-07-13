@@ -1152,6 +1152,48 @@ export default function PMSPage() {
                 ))}
               </div>
             </div>
+
+            {/* Cost Centre-wise Impact */}
+            <div className="col-span-2 bg-gradient-to-br from-amber-50 via-white to-orange-50 rounded-2xl border-2 border-amber-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-md"><BarChart3 className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Cost Centre-wise Impact</h3>
+                <span className="ml-auto text-[11px] text-slate-400">{(sum.cost_centre_breakdown||[]).length} cost centres</span>
+              </div>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-amber-50 z-10">
+                    <tr className="text-slate-500 border-b-2 border-amber-200">
+                      <th className="text-left py-2 px-2 font-black">Cost Centre</th>
+                      <th className="text-right py-2 px-2 font-black">Emp</th>
+                      <th className="text-right py-2 px-2 font-black">Current CTC</th>
+                      <th className="text-right py-2 px-2 font-black">Increment</th>
+                      <th className="text-right py-2 px-2 font-black">Promotion</th>
+                      <th className="text-right py-2 px-2 font-black">Sustained</th>
+                      <th className="text-right py-2 px-2 font-black">Promoted</th>
+                      <th className="text-right py-2 px-2 font-black">Hike %</th>
+                      <th className="text-right py-2 px-2 font-black">New CTC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(sum.cost_centre_breakdown||[]).map((c:any,i:number) => (
+                      <tr key={i} className="border-b border-slate-100 hover:bg-amber-50/60">
+                        <td className="text-left py-1.5 px-2 font-bold text-slate-700 whitespace-nowrap">{c.cost_centre}</td>
+                        <td className="text-right py-1.5 px-2 text-slate-600 font-bold">{c.count}</td>
+                        <td className="text-right py-1.5 px-2 text-slate-600">{fmtCr(c.current_ctc)}</td>
+                        <td className="text-right py-1.5 px-2 text-emerald-600 font-bold">+{fmtCr(c.increment_cost)}</td>
+                        <td className="text-right py-1.5 px-2 text-violet-600 font-bold">+{fmtCr(c.promotion_cost)}</td>
+                        <td className="text-right py-1.5 px-2 text-teal-600 font-bold">+{fmtCr(c.sustained_cost)}</td>
+                        <td className="text-right py-1.5 px-2 text-slate-600">{c.promoted}</td>
+                        <td className="text-right py-1.5 px-2 font-black text-rose-600">{c.hike_pct}%</td>
+                        <td className="text-right py-1.5 px-2 font-black text-indigo-700 whitespace-nowrap">{fmtCr(c.new_ctc)}</td>
+                      </tr>
+                    ))}
+                    {(sum.cost_centre_breakdown||[]).length === 0 && <tr><td colSpan={9} className="text-center py-4 text-slate-300">No cost-centre data</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
