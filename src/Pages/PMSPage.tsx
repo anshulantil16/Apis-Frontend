@@ -613,7 +613,7 @@ export default function PMSPage() {
                       <ScoreRing score={emp.final_score} />
                       <div className="text-[10px] text-slate-400 space-y-0.5">
                         <div className="text-slate-400">Final Score</div>
-                        <div className="font-black text-slate-700 text-sm">{emp.final_score}<span className="text-slate-300 text-[10px]">/120</span></div>
+                        <div className="font-black text-slate-700 text-sm">{emp.final_score}<span className="text-slate-300 text-[10px]">/100</span></div>
                         <div>Grade <span className="font-black" style={{ color: cfg.color }}>{emp.effective_grade}</span></div>
                       </div>
                     </div>
@@ -687,12 +687,13 @@ export default function PMSPage() {
                       <div className="space-y-3">
                         <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-indigo-400"/>Final Score</p>
                         <div>
-                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Final Score (0–120)</label>
-                          <input type="number" min={0} max={120} step="0.01" defaultValue={emp.final_score}
+                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Final Score (0–100, % of target)</label>
+                          <input type="number" min={0} max={115} step="0.01" defaultValue={emp.final_score}
                             onBlur={e => { const v = e.target.value; if (v !== String(emp.final_score)) update(emp.id, { final_score_value: v }); }}
                             className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
+                          <p className="text-[10px] text-slate-400 mt-1">100 = target met. Above 100 = over-achievement (A+ / Exceptional).</p>
                         </div>
-                        <Bar value={emp.final_score} max={120} gradient={cfg.gradient}/>
+                        <Bar value={emp.final_score} max={100} gradient={cfg.gradient}/>
                         <div className={`pt-3 border-t-2 ${cfg.light} flex justify-between items-center`}>
                           <span className="font-bold text-slate-700 text-sm">Grade (auto)</span>
                           <GradePill grade={emp.effective_grade} size="md"/>
