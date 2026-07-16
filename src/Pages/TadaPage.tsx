@@ -91,6 +91,32 @@ const STATUS_STYLE: Record<string, string> = {
   finance_rejected: 'bg-rose-100 text-rose-700', draft: 'bg-slate-100 text-slate-600',
 };
 
+// ── Shared option lists ───────────────────────────────────────────────────────
+const TRAVEL_MODES = ['Train', 'Flight', 'Bus', 'Cab / Taxi', 'Own Car', 'Own Two-Wheeler', 'Auto Rickshaw', 'Company Vehicle'];
+const LOCAL_MODES = ['Cab / Taxi', 'Auto Rickshaw', 'Bus', 'Metro', 'Own Car', 'Own Two-Wheeler', 'Bike Taxi', 'E-Rickshaw'];
+const LOCAL_TYPES = ['Outdoor Duty', 'Office Work', 'Client Visit', 'Bank / Govt Work', 'Site Visit', 'Vendor Meeting'];
+
+// Dropdown that always includes an "Other…" option → reveals a free-text input
+function SelectOther({ value, onChange, options, className, placeholder = 'Select…' }: {
+  value: string; onChange: (v: string) => void; options: string[]; className?: string; placeholder?: string;
+}) {
+  const [other, setOther] = useState(!!value && !options.includes(value));
+  return (
+    <div className="space-y-2">
+      <select className={className} value={other ? '__other__' : value}
+        onChange={e => {
+          if (e.target.value === '__other__') { setOther(true); onChange(''); }
+          else { setOther(false); onChange(e.target.value); }
+        }}>
+        <option value="" disabled>{placeholder}</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        <option value="__other__">Other…</option>
+      </select>
+      {other && <input className={className} placeholder="Please specify" value={value} onChange={e => onChange(e.target.value)} autoFocus />}
+    </div>
+  );
+}
+
 // ── Login ─────────────────────────────────────────────────────────────────────
 function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [mode, setMode] = useState<'user' | 'admin'>('user');
@@ -271,11 +297,12 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [toast, setToast] = useState<{ t: string; ok: boolean } | null>(null);
+  const [formKey, setFormKey] = useState(0); // bump to remount SelectOther dropdowns after reset
 
   // celebrate on success → confetti + toast, then hand off after a beat
   const cheer = (message: string) => {
     setToast({ t: message || 'Submitted for approval 🎉', ok: true });
-    setCelebrate(true);
+    setCelebrate(true); setFormKey(k => k + 1);
     setTimeout(() => setCelebrate(false), 1600);
     setTimeout(() => onDone(), 1500);
   };
@@ -363,7 +390,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Contact Number</label><input className={inp} value={tour.contact_number} onChange={e => setTour({ ...tour, contact_number: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction Number <span className="text-slate-300">(from manager)</span></label><input className={inp} value={tour.sanction_number} onChange={e => setTour({ ...tour, sanction_number: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Estimate of Expenses (₹)</label><input type="number" className={inp} value={tour.estimate_amount} onChange={e => setTour({ ...tour, estimate_amount: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode</label><input className={inp} value={tour.travel_mode} onChange={e => setTour({ ...tour, travel_mode: e.target.value })} placeholder="Train / Air / Bus" /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode</label><SelectOther key={formKey} className={inp} value={tour.travel_mode} onChange={v => setTour({ ...tour, travel_mode: v })} options={TRAVEL_MODES} placeholder="Select mode…" /></div>
           </div>
           <button onClick={submitTour} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
         </div>
@@ -392,7 +419,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
                   <div className="lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Date</label><input type="date" className={inp} value={it.date} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} /></div>
                   <div className="lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Amount ₹</label><input type="number" className={inp} value={it.claimed_amount} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, claimed_amount: e.target.value } : x))} placeholder="0" /></div>
                   <div className="col-span-2 lg:col-span-3"><label className="text-xs font-bold text-slate-500 mb-1 block">Description</label><input className={inp} value={it.description} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} placeholder="What was this expense for?" /></div>
-                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">Mode</label><input className={inp} value={it.mode} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, mode: e.target.value } : x))} placeholder="Taxi" /></div>
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">Mode</label><SelectOther key={formKey} className={inp} value={it.mode} onChange={v => setItems(items.map((x, j) => j === i ? { ...x, mode: v } : x))} options={TRAVEL_MODES} placeholder="Mode…" /></div>
                   <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input className={inp} value={it.from_location} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, from_location: e.target.value } : x))} /></div>
                   <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">To</label><input className={inp} value={it.to_location} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, to_location: e.target.value } : x))} /></div>
                 </div>
@@ -416,7 +443,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
           {formHead(active)}
           <div className="grid md:grid-cols-4 gap-3">
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Type</label>
-              <select className={inp} value={local.local_travel_type} onChange={e => setLocal({ ...local, local_travel_type: e.target.value })}><option>Outdoor Duty</option><option>Office Work</option><option>Client Visit</option><option>Bank/Govt Work</option></select></div>
+              <SelectOther key={formKey} className={inp} value={local.local_travel_type} onChange={v => setLocal({ ...local, local_travel_type: v })} options={LOCAL_TYPES} placeholder="Select type…" /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input type="date" className={inp} value={local.from_date} onChange={e => setLocal({ ...local, from_date: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">To</label><input type="date" className={inp} value={local.to_date} onChange={e => setLocal({ ...local, to_date: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Daily Cap</label><div className="w-full border-2 border-emerald-100 bg-emerald-50 rounded-xl px-3 py-2.5 text-sm font-black text-emerald-700">₹{user.caps?.local_conveyance_daily ?? '—'} <span className="font-medium text-emerald-500 text-xs">/ day</span></div></div>
@@ -433,7 +460,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
                   <div className="col-span-2 lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose</label><input className={inp} value={it.purpose} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, purpose: e.target.value } : x))} placeholder="e.g. Client meeting" /></div>
                   <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input className={inp} value={it.from_location} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, from_location: e.target.value } : x))} /></div>
                   <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">To</label><input className={inp} value={it.to_location} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, to_location: e.target.value } : x))} /></div>
-                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">Mode</label><input className={inp} value={it.mode} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, mode: e.target.value } : x))} placeholder="Cab" /></div>
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">Mode</label><SelectOther key={formKey} className={inp} value={it.mode} onChange={v => setLrows(lrows.map((x, j) => j === i ? { ...x, mode: v } : x))} options={LOCAL_MODES} placeholder="Mode…" /></div>
                   <div className="col-span-2 lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Amount ₹</label><input type="number" className={inp} value={it.amount} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))} placeholder="0" /></div>
                 </div>
               </div>
