@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Plane, LogOut, Plus, Trash2, Upload, CheckCircle, XCircle, Clock, FileText,
-  Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, Paperclip, Users, Shield,
+  Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, Paperclip, Users, Shield, BarChart3,
 } from 'lucide-react';
 
 const API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/tada`;
@@ -402,26 +402,122 @@ function ApproverBoard({ user }: { user: User }) {
 }
 
 // ── Admin: user import ────────────────────────────────────────────────────────
-function AdminUsers() {
+const STATUS_LABELS: Record<string, string> = {
+  submitted: 'Pending Manager', manager_approved: 'Pending HR', hr_approved: 'Pending Finance',
+  finance_approved: 'Finance Approved', paid: 'Paid', manager_rejected: 'Rejected · Manager',
+  hr_rejected: 'Rejected · HR', finance_rejected: 'Rejected · Finance',
+};
+
+function AdminDashboard({ user }: { user: User }) {
+  const [sub, setSub] = useState('overview');
+  const [ov, setOv] = useState<any>(null);
+  const [sel, setSel] = useState<number | null>(null);
+  const [filter, setFilter] = useState('');
   const [msg, setMsg] = useState('');
-  const [count, setCount] = useState(0);
-  const load = () => fetch(`${API}/users/`).then(r => r.json()).then(d => setCount(d.total));
+  const load = () => fetch(`${API}/admin/overview/`).then(r => r.json()).then(setOv);
   useEffect(() => { load(); }, []);
+
   const imp = async (e: any) => {
     const f = e.target.files?.[0]; if (!f) return;
     const fd = new FormData(); fd.append('file', f);
     const r = await fetch(`${API}/users/import/`, { method: 'POST', body: fd });
     const d = await r.json(); setMsg(d.message || d.error); load(); e.target.value = '';
   };
+  const reset = async (what: string) => {
+    if (!confirm(what === 'all' ? 'Clear ALL requests AND users? This cannot be undone.' : 'Clear ALL travel requests? This cannot be undone.')) return;
+    const r = await fetch(`${API}/admin/reset/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ what }) });
+    const d = await r.json(); setMsg(d.message); load();
+  };
+
+  if (sel) return <Detail id={sel} user={user} onBack={() => setSel(null)} />;
+  const reqs = (ov?.requests || []).filter((r: any) => !filter || r.status === filter);
+
+  const stat = (label: string, val: any, grad: string) => (
+    <div className={`bg-gradient-to-br ${grad} rounded-2xl p-4 text-white shadow-md`}>
+      <p className="text-3xl font-black truncate">{val}</p><p className="text-white/80 text-xs font-semibold mt-1">{label}</p>
+    </div>
+  );
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
-      <h3 className="font-black text-slate-800 flex items-center gap-2"><Users className="w-5 h-5 text-indigo-500" />TA/DA User Directory ({count})</h3>
-      <p className="text-slate-500 text-sm">Import the user list (Employee ID, Name, Email, Level M1-M7/E1-E4, Role: employee/manager/hr/finance, Reporting Manager ID).</p>
-      <div className="flex gap-2">
-        <a href={`${API}/users/template/`} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold"><FileText className="w-4 h-4" />Download Template</a>
-        <label className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl text-sm font-bold cursor-pointer"><Upload className="w-4 h-4" />Import Users<input type="file" accept=".xlsx" className="hidden" onChange={imp} /></label>
+    <div className="space-y-4">
+      <div className="flex gap-2 flex-wrap items-center">
+        {[{ k: 'overview', l: 'Overview', i: BarChart3 }, { k: 'requests', l: 'All Requests', i: FileText }, { k: 'users', l: 'Users', i: Users }, { k: 'danger', l: 'Danger Zone', i: Trash2 }].map(t => (
+          <button key={t.k} onClick={() => setSub(t.k)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${sub === t.k ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md' : 'bg-white border-2 border-slate-200 text-slate-500'}`}><t.i className="w-4 h-4" />{t.l}</button>
+        ))}
+        <button onClick={load} className="ml-auto flex items-center gap-1 text-slate-400 text-sm"><RefreshCw className="w-4 h-4" />Refresh</button>
       </div>
-      {msg && <p className="text-emerald-600 text-sm font-semibold">{msg}</p>}
+      {msg && <p className="text-emerald-600 text-sm font-semibold bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">{msg}</p>}
+
+      {sub === 'overview' && ov && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {stat('Total Requests', ov.total_requests, 'from-blue-500 to-indigo-600')}
+            {stat('Total Users', ov.total_users, 'from-slate-500 to-slate-700')}
+            {stat('Total Claimed ₹', fmt(ov.total_claimed), 'from-amber-500 to-orange-600')}
+            {stat('Total Approved ₹', fmt(ov.total_approved), 'from-emerald-500 to-teal-600')}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+            {stat('Pending Manager', ov.pending_manager, 'from-amber-400 to-amber-500')}
+            {stat('Pending HR', ov.pending_hr, 'from-blue-400 to-blue-500')}
+            {stat('Pending Finance', ov.pending_finance, 'from-violet-400 to-violet-500')}
+            {stat('Finance OK', ov.approved, 'from-emerald-400 to-emerald-500')}
+            {stat('Paid', ov.paid, 'from-teal-500 to-emerald-600')}
+            {stat('Rejected', ov.rejected, 'from-rose-400 to-red-500')}
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[{ t: 'By Type', d: ov.by_type }, { t: 'By Department', d: ov.by_department }, { t: 'Users by Role', d: ov.users_by_role }].map(col => (
+              <div key={col.t} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                <p className="text-xs font-black text-slate-500 uppercase tracking-wide mb-2">{col.t}</p>
+                <div className="space-y-1">
+                  {Object.entries(col.d || {}).map(([k, v]: any) => (
+                    <div key={k} className="flex justify-between text-sm"><span className="text-slate-500 capitalize">{String(k).replace(/_/g, ' ')}</span><span className="font-bold text-slate-700">{v as number}</span></div>
+                  ))}
+                  {Object.keys(col.d || {}).length === 0 && <span className="text-xs text-slate-300">No data</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {sub === 'requests' && (
+        <>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select value={filter} onChange={e => setFilter(e.target.value)} className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white">
+              <option value="">All statuses ({ov?.requests?.length || 0})</option>
+              {Object.keys(STATUS_LABELS).map(s => <option key={s} value={s}>{STATUS_LABELS[s]} ({ov?.by_status?.[s] || 0})</option>)}
+            </select>
+            <span className="text-slate-400 text-sm">{reqs.length} shown</span>
+          </div>
+          <div className="space-y-2">
+            {reqs.map((r: any) => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
+            {reqs.length === 0 && <p className="text-slate-300 text-center py-10">No requests.</p>}
+          </div>
+        </>
+      )}
+
+      {sub === 'users' && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+          <h3 className="font-black text-slate-800 flex items-center gap-2"><Users className="w-5 h-5 text-indigo-500" />User Directory ({ov?.total_users ?? 0})</h3>
+          <p className="text-slate-500 text-sm">Import users: Employee ID, Name, Email, Level (M1-M7/E1-E4), Role (employee/manager/hr/finance), Reporting Manager ID.</p>
+          <div className="flex gap-2">
+            <a href={`${API}/users/template/`} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold"><FileText className="w-4 h-4" />Download Template</a>
+            <label className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl text-sm font-bold cursor-pointer"><Upload className="w-4 h-4" />Import Users<input type="file" accept=".xlsx" className="hidden" onChange={imp} /></label>
+          </div>
+          {ov?.users_by_role && <div className="flex gap-2 flex-wrap pt-2">{Object.entries(ov.users_by_role).map(([k, v]: any) => <span key={k} className="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-600 capitalize">{k}: {v as number}</span>)}</div>}
+        </div>
+      )}
+
+      {sub === 'danger' && (
+        <div className="bg-rose-50 rounded-2xl border-2 border-rose-200 p-6 space-y-3">
+          <h3 className="font-black text-rose-700 flex items-center gap-2"><AlertCircle className="w-5 h-5" />Danger Zone</h3>
+          <p className="text-rose-600 text-sm">These actions permanently delete data. Use with care.</p>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => reset('requests')} className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-rose-300 text-rose-600 rounded-xl text-sm font-bold hover:bg-rose-100"><Trash2 className="w-4 h-4" />Clear All Requests</button>
+            <button onClick={() => reset('all')} className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-xl text-sm font-bold hover:bg-rose-700"><Trash2 className="w-4 h-4" />Clear Requests + Users</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -435,11 +531,10 @@ function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () =
   const [mine, setMine] = useState<any[]>([]);
   useEffect(() => { if (tab === 'mine') fetch(`${API}/requests/mine/?employee_id=${user.employee_id}`).then(r => r.json()).then(d => setMine(d.requests || [])); }, [tab, refresh]);
 
-  const tabs = user.role === 'admin'
-    ? [{ k: 'users', l: 'Users', i: Users }]
-    : isApprover
-      ? [{ k: 'approvals', l: 'Approvals', i: Shield }, { k: 'new', l: 'My New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }]
-      : [{ k: 'new', l: 'New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }];
+  const isAdmin = user.role === 'admin';
+  const tabs = isApprover
+    ? [{ k: 'approvals', l: 'Approvals', i: Shield }, { k: 'new', l: 'My New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }]
+    : [{ k: 'new', l: 'New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -447,18 +542,20 @@ function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () =
         <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-4">
           {onNavigateBack && <button onClick={onNavigateBack} className="text-white/70 hover:text-white"><ChevronLeft className="w-5 h-5" /></button>}
           <Plane className="w-6 h-6" />
-          <div className="flex-1"><h1 className="font-black">APIS TA/DA Portal</h1><p className="text-white/70 text-xs">{user.name} · {user.designation} · Level {user.level} · <span className="uppercase font-bold">{user.role}</span></p></div>
+          <div className="flex-1"><h1 className="font-black">APIS TA/DA Portal{isAdmin && ' · Super Admin'}</h1><p className="text-white/70 text-xs">{user.name} · {user.designation} · {isAdmin ? 'Oversight & Setup' : `Level ${user.level}`} · <span className="uppercase font-bold">{user.role}</span></p></div>
           <button onClick={onLogout} className="flex items-center gap-1 text-white/80 hover:text-white text-sm"><LogOut className="w-4 h-4" />Logout</button>
         </div>
-        <div className="max-w-6xl mx-auto px-5 flex gap-1">
-          {tabs.map(t => <button key={t.k} onClick={() => { setTab(t.k); setSel(null); }} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${tab === t.k ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white'}`}><t.i className="w-4 h-4" />{t.l}</button>)}
-        </div>
+        {!isAdmin && (
+          <div className="max-w-6xl mx-auto px-5 flex gap-1">
+            {tabs.map(t => <button key={t.k} onClick={() => { setTab(t.k); setSel(null); }} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${tab === t.k ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white'}`}><t.i className="w-4 h-4" />{t.l}</button>)}
+          </div>
+        )}
       </header>
       <main className="max-w-6xl mx-auto px-5 py-6">
-        {tab === 'users' && <AdminUsers />}
-        {tab === 'approvals' && <ApproverBoard user={user} />}
-        {tab === 'new' && <NewRequest user={user} onDone={() => { setRefresh(x => x + 1); setTab('mine'); }} />}
-        {tab === 'mine' && (sel ? <Detail id={sel} user={user} onBack={() => setSel(null)} /> : (
+        {isAdmin && <AdminDashboard user={user} />}
+        {tab === 'approvals' && !isAdmin && <ApproverBoard user={user} />}
+        {tab === 'new' && !isAdmin && <NewRequest user={user} onDone={() => { setRefresh(x => x + 1); setTab('mine'); }} />}
+        {tab === 'mine' && !isAdmin && (sel ? <Detail id={sel} user={user} onBack={() => setSel(null)} /> : (
           <div className="space-y-2">
             {mine.map(r => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
             {mine.length === 0 && <p className="text-slate-300 text-center py-10">No requests yet. Create one from "New Request".</p>}
