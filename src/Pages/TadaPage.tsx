@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Plane, LogOut, Plus, Trash2, Upload, CheckCircle, XCircle, Clock, FileText,
   Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Paperclip, Users, Shield,
-  BarChart3, TrendingUp, Wallet, Activity,
+  BarChart3, TrendingUp, Wallet, Activity, User, KeyRound, ArrowRight, Sparkles,
 } from 'lucide-react';
 
 // ── Mini charts ───────────────────────────────────────────────────────────────
@@ -71,40 +71,112 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
     setBusy(false);
   };
 
+  const steps = ['Employee', 'Manager', 'HR', 'Finance'];
+  const features = [
+    { i: Shield, t: 'Policy-checked', d: 'Every claim auto-validated against your band limits' },
+    { i: Clock, t: '60-day tracking', d: 'Deadline flags so nothing lapses' },
+    { i: CheckCircle, t: 'Multi-level approval', d: 'Manager → HR → Finance, fully audited' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg"><Plane className="w-6 h-6 text-white" /></div>
-          <div><h1 className="font-black text-slate-800 text-xl">APIS TA/DA Portal</h1><p className="text-slate-400 text-xs">Travel & Daily Allowance{mode === 'admin' && ' · Admin'}</p></div>
+    <div className="min-h-screen flex bg-slate-900">
+      {/* ── Brand panel ── */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[55%] p-12 xl:p-16 text-white relative overflow-hidden bg-gradient-to-br from-sky-600 via-indigo-600 to-violet-700">
+        <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -left-20 bottom-0 w-80 h-80 rounded-full bg-fuchsia-400/20 blur-3xl" />
+        <div className="absolute right-1/3 top-1/2 w-64 h-64 rounded-full bg-cyan-300/10 blur-3xl" />
+
+        <div className="relative flex items-center gap-3">
+          <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center border border-white/20"><Plane className="w-8 h-8" /></div>
+          <div><h1 className="text-2xl font-black tracking-tight">APIS TA/DA Portal</h1><p className="text-white/70 text-sm">Travel &amp; Daily Allowance</p></div>
         </div>
-        {step === 'id' ? (
-          <>
-            <label className="text-xs font-bold text-slate-500 mb-1 block">Employee ID</label>
-            <input value={empId} onChange={e => setEmpId(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="e.g. E1001"
-              className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 mb-3 focus:outline-none focus:border-indigo-400" />
-            <button onClick={() => send(false)} disabled={busy || !empId.trim()} className="w-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-              {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Send OTP'}
-            </button>
-            <div className="mt-4 pt-4 border-t border-slate-100 text-center">
-              <button onClick={() => send(true)} disabled={busy} className="inline-flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 text-xs font-bold">
-                <Shield className="w-3.5 h-3.5" /> Admin Login (import users &amp; setup)
-              </button>
+
+        <div className="relative space-y-8">
+          <div>
+            <p className="inline-flex items-center gap-1.5 text-xs font-bold bg-white/15 backdrop-blur px-3 py-1.5 rounded-full border border-white/20 mb-5">
+              <Sparkles className="w-3.5 h-3.5" /> Apis India Limited
+            </p>
+            <h2 className="text-4xl xl:text-5xl font-black leading-[1.1]">Travel claims,<br />made simple &amp;<br /><span className="text-cyan-200">policy-perfect.</span></h2>
+            <p className="text-white/75 max-w-md mt-5 text-[15px] leading-relaxed">Raise tour sanctions &amp; expense claims, attach bills, and watch them flow through approvals — all within your allowance limits, automatically.</p>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {steps.map((s, i) => (
+              <div key={s} className="flex items-center gap-1.5">
+                <div className="px-3.5 py-2 bg-white/15 backdrop-blur rounded-xl text-sm font-bold border border-white/20">{s}</div>
+                {i < 3 && <ChevronRight className="w-4 h-4 text-white/40" />}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative grid grid-cols-3 gap-4">
+          {features.map(f => (
+            <div key={f.t} className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/15">
+              <f.i className="w-5 h-5 mb-2 text-cyan-200" />
+              <p className="text-sm font-bold">{f.t}</p>
+              <p className="text-[11px] text-white/60 mt-0.5 leading-snug">{f.d}</p>
             </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-slate-500 mb-1">{mode === 'admin' ? 'Admin OTP sent to' : 'OTP sent to'} <b>{masked}</b></p>
-            {mode === 'admin' && <p className="text-[11px] text-indigo-500 mb-2">Admin access — for importing the user directory.</p>}
-            <input value={otp} onChange={e => setOtp(e.target.value)} onKeyDown={e => e.key === 'Enter' && verify()} placeholder="6-digit OTP" maxLength={6}
-              className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 mb-3 text-center text-2xl tracking-widest font-black focus:outline-none focus:border-indigo-400" />
-            <button onClick={verify} disabled={busy || otp.length < 4} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-              {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Verify & Login'}
-            </button>
-            <button onClick={() => { setStep('id'); setMode('user'); setOtp(''); }} className="w-full text-slate-400 text-xs mt-2">← Back</button>
-          </>
-        )}
-        {msg && <p className="text-rose-500 text-sm mt-3 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{msg}</p>}
+          ))}
+        </div>
+      </div>
+
+      {/* ── Form panel ── */}
+      <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-indigo-50 relative overflow-hidden">
+        <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-indigo-200/40 blur-3xl lg:hidden" />
+        <div className="w-full max-w-md relative">
+          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg"><Plane className="w-6 h-6 text-white" /></div>
+            <div><h1 className="font-black text-slate-800 text-lg">APIS TA/DA Portal</h1><p className="text-slate-400 text-xs">Travel &amp; Daily Allowance</p></div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-xl shadow-indigo-500/10 p-8 border border-slate-100">
+            {mode === 'admin' && (
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full mb-4">
+                <Shield className="w-3 h-3" /> Admin access
+              </div>
+            )}
+            <h2 className="text-2xl font-black text-slate-800">{step === 'id' ? 'Welcome back' : 'Check your inbox'}</h2>
+            <p className="text-slate-400 text-sm mb-6">{step === 'id' ? 'Sign in with your Employee ID to continue.' : `We emailed a 6-digit code to your registered address.`}</p>
+
+            {step === 'id' ? (
+              <>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 block">Employee ID</label>
+                <div className="relative mb-4">
+                  <User className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input value={empId} onChange={e => setEmpId(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="e.g. E1001"
+                    className="w-full border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3.5 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all font-semibold text-slate-700" />
+                </div>
+                <button onClick={() => send(false)} disabled={busy || !empId.trim()} className="w-full bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold py-3.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
+                  {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <>Send OTP <ArrowRight className="w-4 h-4" /></>}
+                </button>
+                <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+                  <button onClick={() => send(true)} disabled={busy} className="inline-flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 text-xs font-bold transition-colors">
+                    <Shield className="w-3.5 h-3.5" /> Admin Login (import users &amp; setup)
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 mb-5 text-sm text-indigo-700 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 shrink-0" /> Code sent to <b>{masked}</b>
+                </div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 block">One-Time Password</label>
+                <div className="relative mb-4">
+                  <KeyRound className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input value={otp} onChange={e => setOtp(e.target.value)} onKeyDown={e => e.key === 'Enter' && verify()} placeholder="000000" maxLength={6} autoFocus
+                    className="w-full border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3.5 text-center text-2xl tracking-[0.4em] font-black focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all text-slate-700" />
+                </div>
+                <button onClick={verify} disabled={busy || otp.length < 4} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-lg hover:shadow-emerald-500/30 text-white font-bold py-3.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
+                  {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Verify &amp; Login</>}
+                </button>
+                <button onClick={() => { setStep('id'); setMode('user'); setOtp(''); setMsg(''); }} className="w-full text-slate-400 hover:text-slate-600 text-xs mt-3 font-semibold transition-colors">← Use a different ID</button>
+              </>
+            )}
+            {msg && <p className="text-rose-500 text-sm mt-4 flex items-center gap-1.5 bg-rose-50 rounded-lg px-3 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{msg}</p>}
+          </div>
+          <p className="text-center text-slate-400 text-xs mt-6">Secured by email OTP · Apis India Limited</p>
+        </div>
       </div>
     </div>
   );
@@ -181,16 +253,33 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     if (r.ok) { setLrows([{ date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }]); onDone(); }
   };
 
-  const inp = 'w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400';
+  const inp = 'w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all bg-slate-50/50 focus:bg-white';
   const CATS = [{ k: 'travel', l: 'Travel Details' }, { k: 'lodging', l: 'Lodging' }, { k: 'food', l: 'Food / DA' }, { k: 'local_transport', l: 'Local Transport' }, { k: 'misc', l: 'Miscellaneous' }];
+
+  const TYPES = [
+    { k: 'tour_sanction', l: 'Tour Programme Sanction', d: 'Pre-travel approval', i: FileText, grad: 'from-sky-500 to-blue-600' },
+    { k: 'travel_expense', l: 'Travelling Expenses', d: 'Post-travel claim + bills', i: Receipt, grad: 'from-violet-500 to-indigo-600' },
+    { k: 'local_travel', l: 'Local Travel', d: 'City conveyance', i: Car, grad: 'from-emerald-500 to-teal-600' },
+  ];
+  const active = TYPES.find(t => t.k === type)!;
+  const FormHead = ({ t }: { t: typeof TYPES[number] }) => (
+    <div className={`bg-gradient-to-r ${t.grad} rounded-2xl p-5 flex items-center gap-4 text-white relative overflow-hidden`}>
+      <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
+      <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center shrink-0"><t.i className="w-6 h-6" /></div>
+      <div className="relative"><h3 className="font-black text-lg leading-tight">{t.l}</h3><p className="text-white/80 text-sm">{t.d}</p></div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
       <CapsBanner caps={user.caps} />
-      <div className="flex gap-2 flex-wrap">
-        {[{ k: 'tour_sanction', l: 'Tour Programme Sanction', i: FileText }, { k: 'travel_expense', l: 'Travelling Expenses', i: Receipt }, { k: 'local_travel', l: 'Local Travel', i: Car }].map(t => (
-          <button key={t.k} onClick={() => { setType(t.k as any); setMsg(null); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${type === t.k ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md' : 'bg-white border-2 border-slate-200 text-slate-500'}`}>
-            <t.i className="w-4 h-4" />{t.l}
+      <div className="grid sm:grid-cols-3 gap-3">
+        {TYPES.map(t => (
+          <button key={t.k} onClick={() => { setType(t.k as any); setMsg(null); }}
+            className={`text-left p-4 rounded-2xl border-2 transition-all ${type === t.k ? 'border-transparent bg-gradient-to-br ' + t.grad + ' text-white shadow-lg scale-[1.02]' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:shadow-sm'}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${type === t.k ? 'bg-white/20' : 'bg-slate-100'}`}><t.i className={`w-5 h-5 ${type === t.k ? 'text-white' : 'text-indigo-500'}`} /></div>
+            <p className="font-black text-sm leading-tight">{t.l}</p>
+            <p className={`text-xs mt-0.5 ${type === t.k ? 'text-white/80' : 'text-slate-400'}`}>{t.d}</p>
           </button>
         ))}
       </div>
@@ -198,8 +287,8 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
       {msg && <div className={`px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 ${msg.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>{msg.ok ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}{msg.t}</div>}
 
       {type === 'tour_sanction' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-          <h3 className="font-black text-slate-800">Tour Programme Sanction (Pre-Travel)</h3>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <FormHead t={active} />
           <div className="grid md:grid-cols-2 gap-3">
             <div><label className="text-xs font-bold text-slate-500">Travel Address</label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500">Destination City</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /></div>
@@ -211,13 +300,13 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             <div><label className="text-xs font-bold text-slate-500">Estimate of Expenses (₹)</label><input type="number" className={inp} value={tour.estimate_amount} onChange={e => setTour({ ...tour, estimate_amount: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500">Travel Mode</label><input className={inp} value={tour.travel_mode} onChange={e => setTour({ ...tour, travel_mode: e.target.value })} placeholder="Train / Air / Bus" /></div>
           </div>
-          <button onClick={submitTour} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50">{busy ? 'Submitting…' : 'Submit for Approval'}</button>
+          <button onClick={submitTour} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
         </div>
       )}
 
       {type === 'travel_expense' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-          <h3 className="font-black text-slate-800">Travelling Expenses (Post-Travel Claim)</h3>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <FormHead t={active} />
           <div className="grid md:grid-cols-4 gap-3">
             <div><label className="text-xs font-bold text-slate-500">Destination City</label><input className={inp} value={texp.destination_city} onChange={e => setTexp({ ...texp, destination_city: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500">From</label><input type="date" className={inp} value={texp.from_date} onChange={e => setTexp({ ...texp, from_date: e.target.value })} /></div>
@@ -227,7 +316,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
           <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-xs text-rose-700 flex items-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /><b>ATTENTION:</b>&nbsp;Attaching bills/invoices is mandatory. Bills must show <b>Apis India Ltd</b> &amp; GSTIN <b>05AAACM0656K1ZL</b>. No bill → no approval.</div>
           <div className="space-y-2">
             {items.map((it, i) => (
-              <div key={i} className="border-2 border-slate-100 rounded-xl p-3 grid md:grid-cols-12 gap-2 items-end">
+              <div key={i} className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 grid md:grid-cols-12 gap-2 items-end">
                 <div className="md:col-span-2"><label className="text-[10px] font-bold text-slate-400">Category</label>
                   <select className={inp} value={it.category} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, category: e.target.value } : x))}>{CATS.map(c => <option key={c.k} value={c.k}>{c.l}</option>)}</select></div>
                 <div className="md:col-span-1"><label className="text-[10px] font-bold text-slate-400">Date</label><input type="date" className={inp} value={it.date} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} /></div>
@@ -247,16 +336,16 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             ))}
             <button onClick={() => setItems([...items, { category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }])} className="flex items-center gap-1 text-indigo-500 text-sm font-bold"><Plus className="w-4 h-4" />Add Expense Line</button>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t">
-            <span className="font-bold text-slate-600">Total Claim: ₹{fmt(items.reduce((s, i) => s + (Number(i.claimed_amount) || 0), 0))}</span>
-            <button onClick={submitTexp} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50">{busy ? 'Submitting…' : 'Save & Submit'}</button>
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <span className="font-black text-slate-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">Total Claim: ₹{fmt(items.reduce((s, i) => s + (Number(i.claimed_amount) || 0), 0))}</span>
+            <button onClick={submitTexp} disabled={busy} className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Save &amp; Submit</>}</button>
           </div>
         </div>
       )}
 
       {type === 'local_travel' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-          <h3 className="font-black text-slate-800">Local Travel (City Conveyance)</h3>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <FormHead t={active} />
           <div className="grid md:grid-cols-4 gap-3">
             <div><label className="text-xs font-bold text-slate-500">Travel Type</label>
               <select className={inp} value={local.local_travel_type} onChange={e => setLocal({ ...local, local_travel_type: e.target.value })}><option>Outdoor Duty</option><option>Office Work</option><option>Client Visit</option><option>Bank/Govt Work</option></select></div>
@@ -266,7 +355,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
           </div>
           <div className="space-y-2">
             {lrows.map((it, i) => (
-              <div key={i} className="border-2 border-slate-100 rounded-xl p-3 grid md:grid-cols-12 gap-2 items-end">
+              <div key={i} className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 grid md:grid-cols-12 gap-2 items-end">
                 <div className="md:col-span-2"><label className="text-[10px] font-bold text-slate-400">Date</label><input type="date" className={inp} value={it.date} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} /></div>
                 <div className="md:col-span-3"><label className="text-[10px] font-bold text-slate-400">Purpose</label><input className={inp} value={it.purpose} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, purpose: e.target.value } : x))} /></div>
                 <div className="md:col-span-2"><label className="text-[10px] font-bold text-slate-400">From</label><input className={inp} value={it.from_location} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, from_location: e.target.value } : x))} /></div>
@@ -278,9 +367,9 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             ))}
             <button onClick={() => setLrows([...lrows, { date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }])} className="flex items-center gap-1 text-indigo-500 text-sm font-bold"><Plus className="w-4 h-4" />Add Journey</button>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t">
-            <span className="font-bold text-slate-600">Total: ₹{fmt(lrows.reduce((s, i) => s + (Number(i.amount) || 0), 0))}</span>
-            <button onClick={submitLocal} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50">{busy ? 'Submitting…' : 'Save & Submit'}</button>
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <span className="font-black text-slate-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">Total: ₹{fmt(lrows.reduce((s, i) => s + (Number(i.amount) || 0), 0))}</span>
+            <button onClick={submitLocal} disabled={busy} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-lg hover:shadow-emerald-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Save &amp; Submit</>}</button>
           </div>
         </div>
       )}
@@ -635,12 +724,15 @@ function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () =
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-gradient-to-r from-sky-600 to-indigo-700 text-white sticky top-0 z-40 shadow-lg">
-        <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-4">
+      <header className="bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-700 text-white sticky top-0 z-40 shadow-lg relative overflow-hidden">
+        <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+        <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-3 relative">
           {onNavigateBack && <button onClick={onNavigateBack} className="text-white/70 hover:text-white"><ChevronLeft className="w-5 h-5" /></button>}
-          <Plane className="w-6 h-6" />
-          <div className="flex-1"><h1 className="font-black">APIS TA/DA Portal{isAdmin && ' · Super Admin'}</h1><p className="text-white/70 text-xs">{user.name} · {user.designation} · {isAdmin ? 'Oversight & Setup' : `Level ${user.level}`} · <span className="uppercase font-bold">{user.role}</span></p></div>
-          <button onClick={onLogout} className="flex items-center gap-1 text-white/80 hover:text-white text-sm"><LogOut className="w-4 h-4" />Logout</button>
+          <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center border border-white/20"><Plane className="w-5 h-5" /></div>
+          <div className="flex-1"><h1 className="font-black leading-tight">APIS TA/DA Portal{isAdmin && ' · Super Admin'}</h1><p className="text-white/70 text-xs">{user.name} · {user.designation} · {isAdmin ? 'Oversight & Setup' : `Level ${user.level}`}</p></div>
+          <span className="hidden sm:inline-flex items-center gap-1.5 bg-white/15 backdrop-blur border border-white/20 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">{user.role}</span>
+          <div className="w-9 h-9 rounded-full bg-white text-indigo-600 flex items-center justify-center font-black text-sm shadow-inner">{(user.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
+          <button onClick={onLogout} className="flex items-center gap-1 text-white/80 hover:text-white text-sm"><LogOut className="w-4 h-4" /><span className="hidden md:inline">Logout</span></button>
         </div>
         {!isAdmin && (
           <div className="max-w-6xl mx-auto px-5 flex gap-1">
@@ -655,7 +747,13 @@ function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () =
         {tab === 'mine' && !isAdmin && (sel ? <Detail id={sel} user={user} onBack={() => setSel(null)} /> : (
           <div className="space-y-2">
             {mine.map(r => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
-            {mine.length === 0 && <p className="text-slate-300 text-center py-10">No requests yet. Create one from "New Request".</p>}
+            {mine.length === 0 && (
+              <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-100 flex items-center justify-center mb-3"><FileText className="w-7 h-7 text-indigo-400" /></div>
+                <p className="font-bold text-slate-500">No requests yet</p>
+                <p className="text-slate-400 text-sm mt-1">Head to <b>New Request</b> to raise a tour sanction or expense claim.</p>
+              </div>
+            )}
           </div>
         ))}
       </main>
