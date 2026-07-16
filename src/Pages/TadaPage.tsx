@@ -262,7 +262,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     { k: 'local_travel', l: 'Local Travel', d: 'City conveyance', i: Car, grad: 'from-emerald-500 to-teal-600' },
   ];
   const active = TYPES.find(t => t.k === type)!;
-  const FormHead = ({ t }: { t: typeof TYPES[number] }) => (
+  const formHead = (t: typeof TYPES[number]) => (
     <div className={`bg-gradient-to-r ${t.grad} rounded-2xl p-5 flex items-center gap-4 text-white relative overflow-hidden`}>
       <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
       <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center shrink-0"><t.i className="w-6 h-6" /></div>
@@ -288,17 +288,17 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
 
       {type === 'tour_sanction' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <FormHead t={active} />
+          {formHead(active)}
           <div className="grid md:grid-cols-2 gap-3">
-            <div><label className="text-xs font-bold text-slate-500">Travel Address</label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">Destination City</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /></div>
-            <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">Purpose of Journey</label><input className={inp} value={tour.purpose} onChange={e => setTour({ ...tour, purpose: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">From Date</label><input type="date" className={inp} value={tour.from_date} onChange={e => setTour({ ...tour, from_date: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">To Date</label><input type="date" className={inp} value={tour.to_date} onChange={e => setTour({ ...tour, to_date: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">Contact Number</label><input className={inp} value={tour.contact_number} onChange={e => setTour({ ...tour, contact_number: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">Sanction Number <span className="text-slate-300">(from manager)</span></label><input className={inp} value={tour.sanction_number} onChange={e => setTour({ ...tour, sanction_number: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">Estimate of Expenses (₹)</label><input type="number" className={inp} value={tour.estimate_amount} onChange={e => setTour({ ...tour, estimate_amount: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">Travel Mode</label><input className={inp} value={tour.travel_mode} onChange={e => setTour({ ...tour, travel_mode: e.target.value })} placeholder="Train / Air / Bus" /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address</label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /></div>
+            <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose of Journey</label><input className={inp} value={tour.purpose} onChange={e => setTour({ ...tour, purpose: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label><input type="date" className={inp} value={tour.from_date} onChange={e => setTour({ ...tour, from_date: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">To Date</label><input type="date" className={inp} value={tour.to_date} onChange={e => setTour({ ...tour, to_date: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Contact Number</label><input className={inp} value={tour.contact_number} onChange={e => setTour({ ...tour, contact_number: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction Number <span className="text-slate-300">(from manager)</span></label><input className={inp} value={tour.sanction_number} onChange={e => setTour({ ...tour, sanction_number: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Estimate of Expenses (₹)</label><input type="number" className={inp} value={tour.estimate_amount} onChange={e => setTour({ ...tour, estimate_amount: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode</label><input className={inp} value={tour.travel_mode} onChange={e => setTour({ ...tour, travel_mode: e.target.value })} placeholder="Train / Air / Bus" /></div>
           </div>
           <button onClick={submitTour} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
         </div>
@@ -306,35 +306,38 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
 
       {type === 'travel_expense' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <FormHead t={active} />
+          {formHead(active)}
           <div className="grid md:grid-cols-4 gap-3">
-            <div><label className="text-xs font-bold text-slate-500">Destination City</label><input className={inp} value={texp.destination_city} onChange={e => setTexp({ ...texp, destination_city: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">From</label><input type="date" className={inp} value={texp.from_date} onChange={e => setTexp({ ...texp, from_date: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">To</label><input type="date" className={inp} value={texp.to_date} onChange={e => setTexp({ ...texp, to_date: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">Sanction No.</label><input className={inp} value={texp.sanction_number} onChange={e => setTexp({ ...texp, sanction_number: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label><input className={inp} value={texp.destination_city} onChange={e => setTexp({ ...texp, destination_city: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input type="date" className={inp} value={texp.from_date} onChange={e => setTexp({ ...texp, from_date: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">To</label><input type="date" className={inp} value={texp.to_date} onChange={e => setTexp({ ...texp, to_date: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction No.</label><input className={inp} value={texp.sanction_number} onChange={e => setTexp({ ...texp, sanction_number: e.target.value })} /></div>
           </div>
           <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-xs text-rose-700 flex items-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /><b>ATTENTION:</b>&nbsp;Attaching bills/invoices is mandatory. Bills must show <b>Apis India Ltd</b> &amp; GSTIN <b>05AAACM0656K1ZL</b>. No bill → no approval.</div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {items.map((it, i) => (
-              <div key={i} className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 grid md:grid-cols-12 gap-2 items-end">
-                <div className="md:col-span-2"><label className="text-[10px] font-bold text-slate-400">Category</label>
-                  <select className={inp} value={it.category} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, category: e.target.value } : x))}>{CATS.map(c => <option key={c.k} value={c.k}>{c.l}</option>)}</select></div>
-                <div className="md:col-span-1"><label className="text-[10px] font-bold text-slate-400">Date</label><input type="date" className={inp} value={it.date} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} /></div>
-                <div className="md:col-span-2"><label className="text-[10px] font-bold text-slate-400">Description</label><input className={inp} value={it.description} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} /></div>
-                <div className="md:col-span-1"><label className="text-[10px] font-bold text-slate-400">From</label><input className={inp} value={it.from_location} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, from_location: e.target.value } : x))} /></div>
-                <div className="md:col-span-1"><label className="text-[10px] font-bold text-slate-400">To</label><input className={inp} value={it.to_location} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, to_location: e.target.value } : x))} /></div>
-                <div className="md:col-span-1"><label className="text-[10px] font-bold text-slate-400">Mode</label><input className={inp} value={it.mode} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, mode: e.target.value } : x))} /></div>
-                <div className="md:col-span-1"><label className="text-[10px] font-bold text-slate-400">Amount ₹</label><input type="number" className={inp} value={it.claimed_amount} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, claimed_amount: e.target.value } : x))} /></div>
-                <div className="md:col-span-2 flex items-center gap-1">
-                  <label className={`flex-1 flex items-center gap-1 px-2 py-2 rounded-xl border-2 text-xs cursor-pointer ${it.bill ? 'border-emerald-300 bg-emerald-50 text-emerald-600' : 'border-slate-200 text-slate-400'}`}>
-                    <Paperclip className="w-3.5 h-3.5" />{it.bill ? 'Bill ✓' : 'Attach Bill'}
-                    <input type="file" className="hidden" onChange={e => setItems(items.map((x, j) => j === i ? { ...x, bill: e.target.files?.[0] || null } : x))} />
-                  </label>
-                  {items.length > 1 && <button onClick={() => setItems(items.filter((_, j) => j !== i))} className="text-rose-400 p-1"><Trash2 className="w-4 h-4" /></button>}
+              <div key={i} className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">Expense Line {i + 1}</span>
+                  {items.length > 1 && <button onClick={() => setItems(items.filter((_, j) => j !== i))} className="text-rose-400 hover:text-rose-600 flex items-center gap-1 text-xs font-bold"><Trash2 className="w-4 h-4" />Remove</button>}
                 </div>
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                  <div className="col-span-2 lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Category</label>
+                    <select className={inp} value={it.category} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, category: e.target.value } : x))}>{CATS.map(c => <option key={c.k} value={c.k}>{c.l}</option>)}</select></div>
+                  <div className="lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Date</label><input type="date" className={inp} value={it.date} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} /></div>
+                  <div className="lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Amount ₹</label><input type="number" className={inp} value={it.claimed_amount} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, claimed_amount: e.target.value } : x))} placeholder="0" /></div>
+                  <div className="col-span-2 lg:col-span-3"><label className="text-xs font-bold text-slate-500 mb-1 block">Description</label><input className={inp} value={it.description} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} placeholder="What was this expense for?" /></div>
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">Mode</label><input className={inp} value={it.mode} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, mode: e.target.value } : x))} placeholder="Taxi" /></div>
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input className={inp} value={it.from_location} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, from_location: e.target.value } : x))} /></div>
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">To</label><input className={inp} value={it.to_location} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, to_location: e.target.value } : x))} /></div>
+                </div>
+                <label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed text-sm font-bold cursor-pointer transition-all ${it.bill ? 'border-emerald-300 bg-emerald-50 text-emerald-600' : 'border-slate-300 text-slate-400 hover:border-indigo-300 hover:text-indigo-500'}`}>
+                  <Paperclip className="w-4 h-4" />{it.bill ? `Bill attached — ${it.bill.name}` : 'Attach Bill / Invoice (mandatory)'}
+                  <input type="file" className="hidden" onChange={e => setItems(items.map((x, j) => j === i ? { ...x, bill: e.target.files?.[0] || null } : x))} />
+                </label>
               </div>
             ))}
-            <button onClick={() => setItems([...items, { category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }])} className="flex items-center gap-1 text-indigo-500 text-sm font-bold"><Plus className="w-4 h-4" />Add Expense Line</button>
+            <button onClick={() => setItems([...items, { category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }])} className="flex items-center justify-center gap-1.5 w-full border-2 border-dashed border-indigo-200 text-indigo-500 hover:bg-indigo-50 rounded-xl py-2.5 text-sm font-bold transition-all"><Plus className="w-4 h-4" />Add Expense Line</button>
           </div>
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <span className="font-black text-slate-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">Total Claim: ₹{fmt(items.reduce((s, i) => s + (Number(i.claimed_amount) || 0), 0))}</span>
@@ -345,27 +348,32 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
 
       {type === 'local_travel' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <FormHead t={active} />
+          {formHead(active)}
           <div className="grid md:grid-cols-4 gap-3">
-            <div><label className="text-xs font-bold text-slate-500">Travel Type</label>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Type</label>
               <select className={inp} value={local.local_travel_type} onChange={e => setLocal({ ...local, local_travel_type: e.target.value })}><option>Outdoor Duty</option><option>Office Work</option><option>Client Visit</option><option>Bank/Govt Work</option></select></div>
-            <div><label className="text-xs font-bold text-slate-500">From</label><input type="date" className={inp} value={local.from_date} onChange={e => setLocal({ ...local, from_date: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">To</label><input type="date" className={inp} value={local.to_date} onChange={e => setLocal({ ...local, to_date: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500">Daily Cap</label><p className="px-3 py-2 font-black text-slate-700">₹{user.caps?.local_conveyance_daily ?? '—'}</p></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input type="date" className={inp} value={local.from_date} onChange={e => setLocal({ ...local, from_date: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">To</label><input type="date" className={inp} value={local.to_date} onChange={e => setLocal({ ...local, to_date: e.target.value })} /></div>
+            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Daily Cap</label><div className="w-full border-2 border-emerald-100 bg-emerald-50 rounded-xl px-3 py-2.5 text-sm font-black text-emerald-700">₹{user.caps?.local_conveyance_daily ?? '—'} <span className="font-medium text-emerald-500 text-xs">/ day</span></div></div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {lrows.map((it, i) => (
-              <div key={i} className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 grid md:grid-cols-12 gap-2 items-end">
-                <div className="md:col-span-2"><label className="text-[10px] font-bold text-slate-400">Date</label><input type="date" className={inp} value={it.date} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} /></div>
-                <div className="md:col-span-3"><label className="text-[10px] font-bold text-slate-400">Purpose</label><input className={inp} value={it.purpose} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, purpose: e.target.value } : x))} /></div>
-                <div className="md:col-span-2"><label className="text-[10px] font-bold text-slate-400">From</label><input className={inp} value={it.from_location} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, from_location: e.target.value } : x))} /></div>
-                <div className="md:col-span-2"><label className="text-[10px] font-bold text-slate-400">To</label><input className={inp} value={it.to_location} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, to_location: e.target.value } : x))} /></div>
-                <div className="md:col-span-1"><label className="text-[10px] font-bold text-slate-400">Mode</label><input className={inp} value={it.mode} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, mode: e.target.value } : x))} /></div>
-                <div className="md:col-span-2 flex items-end gap-1"><div className="flex-1"><label className="text-[10px] font-bold text-slate-400">Amount ₹</label><input type="number" className={inp} value={it.amount} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))} /></div>
-                  {lrows.length > 1 && <button onClick={() => setLrows(lrows.filter((_, j) => j !== i))} className="text-rose-400 p-2"><Trash2 className="w-4 h-4" /></button>}</div>
+              <div key={i} className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">Journey {i + 1}</span>
+                  {lrows.length > 1 && <button onClick={() => setLrows(lrows.filter((_, j) => j !== i))} className="text-rose-400 hover:text-rose-600 flex items-center gap-1 text-xs font-bold"><Trash2 className="w-4 h-4" />Remove</button>}
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">Date</label><input type="date" className={inp} value={it.date} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} /></div>
+                  <div className="col-span-2 lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose</label><input className={inp} value={it.purpose} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, purpose: e.target.value } : x))} placeholder="e.g. Client meeting" /></div>
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input className={inp} value={it.from_location} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, from_location: e.target.value } : x))} /></div>
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">To</label><input className={inp} value={it.to_location} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, to_location: e.target.value } : x))} /></div>
+                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">Mode</label><input className={inp} value={it.mode} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, mode: e.target.value } : x))} placeholder="Cab" /></div>
+                  <div className="col-span-2 lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Amount ₹</label><input type="number" className={inp} value={it.amount} onChange={e => setLrows(lrows.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))} placeholder="0" /></div>
+                </div>
               </div>
             ))}
-            <button onClick={() => setLrows([...lrows, { date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }])} className="flex items-center gap-1 text-indigo-500 text-sm font-bold"><Plus className="w-4 h-4" />Add Journey</button>
+            <button onClick={() => setLrows([...lrows, { date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }])} className="flex items-center justify-center gap-1.5 w-full border-2 border-dashed border-emerald-200 text-emerald-600 hover:bg-emerald-50 rounded-xl py-2.5 text-sm font-bold transition-all"><Plus className="w-4 h-4" />Add Journey</button>
           </div>
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <span className="font-black text-slate-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">Total: ₹{fmt(lrows.reduce((s, i) => s + (Number(i.amount) || 0), 0))}</span>
@@ -493,7 +501,7 @@ function ApproverBoard({ user }: { user: User }) {
   useEffect(() => { load(); }, []);
   if (sel) return <Detail id={sel} user={user} onBack={() => { setSel(null); load(); }} onActioned={load} />;
   return (
-    <div className="space-y-5">
+    <div className="space-y-5">           
       <div>
         <h3 className="font-black text-slate-800 mb-3 flex items-center gap-2"><Clock className="w-5 h-5 text-amber-500" />Pending Your Action ({data.pending.length})</h3>
         <div className="space-y-2">{data.pending.map((r: any) => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
