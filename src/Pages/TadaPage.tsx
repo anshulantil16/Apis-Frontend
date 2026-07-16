@@ -1,8 +1,26 @@
 import { useState, useEffect } from 'react';
 import {
   Plane, LogOut, Plus, Trash2, Upload, CheckCircle, XCircle, Clock, FileText,
-  Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, Paperclip, Users, Shield, BarChart3,
+  Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Paperclip, Users, Shield,
+  BarChart3, TrendingUp, Wallet, Activity,
 } from 'lucide-react';
+
+// ── Mini charts ───────────────────────────────────────────────────────────────
+function Ring({ pct, label, color = '#fff' }: { pct: number; label: string; color?: string }) {
+  const r = 30, c = 2 * Math.PI * r, dash = (Math.min(100, Math.max(0, pct)) / 100) * c;
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: 78, height: 78 }}>
+      <svg width={78} height={78} className="-rotate-90">
+        <circle cx={39} cy={39} r={r} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={7} />
+        <circle cx={39} cy={39} r={r} fill="none" stroke={color} strokeWidth={7} strokeDasharray={`${dash} ${c}`} strokeLinecap="round" />
+      </svg>
+      <div className="absolute text-center"><p className="text-lg font-black leading-none">{pct.toFixed(0)}%</p><p className="text-[8px] opacity-80">{label}</p></div>
+    </div>
+  );
+}
+function PBar({ value, max, grad }: { value: number; max: number; grad: string }) {
+  return <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full rounded-full bg-gradient-to-r ${grad} transition-all duration-700`} style={{ width: `${max > 0 ? Math.min(100, (value / max) * 100) : 0}%` }} /></div>;
+}
 
 const API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/tada`;
 const fmt = (n: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n || 0);
@@ -432,12 +450,6 @@ function AdminDashboard({ user }: { user: User }) {
   if (sel) return <Detail id={sel} user={user} onBack={() => setSel(null)} />;
   const reqs = (ov?.requests || []).filter((r: any) => !filter || r.status === filter);
 
-  const stat = (label: string, val: any, grad: string) => (
-    <div className={`bg-gradient-to-br ${grad} rounded-2xl p-4 text-white shadow-md`}>
-      <p className="text-3xl font-black truncate">{val}</p><p className="text-white/80 text-xs font-semibold mt-1">{label}</p>
-    </div>
-  );
-
   return (
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap items-center">
@@ -448,37 +460,122 @@ function AdminDashboard({ user }: { user: User }) {
       </div>
       {msg && <p className="text-emerald-600 text-sm font-semibold bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">{msg}</p>}
 
-      {sub === 'overview' && ov && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {stat('Total Requests', ov.total_requests, 'from-blue-500 to-indigo-600')}
-            {stat('Total Users', ov.total_users, 'from-slate-500 to-slate-700')}
-            {stat('Total Claimed ₹', fmt(ov.total_claimed), 'from-amber-500 to-orange-600')}
-            {stat('Total Approved ₹', fmt(ov.total_approved), 'from-emerald-500 to-teal-600')}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            {stat('Pending Manager', ov.pending_manager, 'from-amber-400 to-amber-500')}
-            {stat('Pending HR', ov.pending_hr, 'from-blue-400 to-blue-500')}
-            {stat('Pending Finance', ov.pending_finance, 'from-violet-400 to-violet-500')}
-            {stat('Finance OK', ov.approved, 'from-emerald-400 to-emerald-500')}
-            {stat('Paid', ov.paid, 'from-teal-500 to-emerald-600')}
-            {stat('Rejected', ov.rejected, 'from-rose-400 to-red-500')}
-          </div>
-          <div className="grid md:grid-cols-3 gap-4">
-            {[{ t: 'By Type', d: ov.by_type }, { t: 'By Department', d: ov.by_department }, { t: 'Users by Role', d: ov.users_by_role }].map(col => (
-              <div key={col.t} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-                <p className="text-xs font-black text-slate-500 uppercase tracking-wide mb-2">{col.t}</p>
-                <div className="space-y-1">
-                  {Object.entries(col.d || {}).map(([k, v]: any) => (
-                    <div key={k} className="flex justify-between text-sm"><span className="text-slate-500 capitalize">{String(k).replace(/_/g, ' ')}</span><span className="font-bold text-slate-700">{v as number}</span></div>
-                  ))}
-                  {Object.keys(col.d || {}).length === 0 && <span className="text-xs text-slate-300">No data</span>}
+      {sub === 'overview' && ov && (() => {
+        const processed = ov.approved + ov.paid + ov.rejected;
+        const approvalRate = processed ? ((ov.approved + ov.paid) / processed) * 100 : 0;
+        const pendingTotal = ov.pending_manager + ov.pending_hr + ov.pending_finance;
+        const pipeline = [
+          { l: 'Submitted', v: ov.by_status?.submitted || 0, c: '#f59e0b' },
+          { l: 'Manager ✓', v: ov.by_status?.manager_approved || 0, c: '#3b82f6' },
+          { l: 'HR ✓', v: ov.by_status?.hr_approved || 0, c: '#8b5cf6' },
+          { l: 'Finance ✓', v: ov.by_status?.finance_approved || 0, c: '#10b981' },
+          { l: 'Paid', v: ov.by_status?.paid || 0, c: '#0d9488' },
+        ];
+        const typeMeta: any = {
+          tour_sanction: { l: 'Tour Sanction', i: FileText, g: 'from-sky-400 to-blue-500' },
+          travel_expense: { l: 'Travel Expenses', i: Receipt, g: 'from-violet-400 to-purple-500' },
+          local_travel: { l: 'Local Travel', i: Car, g: 'from-amber-400 to-orange-500' },
+        };
+        return (
+          <>
+            {/* Hero */}
+            <div className="rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-sky-600 p-6 text-white shadow-xl relative overflow-hidden">
+              <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10" />
+              <div className="absolute right-24 -bottom-8 w-28 h-28 rounded-full bg-white/5" />
+              <div className="relative flex flex-wrap items-center gap-6">
+                <div>
+                  <p className="text-white/70 text-sm font-semibold flex items-center gap-1.5"><Activity className="w-4 h-4" />Total Travel Requests</p>
+                  <p className="text-6xl font-black leading-none mt-1">{ov.total_requests}</p>
+                  <p className="text-white/80 text-sm mt-2">{ov.total_users} users · <span className="text-amber-200 font-bold">{pendingTotal} pending</span> · <span className="text-rose-200 font-bold">{ov.rejected} rejected</span></p>
+                </div>
+                <div className="flex gap-6 ml-auto items-center flex-wrap">
+                  <div className="text-center"><p className="text-white/70 text-xs flex items-center gap-1 justify-center"><Wallet className="w-3 h-3" />Claimed</p><p className="text-2xl font-black">₹{fmt(ov.total_claimed)}</p></div>
+                  <div className="text-center"><p className="text-white/70 text-xs flex items-center gap-1 justify-center"><CheckCircle className="w-3 h-3" />Approved</p><p className="text-2xl font-black">₹{fmt(ov.total_approved)}</p></div>
+                  <div className="bg-white/15 rounded-2xl px-3 py-2 backdrop-blur"><Ring pct={approvalRate} label="Approval" /></div>
                 </div>
               </div>
-            ))}
-          </div>
-        </>
-      )}
+            </div>
+
+            {/* Pipeline funnel */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              <h3 className="font-black text-slate-800 mb-4 flex items-center gap-2"><Shield className="w-5 h-5 text-indigo-500" />Approval Pipeline</h3>
+              <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                {pipeline.map((p, i) => (
+                  <div key={p.l} className="flex items-center gap-1 flex-1 min-w-[110px]">
+                    <div className="flex-1 rounded-2xl p-4 text-center text-white shadow-md" style={{ background: `linear-gradient(135deg, ${p.c}, ${p.c}bb)` }}>
+                      <p className="text-3xl font-black leading-none">{p.v}</p>
+                      <p className="text-[11px] font-semibold text-white/90 mt-1">{p.l}</p>
+                    </div>
+                    {i < pipeline.length - 1 && <ChevronRight className="w-5 h-5 text-slate-300 shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Type cards + Financial + Approval */}
+            <div className="grid md:grid-cols-3 gap-4">
+              {Object.entries(typeMeta).map(([k, m]: any) => (
+                <div key={k} className={`rounded-2xl p-5 text-white bg-gradient-to-br ${m.g} shadow-md relative overflow-hidden`}>
+                  <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10" />
+                  <m.i className="w-6 h-6 mb-3 opacity-90" />
+                  <p className="text-4xl font-black">{ov.by_type?.[k] || 0}</p>
+                  <p className="text-sm text-white/85 font-semibold">{m.l}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Status distribution */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <h3 className="font-black text-slate-800 mb-3 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-violet-500" />Status Distribution</h3>
+                <div className="space-y-2">
+                  {Object.entries(STATUS_LABELS).map(([s, l]) => { const v = ov.by_status?.[s] || 0; return (
+                    <div key={s} className="flex items-center gap-3 text-sm">
+                      <span className="w-32 text-slate-500 text-xs shrink-0">{l}</span>
+                      <div className="flex-1"><PBar value={v} max={ov.total_requests} grad={s.includes('reject') ? 'from-rose-400 to-red-500' : s === 'paid' ? 'from-teal-500 to-emerald-600' : s.includes('approved') ? 'from-emerald-400 to-teal-500' : 'from-amber-400 to-orange-500'} /></div>
+                      <span className="w-8 text-right font-black text-slate-700">{v}</span>
+                    </div>
+                  ); })}
+                </div>
+              </div>
+              {/* Financial summary */}
+              <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50 rounded-2xl border-2 border-emerald-100 shadow-sm p-5">
+                <h3 className="font-black text-slate-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-emerald-500" />Financial Summary</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center"><span className="text-slate-500 text-sm">Total Claimed</span><span className="font-black text-amber-600 text-lg">₹{fmt(ov.total_claimed)}</span></div>
+                  <PBar value={ov.total_claimed} max={ov.total_claimed || 1} grad="from-amber-400 to-orange-500" />
+                  <div className="flex justify-between items-center"><span className="text-slate-500 text-sm">Total Approved</span><span className="font-black text-emerald-600 text-lg">₹{fmt(ov.total_approved)}</span></div>
+                  <PBar value={ov.total_approved} max={ov.total_claimed || 1} grad="from-emerald-400 to-teal-500" />
+                  <div className="flex justify-between items-center pt-2 border-t-2 border-emerald-100"><span className="text-slate-600 font-bold text-sm">Overall Approval Rate</span><span className="font-black text-indigo-600 text-xl">{approvalRate.toFixed(1)}%</span></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dept + roles */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <h3 className="font-black text-slate-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-pink-500" />Requests by Department</h3>
+                <div className="space-y-2">
+                  {Object.entries(ov.by_department || {}).slice(0, 8).map(([k, v]: any) => (
+                    <div key={k} className="flex items-center gap-3 text-sm"><span className="w-28 text-slate-500 text-xs truncate shrink-0">{k}</span><div className="flex-1"><PBar value={v} max={ov.total_requests} grad="from-pink-400 to-rose-500" /></div><span className="w-8 text-right font-black text-slate-700">{v as number}</span></div>
+                  ))}
+                  {Object.keys(ov.by_department || {}).length === 0 && <span className="text-xs text-slate-300">No data</span>}
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <h3 className="font-black text-slate-800 mb-3 flex items-center gap-2"><Shield className="w-5 h-5 text-indigo-500" />Users by Role</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {['employee', 'manager', 'hr', 'finance', 'admin'].filter(r => ov.users_by_role?.[r]).map((k) => {
+                    const grads: any = { employee: 'from-blue-500 to-indigo-600', manager: 'from-violet-500 to-purple-600', hr: 'from-pink-500 to-rose-600', finance: 'from-emerald-500 to-teal-600', admin: 'from-slate-600 to-slate-800' };
+                    return <div key={k} className={`bg-gradient-to-br ${grads[k]} rounded-2xl p-3 text-center text-white shadow-md`}><p className="text-2xl font-black">{ov.users_by_role[k]}</p><p className="text-[11px] text-white/80 capitalize">{k}</p></div>;
+                  })}
+                  {Object.keys(ov.users_by_role || {}).length === 0 && <span className="text-xs text-slate-300 col-span-2">No users yet</span>}
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {sub === 'requests' && (
         <>
