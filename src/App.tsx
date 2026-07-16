@@ -6,8 +6,9 @@ import { EOMPage } from './Pages/EOMPage';
 import PMSPage from './Pages/PMSPage';
 import { OfferLetterSimplePage } from './Pages/OfferLetterSimplePage';
 import OfferLetterApprovalDashboard from './Pages/OfferLetterApprovalDashboard';
+import { TadaPage } from './Pages/TadaPage';
 
-type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals';
+type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada';
 
 // 'appraisal' = appraisal only (legacy), 'hub' = appraisal + eom only, anything else = all
 const APP_MODE = import.meta.env.VITE_APP_MODE;
@@ -39,7 +40,10 @@ export default function App() {
           onNavigateToEOM={() => navigate('eom')}
           onNavigateToPMS={() => navigate('pms')}
           onNavigateToOfferLetters={() => navigate('offer-letters')}
+          onNavigateToTADA={() => navigate('tada')}
         />
+      ) : view === 'tada' ? (
+        <TadaPage onNavigateBack={() => navigate('extractor')} />
       ) : view === 'performance' ? (
         <PerformancePage onNavigateBack={() => navigate('extractor')} />
       ) : view === 'eom' ? (
