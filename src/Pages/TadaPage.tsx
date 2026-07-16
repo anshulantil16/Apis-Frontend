@@ -22,6 +22,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 function Login({ onLogin }: { onLogin: (u: User) => void }) {
+  const [mode, setMode] = useState<'user' | 'admin'>('user');
   const [empId, setEmpId] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'id' | 'otp'>('id');
@@ -29,19 +30,23 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [masked, setMasked] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const send = async () => {
+  const send = async (asAdmin = false) => {
     setBusy(true); setMsg('');
     try {
-      const r = await fetch(`${API}/auth/send-otp/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: empId.trim() }) });
+      const url = asAdmin ? `${API}/auth/admin-otp/` : `${API}/auth/send-otp/`;
+      const body = asAdmin ? {} : { employee_id: empId.trim() };
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json();
-      if (r.ok) { setStep('otp'); setMasked(d.masked_email); } else setMsg(d.error || 'Failed');
+      if (r.ok) { setMode(asAdmin ? 'admin' : 'user'); setStep('otp'); setMasked(d.masked_email); } else setMsg(d.error || 'Failed');
     } catch { setMsg('Network error'); }
     setBusy(false);
   };
   const verify = async () => {
     setBusy(true); setMsg('');
     try {
-      const r = await fetch(`${API}/auth/verify-otp/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: empId.trim(), otp: otp.trim() }) });
+      const url = mode === 'admin' ? `${API}/auth/admin-verify/` : `${API}/auth/verify-otp/`;
+      const body = mode === 'admin' ? { otp: otp.trim() } : { employee_id: empId.trim(), otp: otp.trim() };
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json();
       if (r.ok) { localStorage.setItem('tada_user', JSON.stringify(d.user)); onLogin(d.user); } else setMsg(d.error || 'Failed');
     } catch { setMsg('Network error'); }
@@ -53,26 +58,32 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
       <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg"><Plane className="w-6 h-6 text-white" /></div>
-          <div><h1 className="font-black text-slate-800 text-xl">APIS TA/DA Portal</h1><p className="text-slate-400 text-xs">Travel & Daily Allowance</p></div>
+          <div><h1 className="font-black text-slate-800 text-xl">APIS TA/DA Portal</h1><p className="text-slate-400 text-xs">Travel & Daily Allowance{mode === 'admin' && ' · Admin'}</p></div>
         </div>
         {step === 'id' ? (
           <>
             <label className="text-xs font-bold text-slate-500 mb-1 block">Employee ID</label>
             <input value={empId} onChange={e => setEmpId(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="e.g. E1001"
               className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 mb-3 focus:outline-none focus:border-indigo-400" />
-            <button onClick={send} disabled={busy || !empId.trim()} className="w-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
+            <button onClick={() => send(false)} disabled={busy || !empId.trim()} className="w-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
               {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Send OTP'}
             </button>
+            <div className="mt-4 pt-4 border-t border-slate-100 text-center">
+              <button onClick={() => send(true)} disabled={busy} className="inline-flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 text-xs font-bold">
+                <Shield className="w-3.5 h-3.5" /> Admin Login (import users &amp; setup)
+              </button>
+            </div>
           </>
         ) : (
           <>
-            <p className="text-sm text-slate-500 mb-3">OTP sent to <b>{masked}</b></p>
+            <p className="text-sm text-slate-500 mb-1">{mode === 'admin' ? 'Admin OTP sent to' : 'OTP sent to'} <b>{masked}</b></p>
+            {mode === 'admin' && <p className="text-[11px] text-indigo-500 mb-2">Admin access — for importing the user directory.</p>}
             <input value={otp} onChange={e => setOtp(e.target.value)} onKeyDown={e => e.key === 'Enter' && verify()} placeholder="6-digit OTP" maxLength={6}
               className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 mb-3 text-center text-2xl tracking-widest font-black focus:outline-none focus:border-indigo-400" />
             <button onClick={verify} disabled={busy || otp.length < 4} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
               {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Verify & Login'}
             </button>
-            <button onClick={() => setStep('id')} className="w-full text-slate-400 text-xs mt-2">← Change Employee ID</button>
+            <button onClick={() => { setStep('id'); setMode('user'); setOtp(''); }} className="w-full text-slate-400 text-xs mt-2">← Back</button>
           </>
         )}
         {msg && <p className="text-rose-500 text-sm mt-3 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{msg}</p>}
