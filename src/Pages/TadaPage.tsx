@@ -1,9 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Plane, LogOut, Plus, Trash2, Upload, CheckCircle, XCircle, Clock, FileText,
   Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Paperclip, Users, Shield,
   BarChart3, TrendingUp, Wallet, Activity, User, KeyRound, ArrowRight, Sparkles,
 } from 'lucide-react';
+
+// ── Animated helpers ──────────────────────────────────────────────────────────
+function useCountUp(target: number, ms = 1100) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    let raf = 0; const start = performance.now(); const from = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / ms);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setV(from + (target - from) * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
+}
+function Count({ n, prefix = '', decimals = 0 }: { n: number; prefix?: string; decimals?: number }) {
+  const v = useCountUp(n || 0);
+  const s = decimals ? v.toFixed(decimals) : new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(v));
+  return <>{prefix}{s}</>;
+}
+function Confetti({ show }: { show: boolean }) {
+  const colors = ['#f59e0b', '#10b981', '#6366f1', '#ec4899', '#06b6d4', '#8b5cf6'];
+  const bits = useMemo(() => Array.from({ length: 60 }, (_, i) => ({
+    left: Math.random() * 100, top: -10 - Math.random() * 20,
+    size: 8 + Math.random() * 6, color: colors[i % colors.length],
+    round: Math.random() > 0.5, delay: Math.random() * 0.4, dur: 0.9 + Math.random() * 0.8,
+  })), []);
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
+      {bits.map((b, i) => (
+        <span key={i} className="absolute animate-confetti" style={{
+          left: `${b.left}%`, top: `${b.top}%`, width: b.size, height: b.size,
+          background: b.color, borderRadius: b.round ? '50%' : '2px',
+          animationDelay: `${b.delay}s`, animationDuration: `${b.dur}s`,
+        }} />
+      ))}
+    </div>
+  );
+}
+function Toast({ msg, ok, onClose }: { msg: string; ok: boolean; onClose: () => void }) {
+  useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, [msg, onClose]);
+  return (
+    <div className="fixed bottom-6 right-6 z-[101] animate-slide-down">
+      <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white font-bold ${ok ? 'bg-gradient-to-r from-emerald-500 to-teal-600' : 'bg-gradient-to-r from-rose-500 to-red-600'}`}>
+        {ok ? <CheckCircle className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+        <span>{msg}</span>
+      </div>
+    </div>
+  );
+}
 
 // ── Mini charts ───────────────────────────────────────────────────────────────
 function Ring({ pct, label, color = '#fff' }: { pct: number; label: string; color?: string }) {
@@ -81,13 +134,13 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
   return (
     <div className="min-h-screen flex bg-slate-900">
       {/* ── Brand panel ── */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[55%] p-12 xl:p-16 text-white relative overflow-hidden bg-gradient-to-br from-sky-600 via-indigo-600 to-violet-700">
-        <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -left-20 bottom-0 w-80 h-80 rounded-full bg-fuchsia-400/20 blur-3xl" />
-        <div className="absolute right-1/3 top-1/2 w-64 h-64 rounded-full bg-cyan-300/10 blur-3xl" />
+      <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[55%] p-12 xl:p-16 text-white relative overflow-hidden sheen bg-gradient-to-br from-sky-600 via-indigo-600 to-violet-700 bg-[length:200%_200%] animate-gradient">
+        <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-white/10 blur-3xl animate-float-slow" />
+        <div className="absolute -left-20 bottom-0 w-80 h-80 rounded-full bg-fuchsia-400/20 blur-3xl animate-float" />
+        <div className="absolute right-1/3 top-1/2 w-64 h-64 rounded-full bg-cyan-300/10 blur-3xl animate-float-slow" />
 
-        <div className="relative flex items-center gap-3">
-          <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center border border-white/20"><Plane className="w-8 h-8" /></div>
+        <div className="relative flex items-center gap-3 animate-slide-down">
+          <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center border border-white/20 animate-float"><Plane className="w-8 h-8" /></div>
           <div><h1 className="text-2xl font-black tracking-tight">APIS TA/DA Portal</h1><p className="text-white/70 text-sm">Travel &amp; Daily Allowance</p></div>
         </div>
 
@@ -110,9 +163,9 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
           </div>
         </div>
 
-        <div className="relative grid grid-cols-3 gap-4">
+        <div className="relative grid grid-cols-3 gap-4 stagger">
           {features.map(f => (
-            <div key={f.t} className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/15">
+            <div key={f.t} className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/15 hover-lift">
               <f.i className="w-5 h-5 mb-2 text-cyan-200" />
               <p className="text-sm font-bold">{f.t}</p>
               <p className="text-[11px] text-white/60 mt-0.5 leading-snug">{f.d}</p>
@@ -130,7 +183,7 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
             <div><h1 className="font-black text-slate-800 text-lg">APIS TA/DA Portal</h1><p className="text-slate-400 text-xs">Travel &amp; Daily Allowance</p></div>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-xl shadow-indigo-500/10 p-8 border border-slate-100">
+          <div className="bg-white rounded-3xl shadow-xl shadow-indigo-500/10 p-8 border border-slate-100 animate-pop">
             {mode === 'admin' && (
               <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full mb-4">
                 <Shield className="w-3 h-3" /> Admin access
@@ -216,6 +269,16 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   const [type, setType] = useState<'tour_sanction' | 'travel_expense' | 'local_travel'>('tour_sanction');
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
+  const [toast, setToast] = useState<{ t: string; ok: boolean } | null>(null);
+
+  // celebrate on success → confetti + toast, then hand off after a beat
+  const cheer = (message: string) => {
+    setToast({ t: message || 'Submitted for approval 🎉', ok: true });
+    setCelebrate(true);
+    setTimeout(() => setCelebrate(false), 1600);
+    setTimeout(() => onDone(), 1500);
+  };
 
   // tour sanction
   const [tour, setTour] = useState<any>({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '' });
@@ -230,7 +293,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     setBusy(true); setMsg(null);
     const r = await fetch(`${API}/requests/tour-sanction/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...tour, employee_id: user.employee_id }) });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setTour({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '' }); onDone(); }
+    if (r.ok) { setTour({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '' }); cheer(d.message); }
   };
   const submitTexp = async () => {
     setBusy(true); setMsg(null);
@@ -241,7 +304,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     items.forEach((it, i) => { if (it.bill) fd.append(`bill_${i}`, it.bill); });
     const r = await fetch(`${API}/requests/travel-expense/`, { method: 'POST', body: fd });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setItems([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]); onDone(); }
+    if (r.ok) { setItems([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]); cheer(d.message); }
   };
   const submitLocal = async () => {
     setBusy(true); setMsg(null);
@@ -250,7 +313,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     fd.append('employee_id', user.employee_id);
     const r = await fetch(`${API}/requests/local-travel/`, { method: 'POST', body: fd });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setLrows([{ date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }]); onDone(); }
+    if (r.ok) { setLrows([{ date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }]); cheer(d.message); }
   };
 
   const inp = 'w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all bg-slate-50/50 focus:bg-white';
@@ -272,11 +335,13 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
 
   return (
     <div className="space-y-4">
+      <Confetti show={celebrate} />
+      {toast && <Toast msg={toast.t} ok={toast.ok} onClose={() => setToast(null)} />}
       <CapsBanner caps={user.caps} />
-      <div className="grid sm:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-3 gap-3 stagger">
         {TYPES.map(t => (
           <button key={t.k} onClick={() => { setType(t.k as any); setMsg(null); }}
-            className={`text-left p-4 rounded-2xl border-2 transition-all ${type === t.k ? 'border-transparent bg-gradient-to-br ' + t.grad + ' text-white shadow-lg scale-[1.02]' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:shadow-sm'}`}>
+            className={`hover-lift text-left p-4 rounded-2xl border-2 transition-all ${type === t.k ? 'border-transparent bg-gradient-to-br ' + t.grad + ' text-white shadow-lg scale-[1.03]' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200'}`}>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${type === t.k ? 'bg-white/20' : 'bg-slate-100'}`}><t.i className={`w-5 h-5 ${type === t.k ? 'text-white' : 'text-indigo-500'}`} /></div>
             <p className="font-black text-sm leading-tight">{t.l}</p>
             <p className={`text-xs mt-0.5 ${type === t.k ? 'text-white/80' : 'text-slate-400'}`}>{t.d}</p>
@@ -287,7 +352,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
       {msg && <div className={`px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 ${msg.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>{msg.ok ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}{msg.t}</div>}
 
       {type === 'tour_sanction' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4 animate-rise">
           {formHead(active)}
           <div className="grid md:grid-cols-2 gap-3">
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address</label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} /></div>
@@ -305,7 +370,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
       )}
 
       {type === 'travel_expense' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4 animate-rise">
           {formHead(active)}
           <div className="grid md:grid-cols-4 gap-3">
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label><input className={inp} value={texp.destination_city} onChange={e => setTexp({ ...texp, destination_city: e.target.value })} /></div>
@@ -347,7 +412,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
       )}
 
       {type === 'local_travel' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4 animate-rise">
           {formHead(active)}
           <div className="grid md:grid-cols-4 gap-3">
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Type</label>
@@ -390,6 +455,8 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
   const [r, setR] = useState<any>(null);
   const [remarks, setRemarks] = useState('');
   const [busy, setBusy] = useState(false);
+  const [party, setParty] = useState(false);
+  const [toast, setToast] = useState<{ t: string; ok: boolean } | null>(null);
   const load = () => fetch(`${API}/requests/${id}/`).then(x => x.json()).then(setR);
   useEffect(() => { load(); }, [id]);
   if (!r) return <div className="p-8 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto" /></div>;
@@ -399,13 +466,20 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
   const act = async (action: string) => {
     setBusy(true);
     const res = await fetch(`${API}/requests/${id}/action/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: user.employee_id, action, remarks }) });
-    if (res.ok) { await load(); onActioned && onActioned(); }
+    if (res.ok) {
+      await load(); if (onActioned) onActioned();
+      const label = action === 'reject' ? 'Request rejected' : action === 'paid' ? 'Marked as paid 💰' : 'Approved & forwarded ✓';
+      setToast({ t: label, ok: action !== 'reject' });
+      if (action !== 'reject') { setParty(true); setTimeout(() => setParty(false), 1600); }
+    }
     setBusy(false);
   };
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-slate-500 text-sm font-bold"><ChevronLeft className="w-4 h-4" />Back</button>
+      <Confetti show={party} />
+      {toast && <Toast msg={toast.t} ok={toast.ok} onClose={() => setToast(null)} />}
+      <button onClick={onBack} className="flex items-center gap-1 text-slate-500 text-sm font-bold hover:text-indigo-600 transition-colors"><ChevronLeft className="w-4 h-4" />Back</button>
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
         <div className="flex justify-between items-start mb-3">
           <div><h3 className="font-black text-slate-800 text-lg">{r.type_label}</h3><p className="text-slate-400 text-sm">{r.employee_name} · {r.employee_id} · {r.department} · Level {r.level}</p></div>
@@ -467,10 +541,10 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
           <textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Remarks (optional)" className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm mb-3" rows={2} />
           <div className="flex gap-2">
             {canAct && <>
-              <button onClick={() => act('approve')} disabled={busy} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50"><CheckCircle className="w-4 h-4" />Approve</button>
-              <button onClick={() => act('reject')} disabled={busy} className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50"><XCircle className="w-4 h-4" />Reject</button>
+              <button onClick={() => act('approve')} disabled={busy} className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-lg hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50 transition-all"><CheckCircle className="w-4 h-4" />Approve</button>
+              <button onClick={() => act('reject')} disabled={busy} className="flex items-center gap-2 bg-gradient-to-r from-rose-500 to-red-600 hover:shadow-lg hover:shadow-rose-500/30 hover:scale-105 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50 transition-all"><XCircle className="w-4 h-4" />Reject</button>
             </>}
-            {canPay && <button onClick={() => act('paid')} disabled={busy} className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-5 py-2.5 rounded-xl disabled:opacity-50">💰 Mark as Paid</button>}
+            {canPay && <button onClick={() => act('paid')} disabled={busy} className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-700 hover:shadow-lg hover:scale-105 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50 transition-all"><Wallet className="w-4 h-4" />Mark as Paid</button>}
           </div>
         </div>
       )}
@@ -481,14 +555,18 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
 // ── Request list card ─────────────────────────────────────────────────────────
 function ReqCard({ r, onClick }: { r: any; onClick: () => void }) {
   const Icon = r.type === 'tour_sanction' ? FileText : r.type === 'travel_expense' ? Receipt : Car;
+  const grad = r.type === 'tour_sanction' ? 'from-sky-400 to-blue-500' : r.type === 'travel_expense' ? 'from-violet-400 to-indigo-500' : 'from-emerald-400 to-teal-500';
+  const pending = ['submitted', 'manager_approved', 'hr_approved', 'finance_approved'].includes(r.status);
   return (
-    <button onClick={onClick} className="w-full text-left bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md p-4 flex items-center gap-3 transition-all">
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center text-white shrink-0"><Icon className="w-5 h-5" /></div>
+    <button onClick={onClick} className="hover-lift w-full text-left bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 p-4 flex items-center gap-3 group">
+      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform`}><Icon className="w-5 h-5" /></div>
       <div className="min-w-0 flex-1">
         <p className="font-bold text-slate-800 text-sm truncate">{r.type_label} {r.destination_city && `· ${r.destination_city}`}</p>
         <p className="text-slate-400 text-xs">{r.employee_name} · {r.created_at} {r.total_claimed > 0 && `· ₹${fmt(r.total_claimed)}`}</p>
       </div>
+      {pending && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse-ring shrink-0" />}
       <Pill s={r.status} label={r.status_label} />
+      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all shrink-0" />
     </button>
   );
 }
@@ -501,15 +579,28 @@ function ApproverBoard({ user }: { user: User }) {
   useEffect(() => { load(); }, []);
   if (sel) return <Detail id={sel} user={user} onBack={() => { setSel(null); load(); }} onActioned={load} />;
   return (
-    <div className="space-y-5">           
+    <div className="space-y-5">
+      <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 bg-[length:200%_200%] animate-gradient text-white p-5 flex items-center gap-4 shadow-lg sheen">
+        <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center shrink-0"><Clock className="w-6 h-6" /></div>
+        <div>
+          <p className="text-white/80 text-sm font-semibold">Awaiting your review</p>
+          <p className="text-3xl font-black leading-none"><Count n={data.pending.length} /> request{data.pending.length !== 1 ? 's' : ''}</p>
+        </div>
+      </div>
       <div>
         <h3 className="font-black text-slate-800 mb-3 flex items-center gap-2"><Clock className="w-5 h-5 text-amber-500" />Pending Your Action ({data.pending.length})</h3>
-        <div className="space-y-2">{data.pending.map((r: any) => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
-          {data.pending.length === 0 && <p className="text-slate-300 text-sm bg-white rounded-2xl border border-slate-100 p-6 text-center">Nothing pending 🎉</p>}</div>
+        <div className="space-y-2 stagger">{data.pending.map((r: any) => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
+          {data.pending.length === 0 && (
+            <div className="text-center py-14 bg-white rounded-2xl border border-dashed border-slate-200 animate-pop">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center mb-3 animate-float"><CheckCircle className="w-8 h-8 text-emerald-400" /></div>
+              <p className="font-bold text-slate-500">All caught up! 🎉</p>
+              <p className="text-slate-400 text-sm mt-1">Nothing is pending your action right now.</p>
+            </div>
+          )}</div>
       </div>
       <div>
         <h3 className="font-black text-slate-800 mb-3">Processed</h3>
-        <div className="space-y-2">{data.processed.map((r: any) => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
+        <div className="space-y-2 stagger">{data.processed.map((r: any) => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
           {data.processed.length === 0 && <p className="text-slate-300 text-sm">None yet.</p>}</div>
       </div>
     </div>
@@ -551,9 +642,9 @@ function AdminDashboard({ user }: { user: User }) {
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap items-center">
         {[{ k: 'overview', l: 'Overview', i: BarChart3 }, { k: 'requests', l: 'All Requests', i: FileText }, { k: 'users', l: 'Users', i: Users }, { k: 'danger', l: 'Danger Zone', i: Trash2 }].map(t => (
-          <button key={t.k} onClick={() => setSub(t.k)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${sub === t.k ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md' : 'bg-white border-2 border-slate-200 text-slate-500'}`}><t.i className="w-4 h-4" />{t.l}</button>
+          <button key={t.k} onClick={() => setSub(t.k)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${sub === t.k ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md scale-105' : 'bg-white border-2 border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-500'}`}><t.i className="w-4 h-4" />{t.l}</button>
         ))}
-        <button onClick={load} className="ml-auto flex items-center gap-1 text-slate-400 text-sm"><RefreshCw className="w-4 h-4" />Refresh</button>
+        <button onClick={load} className="ml-auto flex items-center gap-1 text-slate-400 hover:text-indigo-500 text-sm transition-colors active:rotate-180 duration-500"><RefreshCw className="w-4 h-4" />Refresh</button>
       </div>
       {msg && <p className="text-emerald-600 text-sm font-semibold bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">{msg}</p>}
 
@@ -574,20 +665,20 @@ function AdminDashboard({ user }: { user: User }) {
           local_travel: { l: 'Local Travel', i: Car, g: 'from-amber-400 to-orange-500' },
         };
         return (
-          <>
+          <div className="space-y-4 stagger">
             {/* Hero */}
-            <div className="rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-sky-600 p-6 text-white shadow-xl relative overflow-hidden">
-              <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10" />
-              <div className="absolute right-24 -bottom-8 w-28 h-28 rounded-full bg-white/5" />
+            <div className="rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-sky-600 bg-[length:200%_200%] animate-gradient p-6 text-white shadow-xl relative overflow-hidden sheen">
+              <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10 animate-float-slow" />
+              <div className="absolute right-24 -bottom-8 w-28 h-28 rounded-full bg-white/5 animate-float" />
               <div className="relative flex flex-wrap items-center gap-6">
                 <div>
                   <p className="text-white/70 text-sm font-semibold flex items-center gap-1.5"><Activity className="w-4 h-4" />Total Travel Requests</p>
-                  <p className="text-6xl font-black leading-none mt-1">{ov.total_requests}</p>
+                  <p className="text-6xl font-black leading-none mt-1"><Count n={ov.total_requests} /></p>
                   <p className="text-white/80 text-sm mt-2">{ov.total_users} users · <span className="text-amber-200 font-bold">{pendingTotal} pending</span> · <span className="text-rose-200 font-bold">{ov.rejected} rejected</span></p>
                 </div>
                 <div className="flex gap-6 ml-auto items-center flex-wrap">
-                  <div className="text-center"><p className="text-white/70 text-xs flex items-center gap-1 justify-center"><Wallet className="w-3 h-3" />Claimed</p><p className="text-2xl font-black">₹{fmt(ov.total_claimed)}</p></div>
-                  <div className="text-center"><p className="text-white/70 text-xs flex items-center gap-1 justify-center"><CheckCircle className="w-3 h-3" />Approved</p><p className="text-2xl font-black">₹{fmt(ov.total_approved)}</p></div>
+                  <div className="text-center"><p className="text-white/70 text-xs flex items-center gap-1 justify-center"><Wallet className="w-3 h-3" />Claimed</p><p className="text-2xl font-black"><Count n={ov.total_claimed} prefix="₹" /></p></div>
+                  <div className="text-center"><p className="text-white/70 text-xs flex items-center gap-1 justify-center"><CheckCircle className="w-3 h-3" />Approved</p><p className="text-2xl font-black"><Count n={ov.total_approved} prefix="₹" /></p></div>
                   <div className="bg-white/15 rounded-2xl px-3 py-2 backdrop-blur"><Ring pct={approvalRate} label="Approval" /></div>
                 </div>
               </div>
@@ -599,11 +690,11 @@ function AdminDashboard({ user }: { user: User }) {
               <div className="flex items-center gap-1 overflow-x-auto pb-1">
                 {pipeline.map((p, i) => (
                   <div key={p.l} className="flex items-center gap-1 flex-1 min-w-[110px]">
-                    <div className="flex-1 rounded-2xl p-4 text-center text-white shadow-md" style={{ background: `linear-gradient(135deg, ${p.c}, ${p.c}bb)` }}>
-                      <p className="text-3xl font-black leading-none">{p.v}</p>
+                    <div className="hover-lift flex-1 rounded-2xl p-4 text-center text-white shadow-md" style={{ background: `linear-gradient(135deg, ${p.c}, ${p.c}bb)` }}>
+                      <p className="text-3xl font-black leading-none"><Count n={p.v} /></p>
                       <p className="text-[11px] font-semibold text-white/90 mt-1">{p.l}</p>
                     </div>
-                    {i < pipeline.length - 1 && <ChevronRight className="w-5 h-5 text-slate-300 shrink-0" />}
+                    {i < pipeline.length - 1 && <ChevronRight className="w-5 h-5 text-slate-300 shrink-0 animate-pulse" />}
                   </div>
                 ))}
               </div>
@@ -612,10 +703,10 @@ function AdminDashboard({ user }: { user: User }) {
             {/* Type cards + Financial + Approval */}
             <div className="grid md:grid-cols-3 gap-4">
               {Object.entries(typeMeta).map(([k, m]: any) => (
-                <div key={k} className={`rounded-2xl p-5 text-white bg-gradient-to-br ${m.g} shadow-md relative overflow-hidden`}>
-                  <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10" />
+                <div key={k} className={`hover-lift rounded-2xl p-5 text-white bg-gradient-to-br ${m.g} shadow-md relative overflow-hidden`}>
+                  <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10 animate-float-slow" />
                   <m.i className="w-6 h-6 mb-3 opacity-90" />
-                  <p className="text-4xl font-black">{ov.by_type?.[k] || 0}</p>
+                  <p className="text-4xl font-black"><Count n={ov.by_type?.[k] || 0} /></p>
                   <p className="text-sm text-white/85 font-semibold">{m.l}</p>
                 </div>
               ))}
@@ -664,13 +755,13 @@ function AdminDashboard({ user }: { user: User }) {
                 <div className="grid grid-cols-2 gap-3">
                   {['employee', 'manager', 'hr', 'finance', 'admin'].filter(r => ov.users_by_role?.[r]).map((k) => {
                     const grads: any = { employee: 'from-blue-500 to-indigo-600', manager: 'from-violet-500 to-purple-600', hr: 'from-pink-500 to-rose-600', finance: 'from-emerald-500 to-teal-600', admin: 'from-slate-600 to-slate-800' };
-                    return <div key={k} className={`bg-gradient-to-br ${grads[k]} rounded-2xl p-3 text-center text-white shadow-md`}><p className="text-2xl font-black">{ov.users_by_role[k]}</p><p className="text-[11px] text-white/80 capitalize">{k}</p></div>;
+                    return <div key={k} className={`hover-lift bg-gradient-to-br ${grads[k]} rounded-2xl p-3 text-center text-white shadow-md`}><p className="text-2xl font-black"><Count n={ov.users_by_role[k]} /></p><p className="text-[11px] text-white/80 capitalize">{k}</p></div>;
                   })}
                   {Object.keys(ov.users_by_role || {}).length === 0 && <span className="text-xs text-slate-300 col-span-2">No users yet</span>}
                 </div>
               </div>
             </div>
-          </>
+          </div>
         );
       })()}
 
@@ -683,7 +774,7 @@ function AdminDashboard({ user }: { user: User }) {
             </select>
             <span className="text-slate-400 text-sm">{reqs.length} shown</span>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 stagger">
             {reqs.map((r: any) => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
             {reqs.length === 0 && <p className="text-slate-300 text-center py-10">No requests.</p>}
           </div>
@@ -753,11 +844,34 @@ function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () =
         {tab === 'approvals' && !isAdmin && <ApproverBoard user={user} />}
         {tab === 'new' && !isAdmin && <NewRequest user={user} onDone={() => { setRefresh(x => x + 1); setTab('mine'); }} />}
         {tab === 'mine' && !isAdmin && (sel ? <Detail id={sel} user={user} onBack={() => setSel(null)} /> : (
-          <div className="space-y-2">
-            {mine.map(r => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
+          <div className="space-y-4">
+            {mine.length > 0 && (() => {
+              const isPending = (s: string) => ['submitted', 'manager_approved', 'hr_approved', 'finance_approved'].includes(s);
+              const stats = [
+                { l: 'Total', v: mine.length, i: FileText, g: 'from-sky-500 to-indigo-600' },
+                { l: 'In Progress', v: mine.filter(r => isPending(r.status)).length, i: Clock, g: 'from-amber-500 to-orange-600' },
+                { l: 'Paid', v: mine.filter(r => r.status === 'paid').length, i: Wallet, g: 'from-emerald-500 to-teal-600' },
+                { l: 'Claimed ₹', v: mine.reduce((s, r) => s + (Number(r.total_claimed) || 0), 0), i: TrendingUp, g: 'from-violet-500 to-purple-600', money: true },
+              ];
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
+                  {stats.map(s => (
+                    <div key={s.l} className={`hover-lift rounded-2xl p-4 text-white bg-gradient-to-br ${s.g} shadow-md relative overflow-hidden`}>
+                      <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-white/10" />
+                      <s.i className="w-5 h-5 opacity-90 mb-2" />
+                      <p className="text-3xl font-black leading-none"><Count n={s.v} prefix={s.money ? '₹' : ''} /></p>
+                      <p className="text-xs text-white/85 font-semibold mt-1">{s.l}</p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+            <div className="space-y-2 stagger">
+              {mine.map(r => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
+            </div>
             {mine.length === 0 && (
-              <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-100 flex items-center justify-center mb-3"><FileText className="w-7 h-7 text-indigo-400" /></div>
+              <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 animate-pop">
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-100 flex items-center justify-center mb-3 animate-float"><FileText className="w-8 h-8 text-indigo-400" /></div>
                 <p className="font-bold text-slate-500">No requests yet</p>
                 <p className="text-slate-400 text-sm mt-1">Head to <b>New Request</b> to raise a tour sanction or expense claim.</p>
               </div>
