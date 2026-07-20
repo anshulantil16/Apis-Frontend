@@ -118,7 +118,7 @@ function SelectOther({ value, onChange, options, className, placeholder = 'Selec
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
-function Login({ onLogin }: { onLogin: (u: User) => void }) {
+function Login({ onLogin, onBack }: { onLogin: (u: User) => void; onBack?: () => void }) {
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const [empId, setEmpId] = useState('');
   const [otp, setOtp] = useState('');
@@ -159,6 +159,12 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
 
   return (
     <div className="min-h-screen flex bg-slate-900">
+      {onBack && (
+        <button onClick={onBack}
+          className="fixed top-4 left-4 z-50 flex items-center gap-1.5 px-3 py-2 bg-slate-900/70 hover:bg-slate-900/90 backdrop-blur border border-white/15 text-white rounded-xl text-xs font-bold shadow-lg transition-all">
+          <ChevronLeft className="w-4 h-4" /> Back to Apps
+        </button>
+      )}
       {/* ── Brand panel ── */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[55%] p-12 xl:p-16 text-white relative overflow-hidden sheen bg-gradient-to-br from-sky-600 via-indigo-600 to-violet-700 bg-[length:200%_200%] animate-gradient">
         <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-white/10 blur-3xl animate-float-slow" />
@@ -913,7 +919,7 @@ function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () =
 export function TadaPage({ onNavigateBack }: { onNavigateBack?: () => void }) {
   const [user, setUser] = useState<User | null>(() => { try { return JSON.parse(localStorage.getItem('tada_user') || 'null'); } catch { return null; } });
   const logout = () => { localStorage.removeItem('tada_user'); setUser(null); };
-  if (!user) return <Login onLogin={setUser} />;
+  if (!user) return <Login onLogin={setUser} onBack={onNavigateBack} />;
   return <Portal user={user} onLogout={logout} onNavigateBack={onNavigateBack} />;
 }
 
