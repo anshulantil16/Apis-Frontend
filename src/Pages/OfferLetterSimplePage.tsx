@@ -232,6 +232,7 @@ export function OfferLetterSimplePage() {
             <li>✓ Increment %, Promotion %, Performance Rating, Grade Label (optional)</li>
             <li>✓ <b>Annexure-A salary break-up</b> (green columns): Basic, HRA, allowances &amp; reimbursements as <b>Monthly</b>; PF, ESI, Mediclaim, Bonus, Variable &amp; Gift as <b>Annual</b>. <b>Leave a component blank</b> if the employee isn't eligible — it won't appear in their letter.</li>
             <li>✓ Employee detail columns for Annexure: Function, Cadre, Grade, Date of Joining, Work Location</li>
+            <li>✓ <b>Special Reward (One-time)</b> + optional Note — a one-time payout (not part of CTC) that appears in the letter only when an amount is entered</li>
           </ul>
         </div>
       </div>
