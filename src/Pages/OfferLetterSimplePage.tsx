@@ -230,6 +230,8 @@ export function OfferLetterSimplePage() {
             <li>✓ Current &amp; New Designation — a <b>Promotion Letter</b> is generated automatically when the designation changes, otherwise a <b>Salary Revision Letter</b></li>
             <li>✓ Performance Assessment (e.g. "Strong Performer") — shown in the letter</li>
             <li>✓ Increment %, Promotion %, Performance Rating, Grade Label (optional)</li>
+            <li>✓ <b>Annexure-A salary break-up</b> (green columns): Basic, HRA, allowances &amp; reimbursements as <b>Monthly</b>; PF, ESI, Mediclaim, Bonus, Variable &amp; Gift as <b>Annual</b>. <b>Leave a component blank</b> if the employee isn't eligible — it won't appear in their letter.</li>
+            <li>✓ Employee detail columns for Annexure: Function, Cadre, Grade, Date of Joining, Work Location</li>
           </ul>
         </div>
       </div>
