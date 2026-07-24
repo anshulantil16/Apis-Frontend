@@ -3,7 +3,7 @@ import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
   ChevronUp, Search, X, BarChart3, PieChart, Zap, Star,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
-  Target, RefreshCw, Trash2, LogOut,
+  Target, RefreshCw, Trash2, LogOut, Clock,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -795,9 +795,22 @@ export default function PMSPage() {
                         {emp.redesignation && emp.promoted && <p className="text-[10px] text-amber-600 -mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Policy: redesignation should be without promotion % — override applied.</p>}
                       </div>
 
-                      {/* Remarks */}
+                      {/* Prior-year context + Remarks */}
                       <div className="space-y-3">
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Remarks</p>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-slate-400"/>Prior Year</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+                            <p className="text-[10px] text-emerald-500 font-black uppercase mb-0.5">Last Yr Increment</p>
+                            <p className="text-slate-700 font-black text-base">{emp.fy_2425_growth_pct != null ? `${emp.fy_2425_growth_pct}%` : '—'}</p>
+                            <p className="text-[9px] text-slate-400">FY 24-25</p>
+                          </div>
+                          <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                            <p className="text-[10px] text-indigo-500 font-black uppercase mb-0.5">Variable Pay</p>
+                            <p className="text-slate-700 font-black text-base">{emp.variable_pay != null ? `₹${fmt(emp.variable_pay)}` : '—'}</p>
+                            <p className="text-[9px] text-slate-400">Current · 31-Mar-26</p>
+                          </div>
+                        </div>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest pt-1">Remarks</p>
                         {emp.manager_remarks && <div className="bg-blue-50 border border-blue-100 rounded-xl p-3"><p className="text-[10px] text-blue-400 font-black uppercase mb-1">Manager</p><p className="text-slate-600 text-xs leading-relaxed">{emp.manager_remarks}</p></div>}
                         {emp.hod_remarks && <div className="bg-violet-50 border border-violet-100 rounded-xl p-3"><p className="text-[10px] text-violet-400 font-black uppercase mb-1">HOD</p><p className="text-slate-600 text-xs leading-relaxed">{emp.hod_remarks}</p></div>}
                         <textarea placeholder="Add notes…" defaultValue={emp.notes}
