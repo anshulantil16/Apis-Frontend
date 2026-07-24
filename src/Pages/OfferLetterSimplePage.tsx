@@ -91,7 +91,7 @@ export function OfferLetterSimplePage() {
                   <Download className="w-5 h-5" />
                   Download Excel Template
                 </button>
-                <p className="text-xs text-slate-500 mt-2">Includes: Employee ID, Name, Email, Current/New CTC, Effective Date, etc.</p>
+                <p className="text-xs text-slate-500 mt-2">Includes: Employee ID, Title, Name, Email, Designations, Current/New CTC, Performance Assessment, Effective Date, etc.</p>
               </div>
 
               {/* Step 2: Upload */}
@@ -224,13 +224,12 @@ export function OfferLetterSimplePage() {
         <div className="mt-8 p-6 rounded-xl bg-blue-50 border border-blue-200">
           <h3 className="font-bold text-slate-900 mb-3">📋 What to include in the Excel file:</h3>
           <ul className="space-y-2 text-sm text-slate-700">
-            <li>✓ Employee ID (must match existing employee)</li>
-            <li>✓ Employee Name</li>
-            <li>✓ Email Address</li>
-            <li>✓ Current CTC</li>
-            <li>✓ New CTC</li>
-            <li>✓ Effective Date (YYYY-MM-DD)</li>
-            <li>✓ Increment %, Promotion %, Performance Rating (optional)</li>
+            <li>✓ Employee ID, Employee Name, Email Address</li>
+            <li>✓ Title (Mr./Ms.) — used in the salutation</li>
+            <li>✓ Current CTC, New CTC, Effective Date (YYYY-MM-DD)</li>
+            <li>✓ Current &amp; New Designation — a <b>Promotion Letter</b> is generated automatically when the designation changes, otherwise a <b>Salary Revision Letter</b></li>
+            <li>✓ Performance Assessment (e.g. "Strong Performer") — shown in the letter</li>
+            <li>✓ Increment %, Promotion %, Performance Rating, Grade Label (optional)</li>
           </ul>
         </div>
       </div>
