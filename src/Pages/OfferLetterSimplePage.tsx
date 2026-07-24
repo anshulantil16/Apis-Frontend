@@ -30,7 +30,12 @@ export function OfferLetterSimplePage() {
     }
   };
 
-  const pollBatch = async (batchId: string) => {
+  const pollBatch = async (batchId: string, attempt = 0) => {
+    if (attempt > 1600) {  // ~40 min safety cap
+      setError('Generation is taking unusually long. Check the letters later or re-upload.');
+      setLoading(false);
+      return;
+    }
     try {
       const r = await fetch(`${PMS_API}/offer-letter/batch/${batchId}/`);
       const d = await r.json();
@@ -45,10 +50,10 @@ export function OfferLetterSimplePage() {
         setError((d.errors && d.errors[0]) || 'Generation failed');
         setLoading(false);
       } else {
-        setTimeout(() => pollBatch(batchId), 1500);
+        setTimeout(() => pollBatch(batchId, attempt + 1), 1500);
       }
     } catch {
-      setTimeout(() => pollBatch(batchId), 2500);
+      setTimeout(() => pollBatch(batchId, attempt + 1), 2500);
     }
   };
 
