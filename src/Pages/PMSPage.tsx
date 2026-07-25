@@ -493,9 +493,10 @@ export default function PMSPage() {
               <FileSpreadsheet className="w-3.5 h-3.5" /> Template
             </a>
             <button onClick={() => fileRef.current?.click()} disabled={importing}
+              title="Adds to existing employees and merges by Employee Code (matching codes update, new codes are added). You can import Sales, then HQ, etc. — no need to Clear first."
               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-200 transition-all disabled:opacity-60">
               {importing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-              {importing ? 'Importing…' : 'Import Data'}
+              {importing ? 'Importing…' : emps.length > 0 ? 'Import / Add More' : 'Import Data'}
             </button>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
             {emps.length > 0 && (
