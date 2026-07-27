@@ -1106,7 +1106,9 @@ export default function PMSPage() {
                   const rows = [
                     { label: 'Current Payroll Cost', value: fmtCr(totalCTC), pct: '', color: 'text-slate-700', big: true },
                     { label: 'Merit Increment',       value: `+${fmtCr(sum.cost_increment||0)}`,       pct: pctOf(sum.cost_increment||0),       color: 'text-emerald-600' },
-                    ...(sum.cost_service_adjustment ? [{ label: 'Service-Days Adjustment (±)', value: `${sum.cost_service_adjustment >= 0 ? '+' : '−'}${fmtCr(Math.abs(sum.cost_service_adjustment))}`, pct: pctOf(Math.abs(sum.cost_service_adjustment)), color: sum.cost_service_adjustment >= 0 ? 'text-emerald-600' : 'text-rose-500' }] : []),
+                    ...(sum.cost_service_adj_up ? [{ label: 'Service-Days Adj. — Increased', value: `+${fmtCr(sum.cost_service_adj_up)}`, pct: pctOf(sum.cost_service_adj_up), color: 'text-emerald-600' }] : []),
+                    ...(sum.cost_service_adj_down ? [{ label: 'Service-Days Adj. — Decreased', value: `−${fmtCr(Math.abs(sum.cost_service_adj_down))}`, pct: pctOf(Math.abs(sum.cost_service_adj_down)), color: 'text-rose-500' }] : []),
+                    ...(sum.cost_service_adjustment ? [{ label: 'Service-Days Adjustment (± net)', value: `${sum.cost_service_adjustment >= 0 ? '+' : '−'}${fmtCr(Math.abs(sum.cost_service_adjustment))}`, pct: pctOf(Math.abs(sum.cost_service_adjustment)), color: sum.cost_service_adjustment >= 0 ? 'text-emerald-600' : 'text-rose-500' }] : []),
                     { label: 'Promotion',             value: `+${fmtCr(sum.cost_promotion||0)}`,       pct: pctOf(sum.cost_promotion||0),       color: 'text-violet-600' },
                     { label: 'Sustained Performance', value: `+${fmtCr(sum.cost_sustained||0)}`,       pct: pctOf(sum.cost_sustained||0),       color: 'text-teal-600' },
                     { label: 'Salary Correction',     value: `+${fmtCr(sum.cost_correction||0)}`,      pct: pctOf(sum.cost_correction||0),      color: 'text-sky-600' },
