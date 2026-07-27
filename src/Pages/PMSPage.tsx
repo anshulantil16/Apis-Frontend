@@ -212,6 +212,12 @@ export default function PMSPage() {
     else localStorage.removeItem('pms_email');
   }, [loggedIn, adminEmail]);
 
+  // Scroll back to top when switching tabs or applying the quadrant filter
+  // (so e.g. clicking a Matrix box shows the list from the top, not mid-page)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [tab, fQuad]);
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setImporting(true); setMsg(null);
