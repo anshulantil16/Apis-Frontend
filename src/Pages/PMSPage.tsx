@@ -617,6 +617,7 @@ export default function PMSPage() {
             ) : filtered.map(emp => {
               const isExp = expanded === emp.id;
               const cfg = GRADES[emp.effective_grade];
+              const A = (v:number) => fmt((Number(v)||0) * 12);  // stored CTC is monthly → show ANNUAL (×12)
               return (
                 <div key={emp.id} className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-lg transition-all overflow-hidden ${isExp ? 'border-indigo-200' : 'border-slate-100 hover:border-indigo-200'}`}>
                   <div className="grid grid-cols-12 gap-3 px-4 py-3.5 items-center cursor-pointer" onClick={() => setExpanded(isExp ? null : emp.id)}>
@@ -653,10 +654,10 @@ export default function PMSPage() {
                     {/* CTC */}
                     <div className="col-span-3">
                       <div className={`rounded-2xl p-3 border-2 ${cfg.light}`}>
-                        <div className="flex justify-between text-xs mb-1"><span className="text-slate-400">Current</span><span className="text-slate-600 font-bold">₹{fmt(emp.current_ctc)}</span></div>
+                        <div className="flex justify-between text-xs mb-1"><span className="text-slate-400">Current <span className="text-slate-300">(/yr)</span></span><span className="text-slate-600 font-bold">₹{A(emp.current_ctc)}</span></div>
                         <div className="flex justify-between text-xs mb-0.5">
                           <span className="text-slate-400">Increment <span className="text-emerald-600 font-bold">{emp.effective_increment_pct}%</span></span>
-                          <span className="text-emerald-600 font-bold">+₹{fmt(emp.increment_amount)}</span>
+                          <span className="text-emerald-600 font-bold">+₹{A(emp.increment_amount)}</span>
                         </div>
                         {emp.service_adjustment_amount !== 0 && (
                           <div className="flex justify-between text-xs mb-0.5">
@@ -665,38 +666,38 @@ export default function PMSPage() {
                               <span className={emp.service_adjustment_amount > 0 ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}>{emp.service_adjustment_pct > 0 ? '+' : ''}{emp.service_adjustment_pct}%</span>
                               <span className="text-slate-300">({emp.service_days}d)</span>
                             </span>
-                            <span className={emp.service_adjustment_amount > 0 ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}>{emp.service_adjustment_amount > 0 ? '+' : '−'}₹{fmt(Math.abs(emp.service_adjustment_amount))}</span>
+                            <span className={emp.service_adjustment_amount > 0 ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}>{emp.service_adjustment_amount > 0 ? '+' : '−'}₹{A(Math.abs(emp.service_adjustment_amount))}</span>
                           </div>
                         )}
                         {emp.promoted && (
                           <div className="flex justify-between text-xs mb-0.5">
                             <span className="text-slate-400">Promotion <span className="text-violet-600 font-bold">{emp.effective_promotion_pct}%</span></span>
-                            <span className="text-violet-600 font-bold">+₹{fmt(emp.promotion_amount)}</span>
+                            <span className="text-violet-600 font-bold">+₹{A(emp.promotion_amount)}</span>
                           </div>
                         )}
                         {emp.management_discretion_pct > 0 && (
                           <div className="flex justify-between text-xs mb-0.5">
                             <span className="text-slate-400">Mgmt Disc. <span className="text-amber-600 font-bold">{emp.management_discretion_pct}%</span></span>
-                            <span className="text-amber-600 font-bold">+₹{fmt(emp.management_discretion_amount)}</span>
+                            <span className="text-amber-600 font-bold">+₹{A(emp.management_discretion_amount)}</span>
                           </div>
                         )}
                         {emp.sustained_performance && (
                           <div className="flex justify-between text-xs mb-0.5">
                             <span className="text-slate-400">Sustained <span className="text-teal-600 font-bold">{emp.sustained_pct}%</span></span>
-                            <span className="text-teal-600 font-bold">+₹{fmt(emp.sustained_amount)}</span>
+                            <span className="text-teal-600 font-bold">+₹{A(emp.sustained_amount)}</span>
                           </div>
                         )}
                         {emp.salary_correction_amount > 0 && (
                           <div className="flex justify-between text-xs mb-0.5">
                             <span className="text-slate-400">Correction</span>
-                            <span className="text-sky-600 font-bold">+₹{fmt(emp.salary_correction_amount)}</span>
+                            <span className="text-sky-600 font-bold">+₹{A(emp.salary_correction_amount)}</span>
                           </div>
                         )}
                         <div className="flex justify-between text-xs mb-1 pt-1 border-t border-slate-200">
                           <span className="text-slate-500 font-semibold">Total Hike <span className="font-black">{emp.total_impact_pct}%</span></span>
-                          <span className="text-slate-600 font-bold">+₹{fmt(emp.new_ctc - emp.current_ctc)}</span>
+                          <span className="text-slate-600 font-bold">+₹{A(emp.new_ctc - emp.current_ctc)}</span>
                         </div>
-                        <div className="flex justify-between text-sm"><span className="font-bold text-slate-700">New CTC</span><span className={`font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>₹{fmt(emp.new_ctc)}</span></div>
+                        <div className="flex justify-between text-sm"><span className="font-bold text-slate-700">New CTC <span className="text-slate-300 font-normal text-[10px]">(/yr)</span></span><span className={`font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>₹{A(emp.new_ctc)}</span></div>
                         {emp.on_time_reward && emp.reward_payout > 0 && (
                           <div className="flex justify-between text-[11px] mt-1 pt-1 border-t border-dashed border-orange-200">
                             <span className="text-orange-500 font-semibold">One-Time Reward <span className="text-slate-400 font-normal">(not in CTC)</span></span>
