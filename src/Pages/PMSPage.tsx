@@ -998,33 +998,36 @@ export default function PMSPage() {
                 <h3 className="font-black text-slate-800">Org CTC Growth Trend</h3>
               </div>
               {(() => {
+                // CTC field per FY (last two are the live totals for current & projected)
+                const F = ['fy_2223_ctc','fy_2324_ctc','fy_2425_ctc','current_ctc','new_ctc'];
+                const labels = ['FY 22-23','FY 23-24','FY 24-25','FY 25-26','FY 26-27*'];
                 const yr = (f:string) => emps.reduce((s:number,e:any)=>s+(Number(e[f])||0),0);
-                const series = [
-                  { l: 'FY 22-23', v: yr('fy_2223_ctc') },
-                  { l: 'FY 23-24', v: yr('fy_2324_ctc') },
-                  { l: 'FY 24-25', v: yr('fy_2425_ctc') },
-                  { l: 'FY 25-26', v: totalCTC },
-                  { l: 'FY 26-27*', v: newCTC },
-                ];
+                const totals = F.map(yr);
+                // LIKE-FOR-LIKE increment %: only employees with a CTC in BOTH years,
+                // so headcount changes don't inflate the number.
+                const growthAt = (i:number) => {
+                  if (i===0) return null;
+                  const pf=F[i-1], cf=F[i]; let sp=0, sc=0;
+                  emps.forEach((e:any)=>{ const p=Number(e[pf])||0, c=Number(e[cf])||0; if(p>0 && c>0){ sp+=p; sc+=c; } });
+                  return sp>0 ? ((sc-sp)/sp*100) : null;
+                };
+                const series = labels.map((l,i)=>({ l, v: totals[i], g: growthAt(i) }));
                 const mx = Math.max(...series.map(s=>s.v),1);
                 return (
                   <div className="space-y-2">
-                    {series.map((s,i) => {
-                      const prev = i>0 ? series[i-1].v : 0;
-                      const growth = i>0 && prev>0 ? ((s.v-prev)/prev*100) : null;
-                      return (
+                    {series.map((s) => (
                       <div key={s.l} className="flex items-center gap-3">
                         <div className="w-20 text-xs font-bold text-slate-600">{s.l}</div>
                         <div className="flex-1"><Bar value={s.v} max={mx} gradient="from-emerald-400 to-green-500"/></div>
                         <span className="w-16 text-right text-[11px] font-black">
-                          {growth!==null
-                            ? <span className={growth>=0 ? 'text-emerald-600' : 'text-rose-500'}>{growth>=0?'▲':'▼'} {Math.abs(growth).toFixed(1)}%</span>
+                          {s.g!==null
+                            ? <span className={s.g>=0 ? 'text-emerald-600' : 'text-rose-500'}>{s.g>=0?'▲':'▼'} {Math.abs(s.g).toFixed(1)}%</span>
                             : <span className="text-slate-300">—</span>}
                         </span>
                         <span className="text-xs font-black text-slate-700 w-16 text-right">{fmtCr(s.v)}</span>
                       </div>
-                    )})}
-                    <p className="text-[10px] text-slate-400 mt-1">▲ = year-over-year increase %. *FY 26-27 projected after this appraisal cycle</p>
+                    ))}
+                    <p className="text-[10px] text-slate-400 mt-1">▲ = like-for-like increment % (same employees present in both years, so new joiners don't inflate it). Bars = total CTC of the current workforce per FY. *FY 26-27 projected after this appraisal cycle.</p>
                   </div>
                 );
               })()}
