@@ -632,11 +632,19 @@ export default function PMSPage() {
                       <div className={`rounded-2xl p-3 border-2 ${cfg.light}`}>
                         <div className="flex justify-between text-xs mb-1"><span className="text-slate-400">Current</span><span className="text-slate-600 font-bold">₹{fmt(emp.current_ctc)}</span></div>
                         <div className="flex justify-between text-xs mb-0.5">
-                          <span className="text-slate-400">Increment <span className="text-emerald-600 font-bold">{emp.effective_increment_pct}%</span>
-                            {emp.is_increment_prorated && <span title={`Pro-rated for service days (${emp.service_days}/365, ${emp.increment_proration_factor}×)`} className="inline-flex items-center ml-1 text-amber-500"><Clock className="w-3 h-3"/></span>}
-                          </span>
+                          <span className="text-slate-400">Increment <span className="text-emerald-600 font-bold">{emp.effective_increment_pct}%</span></span>
                           <span className="text-emerald-600 font-bold">+₹{fmt(emp.increment_amount)}</span>
                         </div>
+                        {emp.service_adjustment_amount !== 0 && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400 inline-flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5 text-amber-500"/>Service Adj.
+                              <span className={emp.service_adjustment_amount > 0 ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}>{emp.service_adjustment_pct > 0 ? '+' : ''}{emp.service_adjustment_pct}%</span>
+                              <span className="text-slate-300">({emp.service_days}d)</span>
+                            </span>
+                            <span className={emp.service_adjustment_amount > 0 ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}>{emp.service_adjustment_amount > 0 ? '+' : '−'}₹{fmt(Math.abs(emp.service_adjustment_amount))}</span>
+                          </div>
+                        )}
                         {emp.promoted && (
                           <div className="flex justify-between text-xs mb-0.5">
                             <span className="text-slate-400">Promotion <span className="text-violet-600 font-bold">{emp.effective_promotion_pct}%</span></span>
@@ -708,21 +716,21 @@ export default function PMSPage() {
                           {emp.is_worker ? 'Worker — fixed ₹ increment' : emp.increment_group === 'staff2' ? 'Staff M4–C3' : emp.increment_group === 'special' ? 'CXO/Director — MD discretion' : 'Staff O1–M3'}
                         </div>
 
-                        {/* Service-days (pro-rata) increment */}
+                        {/* Service-days adjustment (separate from the grade increment) */}
                         <div className={`rounded-xl p-3 border ${emp.is_increment_prorated ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
                           <div className="flex items-center justify-between mb-1.5">
-                            <p className="text-[11px] font-black uppercase tracking-wide flex items-center gap-1 text-amber-600"><Clock className="w-3 h-3"/>Service-Adjusted Increment</p>
-                            {emp.is_increment_prorated && <span className="text-[9px] font-black text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">{emp.increment_proration_factor}×</span>}
+                            <p className="text-[11px] font-black uppercase tracking-wide flex items-center gap-1 text-amber-600"><Clock className="w-3 h-3"/>Service-Days Adjustment</p>
+                            {emp.is_increment_prorated && <span className={`text-[9px] font-black rounded px-1.5 py-0.5 ${emp.service_adjustment_amount > 0 ? 'text-emerald-700 bg-emerald-100' : 'text-rose-600 bg-rose-100'}`}>{emp.service_adjustment_pct > 0 ? '+' : ''}{emp.service_adjustment_pct}%</span>}
                           </div>
                           <div className="grid grid-cols-3 gap-2 text-center">
-                            <div><p className="text-[9px] text-slate-400">Service Days</p><p className="text-sm font-black text-slate-700">{emp.service_days ?? '—'}</p><p className="text-[8px] text-slate-400">of 365</p></div>
-                            <div><p className="text-[9px] text-slate-400">Base (grade)</p><p className="text-sm font-black text-slate-500">{emp.base_increment_pct}%</p></div>
-                            <div><p className="text-[9px] text-slate-400">Adjusted</p><p className="text-sm font-black text-emerald-600">{emp.effective_increment_pct}%</p></div>
+                            <div><p className="text-[9px] text-slate-400">Working Days</p><p className="text-sm font-black text-slate-700">{emp.service_days ?? '—'}</p><p className="text-[8px] text-slate-400">of 365</p></div>
+                            <div><p className="text-[9px] text-slate-400">Grade Increment</p><p className="text-sm font-black text-slate-500">{emp.effective_increment_pct}%</p></div>
+                            <div><p className="text-[9px] text-slate-400">Adjustment</p><p className={`text-sm font-black ${emp.service_adjustment_amount > 0 ? 'text-emerald-600' : emp.service_adjustment_amount < 0 ? 'text-rose-500' : 'text-slate-400'}`}>{emp.service_adjustment_amount > 0 ? '+' : ''}{emp.service_adjustment_pct}%</p></div>
                           </div>
                           <p className="text-[9px] text-slate-400 mt-1.5 leading-snug">
-                            {emp.override_increment_pct != null ? 'Manual override set — pro-rata not applied.'
-                              : emp.is_increment_prorated ? `Pro-rated: grade % ÷ 365 × service days (DOJ → 31-Mar-2026). ${emp.increment_proration_factor > 1 ? 'Extra un-appraised days → higher %.' : 'Fewer service days → lower %.'}`
-                              : 'Full-year service — no pro-rata (joined on/before the prior cycle, or DOJ not set).'}
+                            {emp.override_increment_pct != null ? 'Manual override set — no service-days adjustment.'
+                              : emp.is_increment_prorated ? `The grade increment stays as-is; this ± is grade % ÷ 365 × working days (DOJ → 31-Mar-2026). ${emp.service_adjustment_amount > 0 ? 'Extra un-appraised days → added to CTC.' : 'Fewer service days → reduced from CTC.'}`
+                              : 'Full-year service — no adjustment (joined on/before the prior cycle, or DOJ not set).'}
                           </p>
                         </div>
                       </div>
