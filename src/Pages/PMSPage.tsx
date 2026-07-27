@@ -980,7 +980,7 @@ export default function PMSPage() {
                 <h3 className="font-black text-slate-800">Workforce by Location</h3>
               </div>
               <div className="space-y-2">
-                {Object.entries(sum.location_distribution||{}).slice(0,9).map(([k,v]:any) => (
+                {Object.entries(sum.location_distribution||{}).slice(0,15).map(([k,v]:any) => (
                   <div key={k} className="flex items-center gap-3">
                     <div className="w-28 text-xs font-bold text-slate-600 truncate">{k}</div>
                     <div className="flex-1"><Bar value={v as number} max={sum.total_employees||1} gradient="from-teal-400 to-cyan-500"/></div>
