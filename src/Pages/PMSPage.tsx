@@ -22,9 +22,9 @@ const GO = ['A+', 'A', 'B+', 'B', 'C', 'D'];
 // Policy merit-increment matrix (mirrors backend INCREMENT_MATRIX) for the Grade Guide reference.
 const POLICY: Record<string, { staff1: number; staff2: number; worker: number; wpromo: number; promo: number; sustained: number; ptarget: string }> = {
   'A+': { staff1: 14, staff2: 10, worker: 800, wpromo: 400, promo: 5, sustained: 1,   ptarget: '≥ 106%' },
-  'A':  { staff1: 12, staff2: 9,  worker: 600, wpromo: 300, promo: 4, sustained: 1,   ptarget: '95–100%' },
-  'B+': { staff1: 10, staff2: 8,  worker: 400, wpromo: 200, promo: 3, sustained: 0.5, ptarget: '85–94%' },
-  'B':  { staff1: 8,  staff2: 7,  worker: 200, wpromo: 100, promo: 2, sustained: 0.5, ptarget: '65–84%' },
+  'A':  { staff1: 12, staff2: 9,  worker: 600, wpromo: 300, promo: 4, sustained: 0.75, ptarget: '95–100%' },
+  'B+': { staff1: 10, staff2: 8,  worker: 400, wpromo: 200, promo: 3, sustained: 0.5,  ptarget: '85–94%' },
+  'B':  { staff1: 8,  staff2: 7,  worker: 200, wpromo: 100, promo: 2, sustained: 0.25, ptarget: '65–84%' },
   'C':  { staff1: 4,  staff2: 3,  worker: 100, wpromo: 0,   promo: 0, sustained: 0,   ptarget: '51–64%' },
   'D':  { staff1: 0,  staff2: 0,  worker: 0,   wpromo: 0,   promo: 0, sustained: 0,   ptarget: '< 50%' },
 };
