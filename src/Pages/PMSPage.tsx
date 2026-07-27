@@ -605,8 +605,11 @@ export default function PMSPage() {
                       <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white font-black text-lg shadow-lg ${cfg.glow} shrink-0`}>{emp.name[0]}</div>
                       <div className="min-w-0">
                         <p className="text-slate-800 font-bold text-sm truncate">{emp.name}</p>
-                        <p className="text-slate-400 text-xs truncate">{emp.designation}</p>
-                        <p className="text-slate-300 text-[10px]">#{emp.employee_id} · {emp.department}</p>
+                        <p className="text-slate-400 text-xs truncate">
+                          {emp.designation}
+                          {emp.new_designation && emp.new_designation !== emp.designation && <span className="text-violet-500 font-semibold"> → {emp.new_designation}</span>}
+                        </p>
+                        <p className="text-slate-300 text-[10px] truncate">#{emp.employee_id} · {emp.department}</p>
                       </div>
                     </div>
                     {/* Score */}
