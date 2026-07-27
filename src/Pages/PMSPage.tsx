@@ -632,7 +632,9 @@ export default function PMSPage() {
                       <div className={`rounded-2xl p-3 border-2 ${cfg.light}`}>
                         <div className="flex justify-between text-xs mb-1"><span className="text-slate-400">Current</span><span className="text-slate-600 font-bold">₹{fmt(emp.current_ctc)}</span></div>
                         <div className="flex justify-between text-xs mb-0.5">
-                          <span className="text-slate-400">Increment <span className="text-emerald-600 font-bold">{emp.effective_increment_pct}%</span></span>
+                          <span className="text-slate-400">Increment <span className="text-emerald-600 font-bold">{emp.effective_increment_pct}%</span>
+                            {emp.is_increment_prorated && <span title={`Pro-rated for service days (${emp.service_days}/365, ${emp.increment_proration_factor}×)`} className="inline-flex items-center ml-1 text-amber-500"><Clock className="w-3 h-3"/></span>}
+                          </span>
                           <span className="text-emerald-600 font-bold">+₹{fmt(emp.increment_amount)}</span>
                         </div>
                         {emp.promoted && (
@@ -704,6 +706,24 @@ export default function PMSPage() {
                         <div className="flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-2 py-1.5">
                           <span className="font-bold text-slate-600">Category:</span>
                           {emp.is_worker ? 'Worker — fixed ₹ increment' : emp.increment_group === 'staff2' ? 'Staff M4–C3' : emp.increment_group === 'special' ? 'CXO/Director — MD discretion' : 'Staff O1–M3'}
+                        </div>
+
+                        {/* Service-days (pro-rata) increment */}
+                        <div className={`rounded-xl p-3 border ${emp.is_increment_prorated ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-[11px] font-black uppercase tracking-wide flex items-center gap-1 text-amber-600"><Clock className="w-3 h-3"/>Service-Adjusted Increment</p>
+                            {emp.is_increment_prorated && <span className="text-[9px] font-black text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">{emp.increment_proration_factor}×</span>}
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div><p className="text-[9px] text-slate-400">Service Days</p><p className="text-sm font-black text-slate-700">{emp.service_days ?? '—'}</p><p className="text-[8px] text-slate-400">of 365</p></div>
+                            <div><p className="text-[9px] text-slate-400">Base (grade)</p><p className="text-sm font-black text-slate-500">{emp.base_increment_pct}%</p></div>
+                            <div><p className="text-[9px] text-slate-400">Adjusted</p><p className="text-sm font-black text-emerald-600">{emp.effective_increment_pct}%</p></div>
+                          </div>
+                          <p className="text-[9px] text-slate-400 mt-1.5 leading-snug">
+                            {emp.override_increment_pct != null ? 'Manual override set — pro-rata not applied.'
+                              : emp.is_increment_prorated ? `Pro-rated: grade % ÷ 365 × service days (DOJ → 31-Mar-2026). ${emp.increment_proration_factor > 1 ? 'Extra un-appraised days → higher %.' : 'Fewer service days → lower %.'}`
+                              : 'Full-year service — no pro-rata (joined on/before the prior cycle, or DOJ not set).'}
+                          </p>
                         </div>
                       </div>
 
