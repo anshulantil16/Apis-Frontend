@@ -188,6 +188,7 @@ export default function PMSPage() {
   const [search, setSearch]   = useState('');
   const [fGrade, setFGrade]   = useState<string[]>([]);
   const [fDept, setFDept]     = useState<string[]>([]);
+  const [promotedOnly, setPromotedOnly] = useState(false);
   const [expanded, setExpanded] = useState<number|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -312,7 +313,7 @@ export default function PMSPage() {
 
   const filtered = emps.filter(e => {
     const s = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.employee_id.toLowerCase().includes(search.toLowerCase());
-    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department));
+    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department)) && (!promotedOnly || e.promoted);
   });
 
   const TABS = [
@@ -582,7 +583,11 @@ export default function PMSPage() {
               <MultiSelect label="All Grades" options={GO} selected={fGrade} onChange={setFGrade}
                 renderOption={g => `Grade ${g} — ${GRADES[g].label}`} />
               <MultiSelect label="All Departments" options={depts} selected={fDept} onChange={setFDept} />
-              {(search||fGrade.length||fDept.length) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
+              <button onClick={() => setPromotedOnly(v => !v)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${promotedOnly ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white border-transparent shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300'}`}>
+                <Crown className="w-3.5 h-3.5"/>Promoted only {sum.promoted_count ? `(${sum.promoted_count})` : ''}
+              </button>
+              {(search||fGrade.length||fDept.length||promotedOnly) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);setPromotedOnly(false);}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
               <span className="ml-auto text-slate-400 text-xs">{filtered.length} of {emps.length}</span>
             </div>
 
