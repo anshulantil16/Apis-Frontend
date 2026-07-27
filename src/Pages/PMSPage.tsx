@@ -617,7 +617,7 @@ export default function PMSPage() {
             ) : filtered.map(emp => {
               const isExp = expanded === emp.id;
               const cfg = GRADES[emp.effective_grade];
-              const A = (v:number) => fmt((Number(v)||0) * 12);  // stored CTC is monthly → show ANNUAL (×12)
+              const A = (v:number) => fmt(Number(v)||0);  // backend already sends annual CTC
               return (
                 <div key={emp.id} className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-lg transition-all overflow-hidden ${isExp ? 'border-indigo-200' : 'border-slate-100 hover:border-indigo-200'}`}>
                   <div className="grid grid-cols-12 gap-3 px-4 py-3.5 items-center cursor-pointer" onClick={() => setExpanded(isExp ? null : emp.id)}>
