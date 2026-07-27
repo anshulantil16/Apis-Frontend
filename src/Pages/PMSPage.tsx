@@ -189,6 +189,7 @@ export default function PMSPage() {
   const [fGrade, setFGrade]   = useState<string[]>([]);
   const [fDept, setFDept]     = useState<string[]>([]);
   const [promotedOnly, setPromotedOnly] = useState(false);
+  const [fQuad, setFQuad] = useState('');   // Performance-vs-Salary quadrant filter
   const [expanded, setExpanded] = useState<number|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -311,9 +312,16 @@ export default function PMSPage() {
   const incPct      = sum.increment_pct || 0;
   const depts       = [...new Set(emps.map((e:any) => e.department).filter(Boolean))];
 
+  // Performance-vs-Salary quadrant per employee (median split, matches backend)
+  const medScore = sum.matrix_median_score;
+  const medCtc   = sum.matrix_median_ctc;
+  const quadOf = (e:any) => (medScore==null||medCtc==null) ? '' :
+    (e.final_score >= medScore ? 'high' : 'low') + '_perf_' + (Number(e.current_ctc) >= medCtc ? 'high' : 'low') + '_pay';
+  const QUAD_LABEL: Record<string,string> = { high_perf_high_pay:'Star Performers', high_perf_low_pay:'Future Bets', low_perf_high_pay:'Cost Burden', low_perf_low_pay:'Stable Workforce' };
+
   const filtered = emps.filter(e => {
     const s = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.employee_id.toLowerCase().includes(search.toLowerCase());
-    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department)) && (!promotedOnly || e.promoted);
+    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department)) && (!promotedOnly || e.promoted) && (!fQuad || quadOf(e) === fQuad);
   });
 
   const TABS = [
@@ -587,7 +595,8 @@ export default function PMSPage() {
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${promotedOnly ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white border-transparent shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300'}`}>
                 <Crown className="w-3.5 h-3.5"/>Promoted only {sum.promoted_count ? `(${sum.promoted_count})` : ''}
               </button>
-              {(search||fGrade.length||fDept.length||promotedOnly) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);setPromotedOnly(false);}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
+              {fQuad && <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-200">{QUAD_LABEL[fQuad]} <button onClick={() => setFQuad('')}><X className="w-3 h-3"/></button></span>}
+              {(search||fGrade.length||fDept.length||promotedOnly||fQuad) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);setPromotedOnly(false);setFQuad('');}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
               <span className="ml-auto text-slate-400 text-xs">{filtered.length} of {emps.length}</span>
             </div>
 
@@ -914,16 +923,22 @@ export default function PMSPage() {
                   { key: 'low_perf_high_pay',  label: 'Cost Burden',      sub: 'Low Score · High Pay',   grad: 'from-rose-400 to-red-600',       icon: '⚠️' },
                   { key: 'low_perf_low_pay',   label: 'Stable Workforce', sub: 'Low Score · Low Pay',    grad: 'from-slate-400 to-slate-600',    icon: '📊' },
                 ].map(q => (
-                  <div key={q.key} className={`bg-gradient-to-br ${q.grad} rounded-2xl p-4 text-white`}>
+                  <button key={q.key} onClick={() => { setFQuad(q.key); setTab('simulator'); }}
+                    title={`Click to list these employees in the Live Simulator`}
+                    className={`text-left bg-gradient-to-br ${q.grad} rounded-2xl p-4 text-white hover:scale-[1.02] hover:shadow-lg transition-all`}>
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-2xl">{q.icon}</span>
                       <span className="text-3xl font-black">{(sum.performance_vs_salary||{})[q.key]||0}</span>
                     </div>
                     <p className="font-black text-sm">{q.label}</p>
                     <p className="text-white/70 text-xs">{q.sub}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
+              <p className="text-[11px] text-slate-400 mt-3 leading-snug">
+                Split at the <b>median</b> of the workforce: <b>High Score</b> = Final Score ≥ {medScore ?? '—'}, <b>High Pay</b> = Current CTC ≥ ₹{medCtc!=null ? fmt(medCtc) : '—'}.
+                Click any box to list those employees in the Live Simulator.
+              </p>
             </div>
 
             {/* Promotion Readiness */}
