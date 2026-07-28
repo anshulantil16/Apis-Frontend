@@ -3,7 +3,7 @@ import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
   ChevronUp, Search, X, BarChart3, PieChart, Zap, Star,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
-  Target, RefreshCw, Trash2, LogOut, Clock,
+  Target, RefreshCw, Trash2, LogOut, Clock, Calendar,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -870,7 +870,20 @@ export default function PMSPage() {
 
                       {/* Prior-year context + Remarks */}
                       <div className="space-y-3">
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-slate-400"/>Prior Year</p>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400"/>Profile</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                            <p className="text-[10px] text-slate-400 font-black uppercase mb-0.5">Date of Birth</p>
+                            <p className="text-slate-700 font-black text-sm">{emp.date_of_birth || '—'}</p>
+                            <p className="text-[9px] text-slate-400">{emp.age != null ? `Age: ${emp.age} yrs` : ''}</p>
+                          </div>
+                          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                            <p className="text-[10px] text-slate-400 font-black uppercase mb-0.5">Date of Joining</p>
+                            <p className="text-slate-700 font-black text-sm">{emp.date_of_joining || '—'}</p>
+                            <p className="text-[9px] text-slate-400">{emp.tenure_display ? `Tenure: ${emp.tenure_display}` : ''}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 pt-1"><Clock className="w-3.5 h-3.5 text-slate-400"/>Prior Year</p>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
                             <p className="text-[10px] text-emerald-500 font-black uppercase mb-0.5">Last Yr Increment</p>
