@@ -891,9 +891,9 @@ export default function PMSPage() {
                             <p className="text-[9px] text-slate-400">FY 24-25</p>
                           </div>
                           <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
-                            <p className="text-[10px] text-indigo-500 font-black uppercase mb-0.5">Variable Pay</p>
-                            <p className="text-slate-700 font-black text-base">{emp.variable_pay != null ? `₹${fmt(emp.variable_pay)}` : '—'}</p>
-                            <p className="text-[9px] text-slate-400">Current · 31-Mar-26</p>
+                            <p className="text-[10px] text-indigo-500 font-black uppercase mb-0.5">Last Promotion</p>
+                            <p className="text-slate-700 font-black text-base">{emp.last_promotion_year || '—'}</p>
+                            <p className="text-[9px] text-slate-400">Year</p>
                           </div>
                         </div>
                         <p className="text-xs font-black text-slate-500 uppercase tracking-widest pt-1">Remarks</p>
