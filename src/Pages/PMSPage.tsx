@@ -1050,6 +1050,9 @@ export default function PMSPage() {
                 const labels = ['FY 22-23','FY 23-24','FY 24-25','FY 25-26','FY 26-27*'];
                 const yr = (f:string) => emps.reduce((s:number,e:any)=>s+(Number(e[f])||0),0);
                 const totals = F.map(yr);
+                // FY 22-23 through FY 25-26 are fixed company figures (not calculated here).
+                // Only FY 26-27* (the current appraisal cycle) is calculated live.
+                const FIXED_GROWTH = [12, 11, 14, 11];
                 // LIKE-FOR-LIKE increment %: only employees with a CTC in BOTH years,
                 // so headcount changes don't inflate the number.
                 const growthAt = (i:number) => {
@@ -1058,7 +1061,7 @@ export default function PMSPage() {
                   emps.forEach((e:any)=>{ const p=Number(e[pf])||0, c=Number(e[cf])||0; if(p>0 && c>0){ sp+=p; sc+=c; } });
                   return sp>0 ? ((sc-sp)/sp*100) : null;
                 };
-                const series = labels.map((l,i)=>({ l, v: totals[i], g: growthAt(i) }));
+                const series = labels.map((l,i)=>({ l, v: totals[i], g: i < FIXED_GROWTH.length ? FIXED_GROWTH[i] : growthAt(i) }));
                 const mx = Math.max(...series.map(s=>s.v),1);
                 return (
                   <div className="space-y-2">
@@ -1074,7 +1077,7 @@ export default function PMSPage() {
                         <span className="text-xs font-black text-slate-700 w-16 text-right">{fmtCr(s.v)}</span>
                       </div>
                     ))}
-                    <p className="text-[10px] text-slate-400 mt-1">▲ = like-for-like increment % (same employees present in both years, so new joiners don't inflate it). Bars = total CTC of the current workforce per FY. *FY 26-27 projected after this appraisal cycle.</p>
+                    <p className="text-[10px] text-slate-400 mt-1">▲ = increment % for the year. FY 22-23 to FY 25-26 are fixed company figures; FY 26-27* is calculated live (like-for-like — same employees present in both years, so new joiners don't inflate it). Bars = total CTC of the current workforce per FY. *FY 26-27 projected after this appraisal cycle.</p>
                   </div>
                 );
               })()}
