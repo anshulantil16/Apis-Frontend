@@ -213,8 +213,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
           </button>
-          {!HUB_MODE && (
-          <>
+          {/* PMS shown in all modes (hub too) — access is controlled by the PMS login */}
           <button onClick={onNavigateToPMS}
             className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
             <div className="flex items-center gap-2.5">
@@ -226,6 +225,8 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
           </button>
+          {!HUB_MODE && (
+          <>
           {onNavigateToOfferLetters && (
           <button onClick={onNavigateToOfferLetters}
             className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all group">

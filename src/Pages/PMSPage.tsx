@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
-  ChevronUp, Search, X, BarChart3, PieChart, Zap, Star, ArrowUpRight,
+  ChevronUp, Search, X, BarChart3, PieChart, Zap, Star,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
-  Target, RefreshCw, Trash2, LogOut,
+  Target, RefreshCw, Trash2, LogOut, Clock,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -19,6 +19,16 @@ const GRADES: Record<string, { label: string; color: string; gradient: string; g
 };
 const GO = ['A+', 'A', 'B+', 'B', 'C', 'D'];
 
+// Policy merit-increment matrix (mirrors backend INCREMENT_MATRIX) for the Grade Guide reference.
+const POLICY: Record<string, { staff1: number; staff2: number; worker: number; wpromo: number; promo: number; sustained: number; ptarget: string }> = {
+  'A+': { staff1: 14, staff2: 10, worker: 800, wpromo: 400, promo: 5, sustained: 1,   ptarget: '≥ 106%' },
+  'A':  { staff1: 12, staff2: 9,  worker: 600, wpromo: 300, promo: 4, sustained: 0.75, ptarget: '95–100%' },
+  'B+': { staff1: 10, staff2: 8,  worker: 400, wpromo: 200, promo: 3, sustained: 0.5,  ptarget: '85–94%' },
+  'B':  { staff1: 8,  staff2: 7,  worker: 200, wpromo: 100, promo: 2, sustained: 0.25, ptarget: '65–84%' },
+  'C':  { staff1: 4,  staff2: 3,  worker: 100, wpromo: 0,   promo: 0, sustained: 0,   ptarget: '51–64%' },
+  'D':  { staff1: 0,  staff2: 0,  worker: 0,   wpromo: 0,   promo: 0, sustained: 0,   ptarget: '< 50%' },
+};
+
 const fmt   = (n: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n);
 const fmtCr = (n: number) => n >= 10000000 ? `₹${(n/10000000).toFixed(2)}Cr` : n >= 100000 ? `₹${(n/100000).toFixed(2)}L` : `₹${fmt(n)}`;
 
@@ -33,6 +43,43 @@ function Bar({ value, max, gradient }: { value: number; max: number; gradient: s
   return (
     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
       <div className={`h-full rounded-full bg-gradient-to-r ${gradient} transition-all duration-700`} style={{ width: `${max > 0 ? Math.min(100, (value/max)*100) : 0}%` }} />
+    </div>
+  );
+}
+
+function MultiSelect({ label, options, selected, onChange, renderOption }: {
+  label: string; options: string[]; selected: string[];
+  onChange: (v: string[]) => void; renderOption?: (o: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  const toggle = (o: string) => onChange(selected.includes(o) ? selected.filter(x => x !== o) : [...selected, o]);
+  const summary = selected.length === 0 ? label : selected.length === 1 ? (renderOption ? renderOption(selected[0]) : selected[0]) : `${selected.length} selected`;
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(!open)}
+        className={`flex items-center gap-2 border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:outline-none min-w-[160px] ${selected.length ? 'border-indigo-300 text-indigo-700 font-semibold' : 'border-slate-200 text-slate-600'}`}>
+        <span className="truncate flex-1 text-left">{summary}</span>
+        <ChevronDown className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 w-60 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl p-1.5">
+          {selected.length > 0 && (
+            <button onClick={() => onChange([])} className="w-full flex items-center gap-1 px-2 py-1.5 text-xs text-rose-500 font-bold hover:bg-rose-50 rounded-lg mb-0.5"><X className="w-3 h-3"/>Clear selection</button>
+          )}
+          {options.map(o => (
+            <label key={o} className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-indigo-50 rounded-lg cursor-pointer">
+              <input type="checkbox" checked={selected.includes(o)} onChange={() => toggle(o)} className="accent-indigo-500 w-3.5 h-3.5" />
+              <span className="truncate">{renderOption ? renderOption(o) : o}</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -59,18 +106,20 @@ function ScoreRing({ score, size = 50 }: { score: number; size?: number }) {
 function Slider({ emp, onUpdate }: { emp: any; onUpdate: (id: number, d: any) => void }) {
   const cfg = GRADES[emp.effective_grade];
   const [val, setVal] = useState<number>(emp.effective_increment_pct);
-  const min = cfg?.inc_min ?? 0, max = cfg?.inc_max ?? 15;
-  const pct = max > min ? ((val-min)/(max-min))*100 : 100;
+  // Keep the slider in sync when the grade/increment changes elsewhere (e.g. override grade).
+  useEffect(() => { setVal(emp.effective_increment_pct); }, [emp.effective_increment_pct]);
+  const max = 20;
+  const pct = Math.min(100, (val / max) * 100);
+  const groupLabel = emp.is_worker ? 'Worker · ₹ fixed' : emp.increment_group === 'staff2' ? 'Staff M4–C3' : emp.increment_group === 'special' ? 'MD discretion' : 'Staff O1–M3';
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-center">
-        <span className="text-[10px] text-slate-400">{min}%</span>
+        <span className="text-[9px] text-slate-400 truncate">{groupLabel}</span>
         <span className={`text-base font-black bg-gradient-to-r ${cfg?.gradient} bg-clip-text text-transparent`}>{val.toFixed(1)}%</span>
-        <span className="text-[10px] text-slate-400">{max}%</span>
       </div>
       <div className="relative h-3 rounded-full bg-slate-100 overflow-hidden">
         <div className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${cfg?.gradient} transition-all duration-100`} style={{ width: `${pct}%` }} />
-        <input type="range" min={min} max={max} step={0.5} value={val}
+        <input type="range" min={0} max={max} step={0.5} value={val}
           onChange={e => { const v = parseFloat(e.target.value); setVal(v); onUpdate(emp.id, { override_increment_pct: v }); }}
           className="absolute inset-0 w-full opacity-0 cursor-pointer" />
       </div>
@@ -137,8 +186,10 @@ export default function PMSPage() {
   const [msg, setMsg]         = useState<{text:string;ok:boolean}|null>(null);
   const [tab, setTab]         = useState<'simulator'|'org'|'salary'|'leadership'|'guide'>('simulator');
   const [search, setSearch]   = useState('');
-  const [fGrade, setFGrade]   = useState('');
-  const [fDept, setFDept]     = useState('');
+  const [fGrade, setFGrade]   = useState<string[]>([]);
+  const [fDept, setFDept]     = useState<string[]>([]);
+  const [promotedOnly, setPromotedOnly] = useState(false);
+  const [fQuad, setFQuad] = useState('');   // Performance-vs-Salary quadrant filter
   const [expanded, setExpanded] = useState<number|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -160,6 +211,12 @@ export default function PMSPage() {
     if (loggedIn) localStorage.setItem('pms_email', adminEmail);
     else localStorage.removeItem('pms_email');
   }, [loggedIn, adminEmail]);
+
+  // Scroll back to top when switching tabs or applying the quadrant filter
+  // (so e.g. clicking a Matrix box shows the list from the top, not mid-page)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [tab, fQuad]);
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -261,9 +318,16 @@ export default function PMSPage() {
   const incPct      = sum.increment_pct || 0;
   const depts       = [...new Set(emps.map((e:any) => e.department).filter(Boolean))];
 
+  // Performance-vs-Salary quadrant per employee (median split, matches backend)
+  const medScore = sum.matrix_median_score;
+  const medCtc   = sum.matrix_median_ctc;
+  const quadOf = (e:any) => (medScore==null||medCtc==null) ? '' :
+    (e.final_score >= medScore ? 'high' : 'low') + '_perf_' + (Number(e.current_ctc) >= medCtc ? 'high' : 'low') + '_pay';
+  const QUAD_LABEL: Record<string,string> = { high_perf_high_pay:'Star Performers', high_perf_low_pay:'Future Bets', low_perf_high_pay:'Cost Burden', low_perf_low_pay:'Stable Workforce' };
+
   const filtered = emps.filter(e => {
     const s = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.employee_id.toLowerCase().includes(search.toLowerCase());
-    return s && (!fGrade || e.effective_grade === fGrade) && (!fDept || e.department === fDept);
+    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department)) && (!promotedOnly || e.promoted) && (!fQuad || quadOf(e) === fQuad);
   });
 
   const TABS = [
@@ -444,9 +508,10 @@ export default function PMSPage() {
               <FileSpreadsheet className="w-3.5 h-3.5" /> Template
             </a>
             <button onClick={() => fileRef.current?.click()} disabled={importing}
+              title="Adds to existing employees and merges by Employee Code (matching codes update, new codes are added). You can import Sales, then HQ, etc. — no need to Clear first."
               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-200 transition-all disabled:opacity-60">
               {importing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-              {importing ? 'Importing…' : 'Import Data'}
+              {importing ? 'Importing…' : emps.length > 0 ? 'Import / Add More' : 'Import Data'}
             </button>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
             {emps.length > 0 && (
@@ -529,17 +594,15 @@ export default function PMSPage() {
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…"
                   className="border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-indigo-400 w-48 bg-slate-50" />
               </div>
-              <select value={fGrade} onChange={e => setFGrade(e.target.value)}
-                className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400">
-                <option value="">All Grades</option>
-                {GO.map(g => <option key={g} value={g}>Grade {g} — {GRADES[g].label}</option>)}
-              </select>
-              <select value={fDept} onChange={e => setFDept(e.target.value)}
-                className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400">
-                <option value="">All Departments</option>
-                {depts.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              {(search||fGrade||fDept) && <button onClick={() => {setSearch('');setFGrade('');setFDept('');}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
+              <MultiSelect label="All Grades" options={GO} selected={fGrade} onChange={setFGrade}
+                renderOption={g => `Grade ${g} — ${GRADES[g].label}`} />
+              <MultiSelect label="All Departments" options={depts} selected={fDept} onChange={setFDept} />
+              <button onClick={() => setPromotedOnly(v => !v)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${promotedOnly ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white border-transparent shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300'}`}>
+                <Crown className="w-3.5 h-3.5"/>Promoted only {sum.promoted_count ? `(${sum.promoted_count})` : ''}
+              </button>
+              {fQuad && <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-200">{QUAD_LABEL[fQuad]} <button onClick={() => setFQuad('')}><X className="w-3 h-3"/></button></span>}
+              {(search||fGrade.length||fDept.length||promotedOnly||fQuad) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);setPromotedOnly(false);setFQuad('');}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
               <span className="ml-auto text-slate-400 text-xs">{filtered.length} of {emps.length}</span>
             </div>
 
@@ -554,6 +617,7 @@ export default function PMSPage() {
             ) : filtered.map(emp => {
               const isExp = expanded === emp.id;
               const cfg = GRADES[emp.effective_grade];
+              const A = (v:number) => fmt(Number(v)||0);  // backend already sends annual CTC
               return (
                 <div key={emp.id} className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-lg transition-all overflow-hidden ${isExp ? 'border-indigo-200' : 'border-slate-100 hover:border-indigo-200'}`}>
                   <div className="grid grid-cols-12 gap-3 px-4 py-3.5 items-center cursor-pointer" onClick={() => setExpanded(isExp ? null : emp.id)}>
@@ -562,18 +626,20 @@ export default function PMSPage() {
                       <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white font-black text-lg shadow-lg ${cfg.glow} shrink-0`}>{emp.name[0]}</div>
                       <div className="min-w-0">
                         <p className="text-slate-800 font-bold text-sm truncate">{emp.name}</p>
-                        <p className="text-slate-400 text-xs truncate">{emp.designation}</p>
-                        <p className="text-slate-300 text-[10px]">#{emp.employee_id} · {emp.department}</p>
+                        <p className="text-slate-400 text-xs truncate">
+                          {emp.designation}
+                          {emp.new_designation && emp.new_designation !== emp.designation && <span className="text-violet-500 font-semibold"> → {emp.new_designation}</span>}
+                        </p>
+                        <p className="text-slate-300 text-[10px] truncate">#{emp.employee_id} · {emp.department}</p>
                       </div>
                     </div>
                     {/* Score */}
                     <div className="col-span-2 flex items-center gap-3">
                       <ScoreRing score={emp.final_score} />
                       <div className="text-[10px] text-slate-400 space-y-0.5">
-                        <div>EMP: <span className="font-black text-slate-600">{emp.emp_score??'—'}</span></div>
-                        <div>Mgr: <span className="font-black text-slate-600">{emp.manager_score??'—'}</span></div>
-                        <div>HOD: <span className="font-black text-slate-600">{emp.hod_score??'—'}</span></div>
-                        <div>Mgt: <span className="font-black text-slate-600">{emp.management_score??'—'}</span></div>
+                        <div className="text-slate-400">Final Score</div>
+                        <div className="font-black text-slate-700 text-sm">{emp.final_score}<span className="text-slate-300 text-[10px]">/100</span></div>
+                        <div>Grade <span className="font-black" style={{ color: cfg.color }}>{emp.effective_grade}</span></div>
                       </div>
                     </div>
                     {/* Grade */}
@@ -588,9 +654,56 @@ export default function PMSPage() {
                     {/* CTC */}
                     <div className="col-span-3">
                       <div className={`rounded-2xl p-3 border-2 ${cfg.light}`}>
-                        <div className="flex justify-between text-xs mb-1"><span className="text-slate-400">Current</span><span className="text-slate-600 font-bold">₹{fmt(emp.current_ctc)}</span></div>
-                        <div className="flex justify-between text-xs mb-2"><span className="text-slate-400">Increment</span><span className="text-emerald-500 font-bold">+₹{fmt(emp.increment_amount)}</span></div>
-                        <div className="flex justify-between text-sm"><span className="font-bold text-slate-700">New CTC</span><span className={`font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>₹{fmt(emp.new_ctc)}</span></div>
+                        <div className="flex justify-between text-xs mb-1"><span className="text-slate-400">Current <span className="text-slate-300">(/yr)</span></span><span className="text-slate-600 font-bold">₹{A(emp.current_ctc)}</span></div>
+                        <div className="flex justify-between text-xs mb-0.5">
+                          <span className="text-slate-400">Increment <span className="text-emerald-600 font-bold">{emp.effective_increment_pct}%</span></span>
+                          <span className="text-emerald-600 font-bold">+₹{A(emp.increment_amount)}</span>
+                        </div>
+                        {emp.service_adjustment_amount !== 0 && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400 inline-flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5 text-amber-500"/>Service Adj.
+                              <span className={emp.service_adjustment_amount > 0 ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}>{emp.service_adjustment_pct > 0 ? '+' : ''}{emp.service_adjustment_pct}%</span>
+                              <span className="text-slate-300">({emp.service_days}d)</span>
+                            </span>
+                            <span className={emp.service_adjustment_amount > 0 ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}>{emp.service_adjustment_amount > 0 ? '+' : '−'}₹{A(Math.abs(emp.service_adjustment_amount))}</span>
+                          </div>
+                        )}
+                        {emp.promoted && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Promotion <span className="text-violet-600 font-bold">{emp.effective_promotion_pct}%</span></span>
+                            <span className="text-violet-600 font-bold">+₹{A(emp.promotion_amount)}</span>
+                          </div>
+                        )}
+                        {emp.management_discretion_pct > 0 && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Mgmt Disc. <span className="text-amber-600 font-bold">{emp.management_discretion_pct}%</span></span>
+                            <span className="text-amber-600 font-bold">+₹{A(emp.management_discretion_amount)}</span>
+                          </div>
+                        )}
+                        {emp.sustained_performance && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Sustained <span className="text-teal-600 font-bold">{emp.sustained_pct}%</span></span>
+                            <span className="text-teal-600 font-bold">+₹{A(emp.sustained_amount)}</span>
+                          </div>
+                        )}
+                        {emp.salary_correction_amount > 0 && (
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span className="text-slate-400">Correction</span>
+                            <span className="text-sky-600 font-bold">+₹{A(emp.salary_correction_amount)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xs mb-1 pt-1 border-t border-slate-200">
+                          <span className="text-slate-500 font-semibold">Total Hike <span className="font-black">{emp.total_impact_pct}%</span></span>
+                          <span className="text-slate-600 font-bold">+₹{A(emp.new_ctc - emp.current_ctc)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm"><span className="font-bold text-slate-700">New CTC <span className="text-slate-300 font-normal text-[10px]">(/yr)</span></span><span className={`font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>₹{A(emp.new_ctc)}</span></div>
+                        {emp.on_time_reward && emp.reward_payout > 0 && (
+                          <div className="flex justify-between text-[11px] mt-1 pt-1 border-t border-dashed border-orange-200">
+                            <span className="text-orange-500 font-semibold">One-Time Reward <span className="text-slate-400 font-normal">(not in CTC)</span></span>
+                            <span className="text-orange-500 font-bold">₹{fmt(emp.reward_payout)}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     {/* Flags */}
@@ -604,71 +717,113 @@ export default function PMSPage() {
                   </div>
 
                   {isExp && (
-                    <div key={`${emp.id}-${emp.management_score}`} className={`border-t-2 ${cfg.light} bg-gradient-to-br from-slate-50 to-white p-5 grid grid-cols-3 gap-5`}>
-                      {/* Score breakdown */}
+                    <div key={`${emp.id}-${emp.final_score}`} className={`border-t-2 ${cfg.light} bg-gradient-to-br from-slate-50 to-white p-5 grid grid-cols-3 gap-5`}>
+                      {/* Final Score */}
                       <div className="space-y-3">
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-indigo-400"/>Score Breakdown</p>
-                        {[
-                          { l: 'EMP Score',     v: emp.emp_score,                                                   w: 25, g: 'from-green-400 to-emerald-500' },
-                          { l: 'Manager Score', v: emp.manager_score,                                               w: 25, g: 'from-blue-400 to-indigo-500' },
-                          { l: 'HOD Score',     v: emp.hod_score,                                                   w: 25, g: 'from-violet-400 to-purple-500' },
-                          { l: 'Mgmt Score',    v: emp.management_score !== null ? emp.management_score : undefined, w: 25, g: 'from-pink-400 to-rose-500' },
-                        ].map(s => (
-                          <div key={s.l}>
-                            <div className="flex justify-between text-xs mb-1.5">
-                              <span className="text-slate-500">{s.l} <span className="text-slate-300">({s.w}%)</span></span>
-                              <span className={`font-black bg-gradient-to-r ${s.g} bg-clip-text text-transparent`}>{(s.v !== undefined && s.v !== null) ? s.v : '—'}/100</span>
-                            </div>
-                            <Bar value={(s.v !== undefined && s.v !== null) ? s.v : 0} max={100} gradient={s.g}/>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-indigo-400"/>Final Score</p>
+                        <div>
+                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Final Score (0–100, % of target)</label>
+                          <input type="number" min={0} max={115} step="0.01" defaultValue={emp.final_score}
+                            onBlur={e => { const v = e.target.value; if (v !== String(emp.final_score)) update(emp.id, { final_score_value: v }); }}
+                            className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
+                          <p className="text-[10px] text-slate-400 mt-1">100 = target met. Above 100 = over-achievement (A+ / Exceptional).</p>
+                        </div>
+                        <Bar value={emp.final_score} max={100} gradient={cfg.gradient}/>
+                        <div className={`pt-3 border-t-2 ${cfg.light} flex justify-between items-center`}>
+                          <span className="font-bold text-slate-700 text-sm">Grade (auto)</span>
+                          <GradePill grade={emp.effective_grade} size="md"/>
+                        </div>
+                        <p className="text-[10px] text-slate-400">Grade is derived automatically from the Final Score using the standard ranges.</p>
+                        {!emp.merit_eligible && <div className="flex items-center gap-1.5 text-[11px] text-rose-600 font-bold bg-rose-50 border border-rose-200 rounded-lg px-2 py-1.5"><AlertCircle className="w-3.5 h-3.5 shrink-0"/>Not merit-eligible per policy (joined after 01-Oct)</div>}
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-2 py-1.5">
+                          <span className="font-bold text-slate-600">Category:</span>
+                          {emp.is_worker ? 'Worker — fixed ₹ increment' : emp.increment_group === 'staff2' ? 'Staff M4–C3' : emp.increment_group === 'special' ? 'CXO/Director — MD discretion' : 'Staff O1–M3'}
+                        </div>
+
+                        {/* Service-days adjustment (separate from the grade increment) */}
+                        <div className={`rounded-xl p-3 border ${emp.is_increment_prorated ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-[11px] font-black uppercase tracking-wide flex items-center gap-1 text-amber-600"><Clock className="w-3 h-3"/>Service-Days Adjustment</p>
+                            {emp.is_increment_prorated && <span className={`text-[9px] font-black rounded px-1.5 py-0.5 ${emp.service_adjustment_amount > 0 ? 'text-emerald-700 bg-emerald-100' : 'text-rose-600 bg-rose-100'}`}>{emp.service_adjustment_pct > 0 ? '+' : ''}{emp.service_adjustment_pct}%</span>}
                           </div>
-                        ))}
-                        {(emp.fy_prev1_score || emp.fy_prev2_score) && (
-                          <div className="pt-2 border-t border-slate-200">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1.5">Performance Trend</p>
-                            <div className="flex items-center gap-3 text-xs">
-                              {emp.fy_prev2_score && <div className="text-center"><p className="text-slate-400">FY-2</p><p className="font-black text-slate-600">{emp.fy_prev2_score}</p></div>}
-                              {emp.fy_prev1_score && <><ArrowUpRight className="w-3 h-3 text-slate-300"/><div className="text-center"><p className="text-slate-400">FY-1</p><p className="font-black text-slate-600">{emp.fy_prev1_score}</p></div></>}
-                              <ArrowUpRight className="w-3 h-3 text-emerald-400"/>
-                              <div className="text-center"><p className="text-slate-400">Now</p><p className={`font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>{emp.final_score}</p></div>
-                            </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div><p className="text-[9px] text-slate-400">Working Days</p><p className="text-sm font-black text-slate-700">{emp.service_days ?? '—'}</p><p className="text-[8px] text-slate-400">of 365</p></div>
+                            <div><p className="text-[9px] text-slate-400">Grade Increment</p><p className="text-sm font-black text-slate-500">{emp.effective_increment_pct}%</p></div>
+                            <div><p className="text-[9px] text-slate-400">Adjustment</p><p className={`text-sm font-black ${emp.service_adjustment_amount > 0 ? 'text-emerald-600' : emp.service_adjustment_amount < 0 ? 'text-rose-500' : 'text-slate-400'}`}>{emp.service_adjustment_amount > 0 ? '+' : ''}{emp.service_adjustment_pct}%</p></div>
                           </div>
-                        )}
-                        <div className={`pt-2 border-t-2 ${cfg.light} flex justify-between`}>
-                          <span className="font-bold text-slate-700 text-sm">Final Score</span>
-                          <span className={`font-black text-lg bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>{emp.final_score}</span>
+                          <p className="text-[9px] text-slate-400 mt-1.5 leading-snug">
+                            {emp.override_increment_pct != null ? 'Manual override set — no service-days adjustment.'
+                              : emp.is_increment_prorated ? `The grade increment stays as-is; this ± is grade % ÷ 365 × working days (DOJ → 31-Mar-2026). ${emp.service_adjustment_amount > 0 ? 'Extra un-appraised days → added to CTC.' : 'Fewer service days → reduced from CTC.'}`
+                              : 'Full-year service — no adjustment (joined on/before the prior cycle, or DOJ not set).'}
+                          </p>
                         </div>
                       </div>
 
-                      {/* Overrides */}
+                      {/* Management Discretion */}
                       <div className="space-y-3">
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-orange-400"/>Override Controls</p>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-orange-400"/>Management Discretion</p>
+                        <p className="text-[10px] text-slate-400 -mt-1.5"><b>Discretion %</b> is unlimited (warn only). <b>Correction</b> &amp; <b>Special Reward</b> are capped by policy.</p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-slate-500 font-semibold mb-1 block">Discretion %</label>
+                            <input type="number" min={0} step="0.5" defaultValue={emp.management_discretion_pct || ''} placeholder="0"
+                              onBlur={e => update(emp.id, { management_discretion_pct: e.target.value || 0 })}
+                              className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
+                          </div>
+                          <div>
+                            <label className="text-xs text-slate-500 font-semibold mb-1 block">Correction ₹</label>
+                            <input type="number" min={0} step="1000" defaultValue={emp.salary_correction || ''} placeholder="0"
+                              disabled={!emp.salary_correction_allowed}
+                              onBlur={e => update(emp.id, { salary_correction: e.target.value || 0 })}
+                              className={`w-full border-2 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none ${emp.salary_correction_allowed ? 'border-slate-200 bg-white focus:border-indigo-400' : 'border-slate-100 bg-slate-100 text-slate-400 cursor-not-allowed'}`}/>
+                          </div>
+                        </div>
+                        {!emp.salary_correction_allowed && <p className="text-[10px] text-rose-500 -mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Correction not allowed — only A+/A/B+/B grades &amp; not when promoted.</p>}
+
                         <div>
-                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Override Grade</label>
+                          <label className="text-xs text-slate-500 font-semibold mb-1 flex items-center justify-between">
+                            <span>Special Reward ₹</span>
+                            <span className="text-[10px] text-slate-400 font-normal">{emp.special_reward_range ? `${emp.band}: ₹${fmt(emp.special_reward_range[0])}–₹${fmt(emp.special_reward_range[1])}` : 'Director/MD discretion'}</span>
+                          </label>
+                          <div className="flex gap-2 items-center">
+                            <input type="number" min={0} step="1000" defaultValue={emp.reward_amount || ''} placeholder="0"
+                              onBlur={e => { let v = Number(e.target.value)||0; const mx = emp.special_reward_range ? emp.special_reward_range[1] : null; if (mx!==null && v>mx) { v = mx; e.target.value = String(mx); } update(emp.id, { reward_amount: v }); }}
+                              className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 font-bold"/>
+                            <button onClick={() => update(emp.id, { on_time_reward: !emp.on_time_reward })}
+                              className={`px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all whitespace-nowrap ${emp.on_time_reward ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white border-transparent shadow-md' : 'bg-white border-slate-200 text-slate-500'}`}>
+                              {emp.on_time_reward ? '✓ Applied' : 'Apply'}
+                            </button>
+                          </div>
+                          {emp.special_reward_range
+                            ? <p className="text-[10px] text-slate-400 mt-1">Max ₹{fmt(emp.special_reward_range[1])} for {emp.band} band — auto-capped.</p>
+                            : <p className="text-[10px] text-slate-400 mt-1">{emp.band || 'This'} band: Director/MD discretion — no fixed cap.</p>}
+                        </div>
+
+                        <div>
+                          <label className="text-xs text-slate-500 font-semibold mb-1 flex items-center justify-between">
+                            <span>Sustained Performance</span>
+                            <span className="text-[10px] text-teal-600 font-bold">Grade {emp.effective_grade}: +{POLICY[emp.effective_grade]?.sustained ?? 0}%</span>
+                          </label>
+                          <button onClick={() => update(emp.id, { sustained_performance: !emp.sustained_performance })}
+                            className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${emp.sustained_performance ? 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white border-transparent shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300'}`}>
+                            <Sparkles className="w-3.5 h-3.5"/>
+                            {emp.sustained_performance ? `Eligible — adds +${emp.sustained_pct}% (₹${fmt(emp.sustained_amount)})` : 'Mark as Eligible'}
+                          </button>
+                          {(POLICY[emp.effective_grade]?.sustained ?? 0) === 0 && <p className="text-[10px] text-slate-400 mt-1">Grade {emp.effective_grade} has no sustained % as per policy.</p>}
+                        </div>
+
+                        <div>
+                          <label className="text-xs text-slate-500 font-semibold mb-1 block">Override Grade</label>
                           <select value={emp.override_grade||''} onChange={e => update(emp.id, { override_grade: e.target.value })}
                             className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
                             <option value="">Auto — Grade {emp.auto_grade}</option>
                             {GO.map(g => <option key={g} value={g}>Grade {g} — {GRADES[g].label}</option>)}
                           </select>
                         </div>
+
                         <div>
-                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Management Score Override</label>
-                          <div className="flex gap-2 items-center">
-                            <input type="number" min="0" max="100" defaultValue={emp.management_score??''}
-                              id={`mgmt-${emp.id}`}
-                              placeholder="0–100"
-                              className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400"/>
-                            <button onClick={() => {
-                              const inp = document.getElementById(`mgmt-${emp.id}`) as HTMLInputElement;
-                              const val = inp?.value ? parseInt(inp.value) : null;
-                              update(emp.id, { management_score: val });
-                            }}
-                              className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all">
-                              ✓ Save
-                            </button>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Promotion Readiness</label>
+                          <label className="text-xs text-slate-500 font-semibold mb-1 block">Promotion Readiness</label>
                           <select value={emp.promotion_readiness||''} onChange={e => update(emp.id, { promotion_readiness: e.target.value })}
                             className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
                             <option value="">Not Set</option>
@@ -678,10 +833,11 @@ export default function PMSPage() {
                             <option value="not_ready">Not Ready</option>
                           </select>
                         </div>
-                        <div className="flex gap-3">
+
+                        <div className="flex gap-2 flex-wrap">
                           {[
                             { k: 'promoted', l: 'Promoted', v: emp.promoted, g: 'from-violet-500 to-purple-600', I: Crown },
-                            { k: 'on_time_reward', l: 'Reward', v: emp.on_time_reward, g: 'from-amber-400 to-orange-500', I: Star },
+                            { k: 'redesignation', l: 'Redesignation', v: emp.redesignation, g: 'from-sky-500 to-blue-600', I: Star },
                           ].map(t => (
                             <button key={t.k} onClick={() => update(emp.id, { [t.k]: !t.v })}
                               className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${t.v ? `bg-gradient-to-r ${t.g} text-white border-transparent shadow-md` : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
@@ -689,11 +845,25 @@ export default function PMSPage() {
                             </button>
                           ))}
                         </div>
+                        {emp.redesignation && emp.promoted && <p className="text-[10px] text-amber-600 -mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0"/>Policy: redesignation should be without promotion % — override applied.</p>}
                       </div>
 
-                      {/* Remarks */}
+                      {/* Prior-year context + Remarks */}
                       <div className="space-y-3">
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Remarks</p>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-slate-400"/>Prior Year</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+                            <p className="text-[10px] text-emerald-500 font-black uppercase mb-0.5">Last Yr Increment</p>
+                            <p className="text-slate-700 font-black text-base">{emp.fy_2425_growth_pct != null ? `${emp.fy_2425_growth_pct}%` : '—'}</p>
+                            <p className="text-[9px] text-slate-400">FY 24-25</p>
+                          </div>
+                          <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                            <p className="text-[10px] text-indigo-500 font-black uppercase mb-0.5">Variable Pay</p>
+                            <p className="text-slate-700 font-black text-base">{emp.variable_pay != null ? `₹${fmt(emp.variable_pay)}` : '—'}</p>
+                            <p className="text-[9px] text-slate-400">Current · 31-Mar-26</p>
+                          </div>
+                        </div>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest pt-1">Remarks</p>
                         {emp.manager_remarks && <div className="bg-blue-50 border border-blue-100 rounded-xl p-3"><p className="text-[10px] text-blue-400 font-black uppercase mb-1">Manager</p><p className="text-slate-600 text-xs leading-relaxed">{emp.manager_remarks}</p></div>}
                         {emp.hod_remarks && <div className="bg-violet-50 border border-violet-100 rounded-xl p-3"><p className="text-[10px] text-violet-400 font-black uppercase mb-1">HOD</p><p className="text-slate-600 text-xs leading-relaxed">{emp.hod_remarks}</p></div>}
                         <textarea placeholder="Add notes…" defaultValue={emp.notes}
@@ -760,16 +930,22 @@ export default function PMSPage() {
                   { key: 'low_perf_high_pay',  label: 'Cost Burden',      sub: 'Low Score · High Pay',   grad: 'from-rose-400 to-red-600',       icon: '⚠️' },
                   { key: 'low_perf_low_pay',   label: 'Stable Workforce', sub: 'Low Score · Low Pay',    grad: 'from-slate-400 to-slate-600',    icon: '📊' },
                 ].map(q => (
-                  <div key={q.key} className={`bg-gradient-to-br ${q.grad} rounded-2xl p-4 text-white`}>
+                  <button key={q.key} onClick={() => { setFQuad(q.key); setTab('simulator'); }}
+                    title={`Click to list these employees in the Live Simulator`}
+                    className={`text-left bg-gradient-to-br ${q.grad} rounded-2xl p-4 text-white hover:scale-[1.02] hover:shadow-lg transition-all`}>
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-2xl">{q.icon}</span>
                       <span className="text-3xl font-black">{(sum.performance_vs_salary||{})[q.key]||0}</span>
                     </div>
                     <p className="font-black text-sm">{q.label}</p>
                     <p className="text-white/70 text-xs">{q.sub}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
+              <p className="text-[11px] text-slate-400 mt-3 leading-snug">
+                Split at the <b>median</b> of the workforce: <b>High Score</b> = Final Score ≥ {medScore ?? '—'}, <b>High Pay</b> = Current CTC ≥ ₹{medCtc!=null ? fmt(medCtc) : '—'}.
+                Click any box to list those employees in the Live Simulator.
+              </p>
             </div>
 
             {/* Promotion Readiness */}
@@ -805,6 +981,113 @@ export default function PMSPage() {
                 ))}
               </div>
             </div>
+
+            {/* Cadre & Band Distribution */}
+            <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 rounded-2xl border-2 border-blue-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md"><Users className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Cadre &amp; Band Distribution</h3>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(sum.cadre_distribution||{}).map(([k,v]:any) => (
+                  <div key={k} className="flex items-center gap-3">
+                    <div className="w-16 text-xs font-bold text-slate-600 truncate">{k}</div>
+                    <div className="flex-1"><Bar value={v as number} max={sum.total_employees||1} gradient="from-blue-400 to-indigo-500"/></div>
+                    <span className="text-sm font-black text-slate-700 w-8 text-right">{v as number}</span>
+                  </div>
+                ))}
+                {Object.keys(sum.cadre_distribution||{}).length===0 && <span className="text-xs text-slate-300">No data</span>}
+              </div>
+            </div>
+
+            {/* Workforce by Location */}
+            <div className="bg-gradient-to-br from-teal-50 via-white to-cyan-50 rounded-2xl border-2 border-teal-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-md"><BarChart3 className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Workforce by Location</h3>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(sum.location_distribution||{}).slice(0,15).map(([k,v]:any) => (
+                  <div key={k} className="flex items-center gap-3">
+                    <div className="w-28 text-xs font-bold text-slate-600 truncate">{k}</div>
+                    <div className="flex-1"><Bar value={v as number} max={sum.total_employees||1} gradient="from-teal-400 to-cyan-500"/></div>
+                    <span className="text-sm font-black text-slate-700 w-8 text-right">{v as number}</span>
+                  </div>
+                ))}
+                {Object.keys(sum.location_distribution||{}).length===0 && <span className="text-xs text-slate-300">No data</span>}
+              </div>
+            </div>
+
+            {/* Org CTC Growth Trend */}
+            <div className="bg-gradient-to-br from-emerald-50 via-white to-green-50 rounded-2xl border-2 border-emerald-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-md"><TrendingUp className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Org CTC Growth Trend</h3>
+              </div>
+              {(() => {
+                // CTC field per FY (last two are the live totals for current & projected)
+                const F = ['fy_2223_ctc','fy_2324_ctc','fy_2425_ctc','current_ctc','new_ctc'];
+                const labels = ['FY 22-23','FY 23-24','FY 24-25','FY 25-26','FY 26-27*'];
+                const yr = (f:string) => emps.reduce((s:number,e:any)=>s+(Number(e[f])||0),0);
+                const totals = F.map(yr);
+                // LIKE-FOR-LIKE increment %: only employees with a CTC in BOTH years,
+                // so headcount changes don't inflate the number.
+                const growthAt = (i:number) => {
+                  if (i===0) return null;
+                  const pf=F[i-1], cf=F[i]; let sp=0, sc=0;
+                  emps.forEach((e:any)=>{ const p=Number(e[pf])||0, c=Number(e[cf])||0; if(p>0 && c>0){ sp+=p; sc+=c; } });
+                  return sp>0 ? ((sc-sp)/sp*100) : null;
+                };
+                const series = labels.map((l,i)=>({ l, v: totals[i], g: growthAt(i) }));
+                const mx = Math.max(...series.map(s=>s.v),1);
+                return (
+                  <div className="space-y-2">
+                    {series.map((s) => (
+                      <div key={s.l} className="flex items-center gap-3">
+                        <div className="w-20 text-xs font-bold text-slate-600">{s.l}</div>
+                        <div className="flex-1"><Bar value={s.v} max={mx} gradient="from-emerald-400 to-green-500"/></div>
+                        <span className="w-16 text-right text-[11px] font-black">
+                          {s.g!==null
+                            ? <span className={s.g>=0 ? 'text-emerald-600' : 'text-rose-500'}>{s.g>=0?'▲':'▼'} {Math.abs(s.g).toFixed(1)}%</span>
+                            : <span className="text-slate-300">—</span>}
+                        </span>
+                        <span className="text-xs font-black text-slate-700 w-16 text-right">{fmtCr(s.v)}</span>
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-slate-400 mt-1">▲ = like-for-like increment % (same employees present in both years, so new joiners don't inflate it). Bars = total CTC of the current workforce per FY. *FY 26-27 projected after this appraisal cycle.</p>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Increment Category Split */}
+            <div className="bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 rounded-2xl border-2 border-violet-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl flex items-center justify-center shadow-md"><Zap className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Increment Category Split</h3>
+              </div>
+              {(() => {
+                const groups:any = { staff1: 0, staff2: 0, worker: 0, special: 0 };
+                emps.forEach((e:any) => { groups[e.increment_group] = (groups[e.increment_group]||0)+1; });
+                const items = [
+                  { k:'staff1', l:'Staff O1–M3', g:'from-blue-400 to-indigo-500' },
+                  { k:'staff2', l:'Staff M4–C3', g:'from-violet-400 to-purple-500' },
+                  { k:'worker', l:'Workers (W)', g:'from-orange-400 to-red-500' },
+                  { k:'special', l:'CXO / Director', g:'from-slate-400 to-slate-600' },
+                ];
+                return (
+                  <div className="space-y-2">
+                    {items.map(it => (
+                      <div key={it.k} className="flex items-center gap-3">
+                        <div className="w-28 text-xs font-bold text-slate-600">{it.l}</div>
+                        <div className="flex-1"><Bar value={groups[it.k]||0} max={emps.length||1} gradient={it.g}/></div>
+                        <span className="text-sm font-black text-slate-700 w-8 text-right">{groups[it.k]||0}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 
@@ -817,19 +1100,33 @@ export default function PMSPage() {
                 <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-xl flex items-center justify-center shadow-md"><DollarSign className="w-4 h-4 text-white"/></div>
                 <h3 className="font-black text-slate-800">Salary Impact Dashboard</h3>
               </div>
-              <div className="space-y-3">
-                {[
-                  { label: 'Current Payroll Cost', value: fmtCr(totalCTC), color: 'text-slate-700' },
-                  { label: 'Total Increment Cost', value: fmtCr(totalInc), color: 'text-emerald-600' },
-                  { label: 'Promotion Cost',       value: fmtCr(emps.filter(e=>e.promoted).reduce((s:number,e:any)=>s+e.increment_amount,0)), color: 'text-violet-600' },
-                  { label: 'New Payroll Cost',     value: fmtCr(newCTC), color: 'text-indigo-700' },
-                  { label: 'Budget Variance',      value: `${incPct.toFixed(2)}% increase`, color: 'text-rose-600' },
-                ].map(r => (
-                  <div key={r.label} className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-                    <span className="text-slate-500 text-sm">{r.label}</span>
-                    <span className={`font-black text-lg ${r.color}`}>{r.value}</span>
-                  </div>
-                ))}
+              <div className="space-y-1.5">
+                {(() => {
+                  const pctOf = (v:number) => totalCTC ? `${(v/totalCTC*100).toFixed(2)}%` : '—';
+                  const rows = [
+                    { label: 'Current Payroll Cost', value: fmtCr(totalCTC), pct: '', color: 'text-slate-700', big: true },
+                    { label: 'Merit Increment',       value: `+${fmtCr(sum.cost_increment||0)}`,       pct: pctOf(sum.cost_increment||0),       color: 'text-emerald-600' },
+                    ...(sum.cost_service_adj_up ? [{ label: 'Service-Days Adj. — Increased', value: `+${fmtCr(sum.cost_service_adj_up)}`, pct: pctOf(sum.cost_service_adj_up), color: 'text-emerald-600' }] : []),
+                    ...(sum.cost_service_adj_down ? [{ label: 'Service-Days Adj. — Decreased', value: `−${fmtCr(Math.abs(sum.cost_service_adj_down))}`, pct: pctOf(Math.abs(sum.cost_service_adj_down)), color: 'text-rose-500' }] : []),
+                    ...(sum.cost_service_adjustment ? [{ label: 'Service-Days Adjustment (± net)', value: `${sum.cost_service_adjustment >= 0 ? '+' : '−'}${fmtCr(Math.abs(sum.cost_service_adjustment))}`, pct: pctOf(Math.abs(sum.cost_service_adjustment)), color: sum.cost_service_adjustment >= 0 ? 'text-emerald-600' : 'text-rose-500' }] : []),
+                    { label: 'Promotion',             value: `+${fmtCr(sum.cost_promotion||0)}`,       pct: pctOf(sum.cost_promotion||0),       color: 'text-violet-600' },
+                    { label: 'Sustained Performance', value: `+${fmtCr(sum.cost_sustained||0)}`,       pct: pctOf(sum.cost_sustained||0),       color: 'text-teal-600' },
+                    { label: 'Salary Correction',     value: `+${fmtCr(sum.cost_correction||0)}`,      pct: pctOf(sum.cost_correction||0),      color: 'text-sky-600' },
+                    { label: 'Management Discretion', value: `+${fmtCr(sum.cost_mgmt_discretion||0)}`, pct: pctOf(sum.cost_mgmt_discretion||0), color: 'text-amber-600' },
+                    { label: 'Total Hike Cost (recurring)', value: `+${fmtCr(totalInc)}`, pct: `${incPct.toFixed(2)}%`, color: 'text-rose-600', divide: true, big: true },
+                    { label: 'New Payroll Cost', value: fmtCr(newCTC), pct: '', color: 'text-indigo-700', big: true },
+                    { label: 'One-Time Rewards (not in payroll)', value: `+${fmtCr(sum.cost_reward||0)}`, pct: '', color: 'text-orange-600', divide: true },
+                  ];
+                  return rows.map(r => (
+                    <div key={r.label} className={`flex justify-between items-center py-2 ${r.divide ? 'border-t-2 border-slate-200 mt-1 pt-2.5' : 'border-b border-slate-50'}`}>
+                      <span className="text-slate-500 text-sm">{r.label}</span>
+                      <span className="flex items-baseline gap-2">
+                        {r.pct && <span className="text-[11px] text-slate-400 font-semibold">{r.pct}</span>}
+                        <span className={`font-black ${r.big ? 'text-lg' : 'text-base'} ${r.color}`}>{r.value}</span>
+                      </span>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
 
@@ -884,6 +1181,99 @@ export default function PMSPage() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Workforce Overview */}
+            <div className="col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md"><Users className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Workforce Overview</h3>
+              </div>
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                {[
+                  { l: 'Total', v: sum.total_employees||0 },
+                  { l: 'Workers', v: sum.worker_count||0 },
+                  { l: 'Staff', v: (sum.total_employees||0)-(sum.worker_count||0) },
+                  { l: 'Promoted', v: sum.promoted_count||0 },
+                  { l: 'Sustained', v: sum.sustained_count||0 },
+                  { l: 'Rewarded', v: sum.reward_count||0 },
+                  { l: 'Avg Score', v: sum.avg_score||0 },
+                  { l: 'Avg Age', v: sum.avg_age??'—' },
+                  { l: 'Avg Tenure', v: sum.avg_tenure??'—' },
+                  { l: 'Median Score', v: sum.median_score??'—' },
+                  { l: 'Median CTC', v: sum.median_ctc?fmtCr(sum.median_ctc):'—' },
+                  { l: 'Departments', v: (sum.department_breakdown||[]).length },
+                ].map((s,i) => {
+                  const pal = ['from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-violet-500 to-purple-600','from-amber-500 to-orange-600','from-pink-500 to-rose-600','from-cyan-500 to-sky-600','from-fuchsia-500 to-pink-600','from-lime-500 to-green-600','from-rose-500 to-red-600','from-indigo-500 to-blue-600','from-teal-500 to-cyan-600','from-orange-500 to-amber-600'];
+                  return (
+                  <div key={s.l} className={`bg-gradient-to-br ${pal[i%pal.length]} rounded-2xl p-3 text-center text-white shadow-md`}>
+                    <p className="text-xl font-black truncate">{s.v}</p>
+                    <p className="text-[10px] text-white/75 font-semibold mt-0.5">{s.l}</p>
+                  </div>
+                )})}
+              </div>
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                {[
+                  { t: 'By Cadre / Band', d: sum.cadre_distribution },
+                  { t: 'By Location', d: sum.location_distribution },
+                  { t: 'By Category', d: sum.category_distribution },
+                ].map(col => (
+                  <div key={col.t}>
+                    <p className="text-[11px] font-black text-slate-500 uppercase tracking-wide mb-2">{col.t}</p>
+                    <div className="space-y-1">
+                      {Object.entries(col.d||{}).slice(0,6).map(([k,v]:any) => (
+                        <div key={k} className="flex justify-between text-xs">
+                          <span className="text-slate-500 truncate mr-2">{k}</span>
+                          <span className="font-bold text-slate-700 shrink-0">{v as number}</span>
+                        </div>
+                      ))}
+                      {Object.keys(col.d||{}).length === 0 && <span className="text-xs text-slate-300">No data</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cost Centre-wise Impact */}
+            <div className="col-span-2 bg-gradient-to-br from-amber-50 via-white to-orange-50 rounded-2xl border-2 border-amber-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-md"><BarChart3 className="w-4 h-4 text-white"/></div>
+                <h3 className="font-black text-slate-800">Cost Centre-wise Impact</h3>
+                <span className="ml-auto text-[11px] text-slate-400">{(sum.cost_centre_breakdown||[]).length} cost centres</span>
+              </div>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-amber-50 z-10">
+                    <tr className="text-slate-500 border-b-2 border-amber-200">
+                      <th className="text-left py-2 px-2 font-black">Cost Centre</th>
+                      <th className="text-right py-2 px-2 font-black">Emp</th>
+                      <th className="text-right py-2 px-2 font-black">Current CTC</th>
+                      <th className="text-right py-2 px-2 font-black">Increment</th>
+                      <th className="text-right py-2 px-2 font-black">Promotion</th>
+                      <th className="text-right py-2 px-2 font-black">Sustained</th>
+                      <th className="text-right py-2 px-2 font-black">Promoted</th>
+                      <th className="text-right py-2 px-2 font-black">Hike %</th>
+                      <th className="text-right py-2 px-2 font-black">New CTC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(sum.cost_centre_breakdown||[]).map((c:any,i:number) => (
+                      <tr key={i} className="border-b border-slate-100 hover:bg-amber-50/60">
+                        <td className="text-left py-1.5 px-2 font-bold text-slate-700 whitespace-nowrap">{c.cost_centre}</td>
+                        <td className="text-right py-1.5 px-2 text-slate-600 font-bold">{c.count}</td>
+                        <td className="text-right py-1.5 px-2 text-slate-600">{fmtCr(c.current_ctc)}</td>
+                        <td className="text-right py-1.5 px-2 text-emerald-600 font-bold">+{fmtCr(c.increment_cost)}</td>
+                        <td className="text-right py-1.5 px-2 text-violet-600 font-bold">+{fmtCr(c.promotion_cost)}</td>
+                        <td className="text-right py-1.5 px-2 text-teal-600 font-bold">+{fmtCr(c.sustained_cost)}</td>
+                        <td className="text-right py-1.5 px-2 text-slate-600">{c.promoted}</td>
+                        <td className="text-right py-1.5 px-2 font-black text-rose-600">{c.hike_pct}%</td>
+                        <td className="text-right py-1.5 px-2 font-black text-indigo-700 whitespace-nowrap">{fmtCr(c.new_ctc)}</td>
+                      </tr>
+                    ))}
+                    {(sum.cost_centre_breakdown||[]).length === 0 && <tr><td colSpan={9} className="text-center py-4 text-slate-300">No cost-centre data</td></tr>}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -976,13 +1366,16 @@ export default function PMSPage() {
                         <div className="text-right"><p className="text-white font-black text-4xl">{gradeEmps.length}</p><p className="text-white/60 text-xs">employees</p></div>
                       </div>
                     </div>
-                    <div className="p-4 space-y-2">
+                    <div className={`p-4 space-y-2 bg-gradient-to-br ${cfg.light}`}>
                       <p className={`font-black ${cfg.text}`}>{cfg.label}</p>
-                      <p className="text-slate-400 text-xs">Score: <span className={`font-black ${cfg.text}`}>{cfg.range}</span></p>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between"><span className="text-slate-500">Increment</span><span className={`font-black ${cfg.text}`}>{cfg.inc_min}–{cfg.inc_max}%</span></div>
-                        <div className="flex justify-between"><span className="text-slate-500">Promotion %</span><span className="font-bold text-violet-600">{cfg.promo_pct}%</span></div>
-                        {gradeEmps.length > 0 && <div className="flex justify-between"><span className="text-slate-500">Total Inc</span><span className="font-bold text-emerald-600">{fmtCr(gradeEmps.reduce((s:number,e:any)=>s+e.increment_amount,0))}</span></div>}
+                      <p className="text-slate-500 text-xs">Score of Target: <span className={`font-black ${cfg.text}`}>{POLICY[grade].ptarget}</span></p>
+                      <div className="space-y-1.5 text-sm pt-1">
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Staff O1–M3</span><span className="font-black text-white bg-gradient-to-r from-blue-500 to-indigo-600 px-2 py-0.5 rounded-lg text-xs">{POLICY[grade].staff1}%</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Staff M4–C3</span><span className="font-black text-white bg-gradient-to-r from-violet-500 to-purple-600 px-2 py-0.5 rounded-lg text-xs">{POLICY[grade].staff2}%</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Worker (W)</span><span className="font-black text-white bg-gradient-to-r from-orange-500 to-red-500 px-2 py-0.5 rounded-lg text-xs">₹{POLICY[grade].worker}/mo</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Promotion</span><span className="font-black text-white bg-gradient-to-r from-pink-500 to-rose-600 px-2 py-0.5 rounded-lg text-xs">{POLICY[grade].promo}%</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500 text-xs">Sustained</span><span className="font-black text-white bg-gradient-to-r from-teal-500 to-cyan-600 px-2 py-0.5 rounded-lg text-xs">{POLICY[grade].sustained}%</span></div>
+                        {gradeEmps.length > 0 && <div className="flex justify-between pt-1 border-t border-white/50"><span className="text-slate-600 font-semibold text-xs">Total Increment</span><span className="font-black text-emerald-700">{fmtCr(gradeEmps.reduce((s:number,e:any)=>s+e.increment_amount,0))}</span></div>}
                       </div>
                       <Bar value={gradeEmps.length} max={emps.length||1} gradient={cfg.gradient}/>
                     </div>
@@ -992,26 +1385,23 @@ export default function PMSPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Score Formula */}
+              {/* Score → Grade */}
               <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border-2 border-indigo-100 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md"><Zap className="w-4 h-4 text-white"/></div>
-                  <h3 className="font-black text-slate-800">Performance Score Formula</h3>
+                  <h3 className="font-black text-slate-800">Score &amp; Grade</h3>
                 </div>
-                <div className="bg-white rounded-2xl p-5 border border-indigo-100 text-center">
-                  <p className="text-slate-500 text-sm mb-3 font-semibold">Final Score =</p>
+                <div className="bg-white rounded-2xl p-5 border border-indigo-100 text-center space-y-3">
+                  <p className="text-slate-600 text-sm font-semibold">One <b>Final Score</b> is imported directly per employee — the <b>Grade</b> is derived automatically from it (no weighting or formula).</p>
                   <div className="flex items-center justify-center gap-3 flex-wrap">
-                    {[
-                      { l: 'EMP Score × 25%',     g: 'from-green-400 to-emerald-500' },
-                      { l: 'Manager Score × 25%', g: 'from-blue-400 to-indigo-500' },
-                      { l: 'HOD Score × 25%',     g: 'from-violet-400 to-purple-500' },
-                      { l: 'Mgmt Score × 25%',    g: 'from-pink-400 to-rose-500' },
-                    ].map((s,i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        {i > 0 && <span className="text-slate-400 font-black text-2xl">+</span>}
-                        <div className={`bg-gradient-to-r ${s.g} text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg`}>{s.l}</div>
-                      </div>
-                    ))}
+                    <div className="bg-gradient-to-r from-indigo-400 to-violet-500 text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg">Final Score</div>
+                    <span className="text-slate-400 font-black text-2xl">→</span>
+                    <div className="bg-gradient-to-r from-emerald-400 to-teal-500 text-white rounded-2xl px-5 py-3 text-sm font-black shadow-lg">Grade</div>
+                  </div>
+                  <div className="text-xs text-slate-500 pt-2 border-t border-indigo-100 grid grid-cols-2 gap-1 text-left">
+                    <span>A+ : ≥ 106</span><span>A : 95 – 105</span>
+                    <span>B+ : 85 – 94</span><span>B : 65 – 84</span>
+                    <span>C : 51 – 64</span><span>D : &lt; 51</span>
                   </div>
                 </div>
               </div>
