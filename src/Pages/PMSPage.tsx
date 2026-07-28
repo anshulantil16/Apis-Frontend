@@ -127,7 +127,7 @@ function Slider({ emp, onUpdate }: { emp: any; onUpdate: (id: number, d: any) =>
   );
 }
 
-function KpiCard({ label, value, sub, icon: Icon, gradient, glow }: any) {
+function KpiCard({ label, value, sub, icon: Icon, gradient, glow, breakdown }: any) {
   return (
     <div className={`relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br ${gradient} shadow-xl ${glow} text-white`}>
       <div className="absolute -right-5 -top-5 w-24 h-24 rounded-full bg-white/10" />
@@ -138,6 +138,16 @@ function KpiCard({ label, value, sub, icon: Icon, gradient, glow }: any) {
         </div>
         <p className="text-3xl font-black">{value}</p>
         <p className="text-white/60 text-xs mt-1.5">{sub}</p>
+        {breakdown && (
+          <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-white/20">
+            {breakdown.map((b: any, i: number) => (
+              <div key={i} className="flex-1 bg-white/15 rounded-lg px-2 py-1.5 text-center">
+                <p className="text-[9px] text-white/70 font-bold uppercase tracking-wide truncate">{b.label}</p>
+                <p className="text-sm font-black leading-tight">{b.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -189,6 +199,7 @@ export default function PMSPage() {
   const [fGrade, setFGrade]   = useState<string[]>([]);
   const [fDept, setFDept]     = useState<string[]>([]);
   const [promotedOnly, setPromotedOnly] = useState(false);
+  const [rewardedOnly, setRewardedOnly] = useState(false);
   const [fQuad, setFQuad] = useState('');   // Performance-vs-Salary quadrant filter
   const [expanded, setExpanded] = useState<number|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -327,7 +338,7 @@ export default function PMSPage() {
 
   const filtered = emps.filter(e => {
     const s = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.employee_id.toLowerCase().includes(search.toLowerCase());
-    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department)) && (!promotedOnly || e.promoted) && (!fQuad || quadOf(e) === fQuad);
+    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department)) && (!promotedOnly || e.promoted) && (!rewardedOnly || e.on_time_reward) && (!fQuad || quadOf(e) === fQuad);
   });
 
   const TABS = [
@@ -550,7 +561,12 @@ export default function PMSPage() {
           <KpiCard label="Total Employees" value={fmt(sum.total_employees||0)}    sub={`Avg Score: ${sum.avg_score||0}`}                                          icon={Users}     gradient="from-blue-500 to-indigo-600"   glow="shadow-blue-200" />
           <KpiCard label="Current Payroll" value={fmtCr(totalCTC)}               sub="Annual total before increment"                                              icon={DollarSign} gradient="from-slate-500 to-slate-700"   glow="shadow-slate-200" />
           <KpiCard label="New Payroll"     value={fmtCr(newCTC)}                 sub={`+${fmtCr(totalInc)} total increment`}                                      icon={TrendingUp} gradient="from-emerald-400 to-teal-600"  glow="shadow-emerald-200" />
-          <KpiCard label="Avg Increment"   value={`${incPct.toFixed(1)}%`}       sub={`${sum.promoted_count||0} promoted · ${sum.reward_count||0} rewarded`}     icon={Award}      gradient="from-violet-500 to-purple-700" glow="shadow-violet-200" />
+          <KpiCard label="Avg Increment"   value={`${incPct.toFixed(1)}%`}       sub={`${sum.promoted_count||0} promoted · ${sum.reward_count||0} rewarded`}     icon={Award}      gradient="from-violet-500 to-purple-700" glow="shadow-violet-200"
+            breakdown={[
+              { label: 'Normal', value: `${Math.max(0, incPct - (totalCTC ? (sum.cost_mgmt_discretion||0)/totalCTC*100 : 0)).toFixed(1)}%` },
+              { label: '+ Discretion', value: `${(totalCTC ? (sum.cost_mgmt_discretion||0)/totalCTC*100 : 0).toFixed(2)}%` },
+              { label: '= Total', value: `${incPct.toFixed(1)}%` },
+            ]} />
         </div>
 
         {/* Tabs */}
@@ -601,8 +617,12 @@ export default function PMSPage() {
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${promotedOnly ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white border-transparent shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300'}`}>
                 <Crown className="w-3.5 h-3.5"/>Promoted only {sum.promoted_count ? `(${sum.promoted_count})` : ''}
               </button>
+              <button onClick={() => setRewardedOnly(v => !v)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${rewardedOnly ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white border-transparent shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'}`}>
+                <Star className="w-3.5 h-3.5"/>Rewarded only {sum.reward_count ? `(${sum.reward_count})` : ''}
+              </button>
               {fQuad && <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-200">{QUAD_LABEL[fQuad]} <button onClick={() => setFQuad('')}><X className="w-3 h-3"/></button></span>}
-              {(search||fGrade.length||fDept.length||promotedOnly||fQuad) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);setPromotedOnly(false);setFQuad('');}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
+              {(search||fGrade.length||fDept.length||promotedOnly||rewardedOnly||fQuad) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);setPromotedOnly(false);setRewardedOnly(false);setFQuad('');}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
               <span className="ml-auto text-slate-400 text-xs">{filtered.length} of {emps.length}</span>
             </div>
 
