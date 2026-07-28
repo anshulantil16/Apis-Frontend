@@ -199,6 +199,7 @@ export default function PMSPage() {
   const [fGrade, setFGrade]   = useState<string[]>([]);
   const [fDept, setFDept]     = useState<string[]>([]);
   const [promotedOnly, setPromotedOnly] = useState(false);
+  const [rewardedOnly, setRewardedOnly] = useState(false);
   const [fQuad, setFQuad] = useState('');   // Performance-vs-Salary quadrant filter
   const [expanded, setExpanded] = useState<number|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -337,7 +338,7 @@ export default function PMSPage() {
 
   const filtered = emps.filter(e => {
     const s = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.employee_id.toLowerCase().includes(search.toLowerCase());
-    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department)) && (!promotedOnly || e.promoted) && (!fQuad || quadOf(e) === fQuad);
+    return s && (fGrade.length === 0 || fGrade.includes(e.effective_grade)) && (fDept.length === 0 || fDept.includes(e.department)) && (!promotedOnly || e.promoted) && (!rewardedOnly || e.on_time_reward) && (!fQuad || quadOf(e) === fQuad);
   });
 
   const TABS = [
@@ -616,8 +617,12 @@ export default function PMSPage() {
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${promotedOnly ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white border-transparent shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-violet-300'}`}>
                 <Crown className="w-3.5 h-3.5"/>Promoted only {sum.promoted_count ? `(${sum.promoted_count})` : ''}
               </button>
+              <button onClick={() => setRewardedOnly(v => !v)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${rewardedOnly ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white border-transparent shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'}`}>
+                <Star className="w-3.5 h-3.5"/>Rewarded only {sum.reward_count ? `(${sum.reward_count})` : ''}
+              </button>
               {fQuad && <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-200">{QUAD_LABEL[fQuad]} <button onClick={() => setFQuad('')}><X className="w-3 h-3"/></button></span>}
-              {(search||fGrade.length||fDept.length||promotedOnly||fQuad) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);setPromotedOnly(false);setFQuad('');}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
+              {(search||fGrade.length||fDept.length||promotedOnly||rewardedOnly||fQuad) && <button onClick={() => {setSearch('');setFGrade([]);setFDept([]);setPromotedOnly(false);setRewardedOnly(false);setFQuad('');}} className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold"><X className="w-3.5 h-3.5"/>Clear</button>}
               <span className="ml-auto text-slate-400 text-xs">{filtered.length} of {emps.length}</span>
             </div>
 
