@@ -1074,7 +1074,7 @@ export default function PMSPage() {
                   emps.forEach((e:any)=>{ const p=Number(e[pf])||0, c=Number(e[cf])||0; if(p>0 && c>0){ sp+=p; sc+=c; } });
                   return sp>0 ? ((sc-sp)/sp*100) : null;
                 };
-                const series = labels.map((l,i)=>({ l, v: totals[i], g: i < FIXED_GROWTH.length ? FIXED_GROWTH[i] : growthAt(i) }));
+                const series = labels.map((l,i)=>({ l, v: totals[i], g: i < FIXED_GROWTH.length ? FIXED_GROWTH[i] : growthAt(i), fixed: i < FIXED_GROWTH.length }));
                 const mx = Math.max(...series.map(s=>s.v),1);
                 return (
                   <div className="space-y-2">
@@ -1087,7 +1087,7 @@ export default function PMSPage() {
                             ? <span className={s.g>=0 ? 'text-emerald-600' : 'text-rose-500'}>{s.g>=0?'▲':'▼'} {Math.abs(s.g).toFixed(1)}%</span>
                             : <span className="text-slate-300">—</span>}
                         </span>
-                        <span className="text-xs font-black text-slate-700 w-16 text-right">{fmtCr(s.v)}</span>
+                        <span className="text-xs font-black text-slate-700 w-16 text-right">{s.fixed ? '' : fmtCr(s.v)}</span>
                       </div>
                     ))}
                     <p className="text-[10px] text-slate-400 mt-1">▲ = increment % for the year. FY 22-23 to FY 25-26 are fixed company figures; FY 26-27* is calculated live (like-for-like — same employees present in both years, so new joiners don't inflate it). Bars = total CTC of the current workforce per FY. *FY 26-27 projected after this appraisal cycle.</p>
