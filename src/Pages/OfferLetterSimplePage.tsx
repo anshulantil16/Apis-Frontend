@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Upload, Send, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Download, Upload, Send, CheckCircle, AlertCircle, Loader, XCircle } from 'lucide-react';
 
 const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PMS_API = `${_API_BASE}/api/pms`;
@@ -12,6 +12,7 @@ export function OfferLetterSimplePage() {
   const [results, setResults] = useState<any[]>([]);
   const [sendEmails, setSendEmails] = useState(true);
   const [progress, setProgress] = useState<any>(null);
+  const [showFailedOnly, setShowFailedOnly] = useState(false);
 
   const downloadTemplate = async () => {
     try {
@@ -217,15 +218,31 @@ export function OfferLetterSimplePage() {
             </>
           ) : (
             <>
+              {(() => {
+                const sentEmails = progress?.send_emails;
+                const failedCount = results.filter((r:any) => r.status === 'failed').length;
+                const sentCount = results.filter((r:any) => r.status === 'sent').length;
+                const shown = showFailedOnly ? results.filter((r:any) => r.status === 'failed') : results;
+                return (
+                <>
               {/* Success Results */}
-              <div className="text-center mb-8">
-                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Done!</h2>
+              <div className="text-center mb-6">
+                {failedCount === 0
+                  ? <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                  : <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />}
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">{failedCount === 0 ? 'Done!' : 'Completed with issues'}</h2>
                 <p className="text-slate-600">
                   {progress?.generated ?? results.length} letter(s) generated
-                  {progress?.send_emails ? ` · ${progress?.emailed ?? 0} emailed` : ''}
-                  {progress?.failed ? ` · ${progress.failed} failed` : ''}
+                  {sentEmails ? ` · ${sentCount} emailed` : ''}
+                  {failedCount ? ` · ` : ''}
+                  {failedCount ? <span className="text-rose-600 font-bold">{failedCount} failed</span> : ''}
                 </p>
+                {sentEmails && failedCount > 0 && (
+                  <button onClick={() => setShowFailedOnly(v => !v)}
+                    className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${showFailedOnly ? 'bg-rose-500 text-white border-transparent' : 'bg-white text-rose-600 border-rose-200 hover:bg-rose-50'}`}>
+                    <XCircle className="w-3.5 h-3.5"/>{showFailedOnly ? 'Show all' : `Show only failed (${failedCount})`}
+                  </button>
+                )}
               </div>
 
               {/* Results Table */}
@@ -234,40 +251,52 @@ export function OfferLetterSimplePage() {
                   <thead>
                     <tr className="border-b-2 border-slate-200">
                       <th className="text-left py-3 px-4 font-bold text-slate-700">Employee</th>
+                      <th className="text-left py-3 px-4 font-bold text-slate-700">Email</th>
                       <th className="text-left py-3 px-4 font-bold text-slate-700">Status</th>
                       <th className="text-left py-3 px-4 font-bold text-slate-700">Letter</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {results.map((r, i) => (
-                      <tr key={i} className="border-b border-slate-200 hover:bg-slate-50">
+                    {shown.map((r:any, i:number) => (
+                      <tr key={i} className={`border-b border-slate-200 hover:bg-slate-50 ${r.status === 'failed' ? 'bg-rose-50/60' : ''}`}>
                         <td className="py-3 px-4">
                           <div>
                             <p className="font-semibold text-slate-900">{r.name}</p>
                             <p className="text-xs text-slate-500">{r.employee_id}</p>
                           </div>
                         </td>
+                        <td className="py-3 px-4 text-xs text-slate-600">{r.email || <span className="text-rose-500 font-semibold">no email</span>}</td>
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
                             r.status === 'sent'
                               ? 'bg-green-100 text-green-800'
-                              : r.status === 'pending'
+                              : r.status === 'failed'
+                              ? 'bg-rose-100 text-rose-800'
+                              : sentEmails
                               ? 'bg-amber-100 text-amber-800'
                               : 'bg-blue-100 text-blue-800'
                           }`}>
-                            {r.status === 'sent' ? '✓ Sent' : r.status === 'pending' ? '⏳ Pending' : '✓ Generated'}
+                            {r.status === 'sent' ? '✓ Sent'
+                              : r.status === 'failed' ? '✗ Failed'
+                              : sentEmails ? '⏳ Not sent' : '✓ Generated'}
                           </span>
+                          {r.status === 'failed' && r.message && (
+                            <p className="text-[11px] text-rose-600 mt-1 max-w-xs">{r.message}</p>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-xs">
                           {r.pdf_url
                             ? <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer" className="text-blue-600 font-semibold hover:underline">View PDF</a>
-                            : <span className="text-slate-400">{r.message || '—'}</span>}
+                            : <span className="text-slate-400">—</span>}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+                </>
+                );
+              })()}
 
               {/* Reset Button */}
               <button
@@ -277,6 +306,7 @@ export function OfferLetterSimplePage() {
                   setFile(null);
                   setError('');
                   setProgress(null);
+                  setShowFailedOnly(false);
                 }}
                 className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all flex items-center justify-center gap-2"
               >
