@@ -1075,12 +1075,15 @@ export default function PMSPage() {
                   return sp>0 ? ((sc-sp)/sp*100) : null;
                 };
                 const series = labels.map((l,i)=>({ l, v: totals[i], g: i < FIXED_GROWTH.length ? FIXED_GROWTH[i] : growthAt(i), fixed: i < FIXED_GROWTH.length }));
-                const mxPct = Math.max(...series.map(s=>Math.abs(s.g||0)),1);
+                const pcts = series.map(s=>Math.abs(s.g||0));
+                const minPct = Math.min(...pcts), maxPct = Math.max(...pcts,1);
+                const range = Math.max(0.1, maxPct - minPct);
+                const FLOOR = 22; // smallest bar still gets a visible base height; largest reaches 100%
                 return (
                   <div>
                     <div className="flex items-end gap-3 md:gap-5 h-52 px-1">
                       {series.map((s) => {
-                        const hPct = mxPct > 0 ? Math.max(6, (Math.abs(s.g||0)/mxPct)*100) : 6;
+                        const hPct = FLOOR + ((Math.abs(s.g||0) - minPct) / range) * (100 - FLOOR);
                         return (
                           <div key={s.l} className="flex-1 h-full flex flex-col items-center justify-end min-w-0">
                             <span className="text-[11px] font-black mb-1.5 whitespace-nowrap">
