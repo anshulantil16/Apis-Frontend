@@ -1077,20 +1077,26 @@ export default function PMSPage() {
                 const series = labels.map((l,i)=>({ l, v: totals[i], g: i < FIXED_GROWTH.length ? FIXED_GROWTH[i] : growthAt(i), fixed: i < FIXED_GROWTH.length }));
                 const mx = Math.max(...series.map(s=>s.v),1);
                 return (
-                  <div className="space-y-2">
-                    {series.map((s) => (
-                      <div key={s.l} className="flex items-center gap-3">
-                        <div className="w-20 text-xs font-bold text-slate-600">{s.l}</div>
-                        <div className="flex-1"><Bar value={s.v} max={mx} gradient="from-emerald-400 to-green-500"/></div>
-                        <span className="w-16 text-right text-[11px] font-black">
-                          {s.g!==null
-                            ? <span className={s.g>=0 ? 'text-emerald-600' : 'text-rose-500'}>{s.g>=0?'▲':'▼'} {Math.abs(s.g).toFixed(1)}%</span>
-                            : <span className="text-slate-300">—</span>}
-                        </span>
-                        <span className="text-xs font-black text-slate-700 w-16 text-right">{s.fixed ? '' : fmtCr(s.v)}</span>
-                      </div>
-                    ))}
-                    <p className="text-[10px] text-slate-400 mt-1">▲ = increment % for the year. FY 22-23 to FY 25-26 are fixed company figures; FY 26-27* is calculated live (like-for-like — same employees present in both years, so new joiners don't inflate it). Bars = total CTC of the current workforce per FY. *FY 26-27 projected after this appraisal cycle.</p>
+                  <div>
+                    <div className="flex items-end gap-3 md:gap-5 h-52 px-1">
+                      {series.map((s) => {
+                        const hPct = mx > 0 ? Math.max(6, (s.v/mx)*100) : 6;
+                        return (
+                          <div key={s.l} className="flex-1 h-full flex flex-col items-center justify-end min-w-0">
+                            <span className="text-[11px] font-black mb-1.5 whitespace-nowrap">
+                              {s.g!==null
+                                ? <span className={s.g>=0 ? 'text-emerald-600' : 'text-rose-500'}>{s.g>=0?'▲':'▼'} {Math.abs(s.g).toFixed(1)}%</span>
+                                : <span className="text-slate-300">—</span>}
+                            </span>
+                            <div className="w-full max-w-[48px] rounded-t-lg bg-gradient-to-t from-emerald-500 to-green-400 shadow-sm transition-all duration-700"
+                              style={{ height: `${hPct}%` }} title={fmtCr(s.v)} />
+                            <span className="text-[10px] font-bold text-slate-600 mt-2 whitespace-nowrap">{s.l}</span>
+                            <span className="text-[9px] text-slate-400 whitespace-nowrap">{s.fixed ? '' : fmtCr(s.v)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-3">▲ = increment % for the year. FY 22-23 to FY 25-26 are fixed company figures; FY 26-27* is calculated live (like-for-like — same employees present in both years, so new joiners don't inflate it). Bars = total CTC of the current workforce per FY. *FY 26-27 projected after this appraisal cycle.</p>
                   </div>
                 );
               })()}
