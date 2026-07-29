@@ -1091,7 +1091,6 @@ export default function PMSPage() {
                             <div className="w-full max-w-[48px] rounded-t-lg bg-gradient-to-t from-emerald-500 to-green-400 shadow-sm transition-all duration-700"
                               style={{ height: `${hPct}%` }} title={fmtCr(s.v)} />
                             <span className="text-[10px] font-bold text-slate-600 mt-2 whitespace-nowrap">{s.l}</span>
-                            <span className="text-[9px] text-slate-400 whitespace-nowrap">{s.fixed ? '' : fmtCr(s.v)}</span>
                           </div>
                         );
                       })}
