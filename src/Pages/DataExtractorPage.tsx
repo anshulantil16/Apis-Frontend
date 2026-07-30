@@ -56,6 +56,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
   const [territoryDashData, setTerritoryDashData] = useState<any>(null);
   const [salesData, setSalesData] = useState<unknown[]>([]);
   const [salesExporting, setSalesExporting] = useState(false);
+  const [stats, setStats] = useState<any>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const handleFileSelect = (f: File | null) => {
@@ -85,6 +86,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
         if (!res.ok) throw new Error(result.error || 'Failed to process file');
         setHeaders(result.headers); setData(result.data); setSelectedColumns(new Set(result.headers));
         setSalesData(result.sales_data || []);
+        setStats(result.stats || null);
       }
     } catch (err: unknown) {
       if ((err as { name?: string })?.name === 'AbortError') return;
@@ -140,7 +142,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
   };
 
   const switchTool = (id: ToolId) => {
-    setActiveTool(id); setFile(null); setData([]); setHeaders([]); setSelectedColumns(new Set()); setError(null); setTerritoryDashData(null); setSalesData([]);
+    setActiveTool(id); setFile(null); setData([]); setHeaders([]); setSelectedColumns(new Set()); setError(null); setTerritoryDashData(null); setSalesData([]); setStats(null);
   };
 
   const meta = TOOL_META[activeTool];
@@ -368,9 +370,24 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                           <p className="text-sm font-semibold text-slate-700 mt-0.5">
                             <span className="text-amber-600 font-black">{data.length}</span> records extracted from {file?.name}
                           </p>
+                          {stats && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              <span className="font-bold text-slate-700">{stats.rows_in_file}</span> rows in file →{' '}
+                              <span className="font-bold text-emerald-600">{stats.medical_employees}</span> employees in
+                              {' '}<span className="font-semibold">both</span> reports
+                              {stats.excluded_not_done > 0 && (
+                                <> · <span className="font-bold text-amber-600">{stats.excluded_not_done} skipped</span> (HR Remarks not “Done”)</>
+                              )}
+                              {!stats.counts_match && (
+                                <span className="ml-1 font-black text-rose-600">
+                                  ⚠ MISMATCH: Sales has {stats.sales_employees}
+                                </span>
+                              )}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); setSalesData([]); }}
+                          <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); setSalesData([]); setStats(null); }}
                             className="px-3.5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all border border-slate-200">
                             ← Re-upload
                           </button>
@@ -407,7 +424,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                           <span className="text-sm font-bold text-slate-700">{file?.name}</span>
                           <span className="text-xs text-slate-400">· {data.length} rows</span>
                         </div>
-                        <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); setSalesData([]); }}
+                        <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); setSalesData([]); setStats(null); }}
                           className="px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-rose-200">
                           New Sheet
                         </button>
