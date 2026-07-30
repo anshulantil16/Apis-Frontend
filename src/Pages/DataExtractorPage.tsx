@@ -54,6 +54,8 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
   const [activeTool, setActiveTool] = useState<ToolId>('joining');
   const [territoryDashData, setTerritoryDashData] = useState<any>(null);
+  const [salesData, setSalesData] = useState<unknown[]>([]);
+  const [salesExporting, setSalesExporting] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const handleFileSelect = (f: File | null) => {
@@ -82,6 +84,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Failed to process file');
         setHeaders(result.headers); setData(result.data); setSelectedColumns(new Set(result.headers));
+        setSalesData(result.sales_data || []);
       }
     } catch (err: unknown) {
       if ((err as { name?: string })?.name === 'AbortError') return;
@@ -112,6 +115,24 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
     } finally { setLoading(false); }
   };
 
+  const handleSalesExport = async () => {
+    if (!salesData.length) return;
+    setSalesExporting(true); setError(null);
+    const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    try {
+      const res = await fetch(`${API}/api/user_management/export-excel/`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: salesData }),
+      });
+      if (!res.ok) throw new Error('Failed to export Sales Report');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href: url, download: `Apis_SALES_${file?.name || 'export.xlsx'}` });
+      document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally { setSalesExporting(false); }
+  };
+
   const toggleColumn = (col: string) => {
     const s = new Set(selectedColumns);
     if (s.has(col)) { s.delete(col); } else { s.add(col); }
@@ -119,7 +140,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
   };
 
   const switchTool = (id: ToolId) => {
-    setActiveTool(id); setFile(null); setData([]); setHeaders([]); setSelectedColumns(new Set()); setError(null); setTerritoryDashData(null);
+    setActiveTool(id); setFile(null); setData([]); setHeaders([]); setSelectedColumns(new Set()); setError(null); setTerritoryDashData(null); setSalesData([]);
   };
 
   const meta = TOOL_META[activeTool];
@@ -349,15 +370,22 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); }}
+                          <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); setSalesData([]); }}
                             className="px-3.5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all border border-slate-200">
                             ← Re-upload
                           </button>
                           <button onClick={handleExport} disabled={loading || selectedColumns.size === 0}
                             className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 shadow-md shadow-amber-500/15 hover:scale-[1.02] active:scale-95">
                             {loading ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                            Download Excel
+                            {activeTool === 'medical' ? 'Download Medical Data' : 'Download Excel'}
                           </button>
+                          {activeTool === 'medical' && salesData.length > 0 && (
+                            <button onClick={handleSalesExport} disabled={salesExporting}
+                              className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 shadow-md shadow-sky-500/15 hover:scale-[1.02] active:scale-95">
+                              {salesExporting ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                              Download Sales Data
+                            </button>
+                          )}
                         </div>
                       </div>
                       {/* Column selector */}
@@ -379,7 +407,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                           <span className="text-sm font-bold text-slate-700">{file?.name}</span>
                           <span className="text-xs text-slate-400">· {data.length} rows</span>
                         </div>
-                        <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); }}
+                        <button onClick={() => { setFile(null); setData([]); setHeaders([]); setTerritoryDashData(null); setSalesData([]); }}
                           className="px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-rose-200">
                           New Sheet
                         </button>
