@@ -317,7 +317,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-[1440px] mx-auto space-y-5">
 
-            {(activeTool === 'joining' || isDashboard) ? (
+            {(activeTool === 'joining' || activeTool === 'medical' || isDashboard) ? (
               <>
                 {/* Upload zone */}
                 {data.length === 0 && (
@@ -338,7 +338,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                 )}
 
                 {data.length > 0 && (
-                  activeTool === 'joining' ? (
+                  (activeTool === 'joining' || activeTool === 'medical') ? (
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                       {/* Header bar */}
                       <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
