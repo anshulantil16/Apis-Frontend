@@ -13,6 +13,7 @@ export function OfferLetterSimplePage() {
   const [sendEmails, setSendEmails] = useState(true);
   const [progress, setProgress] = useState<any>(null);
   const [showFailedOnly, setShowFailedOnly] = useState(false);
+  const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
 
   const downloadTemplate = async () => {
     try {
@@ -70,6 +71,7 @@ export function OfferLetterSimplePage() {
     setSuccess(false);
     setResults([]);
     setProgress(null);
+    setUploadWarnings([]);
 
     try {
       const formData = new FormData();
@@ -90,6 +92,7 @@ export function OfferLetterSimplePage() {
       }
 
       // Background generation started — poll for progress
+      setUploadWarnings(data.warnings || []);
       setProgress({ total: data.total, processed: 0, generated: 0, emailed: 0,
                     failed: 0, status: 'running', send_emails: data.send_emails });
       pollBatch(data.batch_id);
@@ -107,6 +110,25 @@ export function OfferLetterSimplePage() {
           <h1 className="text-3xl font-bold text-slate-900 mb-2">📄 Offer Letters</h1>
           <p className="text-slate-600">Download template, fill data, and send letters to employees</p>
         </div>
+
+        {/* Upload warnings — rows skipped / duplicated / defaulted dates */}
+        {uploadWarnings.length > 0 && (
+          <div className="mb-6 rounded-xl border-2 border-amber-300 bg-amber-50 p-5">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-bold text-amber-900 mb-2">
+                  Check these before relying on this run
+                </p>
+                <ul className="space-y-1.5">
+                  {uploadWarnings.map((w, i) => (
+                    <li key={i} className="text-sm text-amber-900 leading-relaxed">• {w}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-lg p-8 border border-slate-200">
@@ -307,6 +329,7 @@ export function OfferLetterSimplePage() {
                   setError('');
                   setProgress(null);
                   setShowFailedOnly(false);
+                  setUploadWarnings([]);
                 }}
                 className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all flex items-center justify-center gap-2"
               >
