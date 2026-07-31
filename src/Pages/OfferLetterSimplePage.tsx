@@ -11,6 +11,7 @@ function LettersHistoryPanel() {
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [zipping, setZipping] = useState(false);
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
@@ -44,6 +45,26 @@ function LettersHistoryPanel() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to clear');
     } finally { setClearing(false); }
+  };
+
+  const downloadZip = async () => {
+    setZipping(true); setErr('');
+    try {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set('search', search.trim());
+      if (statusFilter) params.set('status', statusFilter);
+      const res = await fetch(`${PMS_API}/offer-letter/download-all/?${params.toString()}`);
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Failed to build ZIP');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href: url, download: `APIS_Offer_Letters.zip` });
+      document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to download ZIP');
+    } finally { setZipping(false); }
   };
 
   return (
@@ -84,6 +105,10 @@ function LettersHistoryPanel() {
         <button onClick={load} disabled={loading}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-50 disabled:opacity-50">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}/>Refresh
+        </button>
+        <button onClick={downloadZip} disabled={zipping || rows.length === 0}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
+          <Download className="w-3.5 h-3.5"/>{zipping ? 'Zipping…' : (search.trim() || statusFilter ? 'Download Filtered (ZIP)' : 'Download All (ZIP)')}
         </button>
         <button onClick={clearDb} disabled={clearing || summary.total === 0}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 disabled:opacity-50">
