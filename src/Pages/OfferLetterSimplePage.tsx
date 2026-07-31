@@ -1,10 +1,147 @@
-import { useState } from 'react';
-import { Download, Upload, Send, CheckCircle, AlertCircle, Loader, XCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Download, Upload, Send, CheckCircle, AlertCircle, Loader, XCircle, History, Trash2, Search, RefreshCw } from 'lucide-react';
 
 const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PMS_API = `${_API_BASE}/api/pms`;
 
+function LettersHistoryPanel() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>({ total: 0, sent: 0, failed: 0, pending: 0 });
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true); setErr('');
+    try {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set('search', search.trim());
+      if (statusFilter) params.set('status', statusFilter);
+      params.set('limit', '200');
+      const res = await fetch(`${PMS_API}/offer-letter/history/?${params.toString()}`);
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to load letters history');
+      setRows(d.results || []);
+      setSummary(d.summary || { total: 0, sent: 0, failed: 0, pending: 0 });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to load');
+    } finally { setLoading(false); }
+  }, [search, statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const clearDb = async () => {
+    if (!confirm(`This permanently deletes ALL ${summary.total} stored letter record(s) and their PDF files. This cannot be undone. Continue?`)) return;
+    setClearing(true);
+    try {
+      const res = await fetch(`${PMS_API}/offer-letter/history/`, { method: 'DELETE' });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to clear');
+      alert(d.message || 'Cleared.');
+      load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to clear');
+    } finally { setClearing(false); }
+  };
+
+  return (
+    <div>
+      <div className="grid grid-cols-4 gap-3 mb-5">
+        <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-center">
+          <p className="text-2xl font-black text-slate-700">{summary.total}</p>
+          <p className="text-xs text-slate-500">Total</p>
+        </div>
+        <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-center">
+          <p className="text-2xl font-black text-emerald-600">{summary.sent}</p>
+          <p className="text-xs text-slate-500">Sent</p>
+        </div>
+        <div className="rounded-xl bg-rose-50 border border-rose-100 p-3 text-center">
+          <p className="text-2xl font-black text-rose-600">{summary.failed}</p>
+          <p className="text-xs text-slate-500">Failed</p>
+        </div>
+        <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-center">
+          <p className="text-2xl font-black text-amber-600">{summary.pending}</p>
+          <p className="text-xs text-slate-500">Pending</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search name, employee code, email, department…"
+            className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-400" />
+        </div>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white">
+          <option value="">All statuses</option>
+          <option value="sent">Sent</option>
+          <option value="failed">Failed</option>
+          <option value="pending">Pending</option>
+        </select>
+        <button onClick={load} disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-50 disabled:opacity-50">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}/>Refresh
+        </button>
+        <button onClick={clearDb} disabled={clearing || summary.total === 0}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 disabled:opacity-50">
+          <Trash2 className="w-3.5 h-3.5"/>{clearing ? 'Clearing…' : 'Clear DB'}
+        </button>
+      </div>
+
+      {err && <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{err}</div>}
+
+      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b-2 border-slate-200 bg-slate-50">
+              <th className="text-left py-2.5 px-3 font-bold text-slate-600">Employee</th>
+              <th className="text-left py-2.5 px-3 font-bold text-slate-600">Department</th>
+              <th className="text-left py-2.5 px-3 font-bold text-slate-600">Email</th>
+              <th className="text-left py-2.5 px-3 font-bold text-slate-600">Status</th>
+              <th className="text-left py-2.5 px-3 font-bold text-slate-600">Created</th>
+              <th className="text-left py-2.5 px-3 font-bold text-slate-600">Letter</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id} className={`border-b border-slate-100 hover:bg-slate-50 ${r.status === 'failed' ? 'bg-rose-50/40' : ''}`}>
+                <td className="py-2.5 px-3">
+                  <p className="font-semibold text-slate-900">{r.name}</p>
+                  <p className="text-xs text-slate-500">{r.employee_id}</p>
+                </td>
+                <td className="py-2.5 px-3 text-slate-600">{r.department || '—'}</td>
+                <td className="py-2.5 px-3 text-slate-600">{r.email || <span className="text-rose-500">no email</span>}</td>
+                <td className="py-2.5 px-3">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                    r.status === 'sent' ? 'bg-emerald-100 text-emerald-800'
+                    : r.status === 'failed' ? 'bg-rose-100 text-rose-800'
+                    : 'bg-amber-100 text-amber-800'}`}>
+                    {r.status}
+                  </span>
+                </td>
+                <td className="py-2.5 px-3 text-slate-500 text-xs">{new Date(r.created_at).toLocaleString()}</td>
+                <td className="py-2.5 px-3">
+                  {r.pdf_url
+                    ? <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer" className="text-blue-600 font-semibold hover:underline">View PDF</a>
+                    : <span className="text-slate-400">—</span>}
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && !loading && (
+              <tr><td colSpan={6} className="py-8 text-center text-slate-400">No letters found.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function OfferLetterSimplePage() {
+  const [activeTab, setActiveTab] = useState<'upload' | 'history'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -104,13 +241,33 @@ export function OfferLetterSimplePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-2xl mx-auto">
+      <div className={activeTab === 'history' ? 'max-w-5xl mx-auto' : 'max-w-2xl mx-auto'}>
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">📄 Offer Letters</h1>
           <p className="text-slate-600">Download template, fill data, and send letters to employees</p>
         </div>
 
+        {/* Tabs */}
+        <div className="flex items-center gap-2 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-6 w-fit">
+          <button onClick={() => setActiveTab('upload')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'upload' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <Upload className="w-4 h-4"/>Upload &amp; Send
+          </button>
+          <button onClick={() => setActiveTab('history')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <History className="w-4 h-4"/>Letters History
+          </button>
+        </div>
+
+        {activeTab === 'history' && (
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-slate-200">
+            <LettersHistoryPanel />
+          </div>
+        )}
+
+        {activeTab === 'upload' && (
+        <>
         {/* Upload warnings — rows skipped / duplicated / defaulted dates */}
         {uploadWarnings.length > 0 && (
           <div className="mb-6 rounded-xl border-2 border-amber-300 bg-amber-50 p-5">
@@ -355,6 +512,8 @@ export function OfferLetterSimplePage() {
             <li>✓ <b>Special Reward (One-time)</b> + optional Note — a one-time payout (not part of CTC) that appears in the letter only when an amount is entered</li>
           </ul>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
