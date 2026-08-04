@@ -4,7 +4,7 @@ import { AppraisalPage } from './Pages/AppraisalPage';
 import { DataExtractorPage } from './Pages/DataExtractorPage';
 import { EOMPage } from './Pages/EOMPage';
 import PMSPage from './Pages/PMSPage';
-import { OfferLetterSimplePage } from './Pages/OfferLetterSimplePage';
+import { LettersGeneratorPage } from './Pages/LettersGeneratorPage';
 import OfferLetterApprovalDashboard from './Pages/OfferLetterApprovalDashboard';
 import { TadaPage } from './Pages/TadaPage';
 
@@ -70,7 +70,7 @@ export default function App() {
               ← Back
             </button>
           </div>
-          <OfferLetterSimplePage />
+          <LettersGeneratorPage />
         </div>
       ) : view === 'offer-approvals' ? (
         <div>
