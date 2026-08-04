@@ -37,23 +37,49 @@ const EMPTY_FORM = {
   issued_by: '', issued_by_designation: '', remarks: '',
 };
 
-/* Defined at module scope on purpose: a component declared inside the panel is
-   a NEW component type on every render, so React unmounts/remounts the input
-   and the field loses focus after each keystroke. */
+/* Numbered section heading — gives the long form a clear sense of progress. */
+function SectionHead({ n, title, hint }: { n: number; title: string; hint?: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-500 to-red-600
+                      text-white text-xs font-black flex items-center justify-center
+                      shadow-md shadow-rose-500/25 flex-shrink-0">
+        {n}
+      </div>
+      <div className="min-w-0">
+        <h3 className="text-sm font-black text-slate-800 tracking-tight leading-none">{title}</h3>
+        {hint && <p className="text-[11px] text-slate-400 mt-1">{hint}</p>}
+      </div>
+      <div className="flex-1 h-px bg-gradient-to-r from-slate-200 to-transparent ml-2" />
+    </div>
+  );
+}
+
+/* Declared at module scope on purpose: a component declared inside the panel
+   would be a NEW component type on every render, so React would unmount and
+   remount the input and the field would lose focus after each keystroke. */
+const INPUT_CLS =
+  'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-sm ' +
+  'text-slate-800 placeholder:text-slate-400 transition-all ' +
+  'hover:border-slate-300 focus:outline-none focus:bg-white focus:border-rose-400 ' +
+  'focus:ring-4 focus:ring-rose-500/10';
+
+const LABEL_CLS =
+  'block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5';
+
 function Field({ label, value, onChange, type = 'text', ph = '', req = false }: {
   label: string; value: string; onChange: (v: string) => void;
   type?: string; ph?: string; req?: boolean;
 }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-slate-600 mb-1">
+      <label className={LABEL_CLS}>
         {label}{req && <span className="text-rose-500"> *</span>}
       </label>
       <input
         type={type} value={value} placeholder={ph}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm
-                   focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
+        className={INPUT_CLS}
       />
     </div>
   );
@@ -64,12 +90,11 @@ function Area({ label, value, onChange, ph = '', rows = 3 }: {
 }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-slate-600 mb-1">{label}</label>
+      <label className={LABEL_CLS}>{label}</label>
       <textarea
         value={value} placeholder={ph} rows={rows}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm resize-y
-                   focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
+        className={`${INPUT_CLS} resize-y leading-relaxed`}
       />
     </div>
   );
@@ -125,27 +150,35 @@ function SingleLetterPanel() {
 
   if (result) {
     return (
-      <div className="text-center py-6">
-        {result.emailed
-          ? <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto mb-3" />
-          : result.generated
-            ? <CheckCircle className="w-14 h-14 text-blue-500 mx-auto mb-3" />
-            : <XCircle className="w-14 h-14 text-rose-500 mx-auto mb-3" />}
-        <h3 className="text-xl font-bold text-slate-900 mb-1">{result.message}</h3>
+      <div className="text-center py-8">
+        <div className={`w-20 h-20 rounded-3xl mx-auto mb-5 flex items-center justify-center
+          ${result.emailed ? 'bg-emerald-50 ring-8 ring-emerald-500/10'
+            : result.generated ? 'bg-blue-50 ring-8 ring-blue-500/10'
+              : 'bg-rose-50 ring-8 ring-rose-500/10'}`}>
+          {result.generated
+            ? <CheckCircle className={`w-10 h-10 ${result.emailed ? 'text-emerald-500' : 'text-blue-500'}`} />
+            : <XCircle className="w-10 h-10 text-rose-500" />}
+        </div>
+        <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-1.5">{result.message}</h3>
         {result.error && <p className="text-sm text-rose-600 mb-2">{result.error}</p>}
         {result.cc?.length > 0 && (
-          <p className="text-xs text-slate-500 mb-3">Cc: {result.cc.join(', ')}</p>
+          <p className="text-xs text-slate-500 mb-1">
+            <span className="font-bold text-slate-600">Cc:</span> {result.cc.join(', ')}
+          </p>
         )}
-        <div className="flex items-center justify-center gap-3 mt-4">
+        <div className="flex items-center justify-center gap-3 mt-7">
           {result.pdf_url && (
             <a href={`${_API_BASE}${result.pdf_url}`} target="_blank" rel="noreferrer"
-              className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-900">
-              View PDF
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 text-white
+                         text-sm font-bold hover:bg-slate-900 transition-all hover:-translate-y-0.5">
+              <FileWarning className="w-4 h-4" />View PDF
             </a>
           )}
           <button
             onClick={() => { setResult(null); setForm({ ...EMPTY_FORM }); setSendEmail(false); }}
-            className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700">
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white
+                       text-sm font-bold shadow-lg shadow-rose-500/25 transition-all
+                       hover:-translate-y-0.5 hover:shadow-xl hover:shadow-rose-500/30">
             Issue Another Letter
           </button>
         </div>
@@ -163,7 +196,7 @@ function SingleLetterPanel() {
       )}
 
       <section>
-        <h3 className="text-sm font-black text-slate-800 mb-3 uppercase tracking-wide">Employee</h3>
+        <SectionHead n={1} title="Employee Details" hint="Who the letter is addressed to" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {F('Employee Code', 'employee_code', { req: true, ph: 'EMP001' })}
           {F('Employee Name', 'employee_name', { req: true, ph: 'Rahul Sharma' })}
@@ -183,7 +216,7 @@ function SingleLetterPanel() {
       </section>
 
       <section>
-        <h3 className="text-sm font-black text-slate-800 mb-3 uppercase tracking-wide">Warning Details</h3>
+        <SectionHead n={2} title="Warning Details" hint="Be specific — a vague disciplinary letter is hard to defend" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1">Warning Type</label>
@@ -217,7 +250,7 @@ function SingleLetterPanel() {
       </section>
 
       <section>
-        <h3 className="text-sm font-black text-slate-800 mb-3 uppercase tracking-wide">Issue &amp; Delivery</h3>
+        <SectionHead n={3} title="Issue &amp; Delivery" hint="Sent from the HR account" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {F('Letter Date', 'letter_date', { type: 'date' })}
           {F('Employee Email', 'email_address', { type: 'email', ph: 'rahul@apisindia.com' })}
@@ -241,8 +274,11 @@ function SingleLetterPanel() {
       </section>
 
       <button type="submit" disabled={busy}
-        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-red-600
-                   text-white font-bold hover:bg-red-700 disabled:opacity-50 transition-all">
+        className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl
+                   bg-gradient-to-br from-rose-500 to-red-600 text-white font-bold
+                   shadow-lg shadow-rose-500/25 transition-all
+                   hover:-translate-y-0.5 hover:shadow-xl hover:shadow-rose-500/30
+                   disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none">
         {busy ? <><Loader className="w-5 h-5 animate-spin" />Generating…</>
           : <><Send className="w-5 h-5" />{sendEmail ? 'Generate & Send Letter' : 'Generate Letter'}</>}
       </button>
@@ -424,34 +460,75 @@ function BulkUploadPanel() {
         </div>
       )}
 
-      <button onClick={downloadTemplate}
-        className="w-full flex items-center justify-center gap-2 px-6 py-3 mb-5 rounded-xl
-                   border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-50">
-        <Download className="w-5 h-5" />Download Excel Template
-      </button>
-
-      <form onSubmit={upload} className="space-y-4">
-        <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">Filled Excel File</label>
-          <input type="file" accept=".xlsx,.xls"
-            onChange={e => setFile(e.target.files?.[0] || null)}
-            className="w-full text-sm text-slate-600 file:mr-3 file:px-4 file:py-2 file:rounded-lg
-                       file:border-0 file:bg-red-50 file:text-red-700 file:font-bold
-                       file:cursor-pointer border border-slate-300 rounded-lg p-2" />
+      {/* Step 1 — template */}
+      <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 mb-4">
+        <div className="w-9 h-9 rounded-xl bg-white ring-1 ring-slate-200 flex items-center
+                        justify-center text-xs font-black text-slate-500 flex-shrink-0">1</div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-slate-800">Download the template</p>
+          <p className="text-[11px] text-slate-500">Includes a CC Emails column and a Warning Types reference sheet.</p>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer">
+        <button onClick={downloadTemplate}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-300
+                     text-slate-700 text-sm font-bold hover:bg-slate-50 hover:border-slate-400
+                     transition-all flex-shrink-0">
+          <Download className="w-4 h-4" />Template
+        </button>
+      </div>
+
+      {/* Step 2 — upload */}
+      <form onSubmit={upload}>
+        <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-white ring-1 ring-slate-200 flex items-center
+                          justify-center text-xs font-black text-slate-500 flex-shrink-0">2</div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-slate-800">Upload the filled sheet</p>
+            <p className="text-[11px] text-slate-500">.xlsx or .xls</p>
+          </div>
+        </div>
+
+        <label className={`block rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer
+          transition-all mb-4 ${file
+            ? 'border-rose-300 bg-rose-50/50'
+            : 'border-slate-300 bg-slate-50/40 hover:border-rose-300 hover:bg-rose-50/30'}`}>
+          <input type="file" accept=".xlsx,.xls" className="hidden"
+            onChange={e => setFile(e.target.files?.[0] || null)} />
+          <Upload className={`w-8 h-8 mx-auto mb-2 ${file ? 'text-rose-500' : 'text-slate-400'}`} />
+          {file ? (
+            <>
+              <p className="text-sm font-bold text-slate-800 truncate">{file.name}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {(file.size / 1024).toFixed(0)} KB · click to choose a different file
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-bold text-slate-700">Click to choose your Excel file</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Employee ID and Name are the only required columns</p>
+            </>
+          )}
+        </label>
+
+        <label className="flex items-start gap-2.5 cursor-pointer rounded-xl border border-slate-200
+                          bg-white p-3.5 mb-4 hover:border-slate-300 transition-all">
           <input type="checkbox" checked={sendEmails} onChange={e => setSendEmails(e.target.checked)}
-            className="w-4 h-4 accent-red-600" />
-          <span className="text-sm text-slate-700">
+            className="w-4 h-4 accent-rose-600 mt-0.5 flex-shrink-0" />
+          <span className="text-sm text-slate-700 leading-snug">
             Email each letter to the employee
-            <span className="text-slate-400"> (Cc taken from the sheet's "CC Emails" column)</span>
+            <span className="block text-[11px] text-slate-400 mt-0.5">
+              Cc is taken from the sheet's "CC Emails" column. Leave off to generate and store only.
+            </span>
           </span>
         </label>
+
         <button type="submit" disabled={loading || !file}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-red-600
-                     text-white font-bold hover:bg-red-700 disabled:opacity-50">
+          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl
+                     bg-gradient-to-br from-rose-500 to-red-600 text-white font-bold
+                     shadow-lg shadow-rose-500/25 transition-all
+                     hover:-translate-y-0.5 hover:shadow-xl hover:shadow-rose-500/30
+                     disabled:opacity-40 disabled:translate-y-0 disabled:shadow-none">
           {loading ? <><Loader className="w-5 h-5 animate-spin" />Uploading…</>
-            : <><Upload className="w-5 h-5" />Generate Letters</>}
+            : <><Send className="w-5 h-5" />Generate Letters</>}
         </button>
       </form>
     </div>
@@ -533,14 +610,21 @@ function WarningHistoryPanel() {
 
   return (
     <div>
-      <div className="grid grid-cols-4 gap-3 mb-5">
-        {[['Total', summary.total, 'text-slate-800'],
-          ['Sent', summary.sent, 'text-emerald-600'],
-          ['Failed', summary.failed, 'text-rose-600'],
-          ['Pending', summary.pending, 'text-blue-600']].map(([l, v, c]) => (
-          <div key={l as string} className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-center">
-            <p className={`text-2xl font-black ${c}`}>{v as number}</p>
-            <p className="text-xs text-slate-500">{l as string}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {[
+          { l: 'Total', v: summary.total, txt: 'text-slate-800', bar: 'from-slate-400 to-slate-600' },
+          { l: 'Sent', v: summary.sent, txt: 'text-emerald-600', bar: 'from-emerald-400 to-emerald-600' },
+          { l: 'Failed', v: summary.failed, txt: 'text-rose-600', bar: 'from-rose-400 to-red-600' },
+          { l: 'Pending', v: summary.pending, txt: 'text-blue-600', bar: 'from-blue-400 to-indigo-600' },
+        ].map(s => (
+          <div key={s.l}
+            className="relative overflow-hidden rounded-2xl bg-white border border-slate-200
+                       p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+            <div className={`absolute top-0 left-0 h-1 w-full bg-gradient-to-r ${s.bar}`} />
+            <p className={`text-3xl font-black tabular-nums ${s.txt}`}>{s.v}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">
+              {s.l}
+            </p>
           </div>
         ))}
       </div>
@@ -642,34 +726,70 @@ function WarningHistoryPanel() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
+const TABS = [
+  { id: 'single' as const, icon: UserPlus, label: 'Single Letter', sub: 'One employee' },
+  { id: 'bulk' as const, icon: Upload, label: 'Bulk Upload', sub: 'From Excel' },
+  { id: 'history' as const, icon: History, label: 'History', sub: 'Search & export' },
+];
+
 export function WarningLetterPage() {
   const [tab, setTab] = useState<'single' | 'bulk' | 'history'>('single');
 
-  const TabBtn = ({ id, icon: Icon, label }: { id: typeof tab; icon: any; label: string }) => (
-    <button onClick={() => setTab(id)}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all
-        ${tab === id ? 'bg-red-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
-      <Icon className="w-4 h-4" />{label}
-    </button>
-  );
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className={tab === 'history' ? 'max-w-6xl mx-auto' : 'max-w-3xl mx-auto'}>
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">⚠️ Warning Letters</h1>
-          <p className="text-slate-600">
-            Issue a disciplinary letter to one employee, or generate them in bulk from Excel.
-          </p>
+    <div className="min-h-screen bg-[#f5f7fa] pb-16">
+      {/* Hero band — ties the page to the dark hub it was launched from */}
+      <div className="relative overflow-hidden bg-[#0f131c]">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 -left-16 w-96 h-96 rounded-full bg-rose-600/25 blur-[100px]" />
+          <div className="absolute -top-16 right-0 w-96 h-96 rounded-full bg-orange-600/15 blur-[100px]" />
+        </div>
+        <div className="relative max-w-6xl mx-auto px-8 pt-10 pb-24">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20
+                            flex items-center justify-center flex-shrink-0">
+              <FileWarning className="w-6 h-6 text-rose-400" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <h1 className="text-3xl font-black text-white tracking-tight">Warning Letters</h1>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase
+                                 tracking-widest bg-rose-500/10 text-rose-300 ring-1 ring-rose-500/20">
+                  Confidential
+                </span>
+              </div>
+              <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
+                Issue a formal disciplinary letter to one employee, or generate them in bulk from
+                Excel. Every letter is archived and can be exported.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs float over the hero's lower edge */}
+      <div className={`relative z-10 -mt-14 px-8 mx-auto ${tab === 'history' ? 'max-w-6xl' : 'max-w-3xl'}`}>
+        <div className="flex items-center gap-1 bg-white/95 backdrop-blur rounded-2xl p-1.5
+                        border border-slate-200 shadow-xl shadow-slate-900/5 w-fit mb-6">
+          {TABS.map(t => {
+            const Icon = t.icon;
+            const on = tab === t.id;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all
+                  ${on ? 'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-lg shadow-rose-500/25'
+                       : 'text-slate-500 hover:bg-slate-100'}`}>
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <div className="text-left leading-none">
+                  <p className="text-sm font-bold">{t.label}</p>
+                  <p className={`text-[9px] font-bold uppercase tracking-widest mt-1
+                    ${on ? 'text-white/70' : 'text-slate-400'}`}>{t.sub}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex items-center gap-2 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-6 w-fit">
-          <TabBtn id="single" icon={UserPlus} label="Single Letter" />
-          <TabBtn id="bulk" icon={Upload} label="Bulk Upload" />
-          <TabBtn id="history" icon={History} label="Letters History" />
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-lg p-8 border border-slate-200">
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-900/5 p-8 border border-slate-200">
           {tab === 'single' && <SingleLetterPanel />}
           {tab === 'bulk' && <BulkUploadPanel />}
           {tab === 'history' && <WarningHistoryPanel />}

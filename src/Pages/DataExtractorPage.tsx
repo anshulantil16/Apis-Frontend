@@ -256,8 +256,8 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
             <div className="flex items-center gap-2.5">
               <FileSpreadsheet className="w-3.5 h-3.5" />
               <div>
-                <p>Offer Letters</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-rose-700">Generate & Send</p>
+                <p>Letters Generator</p>
+                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-rose-700">Appraisal & Warning</p>
               </div>
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />

@@ -59,19 +59,12 @@ export default function App() {
           <PMSPage />
         </div>
       ) : view === 'offer-letters' ? (
-        <div>
-          <div className="fixed top-3 left-3 z-50 flex gap-2">
-            <button onClick={() => navigate('offer-approvals')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-green-600/80 backdrop-blur border border-green-700 text-white hover:bg-green-700 rounded-lg text-xs font-bold transition-all">
-              📊 Approvals
-            </button>
-            <button onClick={() => navigate('extractor')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 backdrop-blur border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all">
-              ← Back
-            </button>
-          </div>
-          <LettersGeneratorPage />
-        </div>
+        // LettersGeneratorPage owns its own nav chrome (hub / back / approvals)
+        // so the hub's in-page controls can't collide with a fixed overlay.
+        <LettersGeneratorPage
+          onNavigateBack={() => navigate('extractor')}
+          onNavigateToApprovals={() => navigate('offer-approvals')}
+        />
       ) : view === 'offer-approvals' ? (
         <div>
           <div className="fixed top-3 left-3 z-50">
