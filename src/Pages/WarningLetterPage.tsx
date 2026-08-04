@@ -737,27 +737,27 @@ export function WarningLetterPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f7fa] pb-16">
-      {/* Hero band — ties the page to the dark hub it was launched from */}
-      <div className="relative overflow-hidden bg-[#0f131c]">
+      {/* Hero band — light, with a soft rose wash tying it to the letter type */}
+      <div className="relative overflow-hidden bg-white border-b border-slate-200">
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 -left-16 w-96 h-96 rounded-full bg-rose-600/25 blur-[100px]" />
-          <div className="absolute -top-16 right-0 w-96 h-96 rounded-full bg-orange-600/15 blur-[100px]" />
+          <div className="absolute -top-24 -left-16 w-96 h-96 rounded-full bg-rose-400/15 blur-[100px]" />
+          <div className="absolute -top-20 right-0 w-96 h-96 rounded-full bg-orange-300/15 blur-[100px]" />
         </div>
-        <div className="relative max-w-6xl mx-auto px-8 pt-10 pb-24">
+        <div className="relative max-w-6xl mx-auto px-8 pt-8 pb-20">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 ring-1 ring-rose-500/20
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 ring-1 ring-rose-100
                             flex items-center justify-center flex-shrink-0">
-              <FileWarning className="w-6 h-6 text-rose-400" />
+              <FileWarning className="w-6 h-6 text-rose-600" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1.5">
-                <h1 className="text-3xl font-black text-white tracking-tight">Warning Letters</h1>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Warning Letters</h1>
                 <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase
-                                 tracking-widest bg-rose-500/10 text-rose-300 ring-1 ring-rose-500/20">
+                                 tracking-widest bg-rose-50 text-rose-600 ring-1 ring-rose-100">
                   Confidential
                 </span>
               </div>
-              <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
+              <p className="text-slate-500 text-sm max-w-xl leading-relaxed">
                 Issue a formal disciplinary letter to one employee, or generate them in bulk from
                 Excel. Every letter is archived and can be exported.
               </p>
@@ -767,9 +767,9 @@ export function WarningLetterPage() {
       </div>
 
       {/* Tabs float over the hero's lower edge */}
-      <div className={`relative z-10 -mt-14 px-8 mx-auto ${tab === 'history' ? 'max-w-6xl' : 'max-w-3xl'}`}>
-        <div className="flex items-center gap-1 bg-white/95 backdrop-blur rounded-2xl p-1.5
-                        border border-slate-200 shadow-xl shadow-slate-900/5 w-fit mb-6">
+      <div className={`relative z-10 -mt-12 px-8 mx-auto ${tab === 'history' ? 'max-w-6xl' : 'max-w-3xl'}`}>
+        <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5
+                        border border-slate-200 shadow-lg shadow-slate-900/5 w-fit mb-6">
           {TABS.map(t => {
             const Icon = t.icon;
             const on = tab === t.id;
