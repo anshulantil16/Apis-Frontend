@@ -742,9 +742,29 @@ export default function PMSPage() {
                   </div>
 
                   {isExp && (
-                    <div key={`${emp.id}-${emp.final_score}`} className={`border-t-2 ${cfg.light} bg-gradient-to-br from-slate-50 to-white p-5 grid grid-cols-3 gap-5`}>
+                    <div key={`${emp.id}-${emp.final_score}-${emp.current_ctc}`} className={`border-t-2 ${cfg.light} bg-gradient-to-br from-slate-50 to-white p-5 grid grid-cols-3 gap-5`}>
                       {/* Final Score */}
                       <div className="space-y-3">
+                        {/* Current CTC — editable after the master upload. Every
+                            increment / promotion / new-CTC figure is derived from
+                            this, so they all recalculate the moment it is saved. */}
+                        <div className="rounded-xl border-2 border-blue-200 bg-blue-50/60 p-3">
+                          <label className="text-xs font-black text-blue-700 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                            <DollarSign className="w-3.5 h-3.5"/>Current CTC (Annual)
+                          </label>
+                          {/* Rounded to whole rupees: CTC is stored monthly and sent back
+                              annualised (x12), so a value like 800000 returns as 800000.04.
+                              Every other CTC display already formats to 0 decimals. */}
+                          <input type="number" min={0} step="1000" defaultValue={Math.round(Number(emp.current_ctc) || 0)}
+                            onBlur={e => {
+                              const v = Math.round(Number(e.target.value) || 0);
+                              if (v !== Math.round(Number(emp.current_ctc) || 0)) update(emp.id, { current_ctc: v });
+                            }}
+                            className="w-full border-2 border-blue-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-500 font-bold"/>
+                          <p className="text-[10px] text-blue-600/70 mt-1 leading-snug">
+                            Correct a wrong CTC from the master upload — increment, promotion &amp; new CTC all recalculate.
+                          </p>
+                        </div>
                         <p className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-indigo-400"/>Final Score</p>
                         <div>
                           <label className="text-xs text-slate-500 font-semibold mb-1.5 block">Final Score (0–100, % of target)</label>
