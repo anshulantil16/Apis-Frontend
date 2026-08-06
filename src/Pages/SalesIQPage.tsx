@@ -26,6 +26,34 @@ const shortInr = (n: number) => {
 const PALETTE = ['#6366f1', '#06b6d4', '#f59e0b', '#ec4899', '#10b981',
                  '#8b5cf6', '#ef4444', '#14b8a6', '#f97316', '#3b82f6'];
 
+/** Download via fetch+blob rather than a bare <a href>. A plain anchor to a
+ *  failing endpoint silently navigates away or does nothing at all, which is
+ *  indistinguishable from a broken button — this surfaces the actual reason. */
+async function downloadFile(url: string, filename: string) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    if (res.status === 404) {
+      detail = 'endpoint not found (404) — the SalesIQ backend may not be deployed yet';
+    } else {
+      try {
+        const j = await res.json();
+        if (j?.error) detail = j.error;
+      } catch { /* non-JSON error body — keep the status code */ }
+    }
+    throw new Error(`Download failed: ${detail}`);
+  }
+  const blob = await res.blob();
+  const href = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(href);
+  document.body.removeChild(a);
+}
+
 /* ── animated number ────────────────────────────────────────────────────── */
 function useCountUp(target: number, duration = 900) {
   const [val, setVal] = useState(0);
@@ -385,11 +413,19 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
                          text-[12px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />Refresh
             </button>
-            <a href={`${API}/export/?${qs()}`}
+            <button
+              onClick={async () => {
+                setErr('');
+                try {
+                  await downloadFile(`${API}/export/?${qs()}`, 'SalesIQ_Export.xlsx');
+                } catch (e) {
+                  setErr(e instanceof Error ? e.message : 'Could not build the export');
+                }
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white
                          text-[12px] font-bold hover:bg-slate-800 transition-all">
               <Download className="w-3.5 h-3.5" />Export
-            </a>
+            </button>
           </div>
         </div>
 
@@ -877,11 +913,19 @@ function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
       <Panel title="Upload sales data" icon={Upload} subtitle="Excel (.xlsx) — headers auto-detected">
-        <a href={`${API}/template/`}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 mb-4 rounded-xl border
+        <button
+          onClick={async () => {
+            setErr('');
+            try {
+              await downloadFile(`${API}/template/`, 'SalesIQ_Template.xlsx');
+            } catch (e) {
+              setErr(e instanceof Error ? e.message : 'Could not download the template');
+            }
+          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-4 rounded-xl border
                      border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50 transition-all">
           <Download className="w-4 h-4" />Download template
-        </a>
+        </button>
 
         <label
           onDragOver={e => { e.preventDefault(); setDrag(true); }}
