@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Area, BarChart, Bar, PieChart, Pie, Cell, ComposedChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -7,24 +7,14 @@ import {
   Upload, Download, TrendingUp, Target, Users, Package, MapPin,
   Zap, RefreshCw, Trash2, AlertTriangle, CheckCircle2, Info, Sparkles,
   BarChart3, Globe2, ShoppingCart, Boxes, X, Filter, ArrowUpRight, ArrowDownRight,
-  Activity, Layers, FileSpreadsheet, Trophy, Radar,
+  Activity, Layers, FileSpreadsheet, Trophy, Radar, Brain, UserSearch,
 } from 'lucide-react';
-
-const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-const API = `${_API_BASE}/api/sales`;
-
-/* ── formatting ─────────────────────────────────────────────────────────── */
-const inr = (n: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n || 0);
-/** Indian short-form: 1.2 Cr / 45.3 L / 12.5 K — dashboards read better than 9-digit numbers. */
-const shortInr = (n: number) => {
-  const v = Math.abs(n || 0);
-  if (v >= 1e7) return `${(n / 1e7).toFixed(2)} Cr`;
-  if (v >= 1e5) return `${(n / 1e5).toFixed(2)} L`;
-  if (v >= 1e3) return `${(n / 1e3).toFixed(1)} K`;
-  return inr(n);
-};
-const PALETTE = ['#6366f1', '#06b6d4', '#f59e0b', '#ec4899', '#10b981',
-                 '#8b5cf6', '#ef4444', '#14b8a6', '#f97316', '#3b82f6'];
+import {
+  API, _API_BASE, inr, shortInr, PALETTE, useCountUp, Counter, Reveal, Panel,
+  Skel, Empty, ChartTip, Leaderboard,
+} from './SalesIQShared';
+import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
+import { SalesIQLogin, loadSession, clearSession } from './SalesIQLogin';
 
 /** Download via fetch+blob rather than a bare <a href>. A plain anchor to a
  *  failing endpoint silently navigates away or does nothing at all, which is
@@ -54,42 +44,25 @@ async function downloadFile(url: string, filename: string) {
   document.body.removeChild(a);
 }
 
-/* ── animated number ────────────────────────────────────────────────────── */
-function useCountUp(target: number, duration = 900) {
-  const [val, setVal] = useState(0);
-  const fromRef = useRef(0);
-  useEffect(() => {
-    const from = fromRef.current;
-    const delta = target - from;
-    if (delta === 0) { setVal(target); return; }
-    let raf = 0;
-    const t0 = performance.now();
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - t0) / duration);
-      // easeOutExpo — fast start, gentle settle; reads as "counting up" not "sliding"
-      const e = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
-      setVal(from + delta * e);
-      if (p < 1) raf = requestAnimationFrame(tick);
-      else fromRef.current = target;
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return val;
-}
-
-function Counter({ value, format = shortInr, prefix = '' }:
-  { value: number; format?: (n: number) => string; prefix?: string }) {
-  const v = useCountUp(value || 0);
-  return <>{prefix}{format(v)}</>;
-}
-
-/* ── reveal-on-mount wrapper (staggered) ────────────────────────────────── */
-function Reveal({ delay = 0, children, className = '' }:
-  { delay?: number; children: any; className?: string }) {
+/* ── target achievement ring ────────────────────────────────────────────── */
+function AchievementRing({ value }: { value: number }) {
+  const v = useCountUp(value || 0, 1200);
+  const capped = Math.min(v, 150);
+  const R = 54, C = 2 * Math.PI * R;
+  const off = C - (Math.min(capped, 100) / 100) * C;
+  const colour = value >= 100 ? '#10b981' : value >= 80 ? '#f59e0b' : '#ef4444';
   return (
-    <div className={`siq-reveal ${className}`} style={{ animationDelay: `${delay}ms` }}>
-      {children}
+    <div className="relative w-40 h-40 flex items-center justify-center">
+      <svg className="w-40 h-40 -rotate-90">
+        <circle cx="80" cy="80" r={R} fill="none" stroke="#f1f5f9" strokeWidth="12" />
+        <circle cx="80" cy="80" r={R} fill="none" stroke={colour} strokeWidth="12"
+          strokeLinecap="round" strokeDasharray={C} strokeDashoffset={off}
+          style={{ filter: `drop-shadow(0 0 8px ${colour}55)` }} />
+      </svg>
+      <div className="absolute text-center">
+        <p className="text-3xl font-black tabular-nums" style={{ color: colour }}>{v.toFixed(0)}%</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">of target</p>
+      </div>
     </div>
   );
 }
@@ -102,10 +75,10 @@ function Kpi({ icon: Icon, label, value, format = shortInr, prefix = '', sub, de
   const up = (delta ?? 0) >= 0;
   return (
     <Reveal delay={delay}>
-      <div className="group relative overflow-hidden rounded-2xl bg-white border border-slate-200
-                      p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+      <div className="group relative overflow-hidden rounded-2xl bg-white/90 backdrop-blur-sm
+                      border border-slate-200/80 p-5 shadow-sm transition-all duration-300
+                      hover:-translate-y-1.5 hover:shadow-xl">
         <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} />
-        {/* sheen sweep on hover */}
         <div className="siq-sheen pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100" />
         <div className="relative flex items-start justify-between mb-3">
           <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${accent} flex items-center
@@ -131,130 +104,13 @@ function Kpi({ icon: Icon, label, value, format = shortInr, prefix = '', sub, de
   );
 }
 
-/* ── target achievement ring ────────────────────────────────────────────── */
-function AchievementRing({ value }: { value: number }) {
-  const v = useCountUp(value || 0, 1200);
-  const capped = Math.min(v, 150);
-  const R = 54, C = 2 * Math.PI * R;
-  const off = C - (Math.min(capped, 100) / 100) * C;
-  const colour = value >= 100 ? '#10b981' : value >= 80 ? '#f59e0b' : '#ef4444';
-  return (
-    <div className="relative w-40 h-40 flex items-center justify-center">
-      <svg className="w-40 h-40 -rotate-90">
-        <circle cx="80" cy="80" r={R} fill="none" stroke="#f1f5f9" strokeWidth="12" />
-        <circle cx="80" cy="80" r={R} fill="none" stroke={colour} strokeWidth="12"
-          strokeLinecap="round" strokeDasharray={C} strokeDashoffset={off}
-          style={{ filter: `drop-shadow(0 0 8px ${colour}55)` }} />
-      </svg>
-      <div className="absolute text-center">
-        <p className="text-3xl font-black tabular-nums" style={{ color: colour }}>
-          {v.toFixed(0)}%
-        </p>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">of target</p>
-      </div>
-    </div>
-  );
-}
-
-/* ── skeleton shimmer ───────────────────────────────────────────────────── */
-const Skel = ({ className = '' }: { className?: string }) => (
-  <div className={`siq-shimmer rounded-xl bg-slate-100 ${className}`} />
-);
-
-/* ── chart tooltip ──────────────────────────────────────────────────────── */
-function ChartTip({ active, payload, label, money = true }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-xl bg-slate-900/95 backdrop-blur px-3 py-2 shadow-2xl border border-white/10">
-      <p className="text-[11px] font-black text-white mb-1">{label}</p>
-      {payload.map((p: any, i: number) => (
-        <p key={i} className="text-[11px] font-bold flex items-center gap-2" style={{ color: p.color || p.fill }}>
-          <span className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
-          {p.name}: <span className="text-white">{money ? `₹${shortInr(p.value)}` : inr(p.value)}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
-/* ── section card ───────────────────────────────────────────────────────── */
-function Panel({ title, icon: Icon, subtitle, right, children, delay = 0, className = '' }: any) {
-  return (
-    <Reveal delay={delay} className={className}>
-      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 h-full
-                      transition-shadow hover:shadow-lg">
-        <div className="flex items-start justify-between mb-4 gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {Icon && (
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                <Icon className="w-4 h-4 text-slate-600" />
-              </div>
-            )}
-            <div className="min-w-0">
-              <h3 className="text-sm font-black text-slate-800 tracking-tight">{title}</h3>
-              {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
-            </div>
-          </div>
-          {right}
-        </div>
-        {children}
-      </div>
-    </Reveal>
-  );
-}
-
-/* ── leaderboard bars ───────────────────────────────────────────────────── */
-function Leaderboard({ rows, showTarget = false }: { rows: any[]; showTarget?: boolean }) {
-  const max = Math.max(...rows.map(r => r.revenue), 1);
-  return (
-    <div className="space-y-2.5">
-      {rows.map((r, i) => (
-        <div key={r.name} className="siq-reveal group" style={{ animationDelay: `${i * 55}ms` }}>
-          <div className="flex items-center justify-between mb-1 gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black flex-shrink-0
-                ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600'
-                  : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>
-                {i + 1}
-              </span>
-              <span className="text-[12px] font-bold text-slate-700 truncate">{r.name}</span>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {showTarget && r.achievement_pct !== null && r.achievement_pct !== undefined && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded
-                  ${r.achievement_pct >= 100 ? 'bg-emerald-50 text-emerald-600'
-                    : r.achievement_pct >= 80 ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'}`}>
-                  {r.achievement_pct.toFixed(0)}%
-                </span>
-              )}
-              <span className="text-[12px] font-black text-slate-800 tabular-nums">₹{shortInr(r.revenue)}</span>
-            </div>
-          </div>
-          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-            <div className="siq-grow h-full rounded-full transition-all duration-700 group-hover:brightness-110"
-              style={{
-                width: `${(r.revenue / max) * 100}%`,
-                background: `linear-gradient(90deg, ${PALETTE[i % PALETTE.length]}, ${PALETTE[(i + 3) % PALETTE.length]})`,
-              }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ── empty state ────────────────────────────────────────────────────────── */
-const Empty = ({ msg }: { msg: string }) => (
-  <div className="flex flex-col items-center justify-center py-10 text-slate-300">
-    <Boxes className="w-8 h-8 mb-2" />
-    <p className="text-[12px] font-semibold text-slate-400">{msg}</p>
-  </div>
-);
-
 /* ════════════════════════════════════════════════════════════════════════ */
-type Tab = 'overview' | 'geography' | 'products' | 'team' | 'forecast' | 'data';
+type Tab = 'overview' | 'intelligence' | 'geography' | 'products' | 'customers' | 'team' | 'forecast' | 'data';
 
 export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void }) {
+  // Auth gate. Session is read once on mount; loadSession() also enforces the
+  // 12-hour expiry, so a stale localStorage entry can't grant access.
+  const [session, setSession] = useState(() => loadSession());
   const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<any>(null);
@@ -264,6 +120,9 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
   const [breaks, setBreaks] = useState<Record<string, any>>({});
   const [filterOpts, setFilterOpts] = useState<any>(null);
   const [uploads, setUploads] = useState<any>(null);
+  const [intel, setIntel] = useState<any>({});
+  const [cust, setCust] = useState<any>({});
+  const [intelDim, setIntelDim] = useState('state');
   const [err, setErr] = useState('');
 
   // filters
@@ -291,21 +150,32 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
     try {
       const dims = ['state', 'zone', 'area', 'category', 'product', 'sku', 'channel',
                     'salesperson', 'asm', 'rsm', 'customer'];
-      const [ov, tr, ins, fc, fo, up, ...bs] = await Promise.all([
+      const [ov, tr, ins, fc, fo, up,
+             pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price,
+             rfm, cohorts, newRepeat, paretoCustomer,
+             ...bs] = await Promise.all([
         get('overview/'), get('trend/'), get('insights/'),
         get(`forecast/?periods=${horizon}`), fetch(`${API}/filters/`).then(r => r.json()),
         fetch(`${API}/uploads/`).then(r => r.json()),
+        // intelligence tab
+        get(`pareto/?dim=${intelDim}`), get(`matrix/?dim=${intelDim}`),
+        get(`movers/?dim=${intelDim}`), get('anomalies/'), get('seasonality/'),
+        get(`heatmap/?dim=${intelDim}`), get('pacing/'), get('price/'),
+        // customers tab
+        get('rfm/'), get('cohorts/'), get('new-repeat/'), get('pareto/?dim=customer'),
         ...dims.map(d => get(`breakdown/?dim=${d}&limit=12`)),
       ]);
       setOverview(ov); setTrend(tr); setInsights(ins.insights || []);
       setForecast(fc); setFilterOpts(fo); setUploads(up);
+      setIntel({ pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price });
+      setCust({ rfm, cohorts, newRepeat, paretoCustomer });
       const map: Record<string, any> = {};
       dims.forEach((d, i) => { map[d] = bs[i]; });
       setBreaks(map);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load dashboard');
     } finally { setLoading(false); }
-  }, [qs, horizon]);
+  }, [qs, horizon, intelDim]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -340,12 +210,18 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
 
   const TABS: { id: Tab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'intelligence', label: 'Intelligence', icon: Brain },
     { id: 'geography', label: 'Geography', icon: Globe2 },
     { id: 'products', label: 'Products', icon: Package },
+    { id: 'customers', label: 'Customers', icon: UserSearch },
     { id: 'team', label: 'Sales Team', icon: Users },
     { id: 'forecast', label: 'Forecast', icon: Radar },
     { id: 'data', label: 'Data', icon: FileSpreadsheet },
   ];
+
+  if (!session) {
+    return <SalesIQLogin onSuccess={email => setSession({ email, ts: Date.now() })} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f5f7fa] relative">
@@ -426,6 +302,23 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
                          text-[12px] font-bold hover:bg-slate-800 transition-all">
               <Download className="w-3.5 h-3.5" />Export
             </button>
+            <div className="flex items-center gap-2 pl-2 ml-1 border-l border-slate-200">
+              <div className="hidden sm:block text-right leading-none">
+                <p className="text-[11px] font-black text-slate-700">{session.email.split('@')[0]}</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-amber-600">Super admin</p>
+              </div>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600
+                              flex items-center justify-center text-white text-[12px] font-black
+                              shadow-md shadow-amber-500/25">
+                {session.email[0].toUpperCase()}
+              </div>
+              <button onClick={() => { clearSession(); setSession(null); }}
+                title="Sign out"
+                className="px-2.5 py-1.5 rounded-lg text-[12px] font-bold text-slate-400
+                           hover:text-rose-600 hover:bg-rose-50 transition-all">
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
 
@@ -651,6 +544,14 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
             </div>
           </div>
         )}
+
+        {/* ══ INTELLIGENCE ══ */}
+        {!loading && hasData && tab === 'intelligence' && (
+          <IntelligencePanel data={intel} dim={intelDim} setDim={setIntelDim} />
+        )}
+
+        {/* ══ CUSTOMERS ══ */}
+        {!loading && hasData && tab === 'customers' && <CustomersPanel data={cust} />}
 
         {/* ══ GEOGRAPHY ══ */}
         {!loading && hasData && tab === 'geography' && (
