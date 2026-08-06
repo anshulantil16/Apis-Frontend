@@ -22,19 +22,124 @@ export const saveSession = (email: string) =>
   localStorage.setItem(SESSION_KEY, JSON.stringify({ email, ts: Date.now() }));
 export const clearSession = () => localStorage.removeItem(SESSION_KEY);
 
-/* ── honeycomb field ─────────────────────────────────────────────────────
-   A hex grid drawn as SVG. Cells pulse on a staggered loop, so the comb
-   reads as "alive" without a canvas loop burning CPU on every frame.       */
+/* ── Realistic honey pour ─────────────────────────────────────────────────
+   Liquid realism comes from three things, none of which are the shapes
+   themselves:
+
+   1. A "gooey" filter (heavy blur, then a huge alpha contrast boost). Blurred
+      neighbouring shapes bleed into one another and the contrast step snaps
+      the result back to a hard edge — so a falling droplet visibly stretches
+      away from the stream and merges into the pool as ONE body of fluid
+      instead of separate sprites. This is what stops it reading as an emoji.
+   2. A multi-stop gradient plus a specular highlight running down one side,
+      which is what makes a surface read as glossy and three-dimensional.
+   3. Viscous timing — honey accelerates slowly and settles slowly, so every
+      easing curve here is deliberately soft rather than linear.               */
+function HoneyPour({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 260 420" className={className} aria-hidden>
+      <defs>
+        {/* body of the honey — light crown, saturated core, deep amber edge */}
+        <linearGradient id="hp-body" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor="#b45309" />
+          <stop offset="18%"  stopColor="#f59e0b" />
+          <stop offset="42%"  stopColor="#fcd34d" />
+          <stop offset="58%"  stopColor="#fbbf24" />
+          <stop offset="85%"  stopColor="#d97706" />
+          <stop offset="100%" stopColor="#92400e" />
+        </linearGradient>
+        <linearGradient id="hp-pool" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#fde68a" />
+          <stop offset="35%"  stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#b45309" />
+        </linearGradient>
+        <linearGradient id="hp-jar" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor="#78350f" />
+          <stop offset="30%"  stopColor="#d97706" />
+          <stop offset="55%"  stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#92400e" />
+        </linearGradient>
+
+        {/* THE key effect: blur, then crush alpha contrast so shapes fuse */}
+        <filter id="hp-goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+          <feColorMatrix in="blur" mode="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -12" result="goo" />
+          <feBlend in="SourceGraphic" in2="goo" />
+        </filter>
+
+        {/* warm bloom so the honey glows rather than sitting flat */}
+        <filter id="hp-glow" x="-60%" y="-30%" width="220%" height="180%">
+          <feGaussianBlur stdDeviation="9" result="b" />
+          <feColorMatrix in="b" type="matrix"
+            values="1 0 0 0 0  0 .82 0 0 0  0 0 .25 0 0  0 0 0 .75 0" result="warm" />
+          <feMerge><feMergeNode in="warm" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {/* ── ambient glow behind everything ── */}
+      <ellipse cx="130" cy="360" rx="105" ry="34" fill="#f59e0b" opacity=".16"
+        style={{ filter: 'blur(26px)' }} />
+
+      {/* ── the fluid group: all of it fuses under the goo filter ── */}
+      <g filter="url(#hp-goo)">
+        {/* pool */}
+        <ellipse cx="130" cy="356" rx="74" ry="20" fill="url(#hp-pool)"
+          className="hp-pool" />
+        <ellipse cx="130" cy="352" rx="52" ry="13" fill="#fcd34d" opacity=".55"
+          className="hp-pool2" />
+
+        {/* the falling stream — scales down from the spout */}
+        <g className="hp-stream-wrap">
+          <path d="M126 118 C 122 190, 138 250, 130 330 L 130 356 L 126 356 Z"
+            fill="url(#hp-body)" className="hp-stream" />
+        </g>
+
+        {/* droplets: stretch on the way down, squash on impact */}
+        <ellipse cx="130" cy="0" rx="13" ry="15" fill="url(#hp-body)" className="hp-drop hp-drop-a" />
+        <ellipse cx="130" cy="0" rx="10" ry="12" fill="url(#hp-body)" className="hp-drop hp-drop-b" />
+
+        {/* the mass gathering at the spout before it lets go */}
+        <ellipse cx="130" cy="112" rx="20" ry="16" fill="url(#hp-body)" className="hp-bulb" />
+      </g>
+
+      {/* ── specular highlight: NOT gooed, so it stays crisp like wet gloss ── */}
+      <path d="M121 130 C 118 195, 132 255, 125 330" stroke="#fffbeb" strokeWidth="3.2"
+        strokeLinecap="round" fill="none" opacity=".62" className="hp-shine" />
+      <ellipse cx="120" cy="108" rx="5" ry="3.4" fill="#fffbeb" opacity=".7" />
+      <ellipse cx="106" cy="352" rx="17" ry="4.6" fill="#fffbeb" opacity=".42" className="hp-pool-shine" />
+
+      {/* ── dipper ── */}
+      <g filter="url(#hp-glow)">
+        <rect x="122" y="8" width="16" height="34" rx="8" fill="#7c2d12" />
+        {[0, 1, 2, 3, 4].map(i => (
+          <ellipse key={i} cx="130" cy={48 + i * 15} rx={30 - i * 2.6} ry="8"
+            fill="url(#hp-jar)" />
+        ))}
+        <ellipse cx="130" cy="118" rx="15" ry="6" fill="#b45309" />
+      </g>
+
+      {/* ── ripples on the pool ── */}
+      {[0, 1, 2].map(i => (
+        <ellipse key={i} cx="130" cy="356" rx="30" ry="8" fill="none"
+          stroke="#fbbf24" strokeWidth="1.6" className="hp-ripple"
+          style={{ animationDelay: `${i * 1.35}s` }} />
+      ))}
+    </svg>
+  );
+}
+
+/* ── honeycomb backdrop ─────────────────────────────────────────────────── */
 function Honeycomb() {
   const cells: { x: number; y: number; d: number; o: number }[] = [];
-  const W = 9, H = 7, S = 46;
+  const W = 11, H = 9, S = 44;
   for (let r = 0; r < H; r++) {
     for (let c = 0; c < W; c++) {
       cells.push({
         x: c * S * 1.5,
         y: r * S * 1.732 + (c % 2 ? S * 0.866 : 0),
-        d: (r * W + c) * 0.09,
-        o: 0.05 + Math.random() * 0.28,
+        d: (r * W + c) * 0.08,
+        o: 0.14 + Math.random() * 0.3,
       });
     }
   }
@@ -43,72 +148,25 @@ function Honeycomb() {
       const a = (Math.PI / 180) * (60 * i);
       return `${cx + s * Math.cos(a)},${cy + s * Math.sin(a)}`;
     }).join(' ');
-
   return (
-    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 620 560"
+    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 720 660"
       preserveAspectRatio="xMidYMid slice" aria-hidden>
-      <defs>
-        <linearGradient id="combG" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fbbf24" />
-          <stop offset="100%" stopColor="#f59e0b" />
-        </linearGradient>
-      </defs>
       {cells.map((c, i) => (
-        <polygon key={i} points={hex(c.x, c.y, S * 0.52)}
-          fill="none" stroke="url(#combG)" strokeWidth="1.1"
-          style={{ opacity: c.o, animation: `combPulse 5s ease-in-out ${c.d}s infinite` }} />
+        <polygon key={i} points={hex(c.x, c.y, S * 0.52)} fill="none"
+          stroke="#d97706" strokeWidth="1"
+          style={{ opacity: c.o, animation: `combPulse 6s ease-in-out ${c.d}s infinite` }} />
       ))}
     </svg>
   );
 }
 
-/* ── honey drip ──────────────────────────────────────────────────────────
-   A dipper with honey stretching and falling from it, then pooling.        */
-function HoneyDrip() {
-  return (
-    <svg viewBox="0 0 120 200" className="w-24 h-40" aria-hidden>
-      <defs>
-        <linearGradient id="honeyG" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#fde68a" />
-          <stop offset="45%" stopColor="#fbbf24" />
-          <stop offset="100%" stopColor="#d97706" />
-        </linearGradient>
-        <filter id="honeyGlow">
-          <feGaussianBlur stdDeviation="2.5" result="b" />
-          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-      {/* dipper */}
-      <rect x="55" y="6" width="10" height="30" rx="5" fill="#92400e" />
-      {[0, 1, 2, 3].map(i => (
-        <ellipse key={i} cx="60" cy={42 + i * 13} rx={20 - i * 1.5} ry="6.5"
-          fill="url(#honeyG)" filter="url(#honeyGlow)" />
-      ))}
-      {/* stretching strand */}
-      <path d="M60 96 C 60 118, 60 130, 60 146" stroke="url(#honeyG)" strokeWidth="7"
-        strokeLinecap="round" fill="none" filter="url(#honeyGlow)"
-        style={{ animation: 'strand 3.4s ease-in-out infinite' }} />
-      {/* falling droplet */}
-      <circle cx="60" r="7" fill="url(#honeyG)" filter="url(#honeyGlow)"
-        style={{ animation: 'drip 3.4s cubic-bezier(.5,0,.9,.5) infinite' }} />
-      {/* pool */}
-      <ellipse cx="60" cy="182" rx="30" ry="8" fill="url(#honeyG)" opacity="0.85"
-        filter="url(#honeyGlow)" style={{ animation: 'pool 3.4s ease-out infinite' }} />
-    </svg>
-  );
-}
-
-/* ── floating motes ──────────────────────────────────────────────────────
-   Rendered once with randomised, long, offset durations so the drift never
-   visibly loops.                                                            */
+/* ── drifting pollen motes ──────────────────────────────────────────────── */
 function Motes() {
   const motes = useRef(
-    Array.from({ length: 26 }, () => ({
-      l: Math.random() * 100,
-      s: 2 + Math.random() * 5,
-      d: Math.random() * 14,
-      dur: 13 + Math.random() * 16,
-      o: 0.15 + Math.random() * 0.5,
+    Array.from({ length: 22 }, () => ({
+      l: Math.random() * 100, s: 3 + Math.random() * 6,
+      d: Math.random() * 16, dur: 16 + Math.random() * 18,
+      o: 0.2 + Math.random() * 0.4,
     }))
   ).current;
   return (
@@ -117,9 +175,8 @@ function Motes() {
         <span key={i} className="absolute rounded-full"
           style={{
             left: `${m.l}%`, bottom: '-8%', width: m.s, height: m.s,
-            background: 'radial-gradient(circle,#fde68a,#f59e0b)',
-            opacity: m.o, filter: 'blur(.4px)',
-            boxShadow: '0 0 8px #fbbf2488',
+            background: 'radial-gradient(circle at 35% 35%,#fef3c7,#f59e0b)',
+            opacity: m.o, boxShadow: '0 0 10px #fbbf2470',
             animation: `mote ${m.dur}s linear ${m.d}s infinite`,
           }} />
       ))}
@@ -193,183 +250,223 @@ export function SalesIQLogin({ onSuccess }: { onSuccess: (email: string) => void
 
   const onPaste = (e: React.ClipboardEvent) => {
     const txt = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (txt.length === 6) {
-      e.preventDefault();
-      setOtp(txt.split(''));
-      verify(txt);
-    }
+    if (txt.length === 6) { e.preventDefault(); setOtp(txt.split('')); verify(txt); }
   };
 
   const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
 
   return (
-    <div className="min-h-screen bg-[#0a0705] relative overflow-hidden flex items-center justify-center p-6">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6
+                    bg-gradient-to-br from-[#fffdf7] via-[#fff7e6] to-[#ffedd5]">
       <style>{`
-        @keyframes combPulse{0%,100%{opacity:.06}50%{opacity:.42}}
-        @keyframes drip{
-          0%{cy:100px;opacity:0;r:3}
-          22%{cy:112px;opacity:1;r:7}
-          62%{cy:172px;opacity:1;r:8}
-          72%{cy:180px;opacity:.5;r:10}
-          78%,100%{cy:180px;opacity:0;r:3}
+        @keyframes combPulse{0%,100%{opacity:.10}50%{opacity:.4}}
+
+        /* ── honey physics ──
+           One 4.2s cycle shared by every part of the pour so the bulb swells,
+           the strand thins, the drop falls and the pool ripples in sequence. */
+        @keyframes hpBulb{
+          0%{transform:translateY(0) scale(.72,.62)}
+          30%{transform:translateY(3px) scale(1.05,1.02)}
+          52%{transform:translateY(7px) scale(1.16,1.24)}
+          62%{transform:translateY(2px) scale(.82,.72)}
+          100%{transform:translateY(0) scale(.72,.62)}
         }
-        @keyframes strand{
-          0%,100%{d:path("M60 96 C 60 112, 60 118, 60 124")}
-          45%{d:path("M60 96 C 60 126, 60 142, 60 158")}
+        .hp-bulb{transform-origin:130px 112px;animation:hpBulb 4.2s cubic-bezier(.45,.05,.3,1) infinite}
+
+        @keyframes hpStream{
+          0%{transform:scaleY(.06);opacity:0}
+          22%{transform:scaleY(.3);opacity:.85}
+          55%{transform:scaleY(1);opacity:1}
+          88%{transform:scaleY(1);opacity:1}
+          100%{transform:scaleY(.06);opacity:0}
         }
-        @keyframes pool{0%,60%{ry:6;opacity:.65}75%{ry:9.5;opacity:.95}100%{ry:8;opacity:.8}}
+        .hp-stream-wrap{transform-origin:130px 118px;animation:hpStream 4.2s cubic-bezier(.5,0,.4,1) infinite}
+
+        /* stretch while falling, squash on impact — the classic fluid tell */
+        @keyframes hpDrop{
+          0%{transform:translateY(112px) scaleY(.7) scaleX(1.1);opacity:0}
+          14%{opacity:1}
+          30%{transform:translateY(190px) scaleY(1.5) scaleX(.78);opacity:1}
+          60%{transform:translateY(300px) scaleY(1.8) scaleX(.7);opacity:1}
+          74%{transform:translateY(348px) scaleY(.62) scaleX(1.45);opacity:1}
+          84%{transform:translateY(354px) scaleY(.3) scaleX(1.7);opacity:.35}
+          100%{transform:translateY(356px) scaleY(.2) scaleX(1.8);opacity:0}
+        }
+        .hp-drop{transform-origin:130px 0px;animation:hpDrop 4.2s cubic-bezier(.55,0,.75,.55) infinite}
+        .hp-drop-b{animation-delay:2.1s;animation-duration:4.2s}
+
+        @keyframes hpPool{
+          0%,55%{transform:scale(.9,.85)}
+          78%{transform:scale(1.06,1.12)}
+          100%{transform:scale(.9,.85)}
+        }
+        .hp-pool{transform-origin:130px 356px;animation:hpPool 4.2s ease-out infinite}
+        .hp-pool2{transform-origin:130px 352px;animation:hpPool 4.2s ease-out .12s infinite}
+        .hp-pool-shine{transform-origin:130px 352px;animation:hpPool 4.2s ease-out .12s infinite}
+
+        @keyframes hpRipple{
+          0%,62%{transform:scale(.35);opacity:0}
+          74%{opacity:.55}
+          100%{transform:scale(1.9);opacity:0}
+        }
+        .hp-ripple{transform-origin:130px 356px;animation:hpRipple 4.05s ease-out infinite}
+
+        /* highlight slides down the stream like light on a wet surface */
+        @keyframes hpShine{
+          0%,20%{opacity:0;stroke-dashoffset:260}
+          45%{opacity:.62}
+          85%{opacity:.5;stroke-dashoffset:0}
+          100%{opacity:0;stroke-dashoffset:0}
+        }
+        .hp-shine{stroke-dasharray:260;animation:hpShine 4.2s ease-in-out infinite}
+
         @keyframes mote{
           0%{transform:translateY(0) translateX(0) scale(1);opacity:0}
-          10%{opacity:.7}
-          90%{opacity:.5}
-          100%{transform:translateY(-108vh) translateX(38px) scale(.5);opacity:0}
+          12%{opacity:.75}
+          88%{opacity:.5}
+          100%{transform:translateY(-110vh) translateX(44px) scale(.45);opacity:0}
         }
         @keyframes auroraShift{
           0%,100%{transform:translate(0,0) scale(1)}
-          33%{transform:translate(42px,-32px) scale(1.14)}
-          66%{transform:translate(-32px,26px) scale(.92)}
+          33%{transform:translate(46px,-34px) scale(1.15)}
+          66%{transform:translate(-34px,28px) scale(.9)}
         }
-        .aurora{animation:auroraShift 20s ease-in-out infinite}
-        @keyframes riseIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+        .aurora{animation:auroraShift 22s ease-in-out infinite}
+        @keyframes riseIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
         .rise{animation:riseIn .8s cubic-bezier(.2,.8,.2,1) both}
         @keyframes sweep{from{transform:translateX(-140%)}to{transform:translateX(240%)}}
         .sweep::after{content:'';position:absolute;inset:0;width:38%;
-          background:linear-gradient(90deg,transparent,rgba(255,214,120,.28),transparent);
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);
           animation:sweep 3.4s ease-in-out infinite}
-        @keyframes ringSpin{to{transform:rotate(360deg)}}
-        .ring-spin{animation:ringSpin 22s linear infinite}
-        @keyframes glowPulse{0%,100%{opacity:.5}50%{opacity:1}}
+        @keyframes glowPulse{0%,100%{opacity:.45}50%{opacity:1}}
         .glow-pulse{animation:glowPulse 3s ease-in-out infinite}
-        @keyframes typeIn{from{width:0}to{width:100%}}
       `}</style>
 
-      {/* aurora wash */}
+      {/* warm ambient wash */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <div className="aurora absolute -top-1/4 -left-1/4 w-[46rem] h-[46rem] rounded-full
-                        bg-amber-500/20 blur-[130px]" />
+                        bg-amber-300/40 blur-[130px]" />
         <div className="aurora absolute -bottom-1/4 -right-1/4 w-[46rem] h-[46rem] rounded-full
-                        bg-orange-600/20 blur-[130px]" style={{ animationDelay: '7s' }} />
-        <div className="aurora absolute top-1/3 left-1/2 w-[32rem] h-[32rem] rounded-full
-                        bg-yellow-400/10 blur-[120px]" style={{ animationDelay: '13s' }} />
+                        bg-orange-300/35 blur-[130px]" style={{ animationDelay: '8s' }} />
+        <div className="aurora absolute top-1/3 left-1/2 w-[30rem] h-[30rem] rounded-full
+                        bg-yellow-200/40 blur-[110px]" style={{ animationDelay: '14s' }} />
       </div>
-      <div className="absolute inset-0 opacity-40"><Honeycomb /></div>
+      <div className="absolute inset-0 opacity-[0.55]"><Honeycomb /></div>
       <Motes />
-      {/* vignette keeps the centre readable over all the motion */}
-      <div className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 60% 55% at 50% 45%,transparent 25%,rgba(10,7,5,.82) 100%)' }} />
 
       {/* ── card ── */}
-      <div className="relative z-10 w-full max-w-4xl grid md:grid-cols-2 rounded-3xl overflow-hidden
-                      border border-amber-500/20 shadow-[0_30px_90px_-20px_rgba(245,158,11,.35)]
-                      bg-white/[0.035] backdrop-blur-2xl rise">
-        {/* left: brand */}
-        <div className="relative p-10 flex flex-col justify-between border-b md:border-b-0
-                        md:border-r border-amber-500/15 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.09] to-transparent" />
+      <div className="relative z-10 w-full max-w-5xl grid md:grid-cols-2 rounded-[28px] overflow-hidden
+                      border border-amber-200/70 bg-white/70 backdrop-blur-2xl rise
+                      shadow-[0_30px_90px_-24px_rgba(180,83,9,.35)]">
+
+        {/* left: brand + pour */}
+        <div className="relative p-10 flex flex-col justify-between overflow-hidden
+                        bg-gradient-to-br from-amber-50/90 via-orange-50/70 to-amber-100/60
+                        border-b md:border-b-0 md:border-r border-amber-200/60">
           <div className="relative">
-            <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center gap-3 mb-7">
               <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400
-                              to-orange-600 flex items-center justify-center
-                              shadow-lg shadow-amber-500/40">
+                              to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/40">
                 <Zap className="w-6 h-6 text-white" />
-                <span className="glow-pulse absolute -inset-2 rounded-2xl border border-amber-400/40" />
+                <span className="glow-pulse absolute -inset-2 rounded-2xl border-2 border-amber-400/40" />
               </div>
               <div>
-                <p className="text-white font-black text-xl tracking-tight leading-none">SalesIQ</p>
-                <p className="text-[9px] font-black uppercase tracking-[0.28em] text-amber-500/80 mt-1">
+                <p className="text-slate-900 font-black text-xl tracking-tight leading-none">SalesIQ</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.28em] text-amber-700/80 mt-1">
                   APIS India Limited
                 </p>
               </div>
             </div>
 
-            <h1 className="text-4xl font-black leading-[1.1] mb-4
-                           bg-gradient-to-br from-amber-100 via-amber-300 to-orange-500
+            <h1 className="text-[2.6rem] leading-[1.08] font-black mb-4
+                           bg-gradient-to-br from-amber-700 via-orange-600 to-amber-500
                            bg-clip-text text-transparent">
               Every drop<br />of your sales,<br />measured.
             </h1>
-            <p className="text-amber-100/45 text-sm leading-relaxed max-w-xs">
+            <p className="text-amber-900/55 text-sm leading-relaxed max-w-xs">
               Revenue, geography, products, customers and forecasts — one place, updated the
               moment you upload.
             </p>
           </div>
 
-          <div className="relative flex items-end justify-between mt-10">
-            <div className="space-y-2">
+          {/* the pour */}
+          <div className="relative flex items-end justify-between mt-6">
+            <div className="space-y-2 pb-4">
               {['Forecasting to 12 months', 'RFM & cohort intelligence', 'Live target pacing'].map((t, i) => (
                 <div key={t} className="flex items-center gap-2 rise"
-                  style={{ animationDelay: `${400 + i * 130}ms` }}>
-                  <span className="w-1 h-1 rounded-full bg-amber-400" />
-                  <span className="text-[11px] font-semibold text-amber-100/50">{t}</span>
+                  style={{ animationDelay: `${420 + i * 130}ms` }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span className="text-[11px] font-bold text-amber-900/55">{t}</span>
                 </div>
               ))}
             </div>
-            <div className="opacity-90"><HoneyDrip /></div>
+            <HoneyPour className="w-[150px] h-[240px] -mb-2 -mr-2 flex-shrink-0" />
           </div>
         </div>
 
         {/* right: form */}
-        <div className="relative p-10 flex flex-col justify-center">
+        <div className="relative p-10 flex flex-col justify-center bg-white/60">
           <div className="absolute top-6 right-6 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 glow-pulse" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400/70">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 glow-pulse" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">
               Secure
             </span>
           </div>
 
           {step === 'email' ? (
             <form onSubmit={sendOtp} className="rise">
-              <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/25
+              <div className="w-11 h-11 rounded-xl bg-amber-100 border border-amber-200
                               flex items-center justify-center mb-5">
-                <Mail className="w-5 h-5 text-amber-400" />
+                <Mail className="w-5 h-5 text-amber-600" />
               </div>
-              <h2 className="text-2xl font-black text-white mb-1.5">Sign in</h2>
-              <p className="text-[13px] text-amber-100/40 mb-7 leading-relaxed">
+              <h2 className="text-2xl font-black text-slate-900 mb-1.5">Sign in</h2>
+              <p className="text-[13px] text-slate-500 mb-7 leading-relaxed">
                 SalesIQ is restricted. Enter your authorised email and we'll send a one-time code.
               </p>
 
               <label className="block text-[10px] font-black uppercase tracking-widest
-                                text-amber-500/70 mb-2">Email address</label>
+                                text-amber-700/70 mb-2">Email address</label>
               <input type="email" value={email} autoFocus autoComplete="email"
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@apisindia.com"
-                className="w-full px-4 py-3.5 rounded-xl bg-white/[0.04] border border-amber-500/20
-                           text-white placeholder:text-amber-100/20 text-sm font-semibold
-                           transition-all focus:outline-none focus:border-amber-400/60
-                           focus:bg-white/[0.07] focus:ring-4 focus:ring-amber-500/10" />
+                className="w-full px-4 py-3.5 rounded-xl bg-white border border-amber-200
+                           text-slate-800 placeholder:text-slate-300 text-sm font-semibold
+                           transition-all focus:outline-none focus:border-amber-400
+                           focus:ring-4 focus:ring-amber-400/15" />
 
               {err && (
-                <div className="flex items-start gap-2 mt-4 rounded-xl bg-rose-500/10
-                                border border-rose-500/25 p-3 rise">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-[12px] text-rose-200 leading-relaxed">{err}</p>
+                <div className="flex items-start gap-2 mt-4 rounded-xl bg-rose-50
+                                border border-rose-200 p-3 rise">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-[12px] text-rose-700 leading-relaxed">{err}</p>
                 </div>
               )}
 
               <button type="submit" disabled={busy}
                 className="sweep relative overflow-hidden w-full mt-6 flex items-center justify-center
                            gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500
-                           text-[#3b1f00] font-black shadow-lg shadow-amber-500/30 transition-all
-                           hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/40
+                           text-white font-black shadow-lg shadow-amber-500/35 transition-all
+                           hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/45
                            disabled:opacity-50 disabled:translate-y-0">
                 {busy ? <><Loader className="w-4 h-4 animate-spin" />Sending…</>
                       : <>Send login code<ArrowRight className="w-4 h-4" /></>}
               </button>
 
-              <p className="text-[11px] text-amber-100/25 mt-5 text-center leading-relaxed">
+              <p className="text-[11px] text-slate-400 mt-5 text-center leading-relaxed">
                 Access is limited to the SalesIQ super admin. Contact the administrator if you
                 need to be added.
               </p>
             </form>
           ) : (
             <div className="rise">
-              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/25
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200
                               flex items-center justify-center mb-5">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
               </div>
-              <h2 className="text-2xl font-black text-white mb-1.5">Enter your code</h2>
-              <p className="text-[13px] text-amber-100/40 mb-7 leading-relaxed">
-                We sent a 6-digit code to <b className="text-amber-300">{masked}</b>.
-                It expires in <b className="text-amber-300 tabular-nums">{mmss}</b>.
+              <h2 className="text-2xl font-black text-slate-900 mb-1.5">Enter your code</h2>
+              <p className="text-[13px] text-slate-500 mb-7 leading-relaxed">
+                We sent a 6-digit code to <b className="text-amber-700">{masked}</b>.
+                It expires in <b className="text-amber-700 tabular-nums">{mmss}</b>.
               </p>
 
               <div className="flex gap-2 justify-between" onPaste={onPaste}>
@@ -382,24 +479,24 @@ export function SalesIQLogin({ onSuccess }: { onSuccess: (email: string) => void
                       if (e.key === 'ArrowLeft' && i > 0) boxes.current[i - 1]?.focus();
                       if (e.key === 'ArrowRight' && i < 5) boxes.current[i + 1]?.focus();
                     }}
-                    className={`w-full aspect-square rounded-xl bg-white/[0.04] border text-center
-                                text-2xl font-black text-white transition-all
-                                focus:outline-none focus:ring-4 focus:ring-amber-500/15
-                                ${d ? 'border-amber-400/70 bg-amber-500/10' : 'border-amber-500/20'}
+                    className={`w-full aspect-square rounded-xl bg-white border text-center
+                                text-2xl font-black text-slate-800 transition-all
+                                focus:outline-none focus:ring-4 focus:ring-amber-400/15
+                                ${d ? 'border-amber-400 bg-amber-50' : 'border-amber-200'}
                                 focus:border-amber-400`} />
                 ))}
               </div>
 
               {err && (
-                <div className="flex items-start gap-2 mt-4 rounded-xl bg-rose-500/10
-                                border border-rose-500/25 p-3 rise">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-[12px] text-rose-200 leading-relaxed">{err}</p>
+                <div className="flex items-start gap-2 mt-4 rounded-xl bg-rose-50
+                                border border-rose-200 p-3 rise">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-[12px] text-rose-700 leading-relaxed">{err}</p>
                 </div>
               )}
 
               {busy && (
-                <div className="flex items-center justify-center gap-2 mt-5 text-amber-300">
+                <div className="flex items-center justify-center gap-2 mt-5 text-amber-600">
                   <Loader className="w-4 h-4 animate-spin" />
                   <span className="text-[12px] font-bold">Verifying…</span>
                 </div>
@@ -407,12 +504,12 @@ export function SalesIQLogin({ onSuccess }: { onSuccess: (email: string) => void
 
               <div className="flex items-center justify-between mt-6">
                 <button onClick={() => { setStep('email'); setErr(''); }}
-                  className="text-[12px] font-bold text-amber-100/40 hover:text-amber-300 transition-colors">
+                  className="text-[12px] font-bold text-slate-400 hover:text-amber-700 transition-colors">
                   ← Change email
                 </button>
                 <button onClick={() => sendOtp()} disabled={busy || left > 240}
-                  className="flex items-center gap-1.5 text-[12px] font-bold text-amber-400
-                             hover:text-amber-300 disabled:text-amber-100/20 transition-colors">
+                  className="flex items-center gap-1.5 text-[12px] font-bold text-amber-600
+                             hover:text-amber-700 disabled:text-slate-300 transition-colors">
                   <RotateCcw className="w-3.5 h-3.5" />
                   {left > 240 ? `Resend in ${left - 240}s` : 'Resend code'}
                 </button>
@@ -422,8 +519,8 @@ export function SalesIQLogin({ onSuccess }: { onSuccess: (email: string) => void
         </div>
       </div>
 
-      <p className="absolute bottom-5 text-[10px] font-bold uppercase tracking-[0.2em]
-                    text-amber-100/15 z-10">
+      <p className="absolute bottom-5 text-[10px] font-black uppercase tracking-[0.2em]
+                    text-amber-800/30 z-10">
         APIS India Limited · Sales Intelligence
       </p>
     </div>
