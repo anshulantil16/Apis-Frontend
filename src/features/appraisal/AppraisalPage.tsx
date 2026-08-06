@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
-import { AppraisalEmployeeView } from '../Components/Appraisal/employee/AppraisalEmployeeView';
-import { AppraisalManagerView } from '../Components/Appraisal/manager/AppraisalManagerView';
-import { AppraisalHODView } from '../Components/Appraisal/hod/AppraisalHODView';
-import { HRView } from '../Components/Performance/hr/HRView';
-import { ProgressReportDashboard } from '../Components/ProgressReport/ProgressReportDashboard';
+import { AppraisalEmployeeView } from '../../Components/Appraisal/employee/AppraisalEmployeeView';
+import { AppraisalManagerView } from '../../Components/Appraisal/manager/AppraisalManagerView';
+import { AppraisalHODView } from '../../Components/Appraisal/hod/AppraisalHODView';
+import { HRView } from '../../Components/Performance/hr/HRView';
+import { ProgressReportDashboard } from '../../Components/ProgressReport/ProgressReportDashboard';
 interface AppraisalPageProps {
   onNavigateBack: () => void;
 }

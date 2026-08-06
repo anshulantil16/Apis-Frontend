@@ -3,12 +3,12 @@ import {
   Download, AlertCircle, Building2, FileSpreadsheet, HeartPulse, Users,
   TrendingUp, LayoutDashboard, LogOut, Settings, Sparkles, ChevronRight, BarChart3, Plane, Zap,
 } from 'lucide-react';
-import { FileUploadZone } from '../Components/FileUploadZone';
-import { ColumnPills } from '../Components/ColumnPills';
-import { PreviewTable } from '../Components/PreviewTable';
-import { AttendanceDashboard } from '../Components/AttendanceDashboard';
-import { DelhiAttendanceDashboard } from '../Components/DelhiAttendanceDashboard';
-import { TerritoryManagementDashboard } from '../Components/TerritoryManagementDashboard';
+import { FileUploadZone } from '../../Components/FileUploadZone';
+import { ColumnPills } from '../../Components/ColumnPills';
+import { PreviewTable } from '../../Components/PreviewTable';
+import { AttendanceDashboard } from '../../Components/AttendanceDashboard';
+import { DelhiAttendanceDashboard } from '../../Components/DelhiAttendanceDashboard';
+import { TerritoryManagementDashboard } from '../../Components/TerritoryManagementDashboard';
 
 type ToolId = 'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi' | 'territory';
 

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
-import { EmployeeView } from '../Components/Performance/employee/EmployeeView';
-import { ManagerView } from '../Components/Performance/manager/ManagerView';
-import { HRView } from '../Components/Performance/hr/HRView';
-import { ProgressReportDashboard } from '../Components/ProgressReport/ProgressReportDashboard';
+import { EmployeeView } from '../../Components/Performance/employee/EmployeeView';
+import { ManagerView } from '../../Components/Performance/manager/ManagerView';
+import { HRView } from '../../Components/Performance/hr/HRView';
+import { ProgressReportDashboard } from '../../Components/ProgressReport/ProgressReportDashboard';
 
 interface PerformancePageProps {
   onNavigateBack: () => void;

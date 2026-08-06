@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { PerformancePage } from './Pages/PerformancePage';
-import { AppraisalPage } from './Pages/AppraisalPage';
-import { DataExtractorPage } from './Pages/DataExtractorPage';
-import { EOMPage } from './Pages/EOMPage';
-import PMSPage from './Pages/PMSPage';
-import { LettersGeneratorPage } from './Pages/LettersGeneratorPage';
-import OfferLetterApprovalDashboard from './Pages/OfferLetterApprovalDashboard';
-import { TadaPage } from './Pages/TadaPage';
-import { SalesIQPage } from './Pages/SalesIQPage';
+
+/* One import per project, each through its feature barrel — this file is the
+   map of what exists, not a list of file paths. Everything a project owns
+   lives under src/features/<project>/. */
+import { DataExtractorPage } from './features/extractor';
+import { PerformancePage } from './features/performance';
+import { AppraisalPage } from './features/appraisal';
+import { EOMPage } from './features/eom';
+import { PMSPage } from './features/pms';
+import { LettersGeneratorPage, OfferLetterApprovalDashboard } from './features/letters';
+import { TadaPage } from './features/tada';
+import { SalesIQPage } from './features/salesiq';
 
 type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq';
 

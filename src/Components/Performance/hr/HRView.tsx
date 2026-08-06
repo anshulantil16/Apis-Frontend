@@ -4,7 +4,7 @@ import {
   Users, AlertTriangle, TrendingUp, FileText, Settings,
   ChevronDown, ChevronUp, Award, Clock, Lock, Unlock, Download,
 } from 'lucide-react';
-import { PERF_API } from '../../../Pages/PerformancePage';
+import { PERF_API } from '../../../features/performance/PerformancePage';
 import { downloadScorecard } from '../../../utils/downloadScorecard';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

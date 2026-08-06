@@ -109,14 +109,55 @@ function HoneyPour({ className = '' }: { className?: string }) {
       <ellipse cx="120" cy="108" rx="5" ry="3.4" fill="#fffbeb" opacity=".7" />
       <ellipse cx="106" cy="352" rx="17" ry="4.6" fill="#fffbeb" opacity=".42" className="hp-pool-shine" />
 
-      {/* ── dipper ── */}
-      <g filter="url(#hp-glow)">
-        <rect x="122" y="8" width="16" height="34" rx="8" fill="#7c2d12" />
-        {[0, 1, 2, 3, 4].map(i => (
-          <ellipse key={i} cx="130" cy={48 + i * 15} rx={30 - i * 2.6} ry="8"
-            fill="url(#hp-jar)" />
-        ))}
-        <ellipse cx="130" cy="118" rx="15" ry="6" fill="#b45309" />
+      {/* ── APIS honey jar, tilted and pouring ──
+           Drawn with its MOUTH at the group origin, then translated to the
+           pour point and rotated. Doing it that way means the spout stays
+           locked to where the stream begins no matter how the tilt is tuned. */}
+      <g transform="translate(128 112) rotate(34)">
+        {/* glass body */}
+        <path d="M-27 0 L-27 -20 C-27 -30, -41 -36, -41 -52 L-41 -104
+                 C-41 -112, -35 -117, -27 -117 L27 -117
+                 C35 -117, 41 -112, 41 -104 L41 -52
+                 C41 -36, 27 -30, 27 -20 L27 0 Z"
+          fill="#fffaf0" opacity=".55" stroke="#d97706" strokeWidth="1.6" strokeOpacity=".5" />
+
+        {/* honey inside — clipped to the jar, and counter-rotated so its
+            surface stays LEVEL with the world while the jar is tilted */}
+        <clipPath id="hp-jarclip">
+          <path d="M-26 0 L-26 -20 C-26 -30, -40 -36, -40 -52 L-40 -104
+                   C-40 -111, -34 -116, -26 -116 L26 -116
+                   C34 -116, 40 -111, 40 -104 L40 -52
+                   C40 -36, 26 -30, 26 -20 L26 0 Z" />
+        </clipPath>
+        <g clipPath="url(#hp-jarclip)">
+          <g transform="rotate(-34)">
+            <rect x="-120" y="-46" width="240" height="200" fill="url(#hp-pool)" />
+            <rect x="-120" y="-49" width="240" height="5" fill="#fde68a" opacity=".85" />
+          </g>
+        </g>
+
+        {/* label */}
+        <g transform="rotate(0)">
+          <rect x="-34" y="-92" width="68" height="34" rx="5"
+            fill="#fffbeb" stroke="#d97706" strokeWidth="1.2" strokeOpacity=".55" />
+          <text x="0" y="-74" textAnchor="middle"
+            style={{ fontSize: 15, fontWeight: 900, fill: '#b45309', letterSpacing: '1.5px' }}>
+            APIS
+          </text>
+          <text x="0" y="-64" textAnchor="middle"
+            style={{ fontSize: 6.5, fontWeight: 700, fill: '#d97706', letterSpacing: '.8px' }}>
+            PURE HONEY
+          </text>
+        </g>
+
+        {/* glass highlight down one side */}
+        <path d="M-33 -108 C-36 -92, -36 -66, -33 -46" stroke="#ffffff" strokeWidth="4"
+          strokeLinecap="round" fill="none" opacity=".65" />
+
+        {/* neck ring + rim */}
+        <rect x="-28" y="-22" width="56" height="9" rx="4" fill="#b45309" opacity=".85" />
+        <ellipse cx="0" cy="0" rx="27" ry="8" fill="#92400e" />
+        <ellipse cx="0" cy="-1.5" rx="23" ry="6" fill="url(#hp-jar)" />
       </g>
 
       {/* ── ripples on the pool ── */}

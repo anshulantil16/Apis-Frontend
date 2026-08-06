@@ -4,7 +4,7 @@ import {
   Users, TrendingUp, FileText, Award, Clock,
   ChevronDown, ChevronUp, Star, RefreshCw, Trash2, Download,
 } from 'lucide-react';
-import { EOM_API } from '../../../Pages/EOMPage';
+import { EOM_API } from '../../../features/eom/EOMPage';
 import { generateEOMCertificate } from '../../../utils/generateEOMCertificate';
 
 const MONTH_NAMES = ['','January','February','March','April','May','June',

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle2, ChevronRight, ChevronLeft, AlertCircle, Loader2, Award, FileText, Upload } from 'lucide-react';
-import { EOM_API } from '../../../Pages/EOMPage';
+import { EOM_API } from '../../../features/eom/EOMPage';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 

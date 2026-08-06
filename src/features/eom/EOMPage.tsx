@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, BarChart3, LineChart, Mail, Zap } from 'lucide-react';
-import { EOMEmployeeView }  from '../Components/EOM/employee/EOMEmployeeView';
-import { EOMHodView }       from '../Components/EOM/hod/EOMHodView';
-import { EOMPanelView }     from '../Components/EOM/panel/EOMPanelView';
-import { EOMHrView }        from '../Components/EOM/hr/EOMHrView';
+import { EOMEmployeeView }  from '../../Components/EOM/employee/EOMEmployeeView';
+import { EOMHodView }       from '../../Components/EOM/hod/EOMHodView';
+import { EOMPanelView }     from '../../Components/EOM/panel/EOMPanelView';
+import { EOMHrView }        from '../../Components/EOM/hr/EOMHrView';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const EOM_API = `${API_BASE}/api/eom`;

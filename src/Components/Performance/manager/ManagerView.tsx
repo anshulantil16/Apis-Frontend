@@ -3,7 +3,7 @@ import {
   Users, CheckCircle, XCircle, Star, ChevronDown, ChevronUp,
   AlertCircle, Clock, Award, Target, Zap, TrendingUp, Shield,
 } from 'lucide-react';
-import { PERF_API } from '../../../Pages/PerformancePage';
+import { PERF_API } from '../../../features/performance/PerformancePage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

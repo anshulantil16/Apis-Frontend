@@ -3,7 +3,7 @@ import {
   ChevronDown, ChevronUp, CheckCircle2,
   Loader2, AlertCircle, Users, Clock, CheckCircle, Award,
 } from 'lucide-react';
-import { EOM_API } from '../../../Pages/EOMPage';
+import { EOM_API } from '../../../features/eom/EOMPage';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 

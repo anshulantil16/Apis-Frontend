@@ -3,7 +3,7 @@ import {
   Target, Star, CheckCircle, Clock, Plus, Trash2, Send,
   FileText, AlertCircle, ChevronRight, Award, TrendingUp, Lock, Unlock, Download,
 } from 'lucide-react';
-import { PERF_API } from '../../../Pages/PerformancePage';
+import { PERF_API } from '../../../features/performance/PerformancePage';
 
 // ─── Color palette ─────────────────────────────────────────────────────────────
 
