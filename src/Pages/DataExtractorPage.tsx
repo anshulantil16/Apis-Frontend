@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import {
   Download, AlertCircle, Building2, FileSpreadsheet, HeartPulse, Users,
-  TrendingUp, LayoutDashboard, LogOut, Settings, Sparkles, ChevronRight, BarChart3, Plane,
+  TrendingUp, LayoutDashboard, LogOut, Settings, Sparkles, ChevronRight, BarChart3, Plane, Zap,
 } from 'lucide-react';
 import { FileUploadZone } from '../Components/FileUploadZone';
 import { ColumnPills } from '../Components/ColumnPills';
@@ -18,6 +18,7 @@ interface DataExtractorPageProps {
   onNavigateToEOM?: () => void;
   onNavigateToPMS?: () => void;
   onNavigateToOfferLetters?: () => void;
+  onNavigateToSalesIQ?: () => void;
   onNavigateToTADA?: () => void;
 }
 
@@ -45,7 +46,7 @@ const TOOL_META: Record<ToolId, { title: string; desc: string; bar: string; badg
 
 const HUB_MODE = import.meta.env.VITE_APP_MODE === 'hub';
 
-export function DataExtractorPage({ onNavigateToPerformance, onNavigateToAppraisal, onNavigateToEOM, onNavigateToPMS, onNavigateToOfferLetters, onNavigateToTADA }: DataExtractorPageProps) {
+export function DataExtractorPage({ onNavigateToPerformance, onNavigateToAppraisal, onNavigateToEOM, onNavigateToPMS, onNavigateToOfferLetters, onNavigateToTADA, onNavigateToSalesIQ }: DataExtractorPageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -258,6 +259,19 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
               <div>
                 <p>Letters Generator</p>
                 <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-rose-700">Appraisal & Warning</p>
+              </div>
+            </div>
+            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
+          </button>
+          )}
+          {onNavigateToSalesIQ && (
+          <button onClick={onNavigateToSalesIQ}
+            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-400 transition-all group">
+            <div className="flex items-center gap-2.5">
+              <Zap className="w-3.5 h-3.5" />
+              <div>
+                <p>SalesIQ</p>
+                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-indigo-700">Sales Intelligence</p>
               </div>
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
