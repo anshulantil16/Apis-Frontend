@@ -220,7 +220,12 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
   ];
 
   if (!session) {
-    return <SalesIQLogin onSuccess={email => setSession({ email, ts: Date.now() })} />;
+    return (
+      <SalesIQLogin
+        onSuccess={email => setSession({ email, ts: Date.now() })}
+        onBack={onNavigateBack}
+      />
+    );
   }
 
   return (
