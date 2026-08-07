@@ -294,6 +294,12 @@ function BulkUploadPanel() {
   const [sendEmails, setSendEmails] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Populated only on a "missing required columns" 400 — lets the error panel
+  // show exactly what WAS in the sheet, so a wrong-file upload (e.g. another
+  // project's template) is obvious at a glance instead of a bare error string.
+  const [columnError, setColumnError] = useState<{
+    detected_columns?: string[]; required_columns?: string[]; missing_columns?: string[];
+  } | null>(null);
   const [success, setSuccess] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [progress, setProgress] = useState<any>(null);
@@ -345,7 +351,11 @@ function BulkUploadPanel() {
       fd.append('send_emails', String(sendEmails));
       const res = await fetch(`${PMS_API}/warning-letter/upload/`, { method: 'POST', body: fd });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'Upload failed');
+      if (!res.ok) {
+        setColumnError(d.detected_columns ? d : null);
+        throw new Error(d.error || 'Upload failed');
+      }
+      setColumnError(null);
       setWarnings(d.warnings || []);
       poll(d.batch_id);
     } catch (e2) {
@@ -454,9 +464,35 @@ function BulkUploadPanel() {
         </div>
       )}
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 mb-4">
-          <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-rose-800">{error}</p>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 mb-4">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-rose-800">{error}</p>
+          </div>
+          {columnError && (
+            <div className="mt-3 pl-6 space-y-2">
+              {!!columnError.missing_columns?.length && (
+                <p className="text-xs text-rose-700">
+                  <span className="font-bold">Missing:</span> {columnError.missing_columns.join(', ')}
+                </p>
+              )}
+              {!!columnError.detected_columns?.length && (
+                <div>
+                  <p className="text-xs font-bold text-rose-700 mb-1">
+                    Columns found in your file ({columnError.detected_columns.length}):
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {columnError.detected_columns.map((c, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-white border border-rose-200
+                                               text-rose-700 text-[11px] font-semibold">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -492,7 +528,7 @@ function BulkUploadPanel() {
             ? 'border-rose-300 bg-rose-50/50'
             : 'border-slate-300 bg-slate-50/40 hover:border-rose-300 hover:bg-rose-50/30'}`}>
           <input type="file" accept=".xlsx,.xls" className="hidden"
-            onChange={e => setFile(e.target.files?.[0] || null)} />
+            onChange={e => { setFile(e.target.files?.[0] || null); setError(''); setColumnError(null); }} />
           <Upload className={`w-8 h-8 mx-auto mb-2 ${file ? 'text-rose-500' : 'text-slate-400'}`} />
           {file ? (
             <>
