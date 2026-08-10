@@ -224,7 +224,76 @@ export function SuperAdminPanel({ session, onRoomsChanged }: { session: Session;
       {sub === 'rooms' && <RoomsManage session={session} onChanged={onRoomsChanged} />}
       {sub === 'team' && <TeamManage session={session} />}
       {sub === 'analytics' && <AnalyticsPanel session={session} />}
+      <DangerZone session={session} />
     </div>
+  );
+}
+
+/* ── Danger Zone: full database reset ─────────────────────────────────────
+   Always visible at the bottom regardless of which sub-tab is open, so it
+   is never more than one scroll away, but visually set apart (red border,
+   separate heading) so it can't be mistaken for a normal action. */
+function DangerZone({ session }: { session: Session }) {
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState('');
+  const [err, setErr] = useState('');
+
+  const reset = async () => {
+    if (typed !== 'RESET') return;
+    if (!confirm('This permanently deletes ALL bookings, the employee directory and every '
+                + 'admin (except the fixed Super Admin), then restores only the 3 real rooms. '
+                + 'This cannot be undone. Continue?')) return;
+    setBusy(true); setErr(''); setResult('');
+    try {
+      const r = await fetch(`${API}/reset/`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: session.email, confirm: 'RESET' }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Reset failed');
+      setResult(d.message);
+      setTyped('');
+      // A reset touches rooms/employees/admins/bookings across the whole
+      // dashboard — a full reload is the simplest way to guarantee every
+      // panel (including this session's own admin-derived UI state) reflects
+      // the clean database rather than trying to patch a dozen pieces of
+      // local state individually.
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Reset failed');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Reveal delay={80}>
+      <div className="rounded-2xl bg-rose-50/60 border-2 border-rose-200 p-5">
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-4 h-4 text-rose-600" />
+          </div>
+          <h3 className="text-sm font-black text-rose-700 tracking-tight">Danger Zone</h3>
+        </div>
+        <p className="text-[12px] text-rose-600/80 mb-4 ml-[42px]">
+          Permanently deletes all bookings, the employee directory and every admin (the fixed
+          Super Admin is unaffected), then restores only the 3 real APIS rooms. Cannot be undone.
+        </p>
+        <div className="flex flex-wrap items-center gap-2 ml-[42px]">
+          <input value={typed} onChange={e => setTyped(e.target.value)}
+            placeholder='Type "RESET" to enable'
+            className="px-3 py-2 rounded-lg bg-white border border-rose-200 text-slate-800 text-sm
+                       focus:outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-400/10" />
+          <button onClick={reset} disabled={typed !== 'RESET' || busy}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-600 text-white
+                       text-[12px] font-black hover:bg-rose-700 transition-all
+                       disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 className="w-3.5 h-3.5" />{busy ? 'Resetting…' : 'Reset Database'}
+          </button>
+        </div>
+        {result && <p className="text-[12px] text-emerald-700 mt-3 ml-[42px]">{result} Reloading…</p>}
+        {err && <p className="text-[12px] text-rose-700 mt-3 ml-[42px]">{err}</p>}
+      </div>
+    </Reveal>
   );
 }
 
