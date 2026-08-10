@@ -340,6 +340,22 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
     return () => clearInterval(iv);
   }, [session, loadRooms]);
 
+  // Every hook must run unconditionally, on every render, in the same order —
+  // this useMemo used to sit AFTER the `if (!session) return <Login/>` early
+  // return below. That meant the logged-out render called one fewer hook
+  // than the logged-in render, which is a Rules-of-Hooks violation: React
+  // detects the mismatched hook count on the very next render (i.e. the
+  // instant login/logout flips `session`), throws, and — with no error
+  // boundary — silently unmounts the whole tree. That is exactly the "blank
+  // screen after login/logout, fixed only by a full reload" symptom. Hooks
+  // must never move relative to a conditional return; only their computed
+  // VALUE may depend on session-dependent state like `rooms`.
+  const stats = useMemo(() => {
+    const occ = rooms.filter(r => r.status === 'occupied').length;
+    const free = rooms.filter(r => r.status === 'free').length;
+    return { total: rooms.length, occ, free };
+  }, [rooms]);
+
   if (!session) {
     return (
       <RoomPulseLogin
@@ -360,12 +376,6 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
     { id: 'manage', label: 'Manage', icon: ShieldCheck, roles: ['super_admin'] },
   ];
   const visibleTabs = TABS.filter(t => !t.roles || t.roles.includes(session.role));
-
-  const stats = useMemo(() => {
-    const occ = rooms.filter(r => r.status === 'occupied').length;
-    const free = rooms.filter(r => r.status === 'free').length;
-    return { total: rooms.length, occ, free };
-  }, [rooms]);
 
   const onBookingDone = () => { setShowBooking(false); setBookRoom(null); setRefreshKey(k => k + 1); loadRooms(); };
 

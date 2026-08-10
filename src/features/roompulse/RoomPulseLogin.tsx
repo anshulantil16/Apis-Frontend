@@ -12,7 +12,7 @@ function RadarScope() {
     }))
   ).current;
   return (
-    <div className="relative w-full max-w-[380px] aspect-square mx-auto">
+    <div className="relative w-full max-w-[230px] aspect-square mx-auto">
       <svg viewBox="0 0 400 400" className="w-full h-full">
         <defs>
           <radialGradient id="rp-scope-bg" cx="50%" cy="50%" r="50%">
@@ -140,7 +140,10 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
   const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6
+    // h-screen (not min-h-screen) + overflow-hidden: a login page must never
+    // scroll. Every size below (padding, headline, radar) is tuned to fit
+    // inside 100vh on a typical laptop viewport rather than growing past it.
+    <div className="h-screen relative overflow-hidden flex items-center justify-center p-4
                     bg-gradient-to-br from-slate-50 via-cyan-50/40 to-violet-50/40">
       <style>{RP_STYLES}</style>
 
@@ -166,32 +169,32 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
         </button>
       )}
 
-      <div className="relative z-10 w-full max-w-5xl grid md:grid-cols-2 rounded-[28px] overflow-hidden
-                      border border-slate-200 bg-white/80 backdrop-blur-2xl rp-reveal
+      <div className="relative z-10 w-full max-w-5xl max-h-[94vh] grid md:grid-cols-2 rounded-[28px]
+                      overflow-hidden border border-slate-200 bg-white/80 backdrop-blur-2xl rp-reveal
                       shadow-[0_30px_90px_-24px_rgba(6,182,212,.25)]">
 
-        <div className="relative p-10 flex flex-col justify-between overflow-hidden
+        <div className="relative p-6 md:p-8 flex flex-col justify-between overflow-hidden
                         bg-gradient-to-br from-cyan-50/80 via-white to-violet-50/60
                         border-b md:border-b-0 md:border-r border-slate-200">
           <div className="relative">
-            <div className="flex items-center gap-3 mb-7">
-              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-violet-600
+            <div className="flex items-center gap-3 mb-5">
+              <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-400 to-violet-600
                               flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                <Radar className="w-6 h-6 text-white" />
+                <Radar className="w-5 h-5 text-white" />
                 <span className="rp-pulse-glow absolute -inset-2 rounded-2xl border-2 border-cyan-400/30" />
               </div>
               <div>
-                <p className="text-slate-900 font-black text-xl tracking-tight leading-none">RoomPulse</p>
+                <p className="text-slate-900 font-black text-lg tracking-tight leading-none">RoomPulse</p>
                 <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-700/70 mt-1">
                   APIS India Limited
                 </p>
               </div>
             </div>
-            <h1 className="text-[2.4rem] leading-[1.1] font-black mb-4
+            <h1 className="text-[1.85rem] leading-[1.15] font-black mb-3
                            bg-gradient-to-br from-slate-900 via-cyan-700 to-violet-700 bg-clip-text text-transparent">
               Every room,<br />live on one<br />screen.
             </h1>
-            <p className="text-slate-500 text-sm leading-relaxed max-w-xs">
+            <p className="text-slate-500 text-[13px] leading-relaxed max-w-xs">
               See what's free, book instantly, and let admins approve in seconds —
               no more email chains to check a room.
             </p>
@@ -199,20 +202,20 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
           <RadarScope />
         </div>
 
-        <div className="relative p-10 flex flex-col justify-center bg-white/60">
-          <div className="absolute top-6 right-6 flex items-center gap-1.5">
+        <div className="relative p-6 md:p-8 flex flex-col justify-center bg-white/60 overflow-y-auto">
+          <div className="absolute top-4 right-4 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 rp-pulse-glow" />
             <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Live</span>
           </div>
 
           {step === 'email' ? (
             <form onSubmit={sendOtp} className="rp-reveal">
-              <div className="w-11 h-11 rounded-xl bg-cyan-50 border border-cyan-200
-                              flex items-center justify-center mb-5">
-                <Mail className="w-5 h-5 text-cyan-600" />
+              <div className="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-200
+                              flex items-center justify-center mb-4">
+                <Mail className="w-4.5 h-4.5 text-cyan-600" />
               </div>
-              <h2 className="text-2xl font-black text-slate-900 mb-1.5">Sign in</h2>
-              <p className="text-[13px] text-slate-500 mb-7 leading-relaxed">
+              <h2 className="text-xl font-black text-slate-900 mb-1.5">Sign in</h2>
+              <p className="text-[13px] text-slate-500 mb-5 leading-relaxed">
                 Use your APIS email — we'll send a one-time code. Your role
                 (Employee / Admin / Super Admin) is detected automatically.
               </p>
@@ -231,25 +234,25 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
                 </div>
               )}
               <button type="submit" disabled={busy}
-                className="relative overflow-hidden w-full mt-6 flex items-center justify-center gap-2
-                           px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 text-white
+                className="relative overflow-hidden w-full mt-5 flex items-center justify-center gap-2
+                           px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 text-white
                            font-black shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5
                            hover:shadow-xl hover:shadow-cyan-500/40 disabled:opacity-50 disabled:translate-y-0">
                 {busy ? <><Loader className="w-4 h-4 animate-spin" />Sending…</> : <>Send login code<ArrowRight className="w-4 h-4" /></>}
               </button>
-              <p className="text-[11px] text-slate-400 mt-5 text-center leading-relaxed">
+              <p className="text-[11px] text-slate-400 mt-4 text-center leading-relaxed">
                 Any @apisindia.com address can sign in as an Employee. Admin access is
                 granted by a Super Admin.
               </p>
             </form>
           ) : (
             <div className="rp-reveal">
-              <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200
-                              flex items-center justify-center mb-5">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200
+                              flex items-center justify-center mb-4">
+                <ShieldCheck className="w-4.5 h-4.5 text-emerald-600" />
               </div>
-              <h2 className="text-2xl font-black text-slate-900 mb-1.5">Enter your code</h2>
-              <p className="text-[13px] text-slate-500 mb-7 leading-relaxed">
+              <h2 className="text-xl font-black text-slate-900 mb-1.5">Enter your code</h2>
+              <p className="text-[13px] text-slate-500 mb-5 leading-relaxed">
                 Sent to <b className="text-cyan-700">{masked}</b>. Expires in{' '}
                 <b className="text-cyan-700 tabular-nums">{mmss}</b>.
               </p>
