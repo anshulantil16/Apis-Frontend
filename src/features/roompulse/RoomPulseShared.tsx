@@ -1,7 +1,8 @@
 /* Shared primitives for RoomPulse — formatting, animated components, and the
-   "control room" visual language (deep navy/violet/cyan, radar sweeps,
-   pulsing live-status dots). Deliberately distinct from SalesIQ's warm honey
-   theme — this is a live-ops tool, not a data-analysis one. */
+   "live radar" visual language (cyan/violet accents on a light control-room
+   background, radar sweeps, pulsing live-status dots). Deliberately distinct
+   from SalesIQ's warm honey theme — this is a live-ops tool, not a
+   data-analysis one — while staying light per the house style. */
 import { useState, useEffect, useRef } from 'react';
 import { Users2 } from 'lucide-react';
 
@@ -71,9 +72,9 @@ export function Reveal({ delay = 0, children, className = '' }:
 
 /* ── live status pill ───────────────────────────────────────────────────── */
 const STATUS_META: Record<string, { label: string; dot: string; text: string; bg: string; ring: string }> = {
-  occupied: { label: 'Occupied', dot: 'bg-rose-400', text: 'text-rose-300', bg: 'bg-rose-500/10', ring: 'ring-rose-500/30' },
-  upcoming: { label: 'Starting soon', dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-500/10', ring: 'ring-amber-500/30' },
-  free:     { label: 'Free', dot: 'bg-emerald-400', text: 'text-emerald-300', bg: 'bg-emerald-500/10', ring: 'ring-emerald-500/30' },
+  occupied: { label: 'Occupied', dot: 'bg-rose-500', text: 'text-rose-600', bg: 'bg-rose-50', ring: 'ring-rose-200' },
+  upcoming: { label: 'Starting soon', dot: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50', ring: 'ring-amber-200' },
+  free:     { label: 'Free', dot: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-200' },
 };
 export function StatusPill({ status }: { status: string }) {
   const m = STATUS_META[status] || STATUS_META.free;
@@ -93,20 +94,20 @@ export { STATUS_META };
 export function Panel({ title, icon: Icon, subtitle, right, children, delay = 0, className = '' }: any) {
   return (
     <Reveal delay={delay} className={className}>
-      <div className="relative rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/[0.08]
-                      shadow-xl shadow-black/20 p-5 h-full transition-all duration-300
-                      hover:border-white/[0.14] hover:bg-white/[0.05]">
+      <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200
+                      shadow-sm p-5 h-full transition-all duration-300
+                      hover:border-slate-300 hover:shadow-lg">
         <div className="flex items-start justify-between mb-4 gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             {Icon && (
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-violet-500/20
-                              ring-1 ring-white/10 flex items-center justify-center flex-shrink-0">
-                <Icon className="w-4 h-4 text-cyan-300" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-50 to-violet-50
+                              ring-1 ring-slate-200 flex items-center justify-center flex-shrink-0">
+                <Icon className="w-4 h-4 text-cyan-600" />
               </div>
             )}
             <div className="min-w-0">
-              <h3 className="text-sm font-black text-white tracking-tight">{title}</h3>
-              {subtitle && <p className="text-[11px] text-white/40">{subtitle}</p>}
+              <h3 className="text-sm font-black text-slate-800 tracking-tight">{title}</h3>
+              {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
             </div>
           </div>
           {right}
@@ -118,13 +119,13 @@ export function Panel({ title, icon: Icon, subtitle, right, children, delay = 0,
 }
 
 export const Skel = ({ className = '' }: { className?: string }) => (
-  <div className={`rp-shimmer rounded-xl bg-white/[0.06] ${className}`} />
+  <div className={`rp-shimmer rounded-xl bg-slate-100 ${className}`} />
 );
 
 export const Empty = ({ msg, icon: Icon = Users2 }: { msg: string; icon?: any }) => (
-  <div className="flex flex-col items-center justify-center py-10 text-white/25">
+  <div className="flex flex-col items-center justify-center py-10 text-slate-300">
     <Icon className="w-8 h-8 mb-2" />
-    <p className="text-[12px] font-semibold text-white/35 text-center max-w-xs">{msg}</p>
+    <p className="text-[12px] font-semibold text-slate-400 text-center max-w-xs">{msg}</p>
   </div>
 );
 
@@ -150,7 +151,7 @@ export const RP_STYLES = `
   @keyframes rpReveal { from { opacity:0; transform: translateY(14px) scale(.985);} to {opacity:1;transform:none;} }
   .rp-reveal { animation: rpReveal .55s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes rpShimmer { 0%{background-position:-500px 0} 100%{background-position:500px 0} }
-  .rp-shimmer { background-image:linear-gradient(90deg,rgba(255,255,255,.03) 0px,rgba(255,255,255,.09) 100px,rgba(255,255,255,.03) 200px);
+  .rp-shimmer { background-image:linear-gradient(90deg,#f1f5f9 0px,#e2e8f0 100px,#f1f5f9 200px);
                 background-size:600px 100%; animation:rpShimmer 1.3s linear infinite; }
   @keyframes rpPing { 75%,100%{ transform: scale(2.4); opacity:0; } }
   .rp-ping { animation: rpPing 1.6s cubic-bezier(0,0,.2,1) infinite; }

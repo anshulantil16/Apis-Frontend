@@ -11,6 +11,9 @@ import {
   PURPOSE_COLOUR, fmtDate,
 } from './RoomPulseShared';
 
+const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
+  "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
+
 /* ── Approvals ──────────────────────────────────────────────────────────── */
 export function ApprovalsPanel({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const [rows, setRows] = useState<any[]>([]);
@@ -47,14 +50,14 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
   return (
     <Panel title="Pending Approvals" icon={Clock} subtitle={`${rows.length} request(s) waiting`}
       right={
-        <button onClick={load} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10">
+        <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       }>
       {err && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose-500/10 border border-rose-500/25 p-3 mb-4">
-          <AlertTriangle className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" />
-          <p className="text-[12px] text-rose-200">{err}</p>
+        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 mb-4">
+          <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+          <p className="text-[12px] text-rose-700">{err}</p>
         </div>
       )}
       {loading ? (
@@ -65,40 +68,40 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
         <div className="space-y-3">
           {rows.map((b, i) => (
             <Reveal key={b.id} delay={i * 60}>
-              <div className="rounded-2xl bg-white/[0.03] border border-white/[0.08] p-4">
+              <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-[13px] font-black text-white">{b.room_name}</p>
+                      <p className="text-[13px] font-black text-slate-800">{b.room_name}</p>
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1"
-                        style={{ background: `${PURPOSE_COLOUR[b.purpose]}1a`, color: PURPOSE_COLOUR[b.purpose],
-                                 borderColor: `${PURPOSE_COLOUR[b.purpose]}55` }}>
+                        style={{ background: `${PURPOSE_COLOUR[b.purpose]}14`, color: PURPOSE_COLOUR[b.purpose],
+                                 borderColor: `${PURPOSE_COLOUR[b.purpose]}40` }}>
                         {PURPOSE_LABEL[b.purpose]}
                       </span>
                     </div>
-                    <p className="text-[11px] text-white/40 mt-0.5">
+                    <p className="text-[11px] text-slate-500 mt-0.5">
                       {fmtDate(b.date)} · {b.start_time}–{b.end_time} · {b.attendees} attendees
                     </p>
-                    <p className="text-[11px] text-white/50 mt-1">
+                    <p className="text-[11px] text-slate-600 mt-1">
                       {b.requested_by_name} ({b.requested_by_email}){b.department && ` · ${b.department}`}
                     </p>
-                    {b.purpose_detail && <p className="text-[11px] text-white/30 mt-1 italic">"{b.purpose_detail}"</p>}
+                    {b.purpose_detail && <p className="text-[11px] text-slate-400 mt-1 italic">"{b.purpose_detail}"</p>}
                   </div>
                 </div>
                 <input value={remarks[b.id] || ''} onChange={e => setRemarks(r => ({ ...r, [b.id]: e.target.value }))}
                   placeholder="Optional remark (shown to the requester)"
-                  className="w-full mb-3 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-[12px]" />
+                  className={`${inputCls} mb-3 py-2 text-[12px]`} />
                 <div className="flex items-center gap-2">
                   <button onClick={() => act(b.id, 'approve')} disabled={busyId === b.id}
                     className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
-                               bg-emerald-500/15 text-emerald-300 text-[12px] font-black
-                               hover:bg-emerald-500/25 transition-all disabled:opacity-50">
+                               bg-emerald-50 text-emerald-700 text-[12px] font-black
+                               hover:bg-emerald-100 transition-all disabled:opacity-50">
                     <CheckCircle2 className="w-3.5 h-3.5" />Approve
                   </button>
                   <button onClick={() => act(b.id, 'reject')} disabled={busyId === b.id}
                     className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
-                               bg-rose-500/15 text-rose-300 text-[12px] font-black
-                               hover:bg-rose-500/25 transition-all disabled:opacity-50">
+                               bg-rose-50 text-rose-700 text-[12px] font-black
+                               hover:bg-rose-100 transition-all disabled:opacity-50">
                     <XCircle className="w-3.5 h-3.5" />Reject
                   </button>
                 </div>
@@ -143,26 +146,26 @@ export function CalendarPanel({ rooms }: { rooms: any[] }) {
     <Panel title="Room Calendar" icon={Timer} subtitle="Full day timeline — pending and confirmed">
       <div className="flex flex-wrap items-center gap-2 mb-5">
         <select value={roomId || ''} onChange={e => setRoomId(Number(e.target.value))}
-          className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-[12px] font-bold">
-          {rooms.map(r => <option key={r.id} value={r.id} className="bg-[#0a0f1c]">{r.label} {r.name}</option>)}
+          className={`${inputCls} w-auto py-2 text-[12px] font-bold`}>
+          {rooms.map(r => <option key={r.id} value={r.id}>{r.label} {r.name}</option>)}
         </select>
-        <button onClick={() => shiftDay(-1)} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10">
+        <button onClick={() => shiftDay(-1)} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
           <ChevronLeft className="w-4 h-4" />
         </button>
         <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-[12px] font-bold" />
-        <button onClick={() => shiftDay(1)} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10">
+          className={`${inputCls} w-auto py-2 text-[12px] font-bold`} />
+        <button onClick={() => shiftDay(1)} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
       {loading || !data ? <Skel className="h-64" /> : (
-        <div className="relative rounded-xl bg-white/[0.02] border border-white/[0.06] p-4">
+        <div className="relative rounded-xl bg-slate-50 border border-slate-200 p-4">
           <div className="relative h-64 ml-10">
             {HOURS.map(h => (
-              <div key={h} className="absolute inset-x-0 border-t border-white/[0.05]"
+              <div key={h} className="absolute inset-x-0 border-t border-slate-200"
                 style={{ top: `${((h * 60 - dayStart) / span) * 100}%` }}>
-                <span className="absolute -left-10 -top-2 text-[10px] text-white/25 tabular-nums">
+                <span className="absolute -left-10 -top-2 text-[10px] text-slate-400 tabular-nums">
                   {String(h).padStart(2, '0')}:00
                 </span>
               </div>
@@ -173,10 +176,10 @@ export function CalendarPanel({ rooms }: { rooms: any[] }) {
               const colour = b.status === 'pending' ? '#f59e0b' : PURPOSE_COLOUR[b.purpose];
               return (
                 <div key={b.id} className="absolute left-1 right-1 rounded-lg px-2.5 py-1.5 rp-reveal overflow-hidden"
-                  style={{ top: `${top}%`, height: `${height}%`, background: `${colour}22`,
+                  style={{ top: `${top}%`, height: `${height}%`, background: `${colour}18`,
                            borderLeft: `3px solid ${colour}` }}>
-                  <p className="text-[11px] font-black text-white truncate">{b.requested_by_name}</p>
-                  <p className="text-[10px] text-white/50 truncate">
+                  <p className="text-[11px] font-black text-slate-800 truncate">{b.requested_by_name}</p>
+                  <p className="text-[10px] text-slate-500 truncate">
                     {b.start_time}–{b.end_time} · {b.status === 'pending' ? 'Pending' : PURPOSE_LABEL[b.purpose]}
                   </p>
                 </div>
@@ -186,7 +189,7 @@ export function CalendarPanel({ rooms }: { rooms: any[] }) {
         </div>
       )}
       {data && !data.bookings.length && !loading && (
-        <p className="text-center text-white/30 text-[12px] mt-4">Nothing booked this day</p>
+        <p className="text-center text-slate-400 text-[12px] mt-4">Nothing booked this day</p>
       )}
     </Panel>
   );
@@ -204,14 +207,14 @@ export function SuperAdminPanel({ session, onRoomsChanged }: { session: Session;
   return (
     <div className="space-y-5">
       <Reveal>
-        <div className="flex items-center gap-1 bg-white/[0.03] border border-white/10 rounded-2xl p-1.5 w-fit">
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-2xl p-1.5 w-fit shadow-sm">
           {SUB_TABS.map(t => {
             const Icon = t.icon; const on = sub === t.id;
             return (
               <button key={t.id} onClick={() => setSub(t.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-black transition-all
                   ${on ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-lg shadow-cyan-500/20'
-                       : 'text-white/40 hover:text-white/70'}`}>
+                       : 'text-slate-400 hover:text-slate-600'}`}>
                 <Icon className="w-4 h-4" />{t.label}
               </button>
             );
@@ -263,24 +266,20 @@ function RoomsManage({ session, onChanged }: { session: Session; onChanged: () =
       <Panel title="Add a room" icon={Plus}>
         <form onSubmit={create} className="space-y-3">
           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            placeholder="Conference Room - 4" required
-            className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm" />
+            placeholder="Conference Room - 4" required className={inputCls} />
           <div className="grid grid-cols-2 gap-3">
             <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
-              placeholder="(Brand) label"
-              className="px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm" />
+              placeholder="(Brand) label" className={inputCls} />
             <input value={form.floor} onChange={e => setForm(f => ({ ...f, floor: e.target.value }))}
-              placeholder="3rd Floor" required
-              className="px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm" />
+              placeholder="3rd Floor" required className={inputCls} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <input type="number" min={1} value={form.capacity}
-              onChange={e => setForm(f => ({ ...f, capacity: Number(e.target.value) }))}
-              className="px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm" />
+              onChange={e => setForm(f => ({ ...f, capacity: Number(e.target.value) }))} className={inputCls} />
             <input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-              className="h-full rounded-xl bg-white/[0.04] border border-white/10" />
+              className="h-full rounded-xl bg-white border border-slate-200" />
           </div>
-          {err && <p className="text-[12px] text-rose-300">{err}</p>}
+          {err && <p className="text-[12px] text-rose-600">{err}</p>}
           <button type="submit" disabled={busy}
             className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600
                        text-white text-sm font-black hover:-translate-y-0.5 transition-all disabled:opacity-50">
@@ -291,14 +290,14 @@ function RoomsManage({ session, onChanged }: { session: Session; onChanged: () =
       <Panel title="All rooms" icon={Building2} subtitle={`${rooms.length} active`}>
         <div className="space-y-2">
           {rooms.map(r => (
-            <div key={r.id} className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/[0.07] p-3">
+            <div key={r.id} className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: r.color }} />
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-bold text-white truncate">{r.label} {r.name}</p>
-                <p className="text-[10px] text-white/40">{r.floor} · {r.capacity} seats</p>
+                <p className="text-[12px] font-bold text-slate-800 truncate">{r.label} {r.name}</p>
+                <p className="text-[10px] text-slate-400">{r.floor} · {r.capacity} seats</p>
               </div>
               <button onClick={() => retire(r.id, r.name)}
-                className="p-2 rounded-lg text-white/25 hover:text-rose-300 hover:bg-rose-500/10 transition-all">
+                className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -368,22 +367,22 @@ function TeamManage({ session }: { session: Session }) {
       <Panel title="Admins" icon={Shield} subtitle={`${admins.length} admin(s) — Super Admin is fixed`}>
         <form onSubmit={addAdmin} className="flex gap-2 mb-4">
           <input value={newAdmin} onChange={e => setNewAdmin(e.target.value)} placeholder="name@apisindia.com"
-            className="flex-1 px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm" />
+            className={`flex-1 ${inputCls}`} />
           <button type="submit" className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl
                                            bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-[12px] font-black">
             <UserPlus className="w-4 h-4" />Add
           </button>
         </form>
-        {err && <p className="text-[12px] text-rose-300 mb-3">{err}</p>}
+        {err && <p className="text-[12px] text-rose-600 mb-3">{err}</p>}
         <div className="space-y-2">
           {admins.map(a => (
-            <div key={a.id} className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/[0.07] p-3">
+            <div key={a.id} className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-bold text-white truncate">{a.email}</p>
-                <p className="text-[10px] text-white/35">added by {a.added_by || '—'}</p>
+                <p className="text-[12px] font-bold text-slate-800 truncate">{a.email}</p>
+                <p className="text-[10px] text-slate-400">added by {a.added_by || '—'}</p>
               </div>
               <button onClick={() => removeAdmin(a.id)}
-                className="p-2 rounded-lg text-white/25 hover:text-rose-300 hover:bg-rose-500/10 transition-all">
+                className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -395,19 +394,24 @@ function TeamManage({ session }: { session: Session }) {
       <Panel title="Employee Directory" icon={FileSpreadsheet} subtitle={`${employees.count || 0} on record`}>
         <button onClick={downloadTemplate}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-3 rounded-xl
-                     border border-white/10 text-white/70 text-sm font-bold hover:bg-white/[0.05]">
+                     border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50">
           <Download className="w-4 h-4" />Download template
         </button>
         <label className={`block rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all
-          ${uploadBusy ? 'border-white/10' : 'border-white/15 hover:border-cyan-400/40 hover:bg-cyan-500/5'}`}>
+          ${uploadBusy ? 'border-slate-200' : 'border-slate-300 hover:border-cyan-400 hover:bg-cyan-50/50'}`}>
           <input type="file" accept=".xlsx,.xls" className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); }} />
-          <UploadCloud className={`w-7 h-7 mx-auto mb-2 ${uploadBusy ? 'text-white/20 animate-pulse' : 'text-cyan-300/60'}`} />
-          <p className="text-[12px] font-bold text-white/60">
+          <UploadCloud className={`w-7 h-7 mx-auto mb-2 ${uploadBusy ? 'text-slate-300 animate-pulse' : 'text-cyan-500'}`} />
+          <p className="text-[12px] font-bold text-slate-600">
             {uploadBusy ? 'Uploading…' : 'Click to upload the employee sheet'}
           </p>
         </label>
-        {uploadMsg && <p className="text-[12px] text-cyan-300 mt-3">{uploadMsg}</p>}
+        <p className="text-[11px] text-slate-400 mt-3 leading-relaxed">
+          Tip: put <b className="text-slate-500">"Admin"</b> in the Role column to grant that person
+          Admin access in the same upload — no need to add them separately below. A blank or
+          "Employee" cell never removes existing admin access.
+        </p>
+        {uploadMsg && <p className="text-[12px] text-cyan-700 mt-3">{uploadMsg}</p>}
       </Panel>
     </div>
   );
@@ -422,7 +426,7 @@ function AnalyticsPanel({ session }: { session: Session }) {
 
   if (!data) return <Skel className="h-64" />;
 
-  const PALETTE = ['#22d3ee', '#8b5cf6', '#f59e0b', '#ec4899', '#10b981', '#ef4444'];
+  const PALETTE = ['#0891b2', '#8b5cf6', '#f59e0b', '#ec4899', '#10b981', '#ef4444'];
   const purposeData = (data.by_purpose || []).map((p: any) => ({ name: PURPOSE_LABEL[p.purpose] || p.purpose, value: p.n }));
 
   return (
@@ -437,12 +441,12 @@ function AnalyticsPanel({ session }: { session: Session }) {
           const Icon = s.icon;
           return (
             <Reveal key={s.l} delay={i * 60}>
-              <div className="rounded-2xl bg-white/[0.04] border border-white/[0.08] p-4">
-                <Icon className="w-4 h-4 text-cyan-300 mb-2" />
-                <p className="text-2xl font-black text-white tabular-nums">
+              <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4">
+                <Icon className="w-4 h-4 text-cyan-600 mb-2" />
+                <p className="text-2xl font-black text-slate-900 tabular-nums">
                   {s.raw ? s.v : (s.v ?? '—')}{!s.raw && s.suffix}
                 </p>
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/35 mt-1">{s.l}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{s.l}</p>
               </div>
             </Reveal>
           );
@@ -455,10 +459,10 @@ function AnalyticsPanel({ session }: { session: Session }) {
             {(data.top_rooms || []).map((r: any, i: number) => (
               <div key={r.room}>
                 <div className="flex justify-between text-[12px] mb-1">
-                  <span className="font-bold text-white/70">{r.room}</span>
-                  <span className="font-black text-white">{r.bookings}</span>
+                  <span className="font-bold text-slate-600">{r.room}</span>
+                  <span className="font-black text-slate-800">{r.bookings}</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                   <div className="rp-grow h-full rounded-full"
                     style={{ width: `${(r.bookings / (data.top_rooms[0]?.bookings || 1)) * 100}%`,
                              background: PALETTE[i % PALETTE.length] }} />
@@ -475,7 +479,7 @@ function AnalyticsPanel({ session }: { session: Session }) {
                 <Pie data={purposeData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3}>
                   {purposeData.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: '#0a0f1c', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12 }} />
+                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12 }} />
               </PieChart>
             </ResponsiveContainer>
           ) : <Empty msg="No data yet" />}
