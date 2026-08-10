@@ -11,8 +11,9 @@ import { PMSPage } from './features/pms';
 import { LettersGeneratorPage, OfferLetterApprovalDashboard } from './features/letters';
 import { TadaPage } from './features/tada';
 import { SalesIQPage } from './features/salesiq';
+import { RoomPulsePage } from './features/roompulse';
 
-type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq';
+type AppView = 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse';
 
 // 'appraisal' = appraisal only (legacy), 'hub' = appraisal + eom only, anything else = all
 const APP_MODE = import.meta.env.VITE_APP_MODE;
@@ -46,7 +47,10 @@ export default function App() {
           onNavigateToOfferLetters={() => navigate('offer-letters')}
           onNavigateToTADA={() => navigate('tada')}
           onNavigateToSalesIQ={() => navigate('salesiq')}
+          onNavigateToRoomPulse={() => navigate('roompulse')}
         />
+      ) : view === 'roompulse' ? (
+        <RoomPulsePage onNavigateBack={() => navigate('extractor')} />
       ) : view === 'salesiq' ? (
         <SalesIQPage onNavigateBack={() => navigate('extractor')} />
       ) : view === 'tada' ? (
