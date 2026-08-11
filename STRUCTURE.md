@@ -1,103 +1,63 @@
 # Frontend structure
 
-React + TypeScript + Vite + Tailwind. **Each project lives in its own folder
-under `src/features/`** and is reached through that folder's `index.ts`.
+React + TypeScript + Vite + Tailwind. Routing is a plain `useState` switch in
+`src/App.tsx` — no react-router — so "adding a page" means adding a `view`
+value and an `import`, not a route file.
 
 ```
 src/
-  App.tsx              the map of projects — one import per feature barrel
-  main.tsx             entry point
-  Routes/              router config
-
-  features/            ⬅ one folder per project
-    extractor/         Data Extractor (the hub / landing tool)
-    performance/       Performance Hub
-    appraisal/         Appraisal Hub
-    eom/               Employee of the Month
-    pms/               PMS Simulator
-    letters/           Letters Generator (appraisal + warning letters)
-    tada/              TA/DA Portal
-    salesiq/           SalesIQ sales analytics
-
-  Components/          shared, cross-project UI only
-  Services/            API clients
-  utils/               shared helpers
-  Styles/
+  App.tsx           the router: a useState<'view'> switch, one branch per page
+  main.tsx          entry point
+  features/         current convention — one folder per product, self-contained
+    <feature>/
+      <Feature>Page.tsx     top-level screen(s), exported via index.ts
+      <Feature>Shared.tsx   API base URL, session helpers, shared UI
+                             primitives, the feature's RP_STYLES-style CSS
+      index.ts               barrel export used by App.tsx
+  Components/       pre-features/ shared components, still actively used —
+                     see "Legacy layout" below
+  Services/          shared API helpers used by Components/ProgressReport/*
+  utils/              small standalone helpers (certificate/scorecard generation)
 ```
 
-## The rules
+**Where does a given product live?**
 
-1. **Import a project through its barrel**, not by reaching into its files:
-   ```ts
-   import { SalesIQPage } from './features/salesiq';        // yes
-   import { SalesIQPage } from './features/salesiq/SalesIQPage';  // no
-   ```
-   Anything not exported from `index.ts` is that project's private business and
-   can be renamed or moved without touching anything else.
+| Product | Folder | Backend app |
+|---|---|---|
+| Data Extractor / hub | `features/extractor` | `user_management` |
+| Performance | `features/performance` | `performance` |
+| Appraisal | `features/appraisal` | `appraisal` |
+| Employee of the Month | `features/eom` | `eom` |
+| PMS Simulator | `features/pms` | `pms` |
+| Letters Generator (appraisal + warning letters) | `features/letters` | `pms` |
+| TA/DA | `features/tada` | `tada` |
+| SalesIQ | `features/salesiq` | `sales` |
+| AdminPulse (rooms + admin item requests) | `features/roompulse` | `roompulse` |
 
-2. **`src/Components/` is for genuinely shared UI only.** If only one project
-   uses a component, it belongs inside that project's folder. Components that
-   are shared today live there because more than one feature imports them.
+## Legacy layout — `Components/`, `Services/`, `utils/`
 
-3. **A project never imports another project's internals.** If two need the
-   same thing, it moves up to `Components/`, `Services/` or `utils/`.
-
----
-
-## features/salesiq — SalesIQ
-
-```
-salesiq/
-  index.ts            public entry point
-  SalesIQLogin.tsx    OTP login + session helpers + honey animation
-  SalesIQPage.tsx     shell: tabs, filter bar, data loading, Overview/Geography/
-                      Products/Team/Forecast/Data tabs
-  SalesIQPanels.tsx   Intelligence and Customers tabs
-  SalesIQShared.tsx   formatting, animated primitives, chart chrome
-```
-
-`SalesIQShared.tsx` is the one place for `inr` / `shortInr` / `PALETTE`,
-`Counter`, `Reveal`, `Panel`, `Leaderboard`, `Gauge`, `HeatGrid`, `CohortGrid`
-and `ChartTip`. Both `SalesIQPage` and `SalesIQPanels` import from it — do not
-duplicate a formatter or an animated wrapper into a tab file.
-
-**Where do I change...**
-
-| Task | File |
-|---|---|
-| Login look / honey animation | `SalesIQLogin.tsx` |
-| Add a tab, change filters, change what loads | `SalesIQPage.tsx` |
-| Intelligence or Customers content | `SalesIQPanels.tsx` |
-| Number formatting, colours, shared widgets | `SalesIQShared.tsx` |
-
----
-
-## features/letters — Letters Generator
-
-```
-letters/
-  index.ts
-  LettersGeneratorPage.tsx        hub: choose a letter type; owns the nav chrome
-  OfferLetterSimplePage.tsx       appraisal letters (upload / send / history)
-  WarningLetterPage.tsx           warning letters (form / bulk / history)
-  OfferLetterApprovalDashboard.tsx
-```
-
-Adding a letter type = one entry in `LETTERS` in `LettersGeneratorPage.tsx`
-plus its page component.
-
----
+These predate the `features/` convention and are still imported by
+`ProgressReport`, `Appraisal`, `EOM`, `Performance` and the extractor hub —
+**they are not dead code**, just an older pattern. New work should go in
+`features/<name>/`; don't add new files to `Components/` unless you're
+extending something that already lives there. Folding these into `features/`
+properly is a known follow-up, not done yet because it touches several
+actively-used import paths at once.
 
 ## Conventions
 
-- **Animation is CSS keyframes scoped to the page** (a `<style>` block in the
-  component), not an animation library — it keeps the bundle flat.
-- **Never declare a component inside another component's body.** It becomes a
-  new component type on every render, so React unmounts and remounts it and
-  inputs lose focus after each keystroke. Declare it at module scope and pass
-  props (see `Field` / `Area` in `WarningLetterPage.tsx`).
-- **Downloads go through `fetch` + blob**, not a bare `<a href>`. A plain
-  anchor to a failing endpoint does nothing visible, which is indistinguishable
-  from a broken button.
-- **QA builds must use `npm run build:qa`.** Plain `npm run build` is production
-  mode and points the QA site at the PROD API.
+- **One feature = one folder under `features/`.** Keep a feature's API calls,
+  types, and shared UI in its own `*Shared.tsx`; don't reach into another
+  feature's internals.
+- **Django app names and product/brand names may diverge.** `pms` hosts the
+  unrelated "Letters Generator"; `roompulse` hosts the "AdminPulse" brand.
+  Match the folder name to the *backend app*, not the marketing name, so the
+  API base URL and the folder always line up.
+- **Every privileged/role-gated screen re-checks its role server-side.**
+  There's no server session in several features (AdminPulse, SalesIQ) — the
+  "session" is a client-remembered email after OTP verification. Never trust
+  a client-sent role; the backend re-resolves it from email on every request.
+- **React hooks never move relative to a conditional return.** A `useMemo`
+  placed after an early `return <Login/>` breaks the hook-count invariant the
+  instant the user logs in/out — see the git history on `roompulse` for the
+  exact bug this caused (blank screen on login/logout).
