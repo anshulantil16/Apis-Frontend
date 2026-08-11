@@ -184,7 +184,7 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
                 <span className="rp-pulse-glow absolute -inset-2 rounded-2xl border-2 border-cyan-400/30" />
               </div>
               <div>
-                <p className="text-slate-900 font-black text-lg tracking-tight leading-none">RoomPulse</p>
+                <p className="text-slate-900 font-black text-lg tracking-tight leading-none">AdminPulse</p>
                 <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-700/70 mt-1">
                   APIS India Limited
                 </p>
@@ -192,11 +192,11 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
             </div>
             <h1 className="text-[1.85rem] leading-[1.15] font-black mb-3
                            bg-gradient-to-br from-slate-900 via-cyan-700 to-violet-700 bg-clip-text text-transparent">
-              Every room,<br />live on one<br />screen.
+              Everything from<br />Admin, on one<br />screen.
             </h1>
             <p className="text-slate-500 text-[13px] leading-relaxed max-w-xs">
-              See what's free, book instantly, and let admins approve in seconds —
-              no more email chains to check a room.
+              Book a room or request supplies and equipment — see it live, and let
+              admins approve in seconds. No more email chains.
             </p>
           </div>
           <RadarScope />
@@ -300,7 +300,7 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
         </div>
       </div>
       <p className="absolute bottom-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400/60 z-10">
-        APIS India Limited · Conference Room Intelligence
+        APIS India Limited · Admin Requests & Facilities
       </p>
     </div>
   );

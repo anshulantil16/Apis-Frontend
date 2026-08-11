@@ -141,6 +141,33 @@ export const PURPOSE_COLOUR: Record<string, string> = {
   vendor_meeting: '#8b5cf6', other: '#94a3b8',
 };
 
+/* ── resource/item request badges ──────────────────────────────────────── */
+export const CATEGORY_LABEL: Record<string, string> = {
+  stationery: 'Stationery', it_equipment: 'IT Equipment', furniture: 'Furniture',
+  pantry: 'Pantry / Housekeeping', printing: 'Printing', other: 'Other',
+};
+export const CATEGORY_COLOUR: Record<string, string> = {
+  stationery: '#0891b2', it_equipment: '#6366f1', furniture: '#b45309',
+  pantry: '#10b981', printing: '#8b5cf6', other: '#94a3b8',
+};
+export const URGENCY_LABEL: Record<string, string> = {
+  low: 'Low', normal: 'Normal', urgent: 'Urgent',
+};
+export const URGENCY_COLOUR: Record<string, string> = {
+  low: '#64748b', normal: '#0891b2', urgent: '#e11d48',
+};
+
+/* Shared across both request types (room bookings + item requests) — the
+   union of every status either can have, so one badge map covers both in
+   the unified My Requests / Approvals views. */
+export const REQUEST_STATUS_BADGE: Record<string, string> = {
+  pending: 'bg-amber-50 text-amber-600 ring-amber-200',
+  approved: 'bg-emerald-50 text-emerald-600 ring-emerald-200',
+  fulfilled: 'bg-cyan-50 text-cyan-700 ring-cyan-200',
+  rejected: 'bg-rose-50 text-rose-600 ring-rose-200',
+  cancelled: 'bg-slate-50 text-slate-400 ring-slate-200',
+};
+
 export const fmtTime = (t: string) => t; // already HH:MM from the API
 export const fmtDate = (d: string) =>
   new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });

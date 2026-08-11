@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Radar, Users, MapPin, X, Plus, Send, Loader, AlertTriangle, CheckCircle2,
   Calendar as CalendarIcon, LogOut, ShieldCheck, LayoutGrid, ListChecks,
-  ClipboardList,
+  ClipboardList, Package,
 } from 'lucide-react';
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
   ROLE_LABEL, Reveal, Panel, Skel, Empty, StatusPill, PURPOSE_LABEL, PURPOSE_COLOUR,
-  fmtDate,
+  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate,
 } from './RoomPulseShared';
 import { RoomPulseLogin } from './RoomPulseLogin';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './RoomPulseAdminPanels';
@@ -245,71 +245,233 @@ function StatusPillWrap({ status }: { status: string }) {
   return <div className="flex justify-center"><StatusPill status={status === 'approved' ? 'free' : 'upcoming'} /></div>;
 }
 
-/* ── my bookings ─────────────────────────────────────────────────────────── */
-function MyBookingsPanel({ session, refreshKey }: { session: Session; refreshKey: number }) {
+/* ── item / resource request modal — everything Admin provides that isn't
+   a room (stationery, IT equipment, furniture, pantry, printing...) ────── */
+function ItemRequestModal({ session, onClose, onDone }: {
+  session: Session; onClose: () => void; onDone: () => void;
+}) {
+  const [category, setCategory] = useState('stationery');
+  const [itemName, setItemName] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [urgency, setUrgency] = useState('normal');
+  const [reason, setReason] = useState('');
+  const [neededBy, setNeededBy] = useState('');
+  const [department, setDepartment] = useState('');
+  const [name, setName] = useState(session.name || '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [result, setResult] = useState<any>(null);
+
+  const isStaff = session.role === 'admin' || session.role === 'super_admin';
+  const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
+    "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!itemName.trim()) { setErr('What do you need?'); return; }
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch(`${API}/resource-requests/`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: session.email, requested_by_name: name, category, item_name: itemName,
+          quantity, urgency, reason, needed_by: neededBy || null, department,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Request failed');
+      setResult(d);
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Request failed');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm rp-reveal">
+      <div className="w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl
+                      max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
+          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-cyan-600" />
+            {result ? 'Request submitted' : 'Request an item'}
+          </h3>
+          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {result ? (
+          <div className="p-6 text-center">
+            <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center
+              ${result.status === 'approved' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+              <CheckCircle2 className={`w-8 h-8 ${result.status === 'approved' ? 'text-emerald-500' : 'text-amber-500'}`} />
+            </div>
+            <p className="text-slate-900 font-black text-lg mb-1">{result.message}</p>
+            <button onClick={onDone}
+              className="mt-6 w-full px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600
+                         text-white font-black shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all">
+              Done
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="p-5 space-y-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Category</label>
+              <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
+                {Object.entries(CATEGORY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">
+                What do you need?
+              </label>
+              <input value={itemName} onChange={e => setItemName(e.target.value)}
+                placeholder="e.g. A4 paper, wireless mouse, whiteboard markers" className={inputCls} />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Quantity</label>
+                <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
+                  className={`${inputCls} px-2.5 text-xs`} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Urgency</label>
+                <select value={urgency} onChange={e => setUrgency(e.target.value)} className={inputCls}>
+                  {Object.entries(URGENCY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Your name</label>
+                <input value={name} onChange={e => setName(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Department</label>
+                <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Sales" className={inputCls} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">
+                Needed by (optional)
+              </label>
+              <input type="date" value={neededBy} onChange={e => setNeededBy(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">
+                Reason / notes (optional)
+              </label>
+              <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Why do you need this?" className={inputCls} />
+            </div>
+
+            {err && (
+              <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
+                <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+                <p className="text-[12px] text-rose-700">{err}</p>
+              </div>
+            )}
+
+            <button type="submit" disabled={busy}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
+                         bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-black
+                         shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all
+                         disabled:opacity-50 disabled:translate-y-0">
+              {busy ? <><Loader className="w-4 h-4 animate-spin" />Submitting…</>
+                : <><Send className="w-4 h-4" />{isStaff ? 'Record (instant)' : 'Send request'}</>}
+            </button>
+            {!isStaff && (
+              <p className="text-[11px] text-slate-400 text-center">
+                Your request goes to an admin for approval, then fulfilment.
+              </p>
+            )}
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── my requests: room bookings + item requests, merged into one timeline ─ */
+function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey: number }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/bookings/?mine=${encodeURIComponent(session.email)}`);
-      const d = await r.json();
-      setRows(d.results || []);
+      const email = encodeURIComponent(session.email);
+      const [br, rr] = await Promise.all([
+        fetch(`${API}/bookings/?mine=${email}`).then(r => r.json()),
+        fetch(`${API}/resource-requests/?mine=${email}`).then(r => r.json()),
+      ]);
+      // Merge both request types into one timeline, newest first. `kind`
+      // distinguishes them for rendering; bookings don't carry `kind` from
+      // the API (unlike resource requests) so it's tagged on here.
+      const merged = [
+        ...(br.results || []).map((b: any) => ({ ...b, kind: 'room', sortKey: b.created_at })),
+        ...(rr.results || []).map((r: any) => ({ ...r, sortKey: r.created_at })),
+      ].sort((a, b) => (a.sortKey < b.sortKey ? 1 : -1));
+      setRows(merged);
     } finally { setLoading(false); }
   }, [session.email]);
   useEffect(() => { load(); }, [load, refreshKey]);
 
-  const cancel = async (id: number) => {
-    if (!confirm('Cancel this booking?')) return;
-    await fetch(`${API}/bookings/${id}/`, {
+  const cancel = async (row: any) => {
+    const label = row.kind === 'room' ? 'this booking' : 'this request';
+    if (!confirm(`Cancel ${label}?`)) return;
+    const url = row.kind === 'room' ? `${API}/bookings/${row.id}/` : `${API}/resource-requests/${row.id}/`;
+    await fetch(url, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'cancel', email: session.email }),
     });
     load();
   };
 
-  const STATUS_BADGE: Record<string, string> = {
-    pending: 'bg-amber-50 text-amber-600 ring-amber-200',
-    approved: 'bg-emerald-50 text-emerald-600 ring-emerald-200',
-    rejected: 'bg-rose-50 text-rose-600 ring-rose-200',
-    cancelled: 'bg-slate-50 text-slate-400 ring-slate-200',
-  };
-
   if (loading) return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-16" />)}</div>;
-  if (!rows.length) return <Empty msg="No bookings yet — book a room from the grid above" icon={ClipboardList} />;
+  if (!rows.length) return <Empty msg="No requests yet — book a room or request an item above" icon={ClipboardList} />;
 
   return (
     <div className="space-y-2.5">
-      {rows.map((b, i) => (
-        <Reveal key={b.id} delay={i * 40}>
-          <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3.5">
-            <div className="w-2 h-full min-h-[40px] rounded-full flex-shrink-0"
-              style={{ background: PURPOSE_COLOUR[b.purpose] }} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-[13px] font-bold text-slate-800 truncate">{b.room_name}</p>
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 ${STATUS_BADGE[b.status]}`}>
-                  {b.status}
-                </span>
+      {rows.map((row, i) => {
+        const isRoom = row.kind === 'room';
+        const accent = isRoom ? PURPOSE_COLOUR[row.purpose] : CATEGORY_COLOUR[row.category];
+        const cancellable = row.status === 'pending' || row.status === 'approved';
+        return (
+          <Reveal key={`${row.kind}-${row.id}`} delay={i * 40}>
+            <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3.5">
+              <div className="w-2 h-full min-h-[40px] rounded-full flex-shrink-0" style={{ background: accent }} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-500">
+                    {isRoom ? 'Room' : row.category_label}
+                  </span>
+                  <p className="text-[13px] font-bold text-slate-800 truncate">
+                    {isRoom ? row.room_name : `${row.item_name} × ${row.quantity}`}
+                  </p>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 ${REQUEST_STATUS_BADGE[row.status]}`}>
+                    {row.status}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {isRoom
+                    ? <>{fmtDate(row.date)} · {row.start_time}–{row.end_time} · {PURPOSE_LABEL[row.purpose]}</>
+                    : <>{URGENCY_LABEL[row.urgency]} urgency{row.needed_by ? ` · needed by ${fmtDate(row.needed_by)}` : ''}</>}
+                </p>
+                {row.admin_remarks && (
+                  <p className="text-[11px] text-slate-400 mt-0.5">Note: {row.admin_remarks}</p>
+                )}
               </div>
-              <p className="text-[11px] text-slate-400">
-                {fmtDate(b.date)} · {b.start_time}–{b.end_time} · {PURPOSE_LABEL[b.purpose]}
-              </p>
-              {b.admin_remarks && (
-                <p className="text-[11px] text-slate-400 mt-0.5">Note: {b.admin_remarks}</p>
+              {cancellable && (
+                <button onClick={() => cancel(row)}
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-rose-400
+                             hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0">
+                  Cancel
+                </button>
               )}
             </div>
-            {(b.status === 'pending' || b.status === 'approved') && (
-              <button onClick={() => cancel(b.id)}
-                className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-rose-400
-                           hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0">
-                Cancel
-              </button>
-            )}
-          </div>
-        </Reveal>
-      ))}
+          </Reveal>
+        );
+      })}
     </div>
   );
 }
@@ -322,6 +484,7 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
   const [loading, setLoading] = useState(true);
   const [bookRoom, setBookRoom] = useState<any>(null);
   const [showBooking, setShowBooking] = useState(false);
+  const [showItemRequest, setShowItemRequest] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const loadRooms = useCallback(async () => {
@@ -370,7 +533,7 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
 
   const TABS: { id: Tab; label: string; icon: any; roles?: string[] }[] = [
     { id: 'rooms', label: 'Rooms', icon: LayoutGrid },
-    { id: 'mine', label: 'My Bookings', icon: ClipboardList },
+    { id: 'mine', label: 'My Requests', icon: ClipboardList },
     { id: 'approvals', label: 'Approvals', icon: ListChecks, roles: ['admin', 'super_admin'] },
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon, roles: ['admin', 'super_admin'] },
     { id: 'manage', label: 'Manage', icon: ShieldCheck, roles: ['super_admin'] },
@@ -378,6 +541,7 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
   const visibleTabs = TABS.filter(t => !t.roles || t.roles.includes(session.role));
 
   const onBookingDone = () => { setShowBooking(false); setBookRoom(null); setRefreshKey(k => k + 1); loadRooms(); };
+  const onItemRequestDone = () => { setShowItemRequest(false); setRefreshKey(k => k + 1); };
 
   return (
     <div className="min-h-screen bg-[#f5f7fa] relative">
@@ -403,9 +567,9 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
               <span className="rp-pulse-glow absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
             </div>
             <div>
-              <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">RoomPulse</h1>
+              <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">AdminPulse</h1>
               <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400 mt-0.5">
-                Conference Room Intelligence
+                Admin Requests & Facilities
               </p>
             </div>
           </div>
@@ -422,10 +586,16 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
               </div>
             </div>
             <button onClick={() => { setBookRoom(null); setShowBooking(true); }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-cyan-500
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-cyan-500
                          to-violet-600 text-white text-[12px] font-black shadow-lg shadow-cyan-500/20
                          hover:-translate-y-0.5 transition-all">
-              <Plus className="w-3.5 h-3.5" />Book
+              <Plus className="w-3.5 h-3.5" />Book Room
+            </button>
+            <button onClick={() => setShowItemRequest(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200
+                         text-slate-600 text-[12px] font-black hover:border-cyan-300 hover:text-cyan-700
+                         transition-all">
+              <Package className="w-3.5 h-3.5" />Request Item
             </button>
             <div className="flex items-center gap-2 pl-1">
               <div className="hidden sm:block text-right leading-none">
@@ -483,8 +653,8 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
         )}
 
         {tab === 'mine' && (
-          <Panel title="My Bookings" icon={ClipboardList} subtitle="Requests you've made, and their status">
-            <MyBookingsPanel session={session} refreshKey={refreshKey} />
+          <Panel title="My Requests" icon={ClipboardList} subtitle="Room bookings and item requests you've made, and their status">
+            <MyRequestsPanel session={session} refreshKey={refreshKey} />
           </Panel>
         )}
 
@@ -498,6 +668,10 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
       {showBooking && (
         <BookingModal room={bookRoom} rooms={rooms.length ? rooms : []} session={session}
           onClose={() => { setShowBooking(false); setBookRoom(null); }} onDone={onBookingDone} />
+      )}
+      {showItemRequest && (
+        <ItemRequestModal session={session}
+          onClose={() => setShowItemRequest(false)} onDone={onItemRequestDone} />
       )}
     </div>
   );

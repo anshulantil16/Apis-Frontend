@@ -271,8 +271,8 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
             <div className="flex items-center gap-2.5">
               <Radar className="w-3.5 h-3.5" />
               <div>
-                <p>RoomPulse</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-cyan-700">Conference Rooms</p>
+                <p>AdminPulse</p>
+                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-cyan-700">Admin Requests</p>
               </div>
             </div>
             <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />

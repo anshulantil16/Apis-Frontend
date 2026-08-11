@@ -1,43 +1,71 @@
-/* Approvals, Calendar and Super-Admin management panels for RoomPulse. */
+/* Approvals, Calendar and Super-Admin management panels for AdminPulse. */
 import { useState, useEffect, useCallback } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import {
   CheckCircle2, XCircle, Clock, AlertTriangle, Users, Building2, Shield,
   UploadCloud, Download, Trash2, Plus, RefreshCw, TrendingUp, Timer,
   ChevronLeft, ChevronRight, FileSpreadsheet, UserPlus, Percent, BarChart3,
+  PackageCheck, Truck,
 } from 'lucide-react';
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
-  PURPOSE_COLOUR, fmtDate,
+  PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
+  fmtDate,
 } from './RoomPulseShared';
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
   "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
 
-/* ── Approvals ──────────────────────────────────────────────────────────── */
+/* ── Approvals — room bookings + item requests, merged into one queue ────── */
 export function ApprovalsPanel({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const [rows, setRows] = useState<any[]>([]);
+  const [readyToFulfil, setReadyToFulfil] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<number | null>(null);
-  const [remarks, setRemarks] = useState<Record<number, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [remarks, setRemarks] = useState<Record<string, string>>({});
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/bookings/?status=pending&limit=200`);
-      const d = await r.json();
-      setRows(d.results || []);
+      const [br, rr, approved] = await Promise.all([
+        fetch(`${API}/bookings/?status=pending&limit=200`).then(r => r.json()),
+        fetch(`${API}/resource-requests/?status=pending&limit=200`).then(r => r.json()),
+        fetch(`${API}/resource-requests/?status=approved&limit=200`).then(r => r.json()),
+      ]);
+      const merged = [
+        ...(br.results || []).map((b: any) => ({ ...b, kind: 'room' })),
+        ...(rr.results || []),   // already kind: 'resource' from the API
+      ].sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+      setRows(merged);
+      setReadyToFulfil(approved.results || []);
     } finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const act = async (id: number, action: 'approve' | 'reject') => {
-    setBusyId(id); setErr('');
+  const act = async (row: any, action: 'approve' | 'reject') => {
+    const key = `${row.kind}-${row.id}`;
+    setBusyId(key); setErr('');
     try {
-      const r = await fetch(`${API}/bookings/${id}/`, {
+      const url = row.kind === 'room' ? `${API}/bookings/${row.id}/` : `${API}/resource-requests/${row.id}/`;
+      const r = await fetch(url, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, email: session.email, remarks: remarks[id] || '' }),
+        body: JSON.stringify({ action, email: session.email, remarks: remarks[key] || '' }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Action failed');
+      load(); onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Action failed');
+    } finally { setBusyId(null); }
+  };
+
+  const fulfil = async (id: number) => {
+    setBusyId(`resource-${id}`); setErr('');
+    try {
+      const r = await fetch(`${API}/resource-requests/${id}/`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fulfil', email: session.email }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Action failed');
@@ -48,69 +76,128 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
   };
 
   return (
-    <Panel title="Pending Approvals" icon={Clock} subtitle={`${rows.length} request(s) waiting`}
-      right={
-        <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
-      }>
-      {err && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 mb-4">
-          <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
-          <p className="text-[12px] text-rose-700">{err}</p>
-        </div>
-      )}
-      {loading ? (
-        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-24" />)}</div>
-      ) : !rows.length ? (
-        <Empty msg="Nothing pending — all caught up" icon={CheckCircle2} />
-      ) : (
-        <div className="space-y-3">
-          {rows.map((b, i) => (
-            <Reveal key={b.id} delay={i * 60}>
-              <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-[13px] font-black text-slate-800">{b.room_name}</p>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1"
-                        style={{ background: `${PURPOSE_COLOUR[b.purpose]}14`, color: PURPOSE_COLOUR[b.purpose],
-                                 borderColor: `${PURPOSE_COLOUR[b.purpose]}40` }}>
-                        {PURPOSE_LABEL[b.purpose]}
-                      </span>
+    <div className="space-y-5">
+      <Panel title="Pending Approvals" icon={Clock} subtitle={`${rows.length} request(s) waiting`}
+        right={
+          <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        }>
+        {err && (
+          <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 mb-4">
+            <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+            <p className="text-[12px] text-rose-700">{err}</p>
+          </div>
+        )}
+        {loading ? (
+          <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-24" />)}</div>
+        ) : !rows.length ? (
+          <Empty msg="Nothing pending — all caught up" icon={CheckCircle2} />
+        ) : (
+          <div className="space-y-3">
+            {rows.map((row, i) => {
+              const isRoom = row.kind === 'room';
+              const key = `${row.kind}-${row.id}`;
+              const accent = isRoom ? PURPOSE_COLOUR[row.purpose] : CATEGORY_COLOUR[row.category];
+              const label = isRoom ? PURPOSE_LABEL[row.purpose] : row.category_label;
+              return (
+                <Reveal key={key} delay={i * 60}>
+                  <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-white
+                                           text-slate-500 ring-1 ring-slate-200">
+                            {isRoom ? 'Room' : 'Item'}
+                          </span>
+                          <p className="text-[13px] font-black text-slate-800">
+                            {isRoom ? row.room_name : `${row.item_name} × ${row.quantity}`}
+                          </p>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1"
+                            style={{ background: `${accent}14`, color: accent, borderColor: `${accent}40` }}>
+                            {label}
+                          </span>
+                          {!isRoom && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1"
+                              style={{ background: `${URGENCY_COLOUR[row.urgency]}14`, color: URGENCY_COLOUR[row.urgency],
+                                       borderColor: `${URGENCY_COLOUR[row.urgency]}40` }}>
+                              {URGENCY_LABEL[row.urgency]}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {isRoom
+                            ? <>{fmtDate(row.date)} · {row.start_time}–{row.end_time} · {row.attendees} attendees</>
+                            : <>{row.needed_by ? `Needed by ${fmtDate(row.needed_by)}` : 'No deadline given'}</>}
+                        </p>
+                        <p className="text-[11px] text-slate-600 mt-1">
+                          {row.requested_by_name} ({row.requested_by_email}){row.department && ` · ${row.department}`}
+                        </p>
+                        {(isRoom ? row.purpose_detail : row.reason) && (
+                          <p className="text-[11px] text-slate-400 mt-1 italic">
+                            "{isRoom ? row.purpose_detail : row.reason}"
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      {fmtDate(b.date)} · {b.start_time}–{b.end_time} · {b.attendees} attendees
-                    </p>
-                    <p className="text-[11px] text-slate-600 mt-1">
-                      {b.requested_by_name} ({b.requested_by_email}){b.department && ` · ${b.department}`}
-                    </p>
-                    {b.purpose_detail && <p className="text-[11px] text-slate-400 mt-1 italic">"{b.purpose_detail}"</p>}
+                    <input value={remarks[key] || ''} onChange={e => setRemarks(r => ({ ...r, [key]: e.target.value }))}
+                      placeholder="Optional remark (shown to the requester)"
+                      className={`${inputCls} mb-3 py-2 text-[12px]`} />
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => act(row, 'approve')} disabled={busyId === key}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                                   bg-emerald-50 text-emerald-700 text-[12px] font-black
+                                   hover:bg-emerald-100 transition-all disabled:opacity-50">
+                        <CheckCircle2 className="w-3.5 h-3.5" />Approve
+                      </button>
+                      <button onClick={() => act(row, 'reject')} disabled={busyId === key}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                                   bg-rose-50 text-rose-700 text-[12px] font-black
+                                   hover:bg-rose-100 transition-all disabled:opacity-50">
+                        <XCircle className="w-3.5 h-3.5" />Reject
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <input value={remarks[b.id] || ''} onChange={e => setRemarks(r => ({ ...r, [b.id]: e.target.value }))}
-                  placeholder="Optional remark (shown to the requester)"
-                  className={`${inputCls} mb-3 py-2 text-[12px]`} />
-                <div className="flex items-center gap-2">
-                  <button onClick={() => act(b.id, 'approve')} disabled={busyId === b.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
-                               bg-emerald-50 text-emerald-700 text-[12px] font-black
-                               hover:bg-emerald-100 transition-all disabled:opacity-50">
-                    <CheckCircle2 className="w-3.5 h-3.5" />Approve
+                </Reveal>
+              );
+            })}
+          </div>
+        )}
+      </Panel>
+
+      {/* Approving an item request only means "yes" — it isn't done until
+          someone actually hands it over. This section is where that happens. */}
+      <Panel title="Ready to Fulfil" icon={Truck}
+        subtitle={`${readyToFulfil.length} approved item request(s) awaiting hand-over`}>
+        {!readyToFulfil.length ? (
+          <Empty msg="Nothing waiting to be handed over" icon={PackageCheck} />
+        ) : (
+          <div className="space-y-2.5">
+            {readyToFulfil.map((r, i) => (
+              <Reveal key={r.id} delay={i * 50}>
+                <div className="flex items-center gap-3 rounded-xl bg-cyan-50/50 border border-cyan-200 p-3.5">
+                  <div className="w-2 h-full min-h-[36px] rounded-full flex-shrink-0"
+                    style={{ background: CATEGORY_COLOUR[r.category] }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-slate-800 truncate">
+                      {r.item_name} × {r.quantity} <span className="text-slate-400 font-semibold">· {r.category_label}</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      For {r.requested_by_name}{r.department && ` · ${r.department}`}
+                    </p>
+                  </div>
+                  <button onClick={() => fulfil(r.id)} disabled={busyId === `resource-${r.id}`}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 text-white
+                               text-[12px] font-black hover:bg-cyan-700 transition-all disabled:opacity-50 flex-shrink-0">
+                    <PackageCheck className="w-3.5 h-3.5" />Mark Fulfilled
                   </button>
-                  <button onClick={() => act(b.id, 'reject')} disabled={busyId === b.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
-                               bg-rose-50 text-rose-700 text-[12px] font-black
-                               hover:bg-rose-100 transition-all disabled:opacity-50">
-                    <XCircle className="w-3.5 h-3.5" />Reject
-                  </button>
                 </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      )}
-    </Panel>
+              </Reveal>
+            ))}
+          </div>
+        )}
+      </Panel>
+    </div>
   );
 }
 
@@ -241,9 +328,9 @@ function DangerZone({ session }: { session: Session }) {
 
   const reset = async () => {
     if (typed !== 'RESET') return;
-    if (!confirm('This permanently deletes ALL bookings, the employee directory and every '
-                + 'admin (except the fixed Super Admin), then restores only the 3 real rooms. '
-                + 'This cannot be undone. Continue?')) return;
+    if (!confirm('This permanently deletes ALL bookings, item requests, the employee directory '
+                + 'and every admin (except the fixed Super Admin), then restores only the 3 real '
+                + 'rooms. This cannot be undone. Continue?')) return;
     setBusy(true); setErr(''); setResult('');
     try {
       const r = await fetch(`${API}/reset/`, {
@@ -275,8 +362,8 @@ function DangerZone({ session }: { session: Session }) {
           <h3 className="text-sm font-black text-rose-700 tracking-tight">Danger Zone</h3>
         </div>
         <p className="text-[12px] text-rose-600/80 mb-4 ml-[42px]">
-          Permanently deletes all bookings, the employee directory and every admin (the fixed
-          Super Admin is unaffected), then restores only the 3 real APIS rooms. Cannot be undone.
+          Permanently deletes all bookings, item requests, the employee directory and every admin
+          (the fixed Super Admin is unaffected), then restores only the 3 real APIS rooms. Cannot be undone.
         </p>
         <div className="flex flex-wrap items-center gap-2 ml-[42px]">
           <input value={typed} onChange={e => setTyped(e.target.value)}
@@ -497,16 +584,20 @@ function AnalyticsPanel({ session }: { session: Session }) {
 
   const PALETTE = ['#0891b2', '#8b5cf6', '#f59e0b', '#ec4899', '#10b981', '#ef4444'];
   const purposeData = (data.by_purpose || []).map((p: any) => ({ name: PURPOSE_LABEL[p.purpose] || p.purpose, value: p.n }));
+  const categoryData = (data.resource_requests?.by_category || [])
+    .map((c: any) => ({ name: CATEGORY_LABEL[c.category] || c.category, value: c.n }));
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         {[
           { l: 'Total Bookings', v: data.total_bookings, icon: Building2 },
           { l: 'Approval Rate', v: data.approval_rate_pct, suffix: '%', icon: Percent },
           { l: 'Avg. Turnaround', v: data.avg_turnaround_minutes, suffix: 'm', icon: Timer },
           { l: 'Busiest Hour', v: data.busiest_hour !== null ? `${data.busiest_hour}:00` : '—', icon: TrendingUp, raw: true },
-        ].map((s, i) => {
+          { l: 'Item Requests', v: data.resource_requests?.total ?? 0, icon: PackageCheck, raw: true,
+            sub: `${data.resource_requests?.pending ?? 0} pending` },
+        ].map((s: any, i) => {
           const Icon = s.icon;
           return (
             <Reveal key={s.l} delay={i * 60}>
@@ -516,6 +607,7 @@ function AnalyticsPanel({ session }: { session: Session }) {
                   {s.raw ? s.v : (s.v ?? '—')}{!s.raw && s.suffix}
                 </p>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{s.l}</p>
+                {s.sub && <p className="text-[10px] text-slate-400 mt-0.5">{s.sub}</p>}
               </div>
             </Reveal>
           );
@@ -552,6 +644,18 @@ function AnalyticsPanel({ session }: { session: Session }) {
               </PieChart>
             </ResponsiveContainer>
           ) : <Empty msg="No data yet" />}
+        </Panel>
+        <Panel title="Item Request Categories" icon={PackageCheck}>
+          {categoryData.length ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3}>
+                  {categoryData.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : <Empty msg="No item requests in this period" />}
         </Panel>
       </div>
     </div>
