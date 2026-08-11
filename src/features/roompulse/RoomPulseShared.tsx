@@ -76,13 +76,17 @@ const STATUS_META: Record<string, { label: string; dot: string; text: string; bg
   upcoming: { label: 'Starting soon', dot: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50', ring: 'ring-amber-200' },
   free:     { label: 'Free', dot: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-200' },
 };
+const STATUS_GLOW: Record<string, string> = {
+  occupied: 'rgba(244,63,94,.4)', upcoming: 'rgba(245,158,11,.4)', free: 'rgba(16,185,129,.35)',
+};
 export function StatusPill({ status }: { status: string }) {
   const m = STATUS_META[status] || STATUS_META.free;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px]
-                      font-black uppercase tracking-wide ring-1 ${m.bg} ${m.text} ${m.ring}`}>
+    <span className={`rp-pop-in inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px]
+                      font-black uppercase tracking-wide ring-1 ${m.bg} ${m.text} ${m.ring}`}
+      style={{ '--rp-glow': STATUS_GLOW[status] || STATUS_GLOW.free } as any}>
       <span className={`relative w-1.5 h-1.5 rounded-full ${m.dot}`}>
-        {status === 'occupied' && <span className={`rp-ping absolute inset-0 rounded-full ${m.dot}`} />}
+        {status !== 'free' && <span className={`rp-ping absolute inset-0 rounded-full ${m.dot}`} />}
       </span>
       {m.label}
     </span>
@@ -94,14 +98,15 @@ export { STATUS_META };
 export function Panel({ title, icon: Icon, subtitle, right, children, delay = 0, className = '' }: any) {
   return (
     <Reveal delay={delay} className={className}>
-      <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200
+      <div className="group relative rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200
                       shadow-sm p-5 h-full transition-all duration-300
-                      hover:border-slate-300 hover:shadow-lg">
+                      hover:border-cyan-200 hover:shadow-xl hover:shadow-cyan-500/[0.06] hover:-translate-y-0.5">
         <div className="flex items-start justify-between mb-4 gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             {Icon && (
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-50 to-violet-50
-                              ring-1 ring-slate-200 flex items-center justify-center flex-shrink-0">
+                              ring-1 ring-slate-200 flex items-center justify-center flex-shrink-0
+                              transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
                 <Icon className="w-4 h-4 text-cyan-600" />
               </div>
             )}
@@ -190,4 +195,53 @@ export const RP_STYLES = `
   .rp-grow { animation: rpGrow .8s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes rpPulseGlow{0%,100%{opacity:.5}50%{opacity:1}}
   .rp-pulse-glow{animation:rpPulseGlow 2.4s ease-in-out infinite;}
+
+  /* button/card hover sheen — a light sweep that reads as "alive" on hover */
+  .rp-sheen{position:relative;overflow:hidden;}
+  @keyframes rpSheenMove{from{transform:translateX(-130%) skewX(-12deg);}to{transform:translateX(230%) skewX(-12deg);}}
+  .rp-sheen::after{content:'';position:absolute;top:0;left:0;height:100%;width:35%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+    opacity:0;pointer-events:none;}
+  .rp-sheen:hover::after{opacity:1;animation:rpSheenMove .9s ease-in-out;}
+
+  /* card lift + tilt on hover — subtle 3D feel without a JS mousemove handler */
+  .rp-tilt{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;}
+  .rp-tilt:hover{transform:translateY(-6px) rotateX(2deg) rotateY(-1.5deg) scale(1.012);}
+
+  /* coloured glow ring — status-aware "this room is live" pulse */
+  @keyframes rpGlowRing{0%,100%{box-shadow:0 0 0 0 var(--rp-glow,rgba(239,68,68,.35))}
+                         50%{box-shadow:0 0 0 8px transparent}}
+  .rp-glow-ring{animation:rpGlowRing 2.6s ease-in-out infinite;}
+
+  /* animated conic-gradient border — used sparingly, on the single most
+     "this is live" element per screen so it doesn't become visual noise */
+  @keyframes rpBorderSpin{to{--rp-angle:360deg;}}
+  @property --rp-angle{syntax:'<angle>';inherits:false;initial-value:0deg;}
+  .rp-border-flow{position:relative;}
+  .rp-border-flow::before{content:'';position:absolute;inset:-1.5px;border-radius:inherit;
+    padding:1.5px;background:conic-gradient(from var(--rp-angle),#22d3ee,#8b5cf6,#22d3ee);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    animation:rpBorderSpin 3.5s linear infinite;pointer-events:none;}
+
+  /* modal entrance — scale+fade reads as "materialising" rather than a flat fade */
+  @keyframes rpPop{from{opacity:0;transform:scale(.92) translateY(10px);}to{opacity:1;transform:none;}}
+  .rp-pop{animation:rpPop .35s cubic-bezier(.2,.9,.25,1.15) both;}
+  @keyframes rpBackdrop{from{opacity:0;}to{opacity:1;}}
+  .rp-backdrop{animation:rpBackdrop .25s ease both;}
+
+  /* drifting mesh background for the main dashboard — cheap (CSS only),
+     gives the page a sense of motion even when no data is loading */
+  @keyframes rpMeshDrift{0%,100%{transform:translate(0,0) rotate(0deg);}
+                          33%{transform:translate(3%,-4%) rotate(1.5deg);}
+                          66%{transform:translate(-2%,3%) rotate(-1deg);}}
+  .rp-mesh{animation:rpMeshDrift 26s ease-in-out infinite;}
+
+  /* slow decorative spin for background icons/rings */
+  @keyframes rpSpinSlow{to{transform:rotate(360deg);}}
+  .rp-spin-slow{animation:rpSpinSlow 16s linear infinite;}
+
+  /* number/icon pop when a KPI updates */
+  @keyframes rpPopIn{0%{transform:scale(.6);opacity:0;}60%{transform:scale(1.08);opacity:1;}100%{transform:scale(1);}}
+  .rp-pop-in{animation:rpPopIn .5s cubic-bezier(.2,.9,.25,1.2) both;}
 `;

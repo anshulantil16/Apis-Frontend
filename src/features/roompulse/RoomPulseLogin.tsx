@@ -148,8 +148,10 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
       <style>{RP_STYLES}</style>
 
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="rp-blob absolute -top-40 -left-32 w-[36rem] h-[36rem] rounded-full bg-cyan-300/25 blur-[130px]" />
-        <div className="rp-blob absolute -bottom-40 -right-24 w-[36rem] h-[36rem] rounded-full bg-violet-300/25 blur-[130px]" style={{ animationDelay: '6s' }} />
+        <div className="rp-mesh absolute inset-0">
+          <div className="rp-blob absolute -top-40 -left-32 w-[36rem] h-[36rem] rounded-full bg-cyan-300/25 blur-[130px]" />
+          <div className="rp-blob absolute -bottom-40 -right-24 w-[36rem] h-[36rem] rounded-full bg-violet-300/25 blur-[130px]" style={{ animationDelay: '6s' }} />
+        </div>
         <div className="absolute inset-0 opacity-[0.5]"
           style={{ backgroundImage: 'linear-gradient(rgba(15,23,42,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(15,23,42,.035) 1px,transparent 1px)',
                    backgroundSize: '48px 48px' }} />
@@ -171,16 +173,17 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
 
       <div className="relative z-10 w-full max-w-5xl max-h-[94vh] grid md:grid-cols-2 rounded-[28px]
                       overflow-hidden border border-slate-200 bg-white/80 backdrop-blur-2xl rp-reveal
-                      shadow-[0_30px_90px_-24px_rgba(6,182,212,.25)]">
+                      shadow-[0_30px_90px_-24px_rgba(6,182,212,.25)]
+                      transition-transform duration-500 hover:shadow-[0_40px_110px_-24px_rgba(6,182,212,.32)]">
 
         <div className="relative p-6 md:p-8 flex flex-col justify-between overflow-hidden
                         bg-gradient-to-br from-cyan-50/80 via-white to-violet-50/60
                         border-b md:border-b-0 md:border-r border-slate-200">
           <div className="relative">
             <div className="flex items-center gap-3 mb-5">
-              <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-400 to-violet-600
+              <div className="rp-border-flow relative w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-400 to-violet-600
                               flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                <Radar className="w-5 h-5 text-white" />
+                <Radar className="w-5 h-5 text-white rp-spin-slow" />
                 <span className="rp-pulse-glow absolute -inset-2 rounded-2xl border-2 border-cyan-400/30" />
               </div>
               <div>
@@ -234,11 +237,13 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
                 </div>
               )}
               <button type="submit" disabled={busy}
-                className="relative overflow-hidden w-full mt-5 flex items-center justify-center gap-2
+                className="rp-sheen relative overflow-hidden w-full mt-5 flex items-center justify-center gap-2
                            px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 text-white
                            font-black shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5
-                           hover:shadow-xl hover:shadow-cyan-500/40 disabled:opacity-50 disabled:translate-y-0">
-                {busy ? <><Loader className="w-4 h-4 animate-spin" />Sending…</> : <>Send login code<ArrowRight className="w-4 h-4" /></>}
+                           hover:shadow-xl hover:shadow-cyan-500/40 disabled:opacity-50 disabled:translate-y-0
+                           group">
+                {busy ? <><Loader className="w-4 h-4 animate-spin" />Sending…</>
+                  : <>Send login code<ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" /></>}
               </button>
               <p className="text-[11px] text-slate-400 mt-4 text-center leading-relaxed">
                 Any @apisindia.com address can sign in as an Employee. Admin access is
@@ -266,10 +271,11 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
                       if (e.key === 'ArrowLeft' && i > 0) boxes.current[i - 1]?.focus();
                       if (e.key === 'ArrowRight' && i < 5) boxes.current[i + 1]?.focus();
                     }}
-                    className={`w-full aspect-square rounded-xl bg-white border text-center
-                                text-2xl font-black text-slate-800 transition-all focus:outline-none
-                                focus:ring-4 focus:ring-cyan-400/15
-                                ${d ? 'border-cyan-400 bg-cyan-50' : 'border-slate-200'} focus:border-cyan-400`} />
+                    style={{ animationDelay: `${i * 40}ms` }}
+                    className={`rp-reveal w-full aspect-square rounded-xl bg-white border text-center
+                                text-2xl font-black text-slate-800 transition-all duration-200 focus:outline-none
+                                focus:ring-4 focus:ring-cyan-400/15 focus:scale-105
+                                ${d ? 'rp-pop-in border-cyan-400 bg-cyan-50 shadow-md shadow-cyan-500/20' : 'border-slate-200'} focus:border-cyan-400`} />
                 ))}
               </div>
               {err && (

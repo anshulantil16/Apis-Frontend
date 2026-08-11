@@ -15,15 +15,26 @@ import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './RoomPulseAdmin
 type Tab = 'rooms' | 'mine' | 'approvals' | 'calendar' | 'manage';
 
 /* ── room card: the live-status tile that drives the whole dashboard ────── */
+const ROOM_GLOW: Record<string, string> = {
+  occupied: 'rgba(244,63,94,.30)', upcoming: 'rgba(245,158,11,.28)', free: 'rgba(16,185,129,.22)',
+};
 function RoomCard({ room, delay, onBook }: { room: any; delay: number; onBook: () => void }) {
   const ring = room.status === 'occupied' ? 'hover:border-rose-300'
              : room.status === 'upcoming' ? 'hover:border-amber-300' : 'hover:border-emerald-300';
   return (
     <Reveal delay={delay}>
-      <div className={`group relative rounded-2xl bg-white border border-slate-200 p-5 shadow-sm
-                       transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl ${ring}`}>
+      <div className={`rp-tilt group relative rounded-2xl bg-white border border-slate-200 p-5
+                       shadow-sm overflow-hidden ${ring}`}
+        style={{ '--rp-glow': ROOM_GLOW[room.status] || ROOM_GLOW.free,
+                 boxShadow: room.status !== 'free' ? `0 0 0 1px transparent` : undefined } as any}>
+        {/* animated top accent bar in the room's own colour */}
         <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl" style={{ background: room.color }} />
-        <div className="flex items-start justify-between mb-3">
+        {/* faint radial glow that intensifies on hover, colour-matched to status */}
+        <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full
+                        opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl"
+          style={{ background: ROOM_GLOW[room.status] || ROOM_GLOW.free }} />
+
+        <div className="relative flex items-start justify-between mb-3">
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
               {room.floor}
@@ -32,10 +43,12 @@ function RoomCard({ room, delay, onBook }: { room: any; delay: number; onBook: (
               {room.label && <span className="text-slate-400">{room.label} </span>}{room.name}
             </h3>
           </div>
-          <StatusPill status={room.status} />
+          <div className={room.status === 'occupied' ? 'rp-glow-ring rounded-full' : ''}>
+            <StatusPill status={room.status} />
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 text-[11px] text-slate-400 mb-4">
+        <div className="relative flex items-center gap-3 text-[11px] text-slate-400 mb-4">
           <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{room.capacity} seats</span>
           {room.amenities?.length > 0 && (
             <span className="truncate">· {room.amenities.slice(0, 2).join(', ')}</span>
@@ -43,7 +56,8 @@ function RoomCard({ room, delay, onBook }: { room: any; delay: number; onBook: (
         </div>
 
         {room.status === 'occupied' && room.current_booking && (
-          <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 mb-3">
+          <div className="relative rounded-xl bg-rose-50 border border-rose-200 p-3 mb-3 overflow-hidden">
+            <div className="absolute inset-y-0 left-0 w-0.5 bg-rose-400" />
             <p className="text-[11px] font-black text-rose-600">
               Until {room.until} · {room.current_booking.requested_by_name}
             </p>
@@ -53,7 +67,8 @@ function RoomCard({ room, delay, onBook }: { room: any; delay: number; onBook: (
           </div>
         )}
         {room.status === 'upcoming' && room.next_booking && (
-          <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 mb-3">
+          <div className="relative rounded-xl bg-amber-50 border border-amber-200 p-3 mb-3 overflow-hidden">
+            <div className="absolute inset-y-0 left-0 w-0.5 bg-amber-400" />
             <p className="text-[11px] font-black text-amber-600">
               Starts in {room.starts_in_min}m · {room.next_booking.requested_by_name}
             </p>
@@ -63,20 +78,25 @@ function RoomCard({ room, delay, onBook }: { room: any; delay: number; onBook: (
           </div>
         )}
         {room.status === 'free' && room.next_booking && (
-          <p className="text-[11px] text-slate-400 mb-3">
+          <p className="relative text-[11px] text-slate-400 mb-3">
             Next: {room.next_booking.start_time} · {room.next_booking.requested_by_name}
           </p>
         )}
         {room.status === 'free' && !room.next_booking && (
-          <p className="text-[11px] text-emerald-600/70 mb-3">Nothing booked today</p>
+          <p className="relative text-[11px] text-emerald-600/70 mb-3 flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-emerald-400 rp-pulse-glow" />
+            Nothing booked today
+          </p>
         )}
 
         <button onClick={onBook}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl
-                     bg-slate-50 border border-slate-200 text-[12px] font-black text-slate-600
-                     transition-all group-hover:bg-gradient-to-r group-hover:from-cyan-500
-                     group-hover:to-violet-600 group-hover:text-white group-hover:border-transparent">
-          <Plus className="w-3.5 h-3.5" />Book this room
+          className="rp-sheen relative w-full flex items-center justify-center gap-1.5 px-3 py-2.5
+                     rounded-xl bg-slate-50 border border-slate-200 text-[12px] font-black text-slate-600
+                     transition-all duration-300 group-hover:bg-gradient-to-r group-hover:from-cyan-500
+                     group-hover:to-violet-600 group-hover:text-white group-hover:border-transparent
+                     group-hover:shadow-lg group-hover:shadow-cyan-500/25">
+          <Plus className="w-3.5 h-3.5 transition-transform group-hover:rotate-90 duration-300" />
+          Book this room
         </button>
       </div>
     </Reveal>
@@ -129,8 +149,8 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm rp-reveal">
-      <div className="w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl
+    <div className="rp-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="rp-pop w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl
                       max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
           <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -144,7 +164,7 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
 
         {result ? (
           <div className="p-6 text-center">
-            <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center
+            <div className={`rp-pop-in w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center
               ${result.status === 'approved' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
               <CheckCircle2 className={`w-8 h-8 ${result.status === 'approved' ? 'text-emerald-500' : 'text-amber-500'}`} />
             </div>
@@ -223,7 +243,7 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
             )}
 
             <button type="submit" disabled={busy}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
+              className="rp-sheen w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
                          bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-black
                          shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all
                          disabled:opacity-50 disabled:translate-y-0">
@@ -287,8 +307,8 @@ function ItemRequestModal({ session, onClose, onDone }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm rp-reveal">
-      <div className="w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl
+    <div className="rp-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="rp-pop w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl
                       max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
           <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -302,7 +322,7 @@ function ItemRequestModal({ session, onClose, onDone }: {
 
         {result ? (
           <div className="p-6 text-center">
-            <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center
+            <div className={`rp-pop-in w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center
               ${result.status === 'approved' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
               <CheckCircle2 className={`w-8 h-8 ${result.status === 'approved' ? 'text-emerald-500' : 'text-amber-500'}`} />
             </div>
@@ -372,7 +392,7 @@ function ItemRequestModal({ session, onClose, onDone }: {
             )}
 
             <button type="submit" disabled={busy}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
+              className="rp-sheen w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
                          bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-black
                          shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all
                          disabled:opacity-50 disabled:translate-y-0">
@@ -547,8 +567,11 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
     <div className="min-h-screen bg-[#f5f7fa] relative">
       <style>{RP_STYLES}</style>
       <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="rp-blob absolute -top-40 -left-32 w-[32rem] h-[32rem] rounded-full bg-cyan-300/15 blur-[130px]" />
-        <div className="rp-blob absolute top-1/2 -right-32 w-[32rem] h-[32rem] rounded-full bg-violet-300/15 blur-[130px]" style={{ animationDelay: '5s' }} />
+        <div className="rp-mesh absolute inset-0">
+          <div className="rp-blob absolute -top-40 -left-32 w-[32rem] h-[32rem] rounded-full bg-cyan-300/15 blur-[130px]" />
+          <div className="rp-blob absolute top-1/2 -right-32 w-[32rem] h-[32rem] rounded-full bg-violet-300/15 blur-[130px]" style={{ animationDelay: '5s' }} />
+          <div className="rp-blob absolute bottom-0 left-1/3 w-[26rem] h-[26rem] rounded-full bg-emerald-300/10 blur-[130px]" style={{ animationDelay: '2.5s' }} />
+        </div>
       </div>
 
       {/* header */}
@@ -561,9 +584,9 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
             </button>
           )}
           <div className="flex items-center gap-2.5">
-            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600
+            <div className="rp-border-flow relative w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600
                             flex items-center justify-center shadow-lg shadow-cyan-500/30">
-              <Radar className="w-5 h-5 text-white" />
+              <Radar className="w-5 h-5 text-white rp-spin-slow" />
               <span className="rp-pulse-glow absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
             </div>
             <div>
@@ -577,24 +600,24 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden md:flex items-center gap-4 pr-4 border-r border-slate-200">
               <div className="text-center">
-                <p className="text-sm font-black text-emerald-600 tabular-nums">{stats.free}</p>
+                <p key={stats.free} className="rp-pop-in text-sm font-black text-emerald-600 tabular-nums">{stats.free}</p>
                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Free</p>
               </div>
               <div className="text-center">
-                <p className="text-sm font-black text-rose-600 tabular-nums">{stats.occ}</p>
+                <p key={stats.occ} className="rp-pop-in text-sm font-black text-rose-600 tabular-nums">{stats.occ}</p>
                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Occupied</p>
               </div>
             </div>
             <button onClick={() => { setBookRoom(null); setShowBooking(true); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-cyan-500
+              className="rp-sheen flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-cyan-500
                          to-violet-600 text-white text-[12px] font-black shadow-lg shadow-cyan-500/20
-                         hover:-translate-y-0.5 transition-all">
+                         hover:-translate-y-0.5 hover:shadow-xl hover:shadow-cyan-500/30 transition-all">
               <Plus className="w-3.5 h-3.5" />Book Room
             </button>
             <button onClick={() => setShowItemRequest(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200
+              className="rp-sheen flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200
                          text-slate-600 text-[12px] font-black hover:border-cyan-300 hover:text-cyan-700
-                         transition-all">
+                         hover:-translate-y-0.5 transition-all">
               <Package className="w-3.5 h-3.5" />Request Item
             </button>
             <div className="flex items-center gap-2 pl-1">
@@ -604,7 +627,7 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
               </div>
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600
                               flex items-center justify-center text-white text-[12px] font-black
-                              shadow-md shadow-cyan-500/25">
+                              shadow-md shadow-cyan-500/25 transition-transform duration-300 hover:scale-110 hover:rotate-6">
                 {session.email[0].toUpperCase()}
               </div>
               <button onClick={() => { clearSession(); setSession(null); }} title="Sign out"

@@ -145,15 +145,15 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
                       className={`${inputCls} mb-3 py-2 text-[12px]`} />
                     <div className="flex items-center gap-2">
                       <button onClick={() => act(row, 'approve')} disabled={busyId === key}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                        className="rp-sheen flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
                                    bg-emerald-50 text-emerald-700 text-[12px] font-black
-                                   hover:bg-emerald-100 transition-all disabled:opacity-50">
-                        <CheckCircle2 className="w-3.5 h-3.5" />Approve
+                                   hover:bg-emerald-100 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                        {busyId === key ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}Approve
                       </button>
                       <button onClick={() => act(row, 'reject')} disabled={busyId === key}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                        className="rp-sheen flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
                                    bg-rose-50 text-rose-700 text-[12px] font-black
-                                   hover:bg-rose-100 transition-all disabled:opacity-50">
+                                   hover:bg-rose-100 hover:-translate-y-0.5 transition-all disabled:opacity-50">
                         <XCircle className="w-3.5 h-3.5" />Reject
                       </button>
                     </div>
@@ -175,7 +175,7 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
           <div className="space-y-2.5">
             {readyToFulfil.map((r, i) => (
               <Reveal key={r.id} delay={i * 50}>
-                <div className="flex items-center gap-3 rounded-xl bg-cyan-50/50 border border-cyan-200 p-3.5">
+                <div className="rp-tilt flex items-center gap-3 rounded-xl bg-cyan-50/50 border border-cyan-200 p-3.5">
                   <div className="w-2 h-full min-h-[36px] rounded-full flex-shrink-0"
                     style={{ background: CATEGORY_COLOUR[r.category] }} />
                   <div className="min-w-0 flex-1">
@@ -187,8 +187,8 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
                     </p>
                   </div>
                   <button onClick={() => fulfil(r.id)} disabled={busyId === `resource-${r.id}`}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 text-white
-                               text-[12px] font-black hover:bg-cyan-700 transition-all disabled:opacity-50 flex-shrink-0">
+                    className="rp-sheen flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 text-white
+                               text-[12px] font-black hover:bg-cyan-700 hover:-translate-y-0.5 transition-all disabled:opacity-50 flex-shrink-0">
                     <PackageCheck className="w-3.5 h-3.5" />Mark Fulfilled
                   </button>
                 </div>
@@ -299,10 +299,10 @@ export function SuperAdminPanel({ session, onRoomsChanged }: { session: Session;
             const Icon = t.icon; const on = sub === t.id;
             return (
               <button key={t.id} onClick={() => setSub(t.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-black transition-all
-                  ${on ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-lg shadow-cyan-500/20'
-                       : 'text-slate-400 hover:text-slate-600'}`}>
-                <Icon className="w-4 h-4" />{t.label}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-black transition-all duration-300
+                  ${on ? 'rp-sheen bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-lg shadow-cyan-500/20 scale-105'
+                       : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
+                <Icon className={`w-4 h-4 transition-transform duration-300 ${on ? 'scale-110' : ''}`} />{t.label}
               </button>
             );
           })}
@@ -371,10 +371,10 @@ function DangerZone({ session }: { session: Session }) {
             className="px-3 py-2 rounded-lg bg-white border border-rose-200 text-slate-800 text-sm
                        focus:outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-400/10" />
           <button onClick={reset} disabled={typed !== 'RESET' || busy}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-600 text-white
-                       text-[12px] font-black hover:bg-rose-700 transition-all
-                       disabled:opacity-40 disabled:cursor-not-allowed">
-            <Trash2 className="w-3.5 h-3.5" />{busy ? 'Resetting…' : 'Reset Database'}
+            className="rp-sheen flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-600 text-white
+                       text-[12px] font-black hover:bg-rose-700 hover:-translate-y-0.5 transition-all
+                       disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0">
+            <Trash2 className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />{busy ? 'Resetting…' : 'Reset Database'}
           </button>
         </div>
         {result && <p className="text-[12px] text-emerald-700 mt-3 ml-[42px]">{result} Reloading…</p>}
@@ -437,8 +437,9 @@ function RoomsManage({ session, onChanged }: { session: Session; onChanged: () =
           </div>
           {err && <p className="text-[12px] text-rose-600">{err}</p>}
           <button type="submit" disabled={busy}
-            className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600
-                       text-white text-sm font-black hover:-translate-y-0.5 transition-all disabled:opacity-50">
+            className="rp-sheen w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600
+                       text-white text-sm font-black hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/25
+                       transition-all disabled:opacity-50">
             {busy ? 'Adding…' : 'Add Room'}
           </button>
         </form>
@@ -446,8 +447,9 @@ function RoomsManage({ session, onChanged }: { session: Session; onChanged: () =
       <Panel title="All rooms" icon={Building2} subtitle={`${rooms.length} active`}>
         <div className="space-y-2">
           {rooms.map(r => (
-            <div key={r.id} className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
-              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: r.color }} />
+            <div key={r.id} className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-200 p-3
+                                       transition-all duration-300 hover:border-cyan-200 hover:bg-white hover:shadow-sm">
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 rp-pulse-glow" style={{ background: r.color }} />
               <div className="min-w-0 flex-1">
                 <p className="text-[12px] font-bold text-slate-800 truncate">{r.label} {r.name}</p>
                 <p className="text-[10px] text-slate-400">{r.floor} · {r.capacity} seats</p>
@@ -503,7 +505,7 @@ function TeamManage({ session }: { session: Session }) {
     const res = await fetch(`${API}/employees/template/`);
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'RoomPulse_Employee_Template.xlsx';
+    const a = document.createElement('a'); a.href = url; a.download = 'AdminPulse_Employee_Template.xlsx';
     document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a);
   };
   const upload = async (file: File) => {
@@ -524,8 +526,9 @@ function TeamManage({ session }: { session: Session }) {
         <form onSubmit={addAdmin} className="flex gap-2 mb-4">
           <input value={newAdmin} onChange={e => setNewAdmin(e.target.value)} placeholder="name@apisindia.com"
             className={`flex-1 ${inputCls}`} />
-          <button type="submit" className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl
-                                           bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-[12px] font-black">
+          <button type="submit" className="rp-sheen flex items-center gap-1.5 px-4 py-2.5 rounded-xl
+                                           bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-[12px] font-black
+                                           hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/25 transition-all">
             <UserPlus className="w-4 h-4" />Add
           </button>
         </form>
@@ -549,15 +552,17 @@ function TeamManage({ session }: { session: Session }) {
 
       <Panel title="Employee Directory" icon={FileSpreadsheet} subtitle={`${employees.count || 0} on record`}>
         <button onClick={downloadTemplate}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-3 rounded-xl
-                     border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50">
+          className="rp-sheen w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-3 rounded-xl
+                     border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50
+                     hover:border-cyan-300 hover:text-cyan-700 transition-all">
           <Download className="w-4 h-4" />Download template
         </button>
-        <label className={`block rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all
-          ${uploadBusy ? 'border-slate-200' : 'border-slate-300 hover:border-cyan-400 hover:bg-cyan-50/50'}`}>
+        <label className={`group block rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all duration-300
+          ${uploadBusy ? 'border-slate-200' : 'border-slate-300 hover:border-cyan-400 hover:bg-cyan-50/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10'}`}>
           <input type="file" accept=".xlsx,.xls" className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); }} />
-          <UploadCloud className={`w-7 h-7 mx-auto mb-2 ${uploadBusy ? 'text-slate-300 animate-pulse' : 'text-cyan-500'}`} />
+          <UploadCloud className={`w-7 h-7 mx-auto mb-2 transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-110
+            ${uploadBusy ? 'text-slate-300 animate-pulse' : 'text-cyan-500'}`} />
           <p className="text-[12px] font-bold text-slate-600">
             {uploadBusy ? 'Uploading…' : 'Click to upload the employee sheet'}
           </p>
@@ -601,9 +606,12 @@ function AnalyticsPanel({ session }: { session: Session }) {
           const Icon = s.icon;
           return (
             <Reveal key={s.l} delay={i * 60}>
-              <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4">
-                <Icon className="w-4 h-4 text-cyan-600 mb-2" />
-                <p className="text-2xl font-black text-slate-900 tabular-nums">
+              <div className="rp-tilt group relative rounded-2xl bg-white border border-slate-200 shadow-sm p-4
+                              overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-cyan-500/[0.08]">
+                <div className="pointer-events-none absolute -top-6 -right-6 w-20 h-20 rounded-full bg-cyan-400/0
+                                group-hover:bg-cyan-400/10 blur-xl transition-colors duration-500" />
+                <Icon className="w-4 h-4 text-cyan-600 mb-2 transition-transform duration-300 group-hover:scale-125 group-hover:-rotate-6" />
+                <p className="rp-pop-in text-2xl font-black text-slate-900 tabular-nums">
                   {s.raw ? s.v : (s.v ?? '—')}{!s.raw && s.suffix}
                 </p>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{s.l}</p>
