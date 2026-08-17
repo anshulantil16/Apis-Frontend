@@ -118,7 +118,7 @@ function SelectOther({ value, onChange, options, className, placeholder = 'Selec
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
-function Login({ onLogin, onBack }: { onLogin: (u: User) => void; onBack?: () => void }) {
+function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const [empId, setEmpId] = useState('');
   const [otp, setOtp] = useState('');
@@ -158,15 +158,12 @@ function Login({ onLogin, onBack }: { onLogin: (u: User) => void; onBack?: () =>
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-900">
-      {onBack && (
-        <button onClick={onBack}
-          className="fixed top-4 left-4 z-50 flex items-center gap-1.5 px-3 py-2 bg-slate-900/70 hover:bg-slate-900/90 backdrop-blur border border-white/15 text-white rounded-xl text-xs font-bold shadow-lg transition-all">
-          <ChevronLeft className="w-4 h-4" /> Back to Apps
-        </button>
-      )}
+    <div className="min-h-full py-10 px-4 sm:px-6">
+      {/* The split sits inside one card so it reads as a panel on the light
+          shell rather than a full-bleed takeover. */}
+      <div className="max-w-5xl mx-auto flex rounded-3xl overflow-hidden border border-slate-200 shadow-xl">
       {/* ── Brand panel ── */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[55%] p-12 xl:p-16 text-white relative overflow-hidden sheen bg-gradient-to-br from-sky-600 via-indigo-600 to-violet-700 bg-[length:200%_200%] animate-gradient">
+      <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[55%] p-10 xl:p-12 text-white relative overflow-hidden sheen bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-600 bg-[length:200%_200%] animate-gradient">
         <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-white/10 blur-3xl animate-float-slow" />
         <div className="absolute -left-20 bottom-0 w-80 h-80 rounded-full bg-fuchsia-400/20 blur-3xl animate-float" />
         <div className="absolute right-1/3 top-1/2 w-64 h-64 rounded-full bg-cyan-300/10 blur-3xl animate-float-slow" />
@@ -207,22 +204,22 @@ function Login({ onLogin, onBack }: { onLogin: (u: User) => void; onBack?: () =>
       </div>
 
       {/* ── Form panel ── */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-indigo-50 relative overflow-hidden">
-        <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-indigo-200/40 blur-3xl lg:hidden" />
+      <div className="flex-1 flex items-center justify-center p-6 bg-white relative overflow-hidden">
+        <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-indigo-100/50 blur-3xl lg:hidden" />
         <div className="w-full max-w-md relative">
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
             <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg"><Plane className="w-6 h-6 text-white" /></div>
-            <div><h1 className="font-black text-slate-800 text-lg">APIS TA/DA Portal</h1><p className="text-slate-400 text-xs">Travel &amp; Daily Allowance</p></div>
+            <div><h1 className="font-black text-slate-900 text-lg">APIS TA/DA Portal</h1><p className="text-slate-500 text-xs">Travel &amp; Daily Allowance</p></div>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-xl shadow-indigo-500/10 p-8 border border-slate-100 animate-pop">
+          <div className="bg-white rounded-3xl p-8 animate-pop">
             {mode === 'admin' && (
               <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full mb-4">
                 <Shield className="w-3 h-3" /> Admin access
               </div>
             )}
-            <h2 className="text-2xl font-black text-slate-800">{step === 'id' ? 'Welcome back' : 'Check your inbox'}</h2>
-            <p className="text-slate-400 text-sm mb-6">{step === 'id' ? 'Sign in with your Employee ID to continue.' : `We emailed a 6-digit code to your registered address.`}</p>
+            <h2 className="text-2xl font-black text-slate-900">{step === 'id' ? 'Welcome back' : 'Check your inbox'}</h2>
+            <p className="text-slate-500 text-sm mb-6">{step === 'id' ? 'Sign in with your Employee ID to continue.' : `We emailed a 6-digit code to your registered address.`}</p>
 
             {step === 'id' ? (
               <>
@@ -230,7 +227,7 @@ function Login({ onLogin, onBack }: { onLogin: (u: User) => void; onBack?: () =>
                 <div className="relative mb-4">
                   <User className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input value={empId} onChange={e => setEmpId(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="e.g. E1001"
-                    className="w-full border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3.5 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all font-semibold text-slate-700" />
+                    className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-4 py-3.5 focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10 transition-all font-semibold text-slate-800" />
                 </div>
                 <button onClick={() => send(false)} disabled={busy || !empId.trim()} className="w-full bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold py-3.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
                   {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <>Send OTP <ArrowRight className="w-4 h-4" /></>}
@@ -250,18 +247,19 @@ function Login({ onLogin, onBack }: { onLogin: (u: User) => void; onBack?: () =>
                 <div className="relative mb-4">
                   <KeyRound className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input value={otp} onChange={e => setOtp(e.target.value)} onKeyDown={e => e.key === 'Enter' && verify()} placeholder="000000" maxLength={6} autoFocus
-                    className="w-full border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3.5 text-center text-2xl tracking-[0.4em] font-black focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all text-slate-700" />
+                    className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-4 py-3.5 text-center text-2xl tracking-[0.4em] font-black focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10 transition-all text-slate-800" />
                 </div>
                 <button onClick={verify} disabled={busy || otp.length < 4} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-lg hover:shadow-emerald-500/30 text-white font-bold py-3.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
                   {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Verify &amp; Login</>}
                 </button>
-                <button onClick={() => { setStep('id'); setMode('user'); setOtp(''); setMsg(''); }} className="w-full text-slate-400 hover:text-slate-600 text-xs mt-3 font-semibold transition-colors">← Use a different ID</button>
+                <button onClick={() => { setStep('id'); setMode('user'); setOtp(''); setMsg(''); }} className="w-full text-slate-500 hover:text-slate-800 text-xs mt-3 font-semibold transition-colors">← Use a different ID</button>
               </>
             )}
             {msg && <p className="text-rose-500 text-sm mt-4 flex items-center gap-1.5 bg-rose-50 rounded-lg px-3 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{msg}</p>}
           </div>
-          <p className="text-center text-slate-400 text-xs mt-6">Secured by email OTP · Apis India Limited</p>
+          <p className="text-center text-slate-500 text-xs mt-6">Secured by email OTP · Apis India Limited</p>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -841,7 +839,7 @@ function AdminDashboard({ user }: { user: User }) {
 }
 
 // ── Portal shell ──────────────────────────────────────────────────────────────
-function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () => void; onNavigateBack?: () => void }) {
+function Portal({ user, onLogout }: { user: User; onLogout: () => void }) {
   const isApprover = ['manager', 'hr', 'finance'].includes(user.role);
   const [tab, setTab] = useState<string>(isApprover ? 'approvals' : 'new');
   const [refresh, setRefresh] = useState(0);
@@ -855,20 +853,17 @@ function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () =
     : [{ k: 'new', l: 'New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-700 text-white sticky top-0 z-40 shadow-lg relative overflow-hidden">
-        <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+    <div className="min-h-full bg-[#f5f7fa]">
+      <header className="bg-white border-b border-slate-200 text-slate-800 relative z-20">
         <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-3 relative">
-          {onNavigateBack && <button onClick={onNavigateBack} className="text-white/70 hover:text-white"><ChevronLeft className="w-5 h-5" /></button>}
-          <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center border border-white/20"><Plane className="w-5 h-5" /></div>
-          <div className="flex-1"><h1 className="font-black leading-tight">APIS TA/DA Portal{isAdmin && ' · Super Admin'}</h1><p className="text-white/70 text-xs">{user.name} · {user.designation} · {isAdmin ? 'Oversight & Setup' : `Level ${user.level}`}</p></div>
-          <span className="hidden sm:inline-flex items-center gap-1.5 bg-white/15 backdrop-blur border border-white/20 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">{user.role}</span>
-          <div className="w-9 h-9 rounded-full bg-white text-indigo-600 flex items-center justify-center font-black text-sm shadow-inner">{(user.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
-          <button onClick={onLogout} className="flex items-center gap-1 text-white/80 hover:text-white text-sm"><LogOut className="w-4 h-4" /><span className="hidden md:inline">Logout</span></button>
+          <div className="flex-1"><p className="font-black leading-tight text-slate-900">{user.name}</p><p className="text-slate-500 text-xs">{user.designation} · {isAdmin ? 'Oversight & Setup' : `Level ${user.level}`}</p></div>
+          <span className="hidden sm:inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">{user.role}</span>
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-sm">{(user.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
+          <button onClick={onLogout} className="flex items-center gap-1 text-slate-500 hover:text-slate-900 text-sm transition-colors"><LogOut className="w-4 h-4" /><span className="hidden md:inline">Logout</span></button>
         </div>
         {!isAdmin && (
           <div className="max-w-6xl mx-auto px-5 flex gap-1">
-            {tabs.map(t => <button key={t.k} onClick={() => { setTab(t.k); setSel(null); }} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${tab === t.k ? 'border-white text-white' : 'border-transparent text-white/60 hover:text-white'}`}><t.i className="w-4 h-4" />{t.l}</button>)}
+            {tabs.map(t => <button key={t.k} onClick={() => { setTab(t.k); setSel(null); }} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${tab === t.k ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}><t.i className="w-4 h-4" />{t.l}</button>)}
           </div>
         )}
       </header>
@@ -916,11 +911,11 @@ function Portal({ user, onLogout, onNavigateBack }: { user: User; onLogout: () =
   );
 }
 
-export function TadaPage({ onNavigateBack }: { onNavigateBack?: () => void }) {
+export function TadaPage(_props: { onNavigateBack?: () => void } = {}) {
   const [user, setUser] = useState<User | null>(() => { try { return JSON.parse(localStorage.getItem('tada_user') || 'null'); } catch { return null; } });
   const logout = () => { localStorage.removeItem('tada_user'); setUser(null); };
-  if (!user) return <Login onLogin={setUser} onBack={onNavigateBack} />;
-  return <Portal user={user} onLogout={logout} onNavigateBack={onNavigateBack} />;
+  if (!user) return <Login onLogin={setUser} />;
+  return <Portal user={user} onLogout={logout} />;
 }
 
 export default TadaPage;

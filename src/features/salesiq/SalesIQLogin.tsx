@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Zap, Mail, ShieldCheck, ArrowRight, ArrowLeft, Loader, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Zap, Mail, ShieldCheck, ArrowRight, Loader, AlertTriangle, RotateCcw } from 'lucide-react';
 import { API } from './SalesIQShared';
 
 const SESSION_KEY = 'salesiq_session';
@@ -203,13 +203,15 @@ function Honeycomb() {
 
 /* ── drifting pollen motes ──────────────────────────────────────────────── */
 function Motes() {
-  const motes = useRef(
+  // Lazy useState initialiser, not useRef(expr): useRef re-evaluates its
+  // argument on every render even though only the first value is kept.
+  const [motes] = useState(() =>
     Array.from({ length: 22 }, () => ({
       l: Math.random() * 100, s: 3 + Math.random() * 6,
       d: Math.random() * 16, dur: 16 + Math.random() * 18,
       o: 0.2 + Math.random() * 0.4,
     }))
-  ).current;
+  );
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
       {motes.map((m, i) => (
@@ -226,11 +228,8 @@ function Motes() {
 }
 
 /* ════════════════════════════════════════════════════════════════════════ */
-export function SalesIQLogin({ onSuccess, onBack }: {
+export function SalesIQLogin({ onSuccess }: {
   onSuccess: (email: string) => void;
-  /** Leave undefined only when the login is the application root — otherwise a
-   *  user who opens it by mistake is trapped with no way out. */
-  onBack?: () => void;
 }) {
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
@@ -302,7 +301,7 @@ export function SalesIQLogin({ onSuccess, onBack }: {
   const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6
+    <div className="min-h-full relative overflow-hidden flex items-center justify-center px-6 py-10
                     bg-gradient-to-br from-[#fffdf7] via-[#fff7e6] to-[#ffedd5]">
       <style>{`
         @keyframes combPulse{0%,100%{opacity:.10}50%{opacity:.4}}
@@ -399,28 +398,6 @@ export function SalesIQLogin({ onSuccess, onBack }: {
       </div>
       <div className="absolute inset-0 opacity-[0.55]"><Honeycomb /></div>
       <Motes />
-
-      {/* ── back ──
-          Sits above the card so it is reachable at any step of the flow, and
-          styled as frosted glass so it belongs to the scene rather than
-          looking bolted on. */}
-      {onBack && (
-        <button onClick={onBack}
-          className="group absolute top-6 left-6 z-20 flex items-center gap-2 pl-3 pr-4 py-2.5
-                     rounded-full bg-white/70 backdrop-blur-xl border border-amber-200/80
-                     shadow-lg shadow-amber-900/5 transition-all duration-300
-                     hover:bg-white hover:-translate-x-0.5 hover:shadow-xl hover:shadow-amber-900/10">
-          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500
-                           flex items-center justify-center shadow-sm
-                           transition-transform duration-300 group-hover:-translate-x-0.5">
-            <ArrowLeft className="w-3.5 h-3.5 text-white" />
-          </span>
-          <span className="text-[12px] font-black text-amber-900/70 group-hover:text-amber-900
-                           transition-colors">
-            Back to Hub
-          </span>
-        </button>
-      )}
 
       {/* ── card ── */}
       <div className="relative z-10 w-full max-w-5xl grid md:grid-cols-2 rounded-[28px] overflow-hidden

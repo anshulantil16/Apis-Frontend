@@ -265,7 +265,7 @@ export function OfferLetterSimplePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+    <div className="min-h-full bg-[#f5f7fa] p-8">
       <div className={activeTab === 'history' ? 'max-w-5xl mx-auto' : 'max-w-2xl mx-auto'}>
         {/* Header */}
         <div className="mb-6">

@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, Search, Zap,
 } from 'lucide-react';
 import { getTeamProgressReport, getAllCycles } from '../../../Services/progressApi';
+import { TOOL_STYLES } from '../../toolStyles';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,12 +57,12 @@ function EmployeeProgressCard({ member }: { member: any }) {
     : 'border-white/8';
 
   return (
-    <div className={`bg-white/3 border rounded-2xl overflow-hidden transition-all ${statusBorder}`}>
+    <div className={`bg-white/3 border rounded-2xl overflow-hidden transition-all tp-reveal tp-tilt ${statusBorder}`}>
       <div className="p-4">
         {/* Employee info */}
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white font-bold text-sm shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white font-bold text-sm shrink-0 tp-pop-in">
               {member.name.charAt(0)}
             </div>
             <div>
@@ -88,7 +89,7 @@ function EmployeeProgressCard({ member }: { member: any }) {
             <ProgressBar pct={gc.avg_completion} />
             <div className="flex items-center justify-between mt-2">
               <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[gc.at_risk ? 'at_risk' : 'on_track']}`} />
+                <div className={`w-1.5 h-1.5 rounded-full tp-pulse-glow ${STATUS_DOT[gc.at_risk ? 'at_risk' : 'on_track']}`} />
                 <span className={`text-xs font-semibold ${gc.at_risk ? STATUS_COLORS.at_risk : STATUS_COLORS.on_track}`}>
                   {gc.at_risk ? 'At Risk' : 'On Track'}
                 </span>
@@ -188,8 +189,9 @@ export function TeamProgressView({ manager }: { manager: any }) {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      <style>{TOOL_STYLES}</style>
       {/* ── Header ── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-3 tp-reveal">
         <div>
           <h2 className="text-white font-bold text-xl">Team Progress Dashboard</h2>
           <p className="text-slate-400 text-sm mt-0.5">{manager.name} · {manager.designation}</p>
@@ -210,20 +212,20 @@ export function TeamProgressView({ manager }: { manager: any }) {
           { label: 'Submitted', value: stats.submitted ?? '—', icon: CheckCircle, color: 'text-emerald-300', bg: 'bg-emerald-500/8' },
           { label: 'At Risk', value: stats.at_risk ?? '—', icon: AlertTriangle, color: 'text-amber-300', bg: 'bg-amber-500/8' },
           { label: 'Not Started', value: stats.not_started ?? '—', icon: Clock, color: 'text-rose-300', bg: 'bg-rose-500/8' },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className={`${bg} border border-white/8 rounded-2xl p-4`}>
+        ].map(({ label, value, icon: Icon, color, bg }, si) => (
+          <div key={label} className={`${bg} border border-white/8 rounded-2xl p-4 tp-reveal tp-tilt`} style={{ animationDelay: `${si * 70}ms` }}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{label}</p>
               <Icon className={`w-4 h-4 ${color}`} />
             </div>
-            <p className={`text-3xl font-black ${color}`}>{value}</p>
+            <p className={`text-3xl font-black ${color} tp-pop-in`}>{value}</p>
           </div>
         ))}
       </div>
 
       {/* ── Bar chart ── */}
       {barData.length > 0 && (
-        <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
+        <div className="bg-white/3 border border-white/8 rounded-2xl p-5 tp-reveal">
           <h3 className="text-slate-300 text-sm font-bold mb-4">Team Completion Overview</h3>
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
@@ -265,7 +267,7 @@ export function TeamProgressView({ manager }: { manager: any }) {
           <button
             key={f}
             onClick={() => setFilterRisk(f)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition border ${
+            className={`tp-tilt px-4 py-2.5 rounded-xl text-sm font-bold transition border ${
               filterRisk === f
                 ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
                 : 'border-white/8 text-slate-400 hover:border-white/20'
@@ -296,7 +298,7 @@ export function TeamProgressView({ manager }: { manager: any }) {
 
       {/* ── At-risk callout ── */}
       {stats.at_risk > 0 && (
-        <div className="bg-amber-500/8 border border-amber-500/20 rounded-2xl p-5">
+        <div className="bg-amber-500/8 border border-amber-500/20 rounded-2xl p-5 tp-reveal">
           <div className="flex items-center gap-3 mb-3">
             <AlertTriangle className="w-5 h-5 text-amber-400" />
             <h4 className="text-amber-300 font-bold">Action Needed</h4>

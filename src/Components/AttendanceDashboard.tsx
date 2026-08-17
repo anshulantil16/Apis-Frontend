@@ -4,6 +4,7 @@ import {
   Download, MapPin, User, Clock, ChevronDown, ChevronUp, SlidersHorizontal,
   AlertTriangle,
 } from 'lucide-react';
+import { TOOL_STYLES } from './toolStyles';
 
 const getImageUrl = (html: string): string => {
   if (!html) return '';
@@ -166,9 +167,10 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
 
   return (
     <div className="space-y-5">
+      <style>{TOOL_STYLES}</style>
 
       {/* ── Filters ── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
+      <div className="tp-reveal bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full lg:w-auto">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -198,7 +200,7 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
             </select>
           )}
           <button onClick={exportCSV}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-500/15 hover:scale-[1.02] active:scale-95 transition-all">
+            className="tp-sheen flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-500/15 hover:scale-[1.02] active:scale-95 transition-all">
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
         </div>
@@ -213,10 +215,12 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
           { label: 'Weekly Off',    value: kpi.wo,           sub: 'Rest day',                 pct: kpi.woPct,        icon: Coffee,        iconCls: 'bg-sky-100 text-sky-600',        valCls: 'text-sky-700',     grad: 'from-white to-sky-50/60',    ring: 'border-sky-200' },
           { label: 'EOD Done',      value: kpi.eod,          sub: 'Of present employees',     pct: kpi.eodPct,       icon: CheckSquare,   iconCls: 'bg-indigo-100 text-indigo-600',  valCls: 'text-indigo-700',  grad: 'from-white to-indigo-50/60', ring: 'border-indigo-200' },
           { label: 'Invalid Punch', value: kpi.invalidPunch, sub: 'Missing in / out',         pct: null,             icon: AlertTriangle, iconCls: 'bg-red-100 text-red-600',        valCls: 'text-red-700',     grad: 'from-white to-red-50/60',    ring: 'border-red-200' },
-        ].map(c => (
-          <div key={c.label} className={`bg-gradient-to-br ${c.grad} rounded-2xl border ${c.ring} p-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}>
+        ].map((c, i) => (
+          <div key={c.label}
+            className={`tp-reveal tp-tilt bg-gradient-to-br ${c.grad} rounded-2xl border ${c.ring} p-4 shadow-sm hover:shadow-lg transition-all duration-200`}
+            style={{ animationDelay: `${i * 60}ms` }}>
             <div className="flex items-start justify-between mb-3">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${c.iconCls} shadow-sm`}>
+              <div className={`tp-pop-in w-10 h-10 rounded-2xl flex items-center justify-center ${c.iconCls} shadow-sm`}>
                 <c.icon className="w-5 h-5" />
               </div>
               {c.pct !== null && (
@@ -231,7 +235,7 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       </div>
 
       {/* ── Summary table ── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="tp-reveal bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" style={{ animationDelay: '120ms' }}>
         <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-black text-slate-800">By {groupBy.charAt(0).toUpperCase() + String(groupBy).slice(1)}</h3>
@@ -298,9 +302,9 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                               const present = isPresent(rec), leave = isLeave(rec), wo = isWO(rec);
                               const mp = missingFieldPunch(rec);
                               return (
-                                <div key={i} className={`bg-white rounded-xl border p-4 flex gap-3 hover:shadow-md transition-all ${
+                                <div key={i} className={`tp-reveal tp-tilt bg-white rounded-xl border p-4 flex gap-3 hover:shadow-md transition-all ${
                                   mp ? 'border-red-300 bg-red-50/40 ring-1 ring-red-200' : 'border-slate-150 hover:border-slate-200'
-                                }`}>
+                                }`} style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>
                                   {rec.attendanceImage && (
                                     <a href={rec.attendanceImage} target="_blank" rel="noopener noreferrer"
                                       className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm">

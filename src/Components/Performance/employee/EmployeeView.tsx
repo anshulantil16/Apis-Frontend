@@ -4,6 +4,7 @@ import {
   FileText, AlertCircle, ChevronRight, Award, TrendingUp, Lock, Unlock, Download,
 } from 'lucide-react';
 import { PERF_API } from '../../../features/performance/PerformancePage';
+import { TOOL_STYLES } from '../../toolStyles';
 
 // ─── Color palette ─────────────────────────────────────────────────────────────
 
@@ -15,11 +16,11 @@ const CATEGORIES = [
 ];
 
 const GOAL_COLORS = [
-  { border: 'border-l-violet-500', bg: 'bg-violet-500/10',   text: 'text-violet-300',   bar: 'bg-violet-500',   glow: 'shadow-violet-500/20' },
-  { border: 'border-l-amber-500',  bg: 'bg-amber-500/10',    text: 'text-amber-300',    bar: 'bg-amber-500',    glow: 'shadow-amber-500/20' },
-  { border: 'border-l-sky-500',    bg: 'bg-sky-500/10',      text: 'text-sky-300',      bar: 'bg-sky-500',      glow: 'shadow-sky-500/20' },
-  { border: 'border-l-emerald-500',bg: 'bg-emerald-500/10',  text: 'text-emerald-300',  bar: 'bg-emerald-500',  glow: 'shadow-emerald-500/20' },
-  { border: 'border-l-rose-500',   bg: 'bg-rose-500/10',     text: 'text-rose-300',     bar: 'bg-rose-500',     glow: 'shadow-rose-500/20' },
+  { border: 'border-l-violet-500', bg: 'bg-violet-50',   text: 'text-violet-600',   bar: 'bg-violet-500',   glow: 'shadow-violet-500/20' },
+  { border: 'border-l-amber-500',  bg: 'bg-amber-50',    text: 'text-amber-600',    bar: 'bg-amber-500',    glow: 'shadow-amber-500/20' },
+  { border: 'border-l-sky-500',    bg: 'bg-sky-50',      text: 'text-sky-600',      bar: 'bg-sky-500',      glow: 'shadow-sky-500/20' },
+  { border: 'border-l-emerald-500',bg: 'bg-emerald-50',  text: 'text-emerald-600',  bar: 'bg-emerald-500',  glow: 'shadow-emerald-500/20' },
+  { border: 'border-l-rose-500',   bg: 'bg-rose-50',     text: 'text-rose-600',     bar: 'bg-rose-500',     glow: 'shadow-rose-500/20' },
 ];
 const getGoalColor = (i: number) => GOAL_COLORS[i % GOAL_COLORS.length];
 
@@ -56,7 +57,7 @@ function StarRating({ value, onChange, size = 'md' }: { value: number; onChange?
           onMouseLeave={() => setHover(0)}
           disabled={!onChange}
           className={`transition-all ${onChange ? 'hover:scale-125 cursor-pointer' : 'cursor-default'}`}>
-          <Star className={`${sz} transition-colors ${s <= (hover || value) ? 'text-amber-400 fill-amber-400' : 'text-slate-700'}`} />
+          <Star className={`${sz} transition-colors ${s <= (hover || value) ? 'text-amber-500 fill-amber-500' : 'text-slate-300'}`} />
         </button>
       ))}
     </div>
@@ -65,17 +66,17 @@ function StarRating({ value, onChange, size = 'md' }: { value: number; onChange?
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; label: string; dot: string }> = {
-    draft:            { cls: 'bg-slate-800 text-slate-400 border-slate-700',          label: 'Draft',             dot: 'bg-slate-500' },
-    submitted:        { cls: 'bg-blue-500/15 text-blue-300 border-blue-500/30',       label: 'Pending Review',    dot: 'bg-blue-400 animate-pulse' },
-    manager_approved: { cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30', label: 'Manager Approved', dot: 'bg-emerald-400' },
-    manager_rejected: { cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30',       label: 'Changes Requested', dot: 'bg-rose-400' },
-    hr_approved:      { cls: 'bg-violet-500/15 text-violet-300 border-violet-500/30', label: 'HR Approved',       dot: 'bg-violet-400' },
-    finalized:        { cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30',    label: 'Finalized',         dot: 'bg-amber-400' },
+    draft:            { cls: 'bg-slate-100 text-slate-500 border-slate-200',          label: 'Draft',             dot: 'bg-slate-400' },
+    submitted:        { cls: 'bg-blue-50 text-blue-600 border-blue-200',       label: 'Pending Review',    dot: 'bg-blue-500 animate-pulse' },
+    manager_approved: { cls: 'bg-emerald-50 text-emerald-600 border-emerald-200', label: 'Manager Approved', dot: 'bg-emerald-500' },
+    manager_rejected: { cls: 'bg-rose-50 text-rose-600 border-rose-200',       label: 'Changes Requested', dot: 'bg-rose-500' },
+    hr_approved:      { cls: 'bg-violet-50 text-violet-600 border-violet-200', label: 'HR Approved',       dot: 'bg-violet-500' },
+    finalized:        { cls: 'bg-amber-50 text-amber-600 border-amber-200',    label: 'Finalized',         dot: 'bg-amber-500' },
   };
-  const s = map[status] || { cls: 'bg-slate-800 text-slate-400 border-slate-700', label: status, dot: 'bg-slate-500' };
+  const s = map[status] || { cls: 'bg-slate-100 text-slate-500 border-slate-200', label: status, dot: 'bg-slate-400' };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${s.cls}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border tp-pop-in ${s.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full tp-pulse-glow ${s.dot}`} />
       {s.label}
     </span>
   );
@@ -83,7 +84,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }) {
   return (
-    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl px-4 py-4 overflow-x-auto">
+    <div className="ih-inview bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl px-4 py-4 overflow-x-auto">
       <div className="flex items-center min-w-max mx-auto justify-between">
         {JOURNEY_STEPS.map((s, i) => {
           const Icon = s.icon;
@@ -94,27 +95,27 @@ function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }
             <div key={s.key} className="flex items-center">
               <div className="flex flex-col items-center gap-1.5 min-w-[60px]">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
-                  isRejected ? 'bg-rose-500/20 border-2 border-rose-500/50 shadow-lg shadow-rose-500/20'
-                  : done     ? 'bg-emerald-500/20 border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20'
-                  : active   ? 'bg-violet-500/20 border-2 border-violet-500/60 shadow-lg shadow-violet-500/30'
-                  : 'bg-white/[0.04] border border-white/[0.08]'
+                  isRejected ? 'bg-rose-50 border-2 border-rose-300 shadow-sm shadow-rose-500/20'
+                  : done     ? 'bg-emerald-50 border-2 border-emerald-300 shadow-sm shadow-emerald-500/20'
+                  : active   ? 'bg-violet-50 border-2 border-violet-400 shadow-sm shadow-violet-500/20'
+                  : 'bg-slate-50 border border-slate-200'
                 }`}>
                   <Icon className={`w-4 h-4 ${
-                    isRejected ? 'text-rose-400'
-                    : done     ? 'text-emerald-400'
-                    : active   ? 'text-violet-300'
-                    : 'text-slate-600'
+                    isRejected ? 'text-rose-600'
+                    : done     ? 'text-emerald-600'
+                    : active   ? 'text-violet-600'
+                    : 'text-slate-400'
                   }`} />
                 </div>
                 <span className={`text-[10px] font-bold text-center leading-tight ${
-                  isRejected ? 'text-rose-400'
-                  : done     ? 'text-emerald-400'
-                  : active   ? 'text-violet-300'
-                  : 'text-slate-600'
+                  isRejected ? 'text-rose-600'
+                  : done     ? 'text-emerald-600'
+                  : active   ? 'text-violet-700'
+                  : 'text-slate-400'
                 }`}>{isRejected ? 'Rejected' : s.label}</span>
               </div>
               {i < JOURNEY_STEPS.length - 1 && (
-                <div className={`w-8 sm:w-14 h-0.5 mx-2 rounded-full mt-[-14px] transition-all ${done ? 'bg-gradient-to-r from-emerald-500/60 to-emerald-500/20' : 'bg-white/[0.06]'}`} />
+                <div className={`w-8 sm:w-14 h-0.5 mx-2 rounded-full mt-[-14px] transition-all ${done ? 'bg-gradient-to-r from-emerald-500 to-emerald-200' : 'bg-slate-200'}`} />
               )}
             </div>
           );
@@ -133,39 +134,39 @@ function WeightageBar({ goals }: { goals: any[] }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Weightage Allocation</span>
+        <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Weightage Allocation</span>
         <div className="flex items-center gap-2">
-          <span className={`text-base font-black ${isOk ? 'text-emerald-400' : isOver ? 'text-rose-400' : 'text-amber-400'}`}>
+          <span className={`text-base font-black ${isOk ? 'text-emerald-600' : isOver ? 'text-rose-600' : 'text-amber-600'}`}>
             {total}%
           </span>
-          <span className="text-slate-600 text-xs">/ 100%</span>
-          {isOk && <span className="text-emerald-400 text-xs font-bold">✓ Perfect</span>}
+          <span className="text-slate-400 text-xs">/ 100%</span>
+          {isOk && <span className="text-emerald-600 text-xs font-bold">✓ Perfect</span>}
         </div>
       </div>
-      <div className="h-2.5 bg-white/[0.04] rounded-full overflow-hidden flex gap-px">
+      <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden flex gap-px">
         {goalWeights.map((w, i) => (
           <div key={i}
             className={`${getGoalColor(i).bar} transition-all duration-500 rounded-full`}
             style={{ width: `${Math.min(w, 100)}%` }}
             title={`Goal ${i+1}: ${w}%`} />
         ))}
-        {remaining > 0 && <div className="bg-white/[0.04] flex-1 rounded-full" />}
+        {remaining > 0 && <div className="bg-slate-100 flex-1 rounded-full" />}
       </div>
       <div className="flex gap-4 mt-2.5 flex-wrap">
         {goals.map((_, i) => (
           <span key={i} className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <span className={`w-2 h-2 rounded-full ${getGoalColor(i).bar}`} />
-            G{i + 1} <span className="font-bold text-slate-400">{goalWeights[i]}%</span>
+            G{i + 1} <span className="font-bold text-slate-600">{goalWeights[i]}%</span>
           </span>
         ))}
         {remaining > 0 && (
-          <span className="flex items-center gap-1.5 text-[11px] text-amber-500/70">
-            <span className="w-2 h-2 rounded-full bg-white/10 border border-white/20" />
+          <span className="flex items-center gap-1.5 text-[11px] text-amber-600">
+            <span className="w-2 h-2 rounded-full bg-slate-100 border border-slate-300" />
             Remaining <span className="font-bold">{remaining}%</span>
           </span>
         )}
         {isOver && (
-          <span className="flex items-center gap-1.5 text-[11px] text-rose-400 font-bold ml-auto">
+          <span className="flex items-center gap-1.5 text-[11px] text-rose-600 font-bold ml-auto">
             ⚠ Over by {total - 100}%
           </span>
         )}
@@ -177,9 +178,9 @@ function WeightageBar({ goals }: { goals: any[] }) {
 function Toast({ msg }: { msg: { text: string; type: 'success' | 'error' | 'warn' } | null }) {
   if (!msg) return null;
   const cfg = {
-    success: { cls: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300', icon: <CheckCircle className="w-4 h-4 shrink-0" /> },
-    error:   { cls: 'bg-rose-500/10 border-rose-500/25 text-rose-300',         icon: <AlertCircle className="w-4 h-4 shrink-0" /> },
-    warn:    { cls: 'bg-amber-500/10 border-amber-500/25 text-amber-300',       icon: <AlertCircle className="w-4 h-4 shrink-0" /> },
+    success: { cls: 'bg-emerald-50 border-emerald-200 text-emerald-600', icon: <CheckCircle className="w-4 h-4 shrink-0" /> },
+    error:   { cls: 'bg-rose-50 border-rose-200 text-rose-600',         icon: <AlertCircle className="w-4 h-4 shrink-0" /> },
+    warn:    { cls: 'bg-amber-50 border-amber-200 text-amber-600',       icon: <AlertCircle className="w-4 h-4 shrink-0" /> },
   }[msg.type];
   return (
     <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border font-semibold text-sm ${cfg.cls}`}>
@@ -198,31 +199,31 @@ const PHASE_INFO: Record<string, {
     icon: <Clock className="w-4 h-4" />,
     title: 'Cycle Not Yet Open',
     desc: 'This cycle has not been opened for goal setting. Contact HR.',
-    cls: 'text-slate-400 bg-slate-500/8', border: 'border-slate-500/20', locked: true,
+    cls: 'text-slate-600 bg-slate-50', border: 'border-slate-200', locked: true,
   },
   goal_setting: {
     icon: <Unlock className="w-4 h-4" />,
     title: 'Goal Setting Open',
     desc: 'You can add, edit, and submit your goals for manager approval.',
-    cls: 'text-emerald-300 bg-emerald-500/8', border: 'border-emerald-500/20', locked: false,
+    cls: 'text-emerald-700 bg-emerald-50', border: 'border-emerald-200', locked: false,
   },
   goals_locked: {
     icon: <Lock className="w-4 h-4" />,
     title: 'Goals Locked',
     desc: 'Goal setting is closed. Wait for HR to open the review phase.',
-    cls: 'text-amber-300 bg-amber-500/8', border: 'border-amber-500/20', locked: true,
+    cls: 'text-amber-700 bg-amber-50', border: 'border-amber-200', locked: true,
   },
   review_open: {
     icon: <FileText className="w-4 h-4" />,
     title: 'Review Phase Open',
     desc: 'Goals are locked. Submit your quarterly self-review and evidence now.',
-    cls: 'text-blue-300 bg-blue-500/8', border: 'border-blue-500/20', locked: false,
+    cls: 'text-blue-700 bg-blue-50', border: 'border-blue-200', locked: false,
   },
   closed: {
     icon: <Lock className="w-4 h-4" />,
     title: 'Cycle Closed',
     desc: 'This performance cycle has been closed by HR.',
-    cls: 'text-slate-400 bg-slate-500/8', border: 'border-slate-500/20', locked: true,
+    cls: 'text-slate-600 bg-slate-50', border: 'border-slate-200', locked: true,
   },
 };
 
@@ -235,16 +236,16 @@ function CyclePhaseBanner({ cycle }: { cycle: any }) {
       <span className="mt-0.5 shrink-0">{info.icon}</span>
       <div className="flex-1 min-w-0">
         <p className="font-bold text-sm">{info.title}</p>
-        <p className="text-xs opacity-70 mt-0.5">{info.desc}</p>
+        <p className="text-xs opacity-80 mt-0.5">{info.desc}</p>
         {/* Deadlines */}
         <div className="flex flex-wrap gap-3 mt-2">
           {cycle.goal_setting_deadline && (
-            <span className="text-[11px] opacity-60">
+            <span className="text-[11px] opacity-75">
               Goal deadline: <strong>{fmt(cycle.goal_setting_deadline)}</strong>
             </span>
           )}
           {cycle.review_deadline && (
-            <span className="text-[11px] opacity-60">
+            <span className="text-[11px] opacity-75">
               Review deadline: <strong>{fmt(cycle.review_deadline)}</strong>
             </span>
           )}
@@ -474,33 +475,34 @@ export function EmployeeView({ employee }: { employee: any }) {
   const isRejected = goalCard?.status === 'manager_rejected';
 
   return (
-    <div className="min-h-screen bg-[#080818] p-4 lg:p-8">
+    <div className="min-h-full p-4 lg:p-8">
+      <style>{TOOL_STYLES}</style>
       <div className="max-w-3xl mx-auto space-y-4">
 
         {/* ── Profile Card ── */}
-        <div className="relative overflow-hidden rounded-3xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-600/25 via-violet-900/15 to-transparent" />
-          <div className="absolute inset-0 border border-violet-500/20 rounded-3xl" />
+        <div className="relative overflow-hidden rounded-3xl ih-inview tp-tilt bg-white/80 backdrop-blur-xl shadow-sm">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-100/70 via-violet-50/50 to-transparent" />
+          <div className="absolute inset-0 border border-slate-200 rounded-3xl" />
           <div className="relative p-6 flex items-center gap-5">
             {/* Avatar */}
-            <div className="relative shrink-0">
-              <div className="absolute inset-0 bg-violet-500/40 rounded-2xl blur-md scale-110" />
+            <div className="relative shrink-0 tp-pop-in">
+              <div className="absolute inset-0 bg-violet-300/50 rounded-2xl blur-md scale-110" />
               <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-700 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-violet-500/30">
                 {employee.name?.[0] || 'E'}
               </div>
             </div>
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-extrabold text-white tracking-tight truncate">{employee.name}</h2>
-              <p className="text-violet-300 text-sm font-semibold mt-0.5">{employee.designation}</p>
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight truncate">{employee.name}</h2>
+              <p className="text-violet-600 text-sm font-semibold mt-0.5">{employee.designation}</p>
               <div className="flex flex-wrap gap-2 mt-2">
                 {employee.department && (
-                  <span className="text-[11px] text-slate-400 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/[0.08]">
+                  <span className="text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
                     {employee.department}
                   </span>
                 )}
                 {employee.zone && (
-                  <span className="text-[11px] text-slate-400 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/[0.08]">
+                  <span className="text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
                     📍 {employee.zone}
                   </span>
                 )}
@@ -508,12 +510,12 @@ export function EmployeeView({ employee }: { employee: any }) {
                   <span className="text-[11px] text-slate-500 font-mono">#{employee.employee_id}</span>
                 )}
                 {employee.reporting_manager_id && (
-                  <span className="text-[11px] text-slate-400 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/[0.08]">
+                  <span className="text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
                     Reports to: {employee.manager_name || employee.reporting_manager_id}
                   </span>
                 )}
                 {employee.joined_date && (
-                  <span className="text-[11px] text-slate-400 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/[0.08]">
+                  <span className="text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
                     Joined: {new Date(employee.joined_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' })}
                   </span>
                 )}
@@ -523,7 +525,7 @@ export function EmployeeView({ employee }: { employee: any }) {
               <div className="shrink-0 flex flex-col items-end gap-2">
                 <StatusBadge status={goalCard.status} />
                 <button onClick={downloadReport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-slate-300 text-[11px] font-bold transition-all">
+                  className="tp-sheen flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-700 text-[11px] font-bold transition-all">
                   <Download className="w-3.5 h-3.5" /> Download Report
                 </button>
               </div>
@@ -532,48 +534,48 @@ export function EmployeeView({ employee }: { employee: any }) {
         </div>
 
         {/* ── Journey ── */}
-        {goalCard && <JourneyStepper step={journeyStep} rejected={isRejected} />}
+        {goalCard && <div><JourneyStepper step={journeyStep} rejected={isRejected} /></div>}
 
         {/* ── Alerts ── */}
         {isRejected && goalCard?.manager_remarks && (
-          <div className="bg-rose-500/[0.07] border border-rose-500/20 rounded-2xl p-4 flex gap-3">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex gap-3 ih-inview">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-rose-300 font-bold text-sm">Manager requested changes</p>
-              <p className="text-slate-300 text-sm mt-1">{goalCard.manager_remarks}</p>
+              <p className="text-rose-600 font-bold text-sm">Manager requested changes</p>
+              <p className="text-slate-600 text-sm mt-1">{goalCard.manager_remarks}</p>
             </div>
           </div>
         )}
         {goalCard?.status === 'manager_approved' && (
-          <div className="bg-emerald-500/[0.07] border border-emerald-500/20 rounded-2xl p-4 flex gap-3 items-center">
-            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex gap-3 items-center ih-inview">
+            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
             <div className="flex-1">
-              <p className="text-emerald-300 font-bold text-sm">Goals approved — you can now do your self-review</p>
-              {goalCard.manager_remarks && <p className="text-slate-400 text-xs mt-0.5">{goalCard.manager_remarks}</p>}
+              <p className="text-emerald-700 font-bold text-sm">Goals approved — you can now do your self-review</p>
+              {goalCard.manager_remarks && <p className="text-slate-500 text-xs mt-0.5">{goalCard.manager_remarks}</p>}
             </div>
             <ChevronRight className="w-4 h-4 text-emerald-600" />
           </div>
         )}
 
         {/* ── Cycle selector ── */}
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4">
-          <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest mb-3">Select Quarter</p>
+        <div className="bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl p-4 ih-inview">
+          <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-3">Select Quarter</p>
           {cycles.length === 0 ? (
-            <div className="flex items-center gap-2 text-slate-600 text-sm">
+            <div className="flex items-center gap-2 text-slate-500 text-sm">
               <Clock className="w-4 h-4" /> No active cycles. Contact HR.
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
               {cycles.map(c => (
                 <button key={c.id} onClick={() => setSelectedCycle(c)}
-                  className={`px-4 py-2 rounded-xl font-bold text-sm transition-all border ${
+                  className={`tp-tilt px-4 py-2 rounded-xl font-bold text-sm transition-all border ${
                     selectedCycle?.id === c.id
-                      ? 'bg-violet-600/30 border-violet-500/50 text-violet-200 shadow-lg shadow-violet-500/10'
-                      : 'bg-white/[0.03] border-white/[0.08] text-slate-400 hover:border-white/20 hover:text-slate-200'
+                      ? 'bg-violet-50 border-violet-300 text-violet-700 shadow-sm shadow-violet-500/10'
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-violet-300 hover:text-violet-700'
                   }`}>
                   {c.name}
                   <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-semibold ${
-                    selectedCycle?.id === c.id ? 'bg-violet-500/30 text-violet-200' : 'bg-white/5 text-slate-600'
+                    selectedCycle?.id === c.id ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500'
                   }`}>{c.status.replace(/_/g,' ')}</span>
                 </button>
               ))}
@@ -584,10 +586,10 @@ export function EmployeeView({ employee }: { employee: any }) {
         {selectedCycle && (
           <>
             {/* ── Phase Banner ── */}
-            <CyclePhaseBanner cycle={selectedCycle} />
+            <div className="ih-inview"><CyclePhaseBanner cycle={selectedCycle} /></div>
 
             {/* ── Tabs ── */}
-            <div className="flex gap-1 bg-white/[0.03] p-1 rounded-2xl border border-white/[0.06]">
+            <div className="flex gap-1 bg-white/80 backdrop-blur-xl p-1 rounded-2xl border border-slate-200 shadow-sm ih-inview">
               {([
                 { id: 'goals',  label: 'KRA / Goal Setting', icon: cycleStatus === 'goal_setting' ? Target : Lock },
                 { id: 'review', label: 'Self Review',        icon: cycleStatus === 'review_open'  ? FileText : Lock },
@@ -595,8 +597,8 @@ export function EmployeeView({ employee }: { employee: any }) {
                 <button key={t.id} onClick={() => setTab(t.id)}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
                     tab === t.id
-                      ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-lg shadow-violet-500/20'
-                      : 'text-slate-500 hover:text-slate-300'
+                      ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/25'
+                      : 'text-slate-500 hover:text-violet-700'
                   }`}>
                   <t.icon className="w-4 h-4" />
                   {t.label}
@@ -611,7 +613,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-white font-bold text-lg">{selectedCycle.name} — Goals</h3>
+                    <h3 className="text-slate-900 font-bold text-lg">{selectedCycle.name} — Goals</h3>
                     <p className="text-slate-500 text-xs mt-0.5">
                       {canEdit
                         ? '4 categories · multiple KRAs per category · total KPI weightage must equal 100%'
@@ -623,7 +625,7 @@ export function EmployeeView({ employee }: { employee: any }) {
 
                 {/* Weightage bar */}
                 {goals.length > 0 && (
-                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4">
+                  <div className="bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl p-4 ih-inview">
                     <WeightageBar goals={goals} />
                   </div>
                 )}
@@ -636,10 +638,10 @@ export function EmployeeView({ employee }: { employee: any }) {
                     .filter(({ g }) => g.category === cat);
 
                   return (
-                    <div key={cat} className="bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden">
+                    <div key={cat} className="bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl overflow-hidden ih-inview tp-tilt" style={{ animationDelay: `${catColorIdx * 80}ms` }}>
 
                       {/* Category header */}
-                      <div className={`flex items-center justify-between px-5 py-3 ${col.bg} border-b border-white/[0.05]`}>
+                      <div className={`flex items-center justify-between px-5 py-3 ${col.bg} border-b border-slate-200`}>
                         <div className="flex items-center gap-2.5">
                           <span className={`text-xs font-black ${col.text}`}>{cat}</span>
                           {catGoals.length > 0 && (
@@ -648,14 +650,14 @@ export function EmployeeView({ employee }: { employee: any }) {
                         </div>
                         {canEdit && (
                           <button onClick={() => addGoal(cat)}
-                            className={`flex items-center gap-1 text-[11px] font-bold ${col.text} hover:opacity-70 px-2.5 py-1 rounded-lg hover:bg-white/[0.05] transition-all`}>
+                            className={`tp-sheen flex items-center gap-1 text-[11px] font-bold ${col.text} hover:opacity-70 px-2.5 py-1 rounded-lg hover:bg-white transition-all`}>
                             <Plus className="w-3 h-3" /> Add KRA
                           </button>
                         )}
                       </div>
 
                       {/* KRA list for this category */}
-                      <div className="divide-y divide-white/[0.04]">
+                      <div className="divide-y divide-slate-200">
                         {catGoals.map(({ g, i }, catIdx) => (
                           <div key={g._id || g.id || i} className="p-4 space-y-3">
 
@@ -664,7 +666,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                               <span className={`text-[10px] font-black uppercase tracking-wider ${col.text}`}>KRA {catIdx + 1}</span>
                               {canEdit && (
                                 <button onClick={() => removeGoal(i)}
-                                  className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-700 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+                                  className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all">
                                   <Trash2 className="w-3 h-3" />
                                 </button>
                               )}
@@ -674,7 +676,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                             <input disabled={!canEdit} value={g.title}
                               onChange={e => updateGoal(i, 'title', e.target.value)}
                               placeholder="Key Result Area title…"
-                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-2.5 text-white text-sm font-semibold focus:outline-none focus:border-violet-500/50 placeholder-slate-700 disabled:opacity-50 transition-all" />
+                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 text-sm font-semibold focus:outline-none focus:border-violet-400 placeholder-slate-400 disabled:opacity-60 disabled:bg-slate-50 transition-all" />
 
                             {/* KPIs */}
                             <div className="space-y-2">
@@ -682,18 +684,18 @@ export function EmployeeView({ employee }: { employee: any }) {
                                 <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">KPIs</label>
                                 {canEdit && (
                                   <button onClick={() => addKPI(i)}
-                                    className="flex items-center gap-1 text-[10px] font-bold text-violet-400 hover:text-violet-300 px-2 py-1 rounded-lg hover:bg-violet-500/10 transition-all">
+                                    className="flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-700 px-2 py-1 rounded-lg hover:bg-violet-50 transition-all">
                                     <Plus className="w-2.5 h-2.5" /> Add KPI
                                   </button>
                                 )}
                               </div>
                               {(g.kpis || []).map((kpi: any, j: number) => (
-                                <div key={kpi._id || kpi.id || j} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 space-y-2">
+                                <div key={kpi._id || kpi.id || j} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">KPI {j + 1}</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">KPI {j + 1}</span>
                                     {canEdit && g.kpis.length > 1 && (
                                       <button onClick={() => removeKPI(i, j)}
-                                        className="w-5 h-5 flex items-center justify-center text-slate-700 hover:text-rose-400 transition-all">
+                                        className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-all">
                                         <Trash2 className="w-3 h-3" />
                                       </button>
                                     )}
@@ -702,16 +704,16 @@ export function EmployeeView({ employee }: { employee: any }) {
                                     <input disabled={!canEdit} value={kpi.metric || ''}
                                       onChange={e => updateKPI(i, j, 'metric', e.target.value)}
                                       placeholder="KPI / Metric"
-                                      className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-white text-xs font-semibold focus:outline-none focus:border-violet-500/40 placeholder-slate-700 disabled:opacity-50 transition-all" />
+                                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-900 text-xs font-semibold focus:outline-none focus:border-violet-400 placeholder-slate-400 disabled:opacity-60 disabled:bg-slate-50 transition-all" />
                                     <input disabled={!canEdit} value={kpi.target_value || ''}
                                       onChange={e => updateKPI(i, j, 'target_value', e.target.value)}
                                       placeholder="Target"
-                                      className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-white text-xs font-semibold focus:outline-none focus:border-violet-500/40 placeholder-slate-700 disabled:opacity-50 transition-all" />
+                                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-900 text-xs font-semibold focus:outline-none focus:border-violet-400 placeholder-slate-400 disabled:opacity-60 disabled:bg-slate-50 transition-all" />
                                     <input disabled={!canEdit} type="number" min={1} max={100}
                                       value={kpi.weightage || ''}
                                       onChange={e => updateKPI(i, j, 'weightage', Number(e.target.value))}
                                       placeholder="Weightage %"
-                                      className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-white text-xs font-semibold focus:outline-none focus:border-violet-500/40 placeholder-slate-700 disabled:opacity-50 transition-all" />
+                                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-900 text-xs font-semibold focus:outline-none focus:border-violet-400 placeholder-slate-400 disabled:opacity-60 disabled:bg-slate-50 transition-all" />
                                   </div>
                                   {(kpi.manager_rating || kpi.final_score) && (
                                     <div className="flex items-center gap-3 pt-1 flex-wrap">
@@ -735,7 +737,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                         ))}
 
                         {catGoals.length === 0 && (
-                          <p className="px-5 py-3 text-slate-700 text-xs">
+                          <p className="px-5 py-3 text-slate-400 text-xs">
                             {canEdit ? `Click "+ Add KRA" to add a KRA under ${cat}.` : 'No KRAs set for this category.'}
                           </p>
                         )}
@@ -749,11 +751,11 @@ export function EmployeeView({ employee }: { employee: any }) {
                 {canEdit && (
                   <div className="flex gap-3">
                     <button onClick={() => saveGoals(false)} disabled={saving}
-                      className="flex-1 py-3.5 rounded-2xl border border-white/[0.1] text-slate-300 font-bold text-sm hover:bg-white/[0.04] hover:border-white/20 transition-all disabled:opacity-50">
+                      className="tp-sheen flex-1 py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 hover:border-violet-300 hover:text-violet-700 transition-all disabled:opacity-50">
                       {saving ? 'Saving…' : '💾 Save Draft'}
                     </button>
                     <button onClick={() => saveGoals(true)} disabled={saving}
-                      className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]">
+                      className="tp-sheen flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/25 active:scale-[0.98]">
                       <Send className="w-4 h-4" />
                       {saving ? 'Submitting…' : 'Submit to Manager'}
                     </button>
@@ -767,13 +769,13 @@ export function EmployeeView({ employee }: { employee: any }) {
               <div className="space-y-4">
                 {/* Phase-locked: reviews not open yet */}
                 {cycleStatus !== 'review_open' ? (
-                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-14 text-center">
+                  <div className="bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl p-14 text-center ih-inview">
                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
-                      cycleStatus === 'goal_setting' ? 'bg-violet-500/10' : 'bg-amber-500/10'
+                      cycleStatus === 'goal_setting' ? 'bg-violet-50' : 'bg-amber-50'
                     }`}>
-                      <Lock className={`w-8 h-8 ${cycleStatus === 'goal_setting' ? 'text-violet-500' : 'text-amber-500'}`} />
+                      <Lock className={`w-8 h-8 ${cycleStatus === 'goal_setting' ? 'text-violet-600' : 'text-amber-600'}`} />
                     </div>
-                    <p className="text-white font-bold mb-1">
+                    <p className="text-slate-900 font-bold mb-1">
                       {cycleStatus === 'goal_setting' ? 'Review Phase Not Open Yet' : PHASE_INFO[cycleStatus!]?.title || 'Review Locked'}
                     </p>
                     <p className="text-slate-500 text-sm mt-1">
@@ -785,35 +787,35 @@ export function EmployeeView({ employee }: { employee: any }) {
                   </div>
                 ) : !canReview ? (
                   /* Review phase IS open but goals aren't approved yet */
-                  <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-14 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
-                      <Clock className="w-8 h-8 text-slate-600" />
+                  <div className="bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl p-14 text-center ih-inview">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                      <Clock className="w-8 h-8 text-slate-400" />
                     </div>
-                    <p className="text-white font-bold mb-1">Waiting for manager to approve your goals</p>
+                    <p className="text-slate-900 font-bold mb-1">Waiting for manager to approve your goals</p>
                     <p className="text-slate-500 text-sm mt-1">Review phase is open, but you need manager-approved goals before submitting your self-assessment.</p>
                     {goalCard && <div className="mt-5 flex justify-center"><StatusBadge status={goalCard.status} /></div>}
                   </div>
                 ) : (
                   <>
                     <div className="flex items-center justify-between">
-                      <h3 className="text-white font-bold text-lg">Quarter-End Self Assessment</h3>
-                      <span className="text-[11px] text-slate-500 bg-white/[0.04] px-3 py-1.5 rounded-xl border border-white/[0.07]">{selectedCycle.name}</span>
+                      <h3 className="text-slate-900 font-bold text-lg">Quarter-End Self Assessment</h3>
+                      <span className="text-[11px] text-slate-500 bg-white px-3 py-1.5 rounded-xl border border-slate-200">{selectedCycle.name}</span>
                     </div>
 
                     {/* Per-KPI self rating */}
                     {goals.map((g, i) => {
                       const col = getGoalColor(i);
                       return (
-                        <div key={i} className={`bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden border-l-[3px] ${col.border}`}>
-                          <div className="px-5 py-3 border-b border-white/[0.05]">
+                        <div key={i} className={`bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl overflow-hidden border-l-[3px] ih-inview ${col.border}`} style={{ animationDelay: `${i * 70}ms` }}>
+                          <div className="px-5 py-3 border-b border-slate-200">
                             {g.category && <span className={`text-[10px] font-black uppercase tracking-wider ${col.text}`}>{g.category}</span>}
-                            <p className="text-white font-bold text-sm mt-0.5">{g.title || `Goal ${i + 1}`}</p>
+                            <p className="text-slate-900 font-bold text-sm mt-0.5">{g.title || `Goal ${i + 1}`}</p>
                           </div>
                           {(g.kpis || []).map((kpi: any, j: number) => (
-                            <div key={kpi.id || j} className="p-4 border-b border-white/[0.04] last:border-0 space-y-3">
+                            <div key={kpi.id || j} className="p-4 border-b border-slate-200 last:border-0 space-y-3">
                               <div className="flex items-start justify-between gap-3">
                                 <div>
-                                  <p className="text-white text-sm font-semibold">{kpi.metric || `KPI ${j + 1}`}</p>
+                                  <p className="text-slate-800 text-sm font-semibold">{kpi.metric || `KPI ${j + 1}`}</p>
                                   {kpi.target_value && <p className="text-slate-500 text-xs mt-0.5">Target: {kpi.target_value}</p>}
                                 </div>
                                 <span className={`shrink-0 px-2 py-1 rounded-lg text-xs font-black ${col.bg} ${col.text}`}>{kpi.weightage}%</span>
@@ -822,8 +824,8 @@ export function EmployeeView({ employee }: { employee: any }) {
                                 <div className="flex items-center justify-between mb-2">
                                   <label className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Completion</label>
                                   <span className={`text-base font-black ${
-                                    (kpi.self_completion_pct || 0) >= 80 ? 'text-emerald-400'
-                                    : (kpi.self_completion_pct || 0) >= 50 ? 'text-violet-400' : 'text-amber-400'
+                                    (kpi.self_completion_pct || 0) >= 80 ? 'text-emerald-600'
+                                    : (kpi.self_completion_pct || 0) >= 50 ? 'text-violet-600' : 'text-amber-600'
                                   }`}>{kpi.self_completion_pct || 0}%</span>
                                 </div>
                                 <input type="range" min={0} max={100} step={5}
@@ -838,7 +840,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                               <textarea value={kpi.achievement_description || ''}
                                 onChange={e => updateKPI(i, j, 'achievement_description', e.target.value)}
                                 placeholder="What did you achieve on this KPI? Be specific."
-                                className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 resize-none transition-all"
+                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm focus:outline-none focus:border-violet-400 placeholder-slate-400 resize-none transition-all"
                                 rows={2} />
                             </div>
                           ))}
@@ -847,10 +849,10 @@ export function EmployeeView({ employee }: { employee: any }) {
                     })}
 
                     {/* Section D – Self remarks */}
-                    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-                      <div className="px-5 py-3.5 border-b border-white/[0.05] flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-violet-400" />
-                        <p className="text-slate-300 text-sm font-bold">Section D — Employee Self Remarks</p>
+                    <div className="bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl overflow-hidden ih-inview">
+                      <div className="px-5 py-3.5 border-b border-slate-200 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-violet-600" />
+                        <p className="text-slate-800 text-sm font-bold">Section D — Employee Self Remarks</p>
                       </div>
                       <div className="p-5 space-y-4">
                         {[
@@ -867,32 +869,32 @@ export function EmployeeView({ employee }: { employee: any }) {
                             <textarea value={(reviewForm as any)[field]}
                               onChange={e => setReviewForm(p => ({ ...p, [field]: e.target.value }))}
                               placeholder={ph} rows={2}
-                              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-500/50 placeholder-slate-700 resize-none transition-all" />
+                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm focus:outline-none focus:border-violet-400 placeholder-slate-400 resize-none transition-all" />
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Overall rating + evidence */}
-                    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 space-y-5">
+                    <div className="bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm rounded-2xl p-5 space-y-5 ih-inview">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-slate-300 text-sm font-bold">Overall Self Rating</p>
-                          <p className="text-slate-600 text-xs mt-0.5">How would you rate your overall quarter?</p>
+                          <p className="text-slate-800 text-sm font-bold">Overall Self Rating</p>
+                          <p className="text-slate-500 text-xs mt-0.5">How would you rate your overall quarter?</p>
                         </div>
                         <StarRating value={reviewForm.overall_self_rating} size="lg"
                           onChange={v => setReviewForm(p => ({ ...p, overall_self_rating: v }))} />
                       </div>
-                      <div className="border-t border-white/[0.05] pt-4">
-                        <p className="text-slate-300 text-sm font-bold mb-1">Evidence File <span className="text-slate-600 font-normal text-xs">(optional)</span></p>
-                        <p className="text-slate-600 text-xs mb-3">Upload base sheet, report, or supporting document</p>
-                        <label className="flex items-center gap-3 px-4 py-3 bg-white/[0.04] border border-white/[0.08] hover:border-violet-500/30 rounded-xl cursor-pointer transition-all group">
-                          <div className="w-9 h-9 rounded-xl bg-violet-500/15 group-hover:bg-violet-500/25 flex items-center justify-center transition-all">
-                            <FileText className="w-4 h-4 text-violet-400" />
+                      <div className="border-t border-slate-200 pt-4">
+                        <p className="text-slate-800 text-sm font-bold mb-1">Evidence File <span className="text-slate-400 font-normal text-xs">(optional)</span></p>
+                        <p className="text-slate-500 text-xs mb-3">Upload base sheet, report, or supporting document</p>
+                        <label className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 hover:border-violet-300 rounded-xl cursor-pointer transition-all group">
+                          <div className="w-9 h-9 rounded-xl bg-violet-50 group-hover:bg-violet-100 flex items-center justify-center transition-all">
+                            <FileText className="w-4 h-4 text-violet-600" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-slate-300 text-sm font-semibold">{evidenceFile ? evidenceFile.name : 'Choose file to upload'}</p>
-                            <p className="text-slate-600 text-xs mt-0.5">{evidenceFile ? `${(evidenceFile.size / 1024).toFixed(1)} KB` : 'Excel, PDF, or any document'}</p>
+                            <p className="text-slate-800 text-sm font-semibold">{evidenceFile ? evidenceFile.name : 'Choose file to upload'}</p>
+                            <p className="text-slate-500 text-xs mt-0.5">{evidenceFile ? `${(evidenceFile.size / 1024).toFixed(1)} KB` : 'Excel, PDF, or any document'}</p>
                           </div>
                           <input type="file" className="hidden" onChange={e => setEvidenceFile(e.target.files?.[0] || null)} />
                         </label>
@@ -902,7 +904,7 @@ export function EmployeeView({ employee }: { employee: any }) {
                     <Toast msg={msg} />
 
                     <button onClick={submitReview} disabled={saving}
-                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white font-bold transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98]">
+                      className="tp-sheen w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/25 active:scale-[0.98]">
                       <CheckCircle className="w-5 h-5" />
                       {saving ? 'Submitting…' : 'Submit Quarterly Review'}
                     </button>

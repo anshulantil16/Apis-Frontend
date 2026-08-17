@@ -772,7 +772,7 @@ export function WarningLetterPage() {
   const [tab, setTab] = useState<'single' | 'bulk' | 'history'>('single');
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] pb-16">
+    <div className="min-h-full bg-[#f5f7fa] pb-16">
       {/* Hero band — light, with a soft rose wash tying it to the letter type */}
       <div className="relative overflow-hidden bg-white border-b border-slate-200">
         <div aria-hidden className="pointer-events-none absolute inset-0">

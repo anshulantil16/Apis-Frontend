@@ -3,6 +3,7 @@ import {
   Users, CheckCircle, Clock, ChevronDown, ChevronUp, AlertCircle,
   Target, MessageSquare, BookOpen, Send, ArrowLeft, FileText, Download,
 } from 'lucide-react';
+import { TOOL_STYLES } from '../../toolStyles';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PERF_API = `${API_BASE}/api/appraisal`;
@@ -63,8 +64,8 @@ const STATUS_CFG: Record<string, { badge: string; dot: string; label: string }> 
 function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS_CFG[status] || STATUS_CFG.draft;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${cfg.badge}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+    <span className={`tp-pop-in inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${cfg.badge}`}>
+      <span className={`tp-pulse-glow w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
       {cfg.label}
     </span>
   );
@@ -75,7 +76,7 @@ function SectionCard({ title, icon: Icon, color, children }: {
 }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="tp-reveal bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
       <button
         onClick={() => setOpen(o => !o)}
         className={`w-full flex items-center justify-between px-5 py-3.5 ${color} border-b border-slate-200`}>
@@ -235,14 +236,14 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
     <div className="space-y-4">
 
       {/* Back + Employee Profile */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+      <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" />
         <div className="px-5 py-4 flex items-center gap-4">
           <button onClick={onBack}
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all">
+            className="tp-tilt shrink-0 w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-200 shrink-0">
+          <div className="tp-pop-in w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-200 shrink-0">
             {emp.name?.[0] || 'E'}
           </div>
           <div className="flex-1 min-w-0">
@@ -267,7 +268,7 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
         ) : (
           <div className="space-y-5">
             {goals.map((g: any, gi: number) => (
-              <div key={gi} className="rounded-xl border border-slate-200 overflow-hidden">
+              <div key={gi} className="tp-reveal tp-tilt rounded-xl border border-slate-200 overflow-hidden" style={{ animationDelay: `${gi * 70}ms` }}>
                 {/* KRA Header */}
                 <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${CATEGORY_DOT[g.category] || 'bg-slate-400'}`} />
@@ -515,7 +516,7 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
                 <div className="flex gap-3">
                   {(['Yes', 'No'] as const).map(opt => (
                     <button key={opt} onClick={() => setPromoted(opt)}
-                      className={`flex-1 py-2.5 rounded-xl border font-bold text-sm transition-all ${
+                      className={`tp-tilt flex-1 py-2.5 rounded-xl border font-bold text-sm transition-all ${
                         promoted === opt
                           ? opt === 'Yes'
                             ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
@@ -665,9 +666,9 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
 
       {/* ── Submit Manager Rating ── */}
       {gc.status === 'submitted' && (
-        <div className="bg-white border border-blue-200 shadow-sm rounded-2xl p-5 space-y-4">
+        <div className="tp-reveal bg-white border border-blue-200 shadow-sm rounded-2xl p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0">
+            <div className="tp-pop-in w-9 h-9 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0">
               <Send className="w-4 h-4 text-blue-600" />
             </div>
             <div>
@@ -684,7 +685,7 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
           )}
 
           <button onClick={submitManagerRating} disabled={saving}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-[0.98]">
+            className="tp-tilt tp-sheen w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-[0.98]">
             <Send className="w-4 h-4" />
             {saving ? 'Submitting…' : 'Submit Manager Rating'}
           </button>
@@ -692,7 +693,7 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
       )}
 
       {gc.status === 'manager_approved' && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
+        <div className="tp-reveal bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
           <p className="text-emerald-700 font-bold text-sm">Manager rating submitted. Appraisal is proceeding to the next stage.</p>
         </div>
@@ -738,7 +739,8 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
 
   if (selectedCard) {
     return (
-      <div className="min-h-screen bg-slate-100 p-4 lg:p-6">
+      <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+        <style>{TOOL_STYLES}</style>
         <div className="max-w-[1400px] mx-auto">
           <EmployeeAppraisalDetail
             card={selectedCard}
@@ -756,14 +758,15 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
   const others     = teamCards.filter(m => !['submitted','manager_approved','hod_approved','hod_rejected','hr_approved','finalized'].includes((m.goal_card || m)?.status));
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 lg:p-6">
+    <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+      <style>{TOOL_STYLES}</style>
       <div className="max-w-[1200px] mx-auto space-y-5">
 
         {/* Header */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" />
           <div className="px-6 py-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-amber-200">
+            <div className="tp-pop-in w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-amber-200">
               {manager.name?.[0] || 'M'}
             </div>
             <div className="flex-1">
@@ -776,7 +779,7 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
                 ? <span className="text-slate-400 text-sm flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> No active cycles</span>
                 : cycles.map(c => (
                     <button key={c.id} onClick={() => setSelectedCycle(c)}
-                      className={`px-3 py-1 rounded-lg font-bold text-xs transition-all border ${
+                      className={`tp-tilt px-3 py-1 rounded-lg font-bold text-xs transition-all border ${
                         selectedCycle?.id === c.id
                           ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
                           : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
@@ -796,11 +799,11 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
               { label: 'Awaiting Review', count: submitted.length,  color: 'bg-blue-50 border-blue-200 text-blue-700',    dot: 'bg-blue-500 animate-pulse' },
               { label: 'Approved',        count: approved.length,   color: 'bg-emerald-50 border-emerald-200 text-emerald-700', dot: 'bg-emerald-500' },
               { label: 'Not Submitted',   count: others.length,     color: 'bg-slate-50 border-slate-200 text-slate-600',  dot: 'bg-slate-400' },
-            ].map(s => (
-              <div key={s.label} className={`rounded-2xl border p-4 flex items-center gap-3 ${s.color}`}>
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.dot}`} />
+            ].map((s, si) => (
+              <div key={s.label} className={`tp-reveal tp-tilt rounded-2xl border p-4 flex items-center gap-3 ${s.color}`} style={{ animationDelay: `${si * 80}ms` }}>
+                <span className={`tp-pulse-glow w-2.5 h-2.5 rounded-full shrink-0 ${s.dot}`} />
                 <div>
-                  <p className="text-2xl font-black">{s.count}</p>
+                  <p className="tp-pop-in text-2xl font-black">{s.count}</p>
                   <p className="text-xs font-bold uppercase tracking-wider opacity-70">{s.label}</p>
                 </div>
               </div>
@@ -811,12 +814,12 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
         {/* Employee List */}
         {selectedCycle ? (
           loading ? (
-            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
+            <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
               <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-slate-500 text-sm font-medium">Loading team appraisals…</p>
             </div>
           ) : teamCards.length === 0 ? (
-            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
+            <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
               <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-600 font-bold">No team members found for this cycle.</p>
               <p className="text-slate-400 text-sm mt-1">Team members appear here once they start their appraisal.</p>
@@ -833,8 +836,9 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
                   return (
                     <div key={member.employee_id || idx}
                       onClick={() => gc ? setSelectedCard({ ...member, goal_card: gc, cycle_id: selectedCycle.id }) : undefined}
-                      className={`bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm transition-all ${gc ? (canReview ? 'hover:border-blue-300 hover:shadow-md cursor-pointer' : 'hover:border-slate-300 hover:shadow-md cursor-pointer') : 'opacity-60'}`}>
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGrad} flex items-center justify-center font-black text-white shrink-0`}>
+                      className={`tp-reveal tp-tilt bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm transition-all ${gc ? (canReview ? 'hover:border-blue-300 hover:shadow-md cursor-pointer' : 'hover:border-slate-300 hover:shadow-md cursor-pointer') : 'opacity-60'}`}
+                      style={{ animationDelay: `${idx * 40}ms` }}>
+                      <div className={`tp-pop-in w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGrad} flex items-center justify-center font-black text-white shrink-0`}>
                         {member.name?.[0] || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -889,7 +893,7 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
             </div>
           )
         ) : (
-          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
+          <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
             <Target className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-600 font-bold">Select a cycle above to see team appraisals</p>
           </div>

@@ -89,7 +89,7 @@ export default function OfferLetterApprovalDashboard() {
   const filteredLetters = getFilteredLetters();
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-full bg-[#f5f7fa] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

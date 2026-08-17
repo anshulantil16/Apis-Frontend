@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
-import { Radar, Mail, ShieldCheck, ArrowRight, ArrowLeft, Loader, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Radar, Mail, ShieldCheck, ArrowRight, Loader, AlertTriangle, RotateCcw } from 'lucide-react';
 import { API, RP_STYLES } from './RoomPulseShared';
 
 /* ── radar sweep: a rotating gradient wedge over concentric rings, standing
    in for "live scanning of every room" — the login's visual signature. ── */
 function RadarScope() {
   const rings = [40, 75, 110, 145, 180];
-  const dots = useRef(
+  // Lazy useState initialiser, not useRef(expr): useRef re-evaluates its
+  // argument on every render even though only the first value is kept.
+  const [dots] = useState(() =>
     Array.from({ length: 7 }, () => ({
       r: 40 + Math.random() * 140, a: Math.random() * 360, d: Math.random() * 3,
     }))
-  ).current;
+  );
   return (
     <div className="relative w-full max-w-[230px] aspect-square mx-auto">
       <svg viewBox="0 0 400 400" className="w-full h-full">
@@ -55,12 +57,12 @@ function RadarScope() {
 
 /* ── drifting particle field ────────────────────────────────────────────── */
 function Particles() {
-  const pts = useRef(
+  const [pts] = useState(() =>
     Array.from({ length: 24 }, () => ({
       l: Math.random() * 100, s: 2 + Math.random() * 4,
       d: Math.random() * 16, dur: 16 + Math.random() * 18, o: 0.12 + Math.random() * 0.28,
     }))
-  ).current;
+  );
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
       {pts.map((p, i) => (
@@ -73,9 +75,8 @@ function Particles() {
   );
 }
 
-export function RoomPulseLogin({ onSuccess, onBack }: {
+export function RoomPulseLogin({ onSuccess }: {
   onSuccess: (s: { email: string; name: string; role: string }) => void;
-  onBack?: () => void;
 }) {
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
@@ -140,10 +141,10 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
   const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
 
   return (
-    // h-screen (not min-h-screen) + overflow-hidden: a login page must never
-    // scroll. Every size below (padding, headline, radar) is tuned to fit
-    // inside 100vh on a typical laptop viewport rather than growing past it.
-    <div className="h-screen relative overflow-hidden flex items-center justify-center p-4
+    // min-h-full (not h-screen): this login renders inside the shared app
+    // shell's content area, so full-viewport sizing would double-count the
+    // shell header. The card centres in whatever height the shell gives it.
+    <div className="min-h-full relative overflow-hidden flex items-center justify-center px-4 py-10
                     bg-gradient-to-br from-slate-50 via-cyan-50/40 to-violet-50/40">
       <style>{RP_STYLES}</style>
 
@@ -158,20 +159,7 @@ export function RoomPulseLogin({ onSuccess, onBack }: {
       </div>
       <Particles />
 
-      {onBack && (
-        <button onClick={onBack}
-          className="group absolute top-6 left-6 z-20 flex items-center gap-2 pl-3 pr-4 py-2.5
-                     rounded-full bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm
-                     transition-all duration-300 hover:bg-white hover:shadow-md hover:-translate-x-0.5">
-          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-violet-600
-                           flex items-center justify-center transition-transform duration-300 group-hover:-translate-x-0.5">
-            <ArrowLeft className="w-3.5 h-3.5 text-white" />
-          </span>
-          <span className="text-[12px] font-black text-slate-500 group-hover:text-slate-800">Back to Hub</span>
-        </button>
-      )}
-
-      <div className="relative z-10 w-full max-w-5xl max-h-[94vh] grid md:grid-cols-2 rounded-[28px]
+      <div className="relative z-10 w-full max-w-5xl grid md:grid-cols-2 rounded-[28px]
                       overflow-hidden border border-slate-200 bg-white/80 backdrop-blur-2xl rp-reveal
                       shadow-[0_30px_90px_-24px_rgba(6,182,212,.25)]
                       transition-transform duration-500 hover:shadow-[0_40px_110px_-24px_rgba(6,182,212,.32)]">

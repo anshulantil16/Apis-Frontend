@@ -3,6 +3,7 @@ import {
   Users, CheckCircle, Clock, ChevronDown, ChevronUp, AlertCircle,
   Target, MessageSquare, BookOpen, Send, ArrowLeft, FileText, Download,
 } from 'lucide-react';
+import { TOOL_STYLES } from '../../toolStyles';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PERF_API = `${API_BASE}/api/appraisal`;
@@ -66,8 +67,8 @@ const STATUS_CFG: Record<string, { badge: string; dot: string; label: string }> 
 function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS_CFG[status] || STATUS_CFG.draft;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${cfg.badge}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+    <span className={`tp-pop-in inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${cfg.badge}`}>
+      <span className={`tp-pulse-glow w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
       {cfg.label}
     </span>
   );
@@ -78,7 +79,7 @@ function SectionCard({ title, icon: Icon, color, children }: {
 }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="tp-reveal bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
       <button
         onClick={() => setOpen(o => !o)}
         className={`w-full flex items-center justify-between px-5 py-3.5 ${color} border-b border-slate-200`}>
@@ -217,14 +218,14 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
     <div className="space-y-4">
 
       {/* Back + Employee Profile */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+      <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-violet-400" />
         <div className="px-5 py-4 flex items-center gap-4">
           <button onClick={onBack}
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all">
+            className="tp-tilt shrink-0 w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-violet-200 shrink-0">
+          <div className="tp-pop-in w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-violet-200 shrink-0">
             {emp.name?.[0] || 'E'}
           </div>
           <div className="flex-1 min-w-0">
@@ -249,7 +250,7 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
         ) : (
           <div className="space-y-5">
             {goals.map((g: any, gi: number) => (
-              <div key={gi} className="rounded-xl border border-slate-200 overflow-hidden">
+              <div key={gi} className="tp-reveal tp-tilt rounded-xl border border-slate-200 overflow-hidden" style={{ animationDelay: `${gi * 70}ms` }}>
                 <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${CATEGORY_DOT[g.category] || 'bg-slate-400'}`} />
                   <span className="text-xs font-black text-slate-500 uppercase tracking-wider">{g.category}</span>
@@ -516,7 +517,7 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
                 <div className="flex gap-3">
                   {(['Yes', 'No'] as const).map(opt => (
                     <button key={opt} onClick={() => setHodPromoted(opt)}
-                      className={`flex-1 py-2.5 rounded-xl border font-bold text-sm transition-all ${
+                      className={`tp-tilt flex-1 py-2.5 rounded-xl border font-bold text-sm transition-all ${
                         hodPromoted === opt
                           ? opt === 'Yes'
                             ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
@@ -652,9 +653,9 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
 
       {/* ── Submit HOD Review ── */}
       {gc.status === 'manager_approved' && (
-        <div className="bg-white border border-violet-200 shadow-sm rounded-2xl p-5 space-y-4">
+        <div className="tp-reveal bg-white border border-violet-200 shadow-sm rounded-2xl p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0">
+            <div className="tp-pop-in w-9 h-9 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0">
               <Send className="w-4 h-4 text-violet-600" />
             </div>
             <div>
@@ -671,7 +672,7 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
           )}
 
           <button onClick={submitHODReview} disabled={saving}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-violet-200 active:scale-[0.98]">
+            className="tp-tilt tp-sheen w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-violet-200 active:scale-[0.98]">
             <Send className="w-4 h-4" />
             {saving ? 'Submitting…' : 'Submit HOD Review'}
           </button>
@@ -679,7 +680,7 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
       )}
 
       {gc.status === 'hod_approved' && (
-        <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-center gap-3">
+        <div className="tp-reveal bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-violet-600 shrink-0" />
           <p className="text-violet-700 font-bold text-sm">HOD review submitted. Appraisal is proceeding to HR for final review.</p>
         </div>
@@ -724,7 +725,8 @@ export function AppraisalHODView({ hod }: { hod: any }) {
 
   if (selectedCard) {
     return (
-      <div className="min-h-screen bg-slate-100 p-4 lg:p-6">
+      <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+        <style>{TOOL_STYLES}</style>
         <div className="max-w-[1400px] mx-auto">
           <EmployeeAppraisalDetail
             card={selectedCard}
@@ -747,8 +749,8 @@ export function AppraisalHODView({ hod }: { hod: any }) {
     return (
       <div key={member.employee_id}
         onClick={() => gc ? setSelectedCard(member) : undefined}
-        className={`bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm transition-all ${gc ? 'hover:border-violet-300 hover:shadow-md cursor-pointer' : 'opacity-60'}`}>
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-black shrink-0">
+        className={`tp-reveal tp-tilt bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm transition-all ${gc ? 'hover:border-violet-300 hover:shadow-md cursor-pointer' : 'opacity-60'}`}>
+        <div className="tp-pop-in w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-black shrink-0">
           {member.name?.[0] || '?'}
         </div>
         <div className="flex-1 min-w-0">
@@ -766,14 +768,15 @@ export function AppraisalHODView({ hod }: { hod: any }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 lg:p-6">
+    <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+      <style>{TOOL_STYLES}</style>
       <div className="max-w-[1200px] mx-auto space-y-5">
 
         {/* Header */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-violet-400" />
           <div className="px-6 py-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-violet-200">
+            <div className="tp-pop-in w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-violet-200">
               {hod.name?.[0] || 'H'}
             </div>
             <div className="flex-1">
@@ -786,7 +789,7 @@ export function AppraisalHODView({ hod }: { hod: any }) {
                 ? <span className="text-slate-400 text-sm flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> No active cycles</span>
                 : cycles.map(c => (
                     <button key={c.id} onClick={() => setSelectedCycle(c)}
-                      className={`px-3 py-1 rounded-lg font-bold text-xs transition-all border ${
+                      className={`tp-tilt px-3 py-1 rounded-lg font-bold text-xs transition-all border ${
                         selectedCycle?.id === c.id
                           ? 'bg-violet-600 border-violet-600 text-white shadow-sm'
                           : 'bg-white border-slate-200 text-slate-600 hover:border-violet-300 hover:text-violet-600'
@@ -806,11 +809,11 @@ export function AppraisalHODView({ hod }: { hod: any }) {
               { label: 'Pending HOD Review', count: pending.length,  color: 'bg-violet-50 border-violet-200 text-violet-700',   dot: 'bg-violet-500 animate-pulse' },
               { label: 'HOD Approved',       count: reviewed.length, color: 'bg-emerald-50 border-emerald-200 text-emerald-700', dot: 'bg-emerald-500' },
               { label: 'Not Ready',          count: others.length,   color: 'bg-slate-50 border-slate-200 text-slate-600',       dot: 'bg-slate-400' },
-            ].map(s => (
-              <div key={s.label} className={`rounded-2xl border p-4 flex items-center gap-3 ${s.color}`}>
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.dot}`} />
+            ].map((s, si) => (
+              <div key={s.label} className={`tp-reveal tp-tilt rounded-2xl border p-4 flex items-center gap-3 ${s.color}`} style={{ animationDelay: `${si * 80}ms` }}>
+                <span className={`tp-pulse-glow w-2.5 h-2.5 rounded-full shrink-0 ${s.dot}`} />
                 <div>
-                  <p className="text-2xl font-black">{s.count}</p>
+                  <p className="tp-pop-in text-2xl font-black">{s.count}</p>
                   <p className="text-xs font-bold uppercase tracking-wider opacity-70">{s.label}</p>
                 </div>
               </div>
@@ -821,12 +824,12 @@ export function AppraisalHODView({ hod }: { hod: any }) {
         {/* Employee List */}
         {selectedCycle ? (
           loading ? (
-            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
+            <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
               <div className="w-8 h-8 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-slate-500 text-sm font-medium">Loading team appraisals…</p>
             </div>
           ) : teamCards.length === 0 ? (
-            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
+            <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl p-16 text-center">
               <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-500 font-semibold text-sm">No team members found.</p>
               <p className="text-slate-400 text-xs mt-1">Ensure employees have their HOD ID set to <span className="font-mono font-bold">{hod.employee_id}</span> in the employee master sheet.</p>
@@ -860,7 +863,7 @@ export function AppraisalHODView({ hod }: { hod: any }) {
             </div>
           )
         ) : (
-          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-12 text-center">
+          <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl p-12 text-center">
             <p className="text-slate-400 text-sm font-medium">No active appraisal cycle found.</p>
           </div>
         )}

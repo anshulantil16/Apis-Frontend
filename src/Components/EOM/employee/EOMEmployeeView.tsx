@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle2, ChevronRight, ChevronLeft, AlertCircle, Loader2, Award, FileText, Upload } from 'lucide-react';
 import { EOM_API } from '../../../features/eom/EOMPage';
+import { TOOL_STYLES } from '../../toolStyles';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -254,8 +255,9 @@ export function EOMEmployeeView({ employee }: Props) {
     };
     return (
       <div className="max-w-2xl mx-auto px-4 py-12">
-        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-10 text-center">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5
+        <style>{TOOL_STYLES}</style>
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-10 text-center tp-reveal">
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 tp-pop-in
             ${nomination.is_winner ? 'bg-yellow-100' : 'bg-emerald-100'}`}>
             <Award className={`w-8 h-8 ${nomination.is_winner ? 'text-yellow-500' : 'text-emerald-600'}`} />
           </div>
@@ -294,7 +296,8 @@ export function EOMEmployeeView({ employee }: Props) {
   if (!loadingCycles && cycles.length === 0) {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+        <style>{TOOL_STYLES}</style>
+        <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4 tp-pop-in">
           <Award className="w-7 h-7 text-slate-400" />
         </div>
         <h2 className="text-base font-bold text-slate-700 mb-1">No Active Nomination Cycle</h2>
@@ -307,11 +310,13 @@ export function EOMEmployeeView({ employee }: Props) {
   if (!selectedCycle) {
     return (
       <div className="max-w-lg mx-auto px-4 py-12">
+        <style>{TOOL_STYLES}</style>
         <h2 className="text-base font-bold text-slate-800 mb-4">Select Nomination Cycle</h2>
         <div className="space-y-3">
-          {cycles.map(c => (
+          {cycles.map((c, i) => (
             <button key={c.id} onClick={() => setSelectedCycle(c)}
-              className="w-full text-left px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-all">
+              style={{ animationDelay: `${i * 80}ms` }}
+              className="w-full text-left px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-all tp-reveal tp-tilt tp-sheen">
               <p className="font-semibold text-emerald-800 text-sm">{c.name}</p>
               <p className="text-xs text-emerald-600 mt-0.5">{MONTH_NAMES[c.month]} {c.year}</p>
             </button>
@@ -326,6 +331,7 @@ export function EOMEmployeeView({ employee }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
+      <style>{TOOL_STYLES}</style>
 
       {/* Toast */}
       {msg && (
@@ -337,7 +343,7 @@ export function EOMEmployeeView({ employee }: Props) {
       )}
 
       {/* Form card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden tp-reveal">
 
         {/* Header band */}
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4">
@@ -411,10 +417,10 @@ export function EOMEmployeeView({ employee }: Props) {
                 <h2 className="text-sm font-black text-slate-700 uppercase tracking-widest">Part B — SMART Evidence</h2>
                 <p className="text-xs text-slate-400 mt-1">Complete all five fields with specific evidence for each dimension.</p>
               </div>
-              {SMART_META.map(m => (
-                <div key={m.key} className="rounded-xl border border-slate-200 overflow-hidden">
+              {SMART_META.map((m, i) => (
+                <div key={m.key} style={{ animationDelay: `${i * 70}ms` }} className="rounded-xl border border-slate-200 overflow-hidden tp-reveal">
                   <div className="flex items-start gap-3 p-3 bg-slate-50 border-b border-slate-200">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0 tp-pop-in">
                       <span className="text-white font-black text-sm">{m.letter}</span>
                     </div>
                     <div>
@@ -599,14 +605,14 @@ export function EOMEmployeeView({ employee }: Props) {
 
               {step < 4 ? (
                 <button onClick={handleNext} disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all disabled:opacity-60">
+                  className="flex items-center gap-2 px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all disabled:opacity-60 tp-tilt tp-sheen">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   {saving ? 'Saving…' : 'Save & Continue'}
                   {!saving && <ChevronRight className="w-4 h-4" />}
                 </button>
               ) : (
                 <button onClick={handleSubmit} disabled={saving || submitting || !declarationAgreed}
-                  className="flex items-center gap-2 px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all disabled:opacity-50">
+                  className="flex items-center gap-2 px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all disabled:opacity-50 tp-tilt tp-sheen">
                   {(saving || submitting) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
                   {submitting ? 'Submitting…' : saving ? 'Saving…' : 'Submit Nomination'}
                 </button>

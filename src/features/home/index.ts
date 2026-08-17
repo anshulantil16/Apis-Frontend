@@ -1,0 +1,1 @@
+export { IntranetHomePage } from './IntranetHomePage';

@@ -4,6 +4,7 @@ import {
   Users, Briefcase, Search, ChevronDown, ChevronUp, SlidersHorizontal,
   Map, Navigation, TrendingUp, Activity, Zap, Target, Globe,
 } from 'lucide-react';
+import { TOOL_STYLES } from './toolStyles';
 
 export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
   const [selectedDesignations, setSelectedDesignations] = useState<Set<string>>(new Set());
@@ -69,13 +70,14 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
     else if (type === 'designation') setExpandedDesignation(p => ({ ...p, [key]: !p[key] }));
   };
 
-  const KPICard = ({ label, value, icon: Icon, gradient, trend }) => (
-    <div className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group cursor-pointer`}>
+  const KPICard = ({ label, value, icon: Icon, gradient, trend, delay }) => (
+    <div className={`tp-reveal tp-tilt relative overflow-hidden rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group cursor-pointer`}
+      style={{ animationDelay: `${delay || 0}ms` }}>
       <div className={`absolute inset-0 ${gradient} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
       <div className="absolute inset-0 bg-grid-white/[0.05]"></div>
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-4">
-          <div className="p-3 bg-white/20 backdrop-blur-md rounded-xl">
+          <div className="tp-pop-in p-3 bg-white/20 backdrop-blur-md rounded-xl">
             <Icon className="w-6 h-6" />
           </div>
           <span className="text-xs font-bold bg-white/30 backdrop-blur-md px-2.5 py-1 rounded-full">{trend}%</span>
@@ -88,6 +90,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
 
   return (
     <div className="space-y-8 pb-8">
+      <style>{TOOL_STYLES}</style>
       {/* Animated Header */}
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 blur-3xl rounded-full"></div>
@@ -107,6 +110,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
           icon={Users}
           gradient="bg-gradient-to-br from-blue-600 to-cyan-600"
           trend="+12"
+          delay={0}
         />
         <KPICard
           label="Role Matrix"
@@ -114,6 +118,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
           icon={Briefcase}
           gradient="bg-gradient-to-br from-purple-600 to-pink-600"
           trend="+8"
+          delay={60}
         />
         <KPICard
           label="Geographic Zones"
@@ -121,6 +126,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
           icon={Map}
           gradient="bg-gradient-to-br from-emerald-600 to-teal-600"
           trend="+15"
+          delay={120}
         />
         <KPICard
           label="Leadership Units"
@@ -128,11 +134,12 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
           icon={Navigation}
           gradient="bg-gradient-to-br from-orange-600 to-red-600"
           trend="+5"
+          delay={180}
         />
       </div>
 
       {/* Advanced Filters Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 shadow-2xl border border-slate-700/50">
+      <div className="tp-reveal relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 shadow-2xl border border-slate-700/50" style={{ animationDelay: '120ms' }}>
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-purple-500/20 rounded-full blur-3xl"></div>
 
@@ -154,7 +161,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
               { title: 'Zone', data: rawData.filter_options.zones, selected: selectedZones, setter: setSelectedZones, color: 'from-blue-600 to-cyan-600' },
               { title: 'Manager', data: rawData.filter_options.rms.filter(r => r), selected: selectedRMs, setter: setSelectedRMs, color: 'from-orange-600 to-red-600' },
             ].map((filter, idx) => (
-              <div key={idx} className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 hover:border-slate-600/50 transition-all">
+              <div key={idx} className="tp-reveal tp-tilt bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 hover:border-slate-600/50 transition-all" style={{ animationDelay: `${idx * 60}ms` }}>
                 <p className="text-white text-xs font-bold uppercase tracking-wider mb-3">{filter.title}</p>
                 <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
                   {filter.data.map(item => (
@@ -205,7 +212,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
           { title: 'Zone Distribution', data: stats.zoneCount, icon: Map, color: 'from-green-500 to-emerald-500', expanded: expandedZone, toggleKey: 'zone' },
           { title: 'Role Hierarchy', data: stats.designationCount, icon: Briefcase, color: 'from-purple-500 to-pink-500', expanded: expandedDesignation, toggleKey: 'designation' },
         ].map((section, idx) => (
-          <div key={idx} className="group relative">
+          <div key={idx} className="tp-reveal group relative" style={{ animationDelay: `${idx * 60}ms` }}>
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
             <div className="relative backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all">
               <button
@@ -260,7 +267,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
       </div>
 
       {/* Premium Employee Table */}
-      <div className="relative group">
+      <div className="tp-reveal relative group" style={{ animationDelay: '180ms' }}>
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
         <div className="relative backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-white/20 transition-all shadow-2xl">
           <div className="px-8 py-6 border-b border-white/10 bg-gradient-to-r from-indigo-600/10 via-purple-600/10 to-pink-600/10">
@@ -291,7 +298,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {filtered.slice(0, 50).map((r, idx) => (
-                  <tr key={r.id} className="hover:bg-white/5 transition-colors group/row cursor-pointer">
+                  <tr key={r.id} className="tp-reveal hover:bg-white/5 transition-colors group/row cursor-pointer" style={{ animationDelay: `${Math.min(idx, 12) * 30}ms` }}>
                     <td className="px-8 py-4 text-slate-300 font-semibold">{r.code}</td>
                     <td className="px-8 py-4 text-white font-semibold">{r.name}</td>
                     <td className="px-8 py-4">

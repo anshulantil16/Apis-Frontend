@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { EOM_API } from '../../../features/eom/EOMPage';
 import { generateEOMCertificate } from '../../../utils/generateEOMCertificate';
+import { TOOL_STYLES } from '../../toolStyles';
 
 const MONTH_NAMES = ['','January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -253,14 +254,15 @@ export function EOMHrView({ hrUser }: Props) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 lg:p-6">
+    <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+      <style>{TOOL_STYLES}</style>
       <div className="max-w-6xl mx-auto space-y-5">
 
         {/* Header */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden tp-reveal">
           <div className="h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400" />
           <div className="px-6 py-4 flex items-center gap-5">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-emerald-200 shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-emerald-200 shrink-0 tp-pop-in tp-border-flow" style={{ '--tp-c1': '#10b981', '--tp-c2': '#14b8a6' } as any}>
               {hrUser.name?.[0] || 'A'}
             </div>
             <div className="flex-1">
@@ -279,7 +281,7 @@ export function EOMHrView({ hrUser }: Props) {
             )}
             <a href={`${EOM_API}/export/${selectedCycle ? `?cycle_id=${selectedCycle.id}` : ''}`}
               target="_blank" rel="noreferrer"
-              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all">
+              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all tp-tilt tp-sheen">
               <Download className="w-3.5 h-3.5" />
               Export Excel
             </a>
@@ -303,11 +305,11 @@ export function EOMHrView({ hrUser }: Props) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1.5 bg-white border border-slate-200 shadow-sm rounded-2xl p-1.5 overflow-x-auto">
+        <div className="flex gap-1.5 bg-white border border-slate-200 shadow-sm rounded-2xl p-1.5 overflow-x-auto tp-reveal">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap
-                ${tab === t.id ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
+              className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap tp-tilt
+                ${tab === t.id ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-200 tp-sheen' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
               <t.icon className="w-3.5 h-3.5" />{t.label}
             </button>
           ))}
@@ -324,7 +326,7 @@ export function EOMHrView({ hrUser }: Props) {
               <button
                 onClick={() => selectedCycle && fetchCycleData(selectedCycle)}
                 disabled={refreshing}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all disabled:opacity-50">
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all disabled:opacity-50 tp-tilt">
                 <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
                 {refreshing ? 'Refreshing…' : 'Refresh Now'}
               </button>
@@ -344,15 +346,15 @@ export function EOMHrView({ hrUser }: Props) {
             {overview ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                  {statCards.map(s => (
-                    <div key={s.label} className={`bg-white border shadow-sm rounded-2xl p-4 flex flex-col gap-2 ${s.bg}`}>
-                      <s.icon className={`w-4 h-4 ${s.color}`} />
+                  {statCards.map((s, i) => (
+                    <div key={s.label} style={{ animationDelay: `${i * 50}ms` }} className={`bg-white border shadow-sm rounded-2xl p-4 flex flex-col gap-2 tp-reveal tp-tilt ${s.bg}`}>
+                      <s.icon className={`w-4 h-4 ${s.color} tp-pop-in`} />
                       <p className={`text-2xl font-black ${s.color}`}>{s.value ?? 0}</p>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-tight">{s.label}</p>
                     </div>
                   ))}
                 </div>
-                <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
+                <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 tp-reveal">
                   <div className="flex items-center gap-3 mb-5">
                     <BarChart3 className="w-4 h-4 text-emerald-500" />
                     <h4 className="text-slate-900 font-extrabold">Nomination Funnel — {selectedCycle?.name}</h4>
@@ -389,9 +391,9 @@ export function EOMHrView({ hrUser }: Props) {
 
         {/* Import */}
         {tab === 'import' && (
-          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 space-y-7">
+          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 space-y-7 tp-reveal">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0 tp-pop-in">
                 <Upload className="w-6 h-6 text-emerald-500" />
               </div>
               <div>
@@ -405,7 +407,7 @@ export function EOMHrView({ hrUser }: Props) {
                 <p className="text-indigo-500 text-xs mt-0.5">Pre-formatted CSV with sample rows</p>
               </div>
               <button onClick={downloadTemplate}
-                className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all">
+                className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all tp-tilt tp-sheen">
                 <FileText className="w-4 h-4" /> Download Template
               </button>
             </div>
@@ -457,7 +459,7 @@ export function EOMHrView({ hrUser }: Props) {
               </label>
             </div>
             <button onClick={handleImport} disabled={!importFile || importing}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 transition-all">
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 transition-all tp-tilt tp-sheen">
               {importing ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Importing...</> : <><Upload className="w-4 h-4" /> Import Employees</>}
             </button>
             {importMsg && (
@@ -474,9 +476,9 @@ export function EOMHrView({ hrUser }: Props) {
           <div className="space-y-4">
             {/* Panel Members Selection for Current Cycle */}
             {selectedCycle && (
-              <div className="bg-white rounded-2xl border border-blue-200 shadow-sm p-6">
+              <div className="bg-white rounded-2xl border border-blue-200 shadow-sm p-6 tp-reveal">
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0 tp-pop-in">
                     <span className="text-blue-700 font-black text-sm">👥</span>
                   </div>
                   <div className="flex-1">
@@ -517,7 +519,7 @@ export function EOMHrView({ hrUser }: Props) {
                   <button
                     onClick={handleSavePanelMembers}
                     disabled={panelSaving}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm rounded-lg transition-all">
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-sm rounded-lg transition-all tp-tilt tp-sheen">
                     {panelSaving ? 'Saving...' : '✓ Save Panel Members'}
                   </button>
                   <span className="text-xs text-slate-400 py-2">
@@ -527,14 +529,14 @@ export function EOMHrView({ hrUser }: Props) {
               </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 tp-reveal">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-black text-slate-800">Employee Directory</h3>
                   <p className="text-sm text-slate-400 mt-0.5">Add individual employees, edit details, or deactivate. Import Excel for bulk changes.</p>
                 </div>
                 <button onClick={() => setShowAddEmp(v => !v)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all">
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all tp-tilt tp-sheen">
                   + Add Employee
                 </button>
               </div>
@@ -645,9 +647,9 @@ export function EOMHrView({ hrUser }: Props) {
         {/* Manage Cycles */}
         {tab === 'cycle' && (
           <div className="space-y-5">
-            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 space-y-5">
+            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 space-y-5 tp-reveal">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0 tp-pop-in">
                   <Calendar className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div>
@@ -676,7 +678,7 @@ export function EOMHrView({ hrUser }: Props) {
                 </div>
               </div>
               <button onClick={handleCreateCycle} disabled={creatingCycle}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 transition-all">
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 transition-all tp-tilt tp-sheen">
                 {creatingCycle ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Creating...</> : <><Calendar className="w-4 h-4" /> Create &amp; Open Cycle</>}
               </button>
               {cycleMsg && (
@@ -686,8 +688,8 @@ export function EOMHrView({ hrUser }: Props) {
                 </div>
               )}
             </div>
-            {cycles.map(c => (
-              <div key={c.id} className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 flex items-center gap-4">
+            {cycles.map((c, i) => (
+              <div key={c.id} style={{ animationDelay: `${i * 60}ms` }} className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 flex items-center gap-4 tp-reveal tp-tilt">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
                   <Calendar className="w-5 h-5 text-emerald-500" />
                 </div>
@@ -700,7 +702,7 @@ export function EOMHrView({ hrUser }: Props) {
                   {c.status === 'open' ? '● Open' : '○ Closed'}
                 </span>
                 <button onClick={() => toggleCycle(c)}
-                  className={`px-4 py-2 rounded-xl border font-bold text-xs transition-all
+                  className={`px-4 py-2 rounded-xl border font-bold text-xs transition-all tp-tilt
                     ${c.status === 'open' ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100' : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100'}`}>
                   {c.status === 'open' ? 'Close' : 'Reopen'}
                 </button>
@@ -810,20 +812,20 @@ export function EOMHrView({ hrUser }: Props) {
               const hodTotal = nom._total;
               const isTopScorer = rank === 0 && hodTotal > 0;
               return (
-                <div key={nom.id} className={`bg-white shadow-sm rounded-2xl overflow-hidden border ${isTopScorer ? 'border-yellow-300' : 'border-slate-200'}`}>
+                <div key={nom.id} style={{ animationDelay: `${Math.min(rank, 10) * 40}ms` }} className={`bg-white shadow-sm rounded-2xl overflow-hidden border tp-reveal tp-tilt ${isTopScorer ? 'border-yellow-300' : 'border-slate-200'}`}>
                   {isTopScorer && (
                     <div className="h-1 bg-gradient-to-r from-yellow-400 to-amber-400" />
                   )}
                   <div className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-slate-50 transition-all" onClick={() => setExpanded(isExp ? null : nom.id)}>
                     {/* Rank badge */}
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 tp-pop-in
                       ${rank === 0 && hodTotal > 0 ? 'bg-yellow-100 text-yellow-700 border border-yellow-300' :
                         rank === 1 && hodTotal > 0 ? 'bg-slate-100 text-slate-500 border border-slate-200' :
                         rank === 2 && hodTotal > 0 ? 'bg-orange-50 text-orange-600 border border-orange-200' :
                         'bg-slate-50 text-slate-400 border border-slate-100 text-xs'}`}>
                       {hodTotal > 0 ? (rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `#${rank+1}`) : '—'}
                     </div>
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center font-black text-emerald-700 text-sm shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center font-black text-emerald-700 text-sm shrink-0 tp-pop-in">
                       {(nom.employee_name||'E')?.[0]}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -844,7 +846,7 @@ export function EOMHrView({ hrUser }: Props) {
                         </span>
                       )}
                       {nom.is_winner && (
-                        <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-50 border border-yellow-200 text-yellow-700 text-[11px] font-bold">
+                        <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-50 border border-yellow-200 text-yellow-700 text-[11px] font-bold tp-pop-in">
                           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" /> Winner
                         </span>
                       )}
@@ -854,7 +856,7 @@ export function EOMHrView({ hrUser }: Props) {
                       {hodTotal > 0 && (
                         <button
                           onClick={e => { e.stopPropagation(); generateEOMCertificate(nom, selectedCycle); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-700 text-[11px] font-bold hover:bg-amber-100 transition-all shrink-0">
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-700 text-[11px] font-bold hover:bg-amber-100 transition-all shrink-0 tp-tilt tp-sheen">
                           <Award className="w-3 h-3" /> Certificate
                         </button>
                       )}
@@ -1008,13 +1010,13 @@ export function EOMHrView({ hrUser }: Props) {
                             disabled={nom.status === 'hr_finalized'}
                             className="w-4 h-4 accent-yellow-500" />
                           <span className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
-                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-400" /> Mark as Employee of the Month Winner
+                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 tp-pop-in" /> Mark as Employee of the Month Winner
                           </span>
                         </label>
                         {nom.status !== 'hr_finalized' && (
                           <button onClick={() => handleFinalize(nom.id)}
                             disabled={finalizing[nom.id] || !['hod_approved','panel_approved','submitted'].includes(nom.status)}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed tp-tilt tp-sheen">
                             {finalizing[nom.id]
                               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Finalizing...</>
                               : <><CheckCircle className="w-4 h-4" /> Finalize Nomination</>}

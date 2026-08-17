@@ -107,7 +107,7 @@ function Kpi({ icon: Icon, label, value, format = shortInr, prefix = '', sub, de
 /* ════════════════════════════════════════════════════════════════════════ */
 type Tab = 'overview' | 'intelligence' | 'geography' | 'products' | 'customers' | 'team' | 'forecast' | 'data';
 
-export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void }) {
+export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // Auth gate. Session is read once on mount; loadSession() also enforces the
   // 12-hour expiry, so a stale localStorage entry can't grant access.
   const [session, setSession] = useState(() => loadSession());
@@ -223,13 +223,12 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
     return (
       <SalesIQLogin
         onSuccess={email => setSession({ email, ts: Date.now() })}
-        onBack={onNavigateBack}
       />
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] relative">
+    <div className="min-h-full bg-[#f5f7fa] relative">
       <style>{`
         @keyframes siqReveal { from { opacity:0; transform: translateY(14px) scale(.985);} to {opacity:1;transform:none;} }
         .siq-reveal { animation: siqReveal .55s cubic-bezier(.2,.8,.2,1) both; }
@@ -260,27 +259,8 @@ export function SalesIQPage({ onNavigateBack }: { onNavigateBack?: () => void })
       </div>
 
       {/* ── header ── */}
-      <div className="relative z-20 bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0">
+      <div className="relative z-20 bg-white/80 backdrop-blur-xl border-b border-slate-200">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4">
-          {onNavigateBack && (
-            <button onClick={onNavigateBack}
-              className="px-3 py-1.5 rounded-lg text-[12px] font-bold text-slate-400
-                         hover:text-slate-900 hover:bg-slate-100 transition-all">← Back</button>
-          )}
-          <div className="flex items-center gap-2.5">
-            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500
-                            flex items-center justify-center shadow-lg shadow-indigo-500/30">
-              <Zap className="w-5 h-5 text-white" />
-              <span className="siq-pulse absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">SalesIQ</h1>
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400 mt-0.5">
-                APIS India · Sales Intelligence
-              </p>
-            </div>
-          </div>
-
           <div className="ml-auto flex items-center gap-2">
             {activeFilters > 0 && (
               <button onClick={() => { setSel({}); setDFrom(''); setDTo(''); }}

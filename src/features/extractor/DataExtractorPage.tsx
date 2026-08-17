@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type MouseEvent } from 'react';
 import {
   Download, AlertCircle, Building2, FileSpreadsheet, HeartPulse, Users,
-  TrendingUp, LayoutDashboard, LogOut, Settings, Sparkles, ChevronRight, BarChart3, Plane, Zap, Radar,
+  LayoutDashboard, Sparkles,
 } from 'lucide-react';
 import { FileUploadZone } from '../../Components/FileUploadZone';
 import { ColumnPills } from '../../Components/ColumnPills';
@@ -9,31 +9,45 @@ import { PreviewTable } from '../../Components/PreviewTable';
 import { AttendanceDashboard } from '../../Components/AttendanceDashboard';
 import { DelhiAttendanceDashboard } from '../../Components/DelhiAttendanceDashboard';
 import { TerritoryManagementDashboard } from '../../Components/TerritoryManagementDashboard';
+import { TOOL_STYLES } from '../../Components/toolStyles';
 
 type ToolId = 'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi' | 'territory';
 
-interface DataExtractorPageProps {
-  onNavigateToPerformance?: () => void;
-  onNavigateToAppraisal?: () => void;
-  onNavigateToEOM?: () => void;
-  onNavigateToPMS?: () => void;
-  onNavigateToOfferLetters?: () => void;
-  onNavigateToSalesIQ?: () => void;
-  onNavigateToRoomPulse?: () => void;
-  onNavigateToTADA?: () => void;
+/* ── Shared intranet motion helpers (mirrors IntranetHomePage) ───────────────
+   Cursor position is written into CSS vars the .ih-spotlight / .ih-tilt3d
+   rules read, so the glow + tilt track the pointer with zero re-renders. */
+function onSpotlightMove(e: MouseEvent<HTMLElement>) {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+}
+function onTilt3dMove(e: MouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width - 0.5;
+  const py = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty('--ry', `${px * 12}deg`);
+  el.style.setProperty('--rx', `${-py * 12}deg`);
+  onSpotlightMove(e);
+}
+function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
+  e.currentTarget.style.setProperty('--rx', '0deg');
+  e.currentTarget.style.setProperty('--ry', '0deg');
 }
 
+/* The sidebar and page header come from IntranetShell — this page renders only
+   its own centre content, starting with the tool switcher below. */
 const TOOLS: {
   id: ToolId; label: string; sub: string | null;
-  accentBg: string; accentText: string; accentBorder: string;
+  activeCls: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { id: 'joining',    label: 'Joining Forms',      sub: null,              icon: Users,           accentBg: 'bg-amber-500/10',  accentText: 'text-amber-400',  accentBorder: 'border-amber-500'  },
-  { id: 'medical',    label: 'Medical Reports',    sub: null,              icon: HeartPulse,      accentBg: 'bg-rose-500/10',   accentText: 'text-rose-400',   accentBorder: 'border-rose-500'   },
-  { id: 'payroll',    label: 'Payroll Exports',    sub: null,              icon: FileSpreadsheet, accentBg: 'bg-sky-500/10',    accentText: 'text-sky-400',    accentBorder: 'border-sky-500'    },
-  { id: 'attendance', label: 'Field Attendance',   sub: 'BIZOM',           icon: LayoutDashboard, accentBg: 'bg-amber-500/10',  accentText: 'text-amber-400',  accentBorder: 'border-amber-500'  },
-  { id: 'delhi',      label: 'Delhi / HO',         sub: 'Pocket HRMS',     icon: Building2,       accentBg: 'bg-violet-500/10', accentText: 'text-violet-400', accentBorder: 'border-violet-500' },
-  { id: 'territory',  label: 'Territory Mgmt',     sub: 'Sales Org Chart', icon: Users,           accentBg: 'bg-indigo-500/10', accentText: 'text-indigo-400', accentBorder: 'border-indigo-500' },
+  { id: 'joining',    label: 'Joining Forms',    sub: null,              icon: Users,           activeCls: 'from-amber-500 to-orange-500 shadow-amber-500/25'  },
+  { id: 'medical',    label: 'Medical Reports',  sub: null,              icon: HeartPulse,      activeCls: 'from-rose-500 to-red-500 shadow-rose-500/25'       },
+  { id: 'payroll',    label: 'Payroll Exports',  sub: null,              icon: FileSpreadsheet, activeCls: 'from-sky-500 to-blue-500 shadow-sky-500/25'        },
+  { id: 'attendance', label: 'Field Attendance', sub: 'BIZOM',           icon: LayoutDashboard, activeCls: 'from-orange-500 to-amber-500 shadow-orange-500/25' },
+  { id: 'delhi',      label: 'Delhi / HO',       sub: 'Pocket HRMS',     icon: Building2,       activeCls: 'from-violet-500 to-purple-600 shadow-violet-500/25'},
+  { id: 'territory',  label: 'Territory Mgmt',   sub: 'Sales Org Chart', icon: Users,           activeCls: 'from-indigo-500 to-violet-600 shadow-indigo-500/25'},
 ];
 
 const TOOL_META: Record<ToolId, { title: string; desc: string; bar: string; badge: string }> = {
@@ -45,9 +59,7 @@ const TOOL_META: Record<ToolId, { title: string; desc: string; bar: string; badg
   territory:  { title: 'Territory Management',         desc: 'Sales team org chart · zone, designation, RM, and state distribution',     bar: 'bg-indigo-500', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
 };
 
-const HUB_MODE = import.meta.env.VITE_APP_MODE === 'hub';
-
-export function DataExtractorPage({ onNavigateToPerformance, onNavigateToAppraisal, onNavigateToEOM, onNavigateToPMS, onNavigateToOfferLetters, onNavigateToTADA, onNavigateToSalesIQ, onNavigateToRoomPulse }: DataExtractorPageProps) {
+export function DataExtractorPage() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,233 +159,67 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
     setActiveTool(id); setFile(null); setData([]); setHeaders([]); setSelectedColumns(new Set()); setError(null); setTerritoryDashData(null); setSalesData([]); setStats(null);
   };
 
+
   const meta = TOOL_META[activeTool];
   const isDashboard = activeTool === 'attendance' || activeTool === 'delhi' || activeTool === 'territory';
 
   return (
-    <div className="flex h-screen bg-[#f5f7fa] font-sans overflow-hidden">
+    <div className="p-6">
+      <style>{TOOL_STYLES}</style>
 
-      {/* ── Dark sidebar ─────────────────────────────────────────────────── */}
-      <aside className="w-60 bg-[#0a0d14] flex flex-col flex-shrink-0">
-        {/* Brand */}
-        <div className="px-5 py-4 flex items-center gap-3 border-b border-white/[0.06]">
-          <div className="w-7 h-7 flex items-center justify-center flex-shrink-0">
-            <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-lg" />
-          </div>
-          <div>
-            <p className="text-white font-black text-sm tracking-tight leading-none">APIS INDIA</p>
-            <div className="flex items-center gap-1 mt-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
-              <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">Enterprise Hub</p>
-            </div>
-          </div>
+      <div className="max-w-[1440px] mx-auto space-y-5">
+        {/* Tool switcher — the six data tools live here now that the sidebar
+            belongs to the shell and is shared by every product. */}
+        <div className="tp-reveal ih-inview flex flex-wrap gap-2">
+          {TOOLS.map((t, i) => {
+            const Icon = t.icon;
+            const active = activeTool === t.id;
+            return (
+              <button key={t.id} onClick={() => switchTool(t.id)}
+                style={{ animationDelay: `${i * 40}ms` }}
+                className={`tp-reveal ih-sheen flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-[13px] font-bold
+                            transition-all duration-300 border ${
+                  active
+                    ? `bg-gradient-to-r ${t.activeCls} text-white border-transparent shadow-lg -translate-y-0.5 hover:shadow-lg`
+                    : 'bg-white/80 backdrop-blur-xl text-slate-500 border-slate-200 hover:text-slate-800 hover:border-slate-300 hover:-translate-y-0.5 hover:shadow-lg'
+                }`}>
+                <Icon className={`w-4 h-4 flex-shrink-0 transition-transform duration-300 ${active ? 'scale-110' : ''}`} />
+                <span className="text-left leading-tight">
+                  {t.label}
+                  {t.sub && (
+                    <span className={`block text-[9px] font-black uppercase tracking-wider ${active ? 'opacity-70' : 'text-slate-400'}`}>
+                      {t.sub}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 p-2.5 overflow-y-auto">
-          {!HUB_MODE && (
-            <>
-              <p className="px-2.5 pt-4 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Data Tools</p>
-              {TOOLS.map(t => {
-                const Icon = t.icon;
-                const active = activeTool === t.id;
-                return (
-                  <button key={t.id} onClick={() => switchTool(t.id)}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-all mb-0.5 ${
-                      active
-                        ? `${t.accentBg} ${t.accentText} border-l-2 ${t.accentBorder} !pl-[8px]`
-                        : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
-                    }`}>
-                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                    <div className="text-left min-w-0">
-                      <p className="leading-tight truncate">{t.label}</p>
-                      {t.sub && <p className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${active ? 'opacity-60' : 'text-slate-700'}`}>{t.sub}</p>}
-                    </div>
-                  </button>
-                );
-              })}
-              <div className="my-2.5 border-t border-white/[0.06]" />
-            </>
-          )}
-          {HUB_MODE && <div className="pt-4" />}
-          {!HUB_MODE && (
-            <>
-              <p className="px-2.5 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Performance</p>
-              {onNavigateToPerformance && (
-              <button onClick={onNavigateToPerformance}
-                className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
-                <div className="flex items-center gap-2.5">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <div>
-                    <p>Performance Hub</p>
-                    <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-violet-700">Goals &amp; Reviews</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-              </button>
-              )}
-            </>
-          )}
-          {HUB_MODE && (
-            <p className="px-2.5 pb-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Hubs</p>
-          )}
-          <button onClick={onNavigateToAppraisal}
-            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-blue-500/10 hover:text-blue-400 transition-all group">
-            <div className="flex items-center gap-2.5">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <div>
-                <p>Appraisal Hub</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-blue-700">Annual Appraisal</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-          </button>
-          <button onClick={onNavigateToEOM}
-            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400 transition-all group">
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              <div>
-                <p>EOM Hub</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-emerald-700">Employee of the Month</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-          </button>
-          {!HUB_MODE && (
-          <>
-          <button onClick={onNavigateToPMS}
-            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-violet-500/10 hover:text-violet-400 transition-all group">
-            <div className="flex items-center gap-2.5">
-              <BarChart3 className="w-3.5 h-3.5" />
-              <div>
-                <p>PMS Simulator</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-violet-700">Performance & Salary Sim</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-          </button>
-          {onNavigateToOfferLetters && (
-          <button onClick={onNavigateToOfferLetters}
-            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all group">
-            <div className="flex items-center gap-2.5">
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <div>
-                <p>Letters Generator</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-rose-700">Appraisal & Warning</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-          </button>
-          )}
-          {onNavigateToRoomPulse && (
-          <button onClick={onNavigateToRoomPulse}
-            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all group">
-            <div className="flex items-center gap-2.5">
-              <Radar className="w-3.5 h-3.5" />
-              <div>
-                <p>AdminPulse</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-cyan-700">Admin Requests</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-          </button>
-          )}
-          {onNavigateToSalesIQ && (
-          <button onClick={onNavigateToSalesIQ}
-            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-400 transition-all group">
-            <div className="flex items-center gap-2.5">
-              <Zap className="w-3.5 h-3.5" />
-              <div>
-                <p>SalesIQ</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-indigo-700">Sales Intelligence</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-          </button>
-          )}
-          {onNavigateToTADA && (
-          <button onClick={onNavigateToTADA}
-            className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold text-slate-500 hover:bg-sky-500/10 hover:text-sky-400 transition-all group">
-            <div className="flex items-center gap-2.5">
-              <Plane className="w-3.5 h-3.5" />
-              <div>
-                <p>TA/DA Portal</p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mt-0.5 group-hover:text-sky-700">Travel & Allowance</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-80" />
-          </button>
-          )}
-          </>
-          )}
-        </nav>
-
-        {/* Bottom */}
-        <div className="p-2.5 border-t border-white/[0.06] space-y-0.5">
-          <a href="#" className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-slate-600 hover:bg-white/5 hover:text-slate-300 text-[13px] font-semibold transition-all">
-            <Settings className="w-3.5 h-3.5" /><span>Settings</span>
-          </a>
-          <button className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-slate-600 hover:bg-rose-500/10 hover:text-rose-400 text-[13px] font-semibold transition-all">
-            <LogOut className="w-3.5 h-3.5" /><span>Sign Out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main area ────────────────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {HUB_MODE && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-8 bg-gradient-to-br from-slate-50 to-slate-100">
-            <div className="text-center">
-              <img src="/logo.png" alt="APIS" className="w-16 h-16 object-contain mx-auto mb-4 drop-shadow-lg" />
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">APIS INDIA</h1>
-              <p className="text-sm text-slate-500 mt-1">Select a hub from the sidebar to get started</p>
-            </div>
-            <div className="flex gap-4">
-              <button onClick={onNavigateToAppraisal}
-                className="flex flex-col items-center gap-3 px-8 py-6 bg-white rounded-2xl shadow-md border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all group">
-                <TrendingUp className="w-8 h-8 text-blue-500 group-hover:scale-110 transition-transform" />
-                <div className="text-center">
-                  <p className="font-black text-slate-800 text-sm">Appraisal Hub</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Annual Appraisal</p>
-                </div>
-              </button>
-              <button onClick={onNavigateToEOM}
-                className="flex flex-col items-center gap-3 px-8 py-6 bg-white rounded-2xl shadow-md border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all group">
-                <Sparkles className="w-8 h-8 text-emerald-500 group-hover:scale-110 transition-transform" />
-                <div className="text-center">
-                  <p className="font-black text-slate-800 text-sm">EOM Hub</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Employee of the Month</p>
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-        {!HUB_MODE && <>
-
-        {/* Compact page header */}
-        <header className="bg-white border-b border-slate-100 px-7 py-3.5 flex items-center justify-between flex-shrink-0 shadow-sm">
+        {/* Active tool caption */}
+        <div className="tp-reveal ih-inview flex items-center justify-between gap-4" style={{ animationDelay: '60ms' }}>
           <div className="flex items-center gap-3.5">
-            <div className={`w-1 h-7 rounded-full ${meta.bar}`} />
+            <div className={`w-1 h-7 rounded-full ${meta.bar} ih-pulse-glow`} />
             <div>
-              <h1 className="text-sm font-black text-slate-900 leading-tight">{meta.title}</h1>
-              <p className="text-xs text-slate-400 mt-0.5">{meta.desc}</p>
+              <h1 className="ih-grad-text text-sm font-black leading-tight bg-gradient-to-r from-slate-900 via-amber-600 to-orange-600">{meta.title}</h1>
+              <p className="text-xs text-slate-500 mt-0.5">{meta.desc}</p>
             </div>
           </div>
-          <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full border ${meta.badge}`}>
-            Active
+          <span className={`flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full border ${meta.badge}`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-current ih-pulse-glow" />Active
           </span>
-        </header>
+        </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-[1440px] mx-auto space-y-5">
 
             {(activeTool === 'joining' || activeTool === 'medical' || isDashboard) ? (
               <>
                 {/* Upload zone */}
                 {data.length === 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-7">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-5">Upload File</p>
+                  <div
+                    onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+                    className="tp-reveal ih-inview ih-tilt3d ih-spotlight rounded-2xl bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm p-7 transition-shadow duration-300 hover:shadow-md">
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-5">Upload File</p>
                     <FileUploadZone file={file} loading={loading} isProcessed={data.length > 0}
                       onFileSelect={handleFileSelect} onProcess={handleUpload} />
                     {error && (
@@ -390,11 +236,11 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
 
                 {data.length > 0 && (
                   (activeTool === 'joining' || activeTool === 'medical') ? (
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="tp-reveal ih-inview rounded-2xl bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm overflow-hidden">
                       {/* Header bar */}
                       <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
                         <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Review &amp; Export</p>
+                          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Review &amp; Export</p>
                           <p className="text-sm font-semibold text-slate-700 mt-0.5">
                             <span className="text-amber-600 font-black">{data.length}</span> records extracted from {file?.name}
                           </p>
@@ -420,13 +266,13 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                             ← Re-upload
                           </button>
                           <button onClick={handleExport} disabled={loading || selectedColumns.size === 0}
-                            className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 shadow-md shadow-amber-500/15 hover:scale-[1.02] active:scale-95">
+                            className="ih-sheen flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs rounded-xl transition-all disabled:opacity-50 shadow-md shadow-amber-500/15 hover:-translate-y-0.5 hover:shadow-lg active:scale-95">
                             {loading ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                             {activeTool === 'medical' ? 'Download Medical Data' : 'Download Excel'}
                           </button>
                           {activeTool === 'medical' && salesData.length > 0 && (
                             <button onClick={handleSalesExport} disabled={salesExporting}
-                              className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 shadow-md shadow-sky-500/15 hover:scale-[1.02] active:scale-95">
+                              className="ih-sheen flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-black text-xs rounded-xl transition-all disabled:opacity-50 shadow-md shadow-sky-500/15 hover:-translate-y-0.5 hover:shadow-lg active:scale-95">
                               {salesExporting ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                               Download Sales Data
                             </button>
@@ -435,7 +281,7 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                       </div>
                       {/* Column selector */}
                       <div className="px-6 py-4 border-b border-slate-50">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Select columns to include</p>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Select columns to include</p>
                         <ColumnPills headers={headers} selectedColumns={selectedColumns} onToggleColumn={toggleColumn} />
                       </div>
                       {/* Preview */}
@@ -444,11 +290,11 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="tp-reveal space-y-4">
                       {/* Active sheet bar */}
-                      <div className="bg-white flex items-center justify-between px-5 py-2.5 rounded-xl border border-slate-100 shadow-sm">
+                      <div className="ih-inview bg-white/80 backdrop-blur-xl flex items-center justify-between px-5 py-2.5 rounded-2xl border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 ih-pulse-glow flex-shrink-0" />
                           <span className="text-sm font-bold text-slate-700">{file?.name}</span>
                           <span className="text-xs text-slate-400">· {data.length} rows</span>
                         </div>
@@ -468,21 +314,20 @@ export function DataExtractorPage({ onNavigateToPerformance, onNavigateToApprais
                 )}
               </>
             ) : (
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center min-h-80 text-center p-12">
-                <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                  <Sparkles className="w-6 h-6 text-slate-400" />
+              <div
+                onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+                className="tp-reveal ih-inview ih-tilt3d ih-spotlight rounded-2xl bg-white/80 backdrop-blur-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center min-h-80 text-center p-12">
+                <div className="tp-pop-in ih-float w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mb-4">
+                  <Sparkles className="w-6 h-6 text-amber-600" />
                 </div>
-                <h3 className="text-lg font-black text-slate-800 mb-2">Module In Development</h3>
+                <h3 className="ih-grad-text text-lg font-black mb-2 bg-gradient-to-r from-slate-900 via-amber-600 to-orange-600">Module In Development</h3>
                 <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
                   The <span className="font-bold text-slate-700">{meta.title}</span> module is being engineered. Check back soon.
                 </p>
               </div>
             )}
 
-          </div>
-        </div>
-        </>}
-      </main>
+      </div>
     </div>
   );
 }

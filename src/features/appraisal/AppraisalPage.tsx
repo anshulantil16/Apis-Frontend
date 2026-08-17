@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
 import { AppraisalEmployeeView } from '../../Components/Appraisal/employee/AppraisalEmployeeView';
 import { AppraisalManagerView } from '../../Components/Appraisal/manager/AppraisalManagerView';
 import { AppraisalHODView } from '../../Components/Appraisal/hod/AppraisalHODView';
 import { HRView } from '../../Components/Performance/hr/HRView';
 import { ProgressReportDashboard } from '../../Components/ProgressReport/ProgressReportDashboard';
+import { TOOL_STYLES } from '../../Components/toolStyles';
 interface AppraisalPageProps {
-  onNavigateBack: () => void;
+  onNavigateBack?: () => void;
 }
 
 type Role = 'employee' | 'manager' | 'hod' | 'hr';
@@ -14,13 +15,35 @@ type Role = 'employee' | 'manager' | 'hod' | 'hr';
 const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const APPRAISAL_API = `${_API_BASE}/api/appraisal`;
 
+/* ── Shared intranet motion helpers (mirrors IntranetHomePage) ───────────────
+   Cursor position is written into CSS vars the .ih-spotlight / .ih-tilt3d
+   rules read, so the glow + tilt track the pointer with zero re-renders. */
+function onSpotlightMove(e: MouseEvent<HTMLElement>) {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+}
+function onTilt3dMove(e: MouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width - 0.5;
+  const py = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty('--ry', `${px * 12}deg`);
+  el.style.setProperty('--rx', `${-py * 12}deg`);
+  onSpotlightMove(e);
+}
+function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
+  e.currentTarget.style.setProperty('--rx', '0deg');
+  e.currentTarget.style.setProperty('--ry', '0deg');
+}
+
 // ─── Inner hub wrapper ────────────────────────────────────────────────────────
 
 type HubSection = 'goals' | 'progress';
 
 function AppraisalHub({
-  employee, role, onLogout, onNavigateBack,
-}: { employee: any; role: Role; onLogout: () => void; onNavigateBack: () => void }) {
+  employee, role, onLogout,
+}: { employee: any; role: Role; onLogout: () => void }) {
   const [section, setSection] = useState<HubSection>('goals');
 
   const roleConfig = {
@@ -41,23 +64,18 @@ function AppraisalHub({
   const initial = (employee.name || 'U')[0].toUpperCase();
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white shadow-sm sticky top-0 z-50">
+    <div className="min-h-full bg-[#f5f7fa]">
+      <style>{TOOL_STYLES}</style>
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-xl shadow-sm relative z-20">
         <div className="px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
           {/* Left */}
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={onLogout}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0">
-              <ArrowLeft className="w-4 h-4" />
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0 group">
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
             </button>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 flex items-center justify-center shrink-0">
-                <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-sm" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-slate-900 font-bold text-sm leading-none truncate">APIS Appraisal Hub</p>
-                <p className="text-slate-500 text-[11px] mt-0.5 truncate">{employee.name} · {employee.designation}</p>
-              </div>
+            <div className="min-w-0">
+              <p className="text-slate-600 text-xs font-semibold truncate">{employee.name} · {employee.designation}</p>
             </div>
           </div>
 
@@ -71,9 +89,9 @@ function AppraisalHub({
                 ]
             ).map(({ s, label, icon: Icon }) => (
               <button key={s} onClick={() => setSection(s)}
-                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                className={`tp-sheen ih-sheen flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
                   section === s
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md shadow-blue-200'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md shadow-blue-200 scale-[1.02] hover:shadow-lg'
                     : 'text-slate-500 hover:text-slate-700 hover:bg-white'
                 }`}>
                 <Icon className="w-4 h-4" />
@@ -85,15 +103,12 @@ function AppraisalHub({
           {/* Right */}
           <div className="flex items-center gap-3 shrink-0">
             <span className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${roleConfig.badge}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${roleConfig.dot}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${roleConfig.dot} tp-pulse-glow ih-pulse-glow`} />
               {roleConfig.label}
             </span>
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200 flex items-center justify-center text-blue-700 font-black text-sm">
               {initial}
             </div>
-            <button onClick={onNavigateBack} className="hidden lg:block text-slate-400 hover:text-slate-700 text-xs font-semibold transition-colors">
-              ← Data Tools
-            </button>
           </div>
         </div>
 
@@ -168,7 +183,7 @@ const ROLE_CONFIG = [
   },
 ] as const;
 
-export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
+export function AppraisalPage({}: AppraisalPageProps) {
   const [role, setRole] = useState<Role | null>(() =>
     localStorage.getItem('appraisal_role') as Role | null
   );
@@ -191,6 +206,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
     if (role && employee) localStorage.setItem('appraisal_role', role);
     else if (!employee) localStorage.removeItem('appraisal_role');
   }, [role, employee]);
+
 
   const parseJsonSafe = async (res: Response) => {
     const ct = res.headers.get('content-type') || '';
@@ -284,27 +300,22 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
           localStorage.removeItem('appraisal_employee');
           localStorage.removeItem('appraisal_role');
         }}
-        onNavigateBack={onNavigateBack}
       />
     );
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-full py-10 bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <style>{TOOL_STYLES}</style>
       {/* Background decoration */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" />
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-200/40 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-80 h-80 bg-indigo-200/40 rounded-full blur-[100px] pointer-events-none" />
-
-      <button onClick={onNavigateBack}
-        className="absolute top-4 left-4 flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors text-sm font-medium group">
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        Data Tools
-      </button>
+      <div className="ih-aurora absolute top-1/4 -left-32 w-96 h-96 bg-blue-200/40 rounded-full blur-[100px] pointer-events-none" />
+      <div className="ih-drift absolute bottom-1/4 -right-32 w-80 h-80 bg-indigo-200/40 rounded-full blur-[100px] pointer-events-none" style={{ animationDelay: '4s' }} />
+      <div className="ih-aurora absolute top-1/2 left-1/3 w-72 h-72 bg-indigo-300/25 rounded-full blur-[110px] pointer-events-none" style={{ animationDelay: '7s' }} />
 
       {/* Instructions panel — bottom-left */}
       <div className="absolute bottom-5 left-5 max-w-[260px] z-10">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Instructions</p>
+        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Instructions</p>
         <div className="space-y-2">
           {[
             { n: 1, text: 'The performance review booklet consists of 2 Sections — Section I: Performance Assessment, Section II: Development Action Plan.' },
@@ -313,7 +324,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
           ].map(({ n, text }) => (
             <div key={n} className="flex gap-2">
               <span className="w-4 h-4 rounded-full bg-blue-100 border border-blue-200 text-blue-600 text-[9px] font-black flex items-center justify-center shrink-0 mt-px">{n}</span>
-              <p className="text-[10px] text-slate-400 leading-relaxed">{text}</p>
+              <p className="text-[10px] text-slate-500 leading-relaxed">{text}</p>
             </div>
           ))}
         </div>
@@ -321,17 +332,20 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
 
       <div className="w-full max-w-md relative z-10">
         {/* Brand */}
-        <div className="text-center mb-4">
-          <div className="w-14 h-14 flex items-center justify-center mx-auto mb-2 drop-shadow-lg">
+        <div className="tp-reveal text-center mb-4">
+          <div className="tp-border-flow ih-float w-14 h-14 flex items-center justify-center mx-auto mb-2 rounded-2xl p-1.5 bg-white shadow-lg"
+            style={{ '--tp-c1': '#3b82f6', '--tp-c2': '#6366f1' } as any}>
             <img src="/logo.png" alt="APIS India" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Appraisal Hub</h1>
+          <h1 className="ih-grad-text text-2xl font-black tracking-tight bg-gradient-to-r from-slate-900 via-blue-600 to-indigo-600">Appraisal Hub</h1>
           <p className="text-slate-500 mt-1 text-xs font-medium">Annual Appraisal · KRA/KPI Setting · Final Assessment</p>
         </div>
 
         {/* Card */}
-        <div className="relative">
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/60">
+        <div className="tp-reveal ih-inview relative" style={{ animationDelay: '80ms' }}>
+          <div
+            onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+            className="ih-tilt3d ih-spotlight bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/60">
 
             {step === 'admin_otp' ? (
               <>
@@ -341,7 +355,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                 </button>
 
                 <div className="text-center mb-7">
-                  <div className="w-14 h-14 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center mx-auto mb-4">
+                  <div className="ih-float w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center mx-auto mb-4">
                     <Mail className="w-7 h-7 text-rose-600" />
                   </div>
                   <h3 className="text-slate-900 font-bold text-base mb-1">Admin verification</h3>
@@ -355,7 +369,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                 </div>
 
                 <div className="mb-5">
-                  <label className="text-slate-500 text-xs font-bold uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
                   <input
                     type="text" inputMode="numeric" placeholder="· · · · · ·" maxLength={6}
                     value={otpInput}
@@ -378,7 +392,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                 )}
 
                 <button onClick={handleAdminVerify} disabled={otpInput.length !== 6 || loading}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-rose-200 active:scale-[0.98] flex items-center justify-center gap-2">
+                  className="ih-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-rose-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
                   {loading
                     ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Verifying...</>
                     : '🏢 Enter as Admin'}
@@ -393,7 +407,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
               <>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">1</span>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Select your role</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Select your role</p>
                 </div>
 
                 <div className="space-y-2 mb-4">
@@ -405,7 +419,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                       </div>
                       <div className="text-left flex-1">
                         <p className={`font-bold text-sm leading-none ${role === id ? '' : 'text-slate-700'}`}>{label}</p>
-                        <p className={`text-[11px] mt-0.5 ${role === id ? 'opacity-70' : 'text-slate-400'}`}>{sub}</p>
+                        <p className={`text-[11px] mt-0.5 ${role === id ? 'opacity-70' : 'text-slate-500'}`}>{sub}</p>
                       </div>
                       <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-all ${role === id ? 'border-current bg-current scale-100' : 'border-slate-300 scale-75'}`} />
                     </button>
@@ -414,7 +428,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
 
                 <div className="flex items-center gap-2 mb-2">
                   <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">2</span>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Enter your Employee Code</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Enter your Employee Code</p>
                 </div>
                 <div className="relative mb-4">
                   <input
@@ -434,7 +448,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                 )}
 
                 <button onClick={handleSendOtp} disabled={!role || !inputId.trim() || loading}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2">
+                  className="ih-sheen w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-blue-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
                   {loading
                     ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending OTP...</>
                     : <><Mail className="w-4 h-4" /> Send OTP to Email</>}
@@ -448,7 +462,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                     {loading ? <span className="w-3.5 h-3.5 border-2 border-rose-400/40 border-t-rose-500 rounded-full animate-spin" /> : '🏢'}
                     First-time setup — Admin OTP Login
                   </button>
-                  <p className="text-slate-400 text-[10px] text-center mt-1.5">OTP will be sent to the registered admin email</p>
+                  <p className="text-slate-500 text-[10px] text-center mt-1.5">OTP will be sent to the registered admin email</p>
                 </div>
               </>
             ) : (
@@ -459,7 +473,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                 </button>
 
                 <div className="text-center mb-7">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center mx-auto mb-4">
+                  <div className="ih-float w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mx-auto mb-4">
                     <Mail className="w-7 h-7 text-blue-600" />
                   </div>
                   <h3 className="text-slate-900 font-bold text-base mb-1">Check your inbox</h3>
@@ -473,7 +487,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                 </div>
 
                 <div className="mb-5">
-                  <label className="text-slate-500 text-xs font-bold uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
                   <input
                     type="text" inputMode="numeric" placeholder="· · · · · ·" maxLength={6}
                     value={otpInput}
@@ -496,7 +510,7 @@ export function AppraisalPage({ onNavigateBack }: AppraisalPageProps) {
                 )}
 
                 <button onClick={handleVerifyOtp} disabled={otpInput.length !== 6 || loading}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-2">
+                  className="ih-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-blue-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
                   {loading
                     ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Verifying...</>
                     : '✓ Verify & Enter Hub'}

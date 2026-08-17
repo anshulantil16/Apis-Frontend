@@ -1,0 +1,157 @@
+/* Animation toolkit for the intranet dashboard.
+ *
+ * Deliberately weighted toward CONTINUOUS motion, not just entrances.
+ * Entrance-only animations play for half a second on mount and then the page
+ * sits perfectly still — which reads to a user as "there are no animations".
+ * Everything under "ambient" below loops forever so the dashboard always
+ * feels alive. It's all CSS (no JS rAF loops), so it stays cheap.
+ *
+ * Injected once by IntranetShell via <style>{IH_STYLES}</style>, which means
+ * every screen in the app can use these classes without importing anything.
+ */
+export const IH_STYLES = `
+/* ── ambient: slow drifting blobs / aurora ─────────────────────────────── */
+@keyframes ihDrift {
+  0%,100% { transform: translate(0,0) rotate(0deg) scale(1); }
+  33% { transform: translate(4%,-5%) rotate(2deg) scale(1.06); }
+  66% { transform: translate(-3%,4%) rotate(-1.5deg) scale(.96); }
+}
+.ih-drift { animation: ihDrift 24s ease-in-out infinite; }
+
+@keyframes ihAurora {
+  0%,100% { transform: translate(-8%,-6%) scale(1); opacity:.5; }
+  50% { transform: translate(8%,6%) scale(1.25); opacity:.85; }
+}
+.ih-aurora { animation: ihAurora 18s ease-in-out infinite; }
+
+/* ── ambient: animated gradient fills + gradient text ──────────────────── */
+@keyframes ihGradShift { 0%,100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
+.ih-grad-move { background-size: 220% 220%; animation: ihGradShift 9s ease infinite; }
+.ih-grad-text {
+  background-size: 220% 220%; animation: ihGradShift 7s ease infinite;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ── ambient: sheen sweeping across a surface on a loop ────────────────── */
+@keyframes ihSweep { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+.ih-sweep { position: relative; overflow: hidden; }
+.ih-sweep::after {
+  content:''; position:absolute; top:0; bottom:0; left:0; width:28%; pointer-events:none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+  animation: ihSweep 6s ease-in-out infinite;
+}
+
+/* ── ambient: pulsing glow / breathing ring ────────────────────────────── */
+@keyframes ihPulseGlow { 0%,100% { opacity:.5; transform:scale(1); } 50% { opacity:1; transform:scale(1.3); } }
+.ih-pulse-glow { animation: ihPulseGlow 2.2s ease-in-out infinite; }
+
+@keyframes ihBreathe { 0%,100% { box-shadow:0 0 0 0 var(--ih-ring, rgba(6,182,212,.45)); } 70% { box-shadow:0 0 0 12px transparent; } }
+.ih-breathe { animation: ihBreathe 2.8s ease-out infinite; }
+
+/* ── ambient: rotating conic border ────────────────────────────────────── */
+@property --ih-angle { syntax:'<angle>'; inherits:false; initial-value:0deg; }
+@keyframes ihBorderSpin { to { --ih-angle: 360deg; } }
+.ih-border-flow { position: relative; }
+.ih-border-flow::before {
+  content:''; position:absolute; inset:-2px; border-radius:inherit; padding:2px;
+  background: conic-gradient(from var(--ih-angle), #22d3ee, #8b5cf6, #f59e0b, #22d3ee);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: ihBorderSpin 4s linear infinite; pointer-events:none;
+}
+
+/* ── ambient: slow spin, float, shimmer ────────────────────────────────── */
+@keyframes ihSpinSlow { to { transform: rotate(360deg); } }
+.ih-spin-slow { animation: ihSpinSlow 18s linear infinite; }
+
+@keyframes ihFloatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.ih-float { animation: ihFloatY 4.5s ease-in-out infinite; }
+
+@keyframes ihShimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+.ih-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+  background-size: 200% 100%; animation: ihShimmer 3s ease-in-out infinite;
+}
+
+/* ── ambient: marquee ticker (pauses on hover) ─────────────────────────── */
+@keyframes ihTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ih-ticker { animation: ihTicker 34s linear infinite; }
+.ih-ticker-track:hover .ih-ticker { animation-play-state: paused; }
+
+/* ── ambient: rising particles ─────────────────────────────────────────── */
+@keyframes ihFloatUp {
+  0% { transform: translateY(0); opacity:0; }
+  10% { opacity:1; } 90% { opacity:1; }
+  100% { transform: translateY(-120vh); opacity:0; }
+}
+.ih-particle { animation-name: ihFloatUp; animation-timing-function: linear; animation-iteration-count: infinite; }
+
+/* ── entrances (one-shot) ──────────────────────────────────────────────── */
+@keyframes ihReveal { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+.ih-reveal { animation: ihReveal .6s cubic-bezier(.2,.8,.2,1) both; }
+
+@keyframes ihFade { from { opacity:0; } to { opacity:1; } }
+.ih-fade { animation: ihFade .5s ease both; }
+
+@keyframes ihPopIn { 0% { transform:scale(.6); opacity:0; } 60% { transform:scale(1.08); opacity:1; } 100% { transform:scale(1); } }
+.ih-pop-in { animation: ihPopIn .5s cubic-bezier(.2,.9,.25,1.2) both; }
+
+@keyframes ihPaletteIn { from { opacity:0; transform:translateY(-10px) scale(.98); } to { opacity:1; transform:none; } }
+.ih-palette-in { animation: ihPaletteIn .2s cubic-bezier(.2,.9,.25,1.1) both; }
+
+/* Scroll-triggered reveal. IntranetShell adds .is-in via an IntersectionObserver
+   so cards animate every time they scroll into view, not only on first load.
+
+   Deliberately VISIBLE by default: the hidden state is scoped to
+   html.ih-reveal-ready, which the shell only sets once the observer is
+   confirmed running. If the observer never attaches (unsupported browser, a
+   crash, or an element rendered outside the shell) the content just shows
+   normally instead of being stuck at opacity:0 — and an invisible element
+   still swallows clicks, so failing visible is much safer than failing
+   hidden. */
+.ih-inview { transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1); }
+html.ih-reveal-ready .ih-inview { opacity:0; transform: translateY(24px); }
+html.ih-reveal-ready .ih-inview.is-in { opacity:1; transform:none; }
+
+/* ── interaction ───────────────────────────────────────────────────────── */
+.ih-tilt { transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s; }
+.ih-tilt:hover { transform: translateY(-6px) scale(1.015); }
+
+/* real 3D tilt — --rx/--ry are written by a mousemove handler */
+.ih-tilt3d {
+  transform: perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+  transition: transform .2s ease-out, box-shadow .3s ease;
+}
+
+@keyframes ihSheenMove { from { transform:translateX(-130%) skewX(-12deg); } to { transform:translateX(230%) skewX(-12deg); } }
+.ih-sheen { position:relative; overflow:hidden; }
+.ih-sheen::after {
+  content:''; position:absolute; top:0; left:0; height:100%; width:35%; opacity:0; pointer-events:none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+}
+.ih-sheen:hover::after { opacity:1; animation: ihSheenMove .9s ease-in-out; }
+
+/* cursor-follow spotlight — --mx/--my are written by a mousemove handler */
+.ih-spotlight { position:relative; }
+.ih-spotlight::before {
+  content:''; position:absolute; inset:0; pointer-events:none; opacity:0; border-radius:inherit;
+  transition: opacity .3s ease;
+  background: radial-gradient(240px circle at var(--mx,50%) var(--my,50%), rgba(99,102,241,.13), transparent 70%);
+}
+.ih-spotlight:hover::before { opacity:1; }
+
+/* neon edge that lights up on hover */
+.ih-neon { transition: box-shadow .35s ease, border-color .35s ease; }
+.ih-neon:hover { box-shadow: 0 0 0 1px var(--ih-neon, #22d3ee), 0 10px 34px -10px var(--ih-neon, #22d3ee); }
+
+/* Respect the OS "reduce motion" setting — kill every looping animation.
+   Ambient motion is decorative; for users who get motion sickness it is not
+   a nice-to-have to switch it off. */
+@media (prefers-reduced-motion: reduce) {
+  .ih-drift,.ih-aurora,.ih-grad-move,.ih-grad-text,.ih-sweep::after,.ih-pulse-glow,.ih-breathe,
+  .ih-border-flow::before,.ih-spin-slow,.ih-float,.ih-shimmer,.ih-ticker,.ih-particle
+  { animation: none !important; }
+  html.ih-reveal-ready .ih-inview { opacity:1; transform:none; transition:none; }
+  .ih-tilt3d { transform:none; }
+}
+`;

@@ -35,10 +35,10 @@ export function ColumnPills({ headers, selectedColumns, onToggleColumn }: Column
             <button
               key={col}
               onClick={() => onToggleColumn(col)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 border ${
                 on
-                  ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/20'
-                  : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
+                  ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/20 scale-[1.03]'
+                  : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700 hover:-translate-y-0.5'
               }`}
             >
               {col}

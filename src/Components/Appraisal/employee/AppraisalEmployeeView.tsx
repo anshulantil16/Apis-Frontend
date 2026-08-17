@@ -4,6 +4,7 @@ import {
   AlertCircle, Award, Lock, Unlock, ChevronDown,
   ChevronRight, ArrowLeft, MessageSquare, BookOpen, X, ThumbsUp, Upload, FileText,
 } from 'lucide-react';
+import { TOOL_STYLES } from '../../toolStyles';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PERF_API = `${API_BASE}/api/appraisal`;
@@ -83,7 +84,8 @@ function StarRating({ value, onChange }: { value: number; onChange?: (v: number)
             onClick={() => onChange?.(s)}
             onMouseEnter={() => onChange && setHovered(s)}
             onMouseLeave={() => onChange && setHovered(0)}
-            className="text-2xl transition-transform hover:scale-110 disabled:cursor-default leading-none"
+            className="tp-pop-in text-2xl transition-transform hover:scale-110 disabled:cursor-default leading-none"
+            style={{ animationDelay: `${s * 60}ms` }}
           >
             <span className={s <= active ? 'text-amber-400' : 'text-slate-200'}>★</span>
           </button>
@@ -129,8 +131,8 @@ function StatusBadge({ status }: { status: string }) {
   };
   const s = map[status] || { cls: 'bg-slate-100 text-slate-600 border-slate-200', label: status, dot: 'bg-slate-400' };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${s.cls}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+    <span className={`tp-pop-in inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${s.cls}`}>
+      <span className={`tp-pulse-glow w-1.5 h-1.5 rounded-full ${s.dot}`} />
       {s.label}
     </span>
   );
@@ -138,7 +140,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }) {
   return (
-    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 overflow-x-auto">
+    <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 overflow-x-auto">
       <div className="flex items-center min-w-max gap-0">
         {JOURNEY_STEPS.map((s, i) => {
           const Icon = s.icon;
@@ -148,7 +150,7 @@ function JourneyStepper({ step, rejected }: { step: number; rejected?: boolean }
           return (
             <div key={s.key} className="flex items-center">
               <div className="flex flex-col items-center gap-1.5 min-w-[80px]">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
+                <div className={`tp-pop-in w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
                   isRejected ? 'bg-rose-100 border-2 border-rose-400 shadow-sm shadow-rose-100'
                   : done     ? 'bg-emerald-100 border-2 border-emerald-400 shadow-sm shadow-emerald-100'
                   : active   ? 'bg-blue-100 border-2 border-blue-500 shadow-sm shadow-blue-100'
@@ -215,7 +217,7 @@ function FormStepBar({ step }: { step: 1 | 2 | 3 | 4 }) {
     { n: 4, label: 'Feedback',              sub: 'Manager & Org review',     icon: ThumbsUp },
   ];
   return (
-    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4">
+    <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4">
       <div className="flex items-center gap-0">
         {steps.map((s, i) => {
           const Icon = s.icon;
@@ -224,7 +226,7 @@ function FormStepBar({ step }: { step: 1 | 2 | 3 | 4 }) {
           return (
             <div key={s.n} className="flex items-center flex-1">
               <div className="flex items-center gap-3 flex-1">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                <div className={`tp-pop-in w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
                   done   ? 'bg-emerald-100 border-2 border-emerald-400'
                   : active && s.n === 1 ? 'bg-blue-600 border-2 border-blue-600 shadow-md shadow-blue-100'
                   : active && s.n === 2 ? 'bg-indigo-600 border-2 border-indigo-600 shadow-md shadow-indigo-100'
@@ -747,15 +749,16 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   const isRejected = goalCard?.status === 'manager_rejected';
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 lg:p-6">
+    <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+      <style>{TOOL_STYLES}</style>
       <div className="max-w-[1400px] mx-auto space-y-4">
 
         {/* ── Profile Card ── */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           <div className="h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" />
           <div className="px-6 py-4 flex items-center gap-5">
             <div className="relative shrink-0">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xl font-black text-white shadow-lg shadow-blue-200">
+              <div className="tp-pop-in w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xl font-black text-white shadow-lg shadow-blue-200">
                 {employee.name?.[0] || 'E'}
               </div>
             </div>
@@ -789,7 +792,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
         {/* ── Alerts ── */}
         {isRejected && goalCard?.manager_remarks && (
-          <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3 shadow-sm">
+          <div className="tp-reveal bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3 shadow-sm">
             <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-rose-700 font-bold text-sm">Manager requested changes</p>
@@ -798,14 +801,14 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
           </div>
         )}
         {goalCard?.status === 'manager_approved' && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex gap-3 items-center shadow-sm">
+          <div className="tp-reveal bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex gap-3 items-center shadow-sm">
             <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
             <p className="text-emerald-700 font-bold text-sm">Appraisal goals approved by manager</p>
           </div>
         )}
 
         {/* ── Cycle + Phase row ── */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="tp-reveal flex flex-wrap items-center gap-3">
           {/* Cycle selector */}
           <div className="flex items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-xl px-4 py-2.5">
             <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest shrink-0">Cycle</span>
@@ -815,7 +818,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
               <div className="flex gap-2 flex-wrap">
                 {cycles.map(c => (
                   <button key={c.id} onClick={() => setSelectedCycle(c)}
-                    className={`px-3 py-1 rounded-lg font-bold text-xs transition-all border ${
+                    className={`tp-tilt px-3 py-1 rounded-lg font-bold text-xs transition-all border ${
                       selectedCycle?.id === c.id
                         ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
                         : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
@@ -853,7 +856,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
         {/* ── Main Form ── */}
         {selectedCycle ? (
           formStep === 1 ? (
-          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+          <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
 
             {/* Section header */}
             <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 flex items-center justify-between">
@@ -876,22 +879,22 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                 .filter(({ g }) => g.category === cat);
 
               return (
-                <div key={cat} className="border-b border-slate-100 last:border-0">
+                <div key={cat} className="tp-reveal border-b border-slate-100 last:border-0" style={{ animationDelay: `${catIdx * 80}ms` }}>
 
                   {/* Category row */}
                   <div className={`flex items-center justify-between px-6 py-3 border-b ${col.header}`}>
                     <div className="flex items-center gap-3">
-                      <span className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
+                      <span className={`tp-pulse-glow w-2.5 h-2.5 rounded-full ${col.dot}`} />
                       <span className={`text-sm font-black ${col.title}`}>{cat}</span>
                       {catGoals.length > 0 && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${col.badge}`}>
+                        <span className={`tp-pop-in text-[10px] font-bold px-2 py-0.5 rounded-full border ${col.badge}`}>
                           {catGoals.length} KRA{catGoals.length !== 1 ? 's' : ''}
                         </span>
                       )}
                     </div>
                     {canEdit && (
                       <button onClick={() => addGoal(cat)}
-                        className={`flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-white border-2 shadow-sm hover:shadow-md transition-all ${col.addBtn}`}>
+                        className={`tp-tilt tp-sheen flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-white border-2 shadow-sm hover:shadow-md transition-all ${col.addBtn}`}>
                         <Plus className="w-4 h-4" /> Add KRA
                       </button>
                     )}
@@ -904,7 +907,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                   ) : (
                     <div className="divide-y divide-slate-100">
                       {catGoals.map(({ g, i }, catIdx2) => (
-                        <div key={g._id || g.id || i} className={`border-l-4 ${col.accent} bg-white`}>
+                        <div key={g._id || g.id || i} className={`tp-reveal tp-tilt border-l-4 ${col.accent} bg-white`} style={{ animationDelay: `${catIdx2 * 60}ms` }}>
 
                           {/* KRA header row */}
                           <div className="flex items-center gap-3 px-6 py-3 bg-slate-50/70 border-b border-slate-100">
@@ -958,7 +961,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                           {canEdit && (
                             <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50">
                               <button onClick={() => addKPI(i)}
-                                className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 px-4 py-2 rounded-xl border-2 border-blue-200 hover:border-blue-400 bg-white hover:bg-blue-50 shadow-sm hover:shadow-md transition-all">
+                                className="tp-tilt tp-sheen flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 px-4 py-2 rounded-xl border-2 border-blue-200 hover:border-blue-400 bg-white hover:bg-blue-50 shadow-sm hover:shadow-md transition-all">
                                 <Plus className="w-4 h-4" /> Add KPI Row
                               </button>
                             </div>
@@ -1002,11 +1005,11 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
               {canEdit && (
                 <div className="flex gap-3">
                   <button onClick={handleSaveDraft} disabled={saving}
-                    className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all disabled:opacity-50 shadow-sm">
+                    className="tp-tilt tp-sheen px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all disabled:opacity-50 shadow-sm">
                     {saving ? 'Saving…' : '💾 Save Draft'}
                   </button>
                   <button onClick={handleNextStep} disabled={saving}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2 shadow-md shadow-blue-200 active:scale-[0.98]">
+                    className="tp-tilt tp-sheen px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2 shadow-md shadow-blue-200 active:scale-[0.98]">
                     {saving ? 'Saving…' : 'Next: Self Review'}
                     {!saving && <ChevronRight className="w-4 h-4" />}
                   </button>
@@ -1016,7 +1019,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
           </div>
           ) : formStep === 2 ? (
           /* ── Step 2: Self-Review Questions ── */
-          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+          <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
 
             {/* Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-700 flex items-center gap-3">
@@ -1032,9 +1035,9 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
             {/* Questions */}
             <div className="divide-y divide-slate-100">
               {SELF_REVIEW_QUESTIONS.map((question, qi) => (
-                <div key={qi} className="px-8 py-6">
+                <div key={qi} className="tp-reveal px-8 py-6" style={{ animationDelay: `${qi * 80}ms` }}>
                   <div className="flex gap-4">
-                    <div className="shrink-0 w-8 h-8 rounded-xl bg-indigo-100 border border-indigo-200 flex items-center justify-center">
+                    <div className="tp-pop-in shrink-0 w-8 h-8 rounded-xl bg-indigo-100 border border-indigo-200 flex items-center justify-center">
                       <span className="text-indigo-700 font-black text-sm">{qi + 1}</span>
                     </div>
                     <div className="flex-1">
@@ -1173,7 +1176,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-4">
               <button
                 onClick={() => { setFormStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm">
+                className="tp-tilt flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm">
                 <ArrowLeft className="w-4 h-4" /> Back to Goals
               </button>
 
@@ -1181,7 +1184,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
               {canEditFreeText && (
                 <button onClick={handleNextFromStep2} disabled={saving}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2 shadow-md shadow-indigo-200 active:scale-[0.98]">
+                  className="tp-tilt tp-sheen px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2 shadow-md shadow-indigo-200 active:scale-[0.98]">
                   {saving ? 'Saving…' : 'Next: Training & Capability'}
                   {!saving && <ChevronRight className="w-4 h-4" />}
                 </button>
@@ -1190,7 +1193,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
           </div>
           ) : formStep === 3 ? (
           /* ── Step 3: Training & Capability Requirements ── */
-          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+          <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
 
             {/* Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 flex items-center gap-3">
@@ -1288,7 +1291,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-4">
               <button
                 onClick={() => { setFormStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm">
+                className="tp-tilt flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm">
                 <ArrowLeft className="w-4 h-4" /> Back to Self-Review
               </button>
 
@@ -1296,7 +1299,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
               {canEditFreeText && (
                 <button onClick={handleNextFromStep3} disabled={saving}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2 shadow-md shadow-teal-200 active:scale-[0.98]">
+                  className="tp-tilt tp-sheen px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2 shadow-md shadow-teal-200 active:scale-[0.98]">
                   {saving ? 'Saving…' : 'Next: Feedback'}
                   {!saving && <ChevronRight className="w-4 h-4" />}
                 </button>
@@ -1305,7 +1308,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
           </div>
           ) : (
           /* ── Step 4: Feedback ── */
-          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+          <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
 
             {/* Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-rose-500 to-pink-600 flex items-center gap-3">
@@ -1387,7 +1390,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
             <div className="px-6 py-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-4">
               <button
                 onClick={() => { setFormStep(3); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm">
+                className="tp-tilt flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm">
                 <ArrowLeft className="w-4 h-4" /> Back to Training
               </button>
 
@@ -1396,11 +1399,11 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
               {canEditFreeText && (
                 <div className="flex items-center gap-3">
                   <button onClick={handleSaveDraft} disabled={saving}
-                    className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 transition-all disabled:opacity-50 shadow-sm">
+                    className="tp-tilt tp-sheen px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white font-bold text-sm hover:bg-slate-50 transition-all disabled:opacity-50 shadow-sm">
                     {saving ? 'Saving…' : '💾 Save Draft'}
                   </button>
                   <button onClick={handleSubmitToManager} disabled={saving}
-                    className="px-7 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2 shadow-md shadow-rose-200 active:scale-[0.98]">
+                    className="tp-tilt tp-sheen px-7 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2 shadow-md shadow-rose-200 active:scale-[0.98]">
                     <Send className="w-4 h-4" />
                     {saving ? 'Submitting…' : 'Submit to Manager'}
                   </button>
@@ -1410,8 +1413,8 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
           </div>
           )
         ) : (
-          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-20 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mx-auto mb-4">
+          <div className="tp-reveal bg-white border border-slate-200 shadow-sm rounded-2xl p-20 text-center">
+            <div className="tp-pop-in w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mx-auto mb-4">
               <Target className="w-8 h-8 text-blue-500" />
             </div>
             <p className="text-slate-700 font-bold text-base">Select an appraisal cycle above to begin</p>

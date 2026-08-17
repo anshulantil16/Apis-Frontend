@@ -1,3 +1,5 @@
+import { TOOL_STYLES } from './toolStyles';
+
 interface PreviewTableProps {
   data: unknown[];
   selectedColumns: Set<string>;
@@ -8,7 +10,8 @@ export function PreviewTable({ data, selectedColumns, totalRows }: PreviewTableP
   const cols = Array.from(selectedColumns);
 
   return (
-    <div className="overflow-x-auto">
+    <div className="tp-reveal overflow-x-auto">
+      <style>{TOOL_STYLES}</style>
       <table className="w-full text-left text-xs">
         <thead>
           <tr className="border-b border-slate-100">
@@ -22,7 +25,7 @@ export function PreviewTable({ data, selectedColumns, totalRows }: PreviewTableP
         </thead>
         <tbody className="divide-y divide-slate-50">
           {data.map((row, i) => (
-            <tr key={i} className="hover:bg-amber-50/30 transition-colors">
+            <tr key={i} className="hover:bg-amber-50/50 transition-colors duration-200">
               <td className="px-4 py-2.5 text-slate-300 font-bold text-center tabular-nums">{i + 1}</td>
               {cols.map(col => (
                 <td key={col} className="px-4 py-2.5 text-slate-600 font-medium whitespace-nowrap max-w-[200px] truncate">

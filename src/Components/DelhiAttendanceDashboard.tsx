@@ -4,6 +4,7 @@ import {
   Clock, ChevronDown, ChevronUp, SlidersHorizontal,
   AlertTriangle, Timer, Activity, TrendingDown, MessageSquare,
 } from 'lucide-react';
+import { TOOL_STYLES } from './toolStyles';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -261,9 +262,10 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
 
   return (
     <div className="space-y-5">
+      <style>{TOOL_STYLES}</style>
 
       {/* ── Filters bar ── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
+      <div className="tp-reveal bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full lg:w-auto">
           {/* Search */}
           <div className="relative flex-1 min-w-0">
@@ -318,7 +320,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
             </div>
           )}
           <button onClick={exportCSV}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-violet-500/15 hover:scale-[1.02] active:scale-95 transition-all">
+            className="tp-sheen flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-violet-500/15 hover:scale-[1.02] active:scale-95 transition-all">
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
         </div>
@@ -327,7 +329,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       {/* ── Range mode banner ── */}
       {isRange && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border border-violet-100 rounded-xl">
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse flex-shrink-0" />
+          <span className="tp-pulse-glow w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse flex-shrink-0" />
           <p className="text-xs font-semibold text-violet-700">
             Range mode · KPI cards show <span className="font-black">avg/day</span> across {kpi.daysCount} days · {kpi.total} unique employees
           </p>
@@ -345,9 +347,11 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
           { label: 'Late In',        value: kpi.late,           sub: `${kpi.latePct}% of present`,                  border: 'border-t-2 border-amber-400',   icon: AlertTriangle,iconCls: 'bg-amber-50 text-amber-500'    },
           { label: 'Avg Hours',      value: kpi.avgDurStr,      sub: `${kpi.shortHours} short days`,                border: 'border-t-2 border-violet-400',  icon: Timer,        iconCls: 'bg-violet-50 text-violet-500'   },
           { label: 'Invalid Punch',  value: kpi.invalidPunch,   sub: 'Missing in or out',                           border: 'border-t-2 border-red-500',     icon: AlertTriangle,iconCls: 'bg-red-50 text-red-500'         },
-        ].map(c => (
-          <div key={c.label} className={`bg-white rounded-2xl border border-slate-100 ${c.border} p-4 shadow-sm hover:shadow-md transition-all`}>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${c.iconCls}`}>
+        ].map((c, i) => (
+          <div key={c.label}
+            className={`tp-reveal tp-tilt bg-white rounded-2xl border border-slate-100 ${c.border} p-4 shadow-sm hover:shadow-md transition-all`}
+            style={{ animationDelay: `${i * 60}ms` }}>
+            <div className={`tp-pop-in w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${c.iconCls}`}>
               <c.icon className="w-4 h-4" />
             </div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.label}</p>
@@ -361,7 +365,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       {(Object.keys(kpi.leaveTypes).length > 0 || Object.keys(kpi.remarkTypes).length > 0) && (
         <div className="flex flex-col sm:flex-row gap-3">
           {Object.keys(kpi.leaveTypes).length > 0 && (
-            <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="tp-reveal tp-tilt flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
                 <Activity className="w-3 h-3" /> Leave &amp; Off
               </p>
@@ -378,7 +382,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
             </div>
           )}
           {Object.keys(kpi.remarkTypes).length > 0 && (
-            <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="tp-reveal tp-tilt flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
                 <MessageSquare className="w-3 h-3" /> Remarks{isRange ? ' (total)' : ''}
               </p>
@@ -398,7 +402,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       )}
 
       {/* ── Summary table ── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="tp-reveal bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" style={{ animationDelay: '120ms' }}>
         <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-black text-slate-800">
@@ -471,7 +475,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                           {isRange ? (
                             /* Range: per-employee attendance log */
                             <div className="space-y-2">
-                              {grp.employeeList.map(emp => {
+                              {grp.employeeList.map((emp, empIdx) => {
                                 const pC = emp.recs.filter(r => typeInfo(r.type).cat === 'present').length;
                                 const aC = emp.recs.filter(r => typeInfo(r.type).cat === 'absent').length;
                                 const lC = emp.recs.filter(r => typeInfo(r.type).cat === 'leave').length;
@@ -481,7 +485,8 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                 const invalidC = emp.recs.filter(r => missingPunchType(r)).length;
                                 const first = emp.recs[0];
                                 return (
-                                  <div key={emp.code} className={`rounded-xl border shadow-sm overflow-hidden ${invalidC > 0 ? 'border-red-300 bg-red-50/20' : 'border-slate-200/70 bg-white'}`}>
+                                  <div key={emp.code} className={`tp-reveal tp-tilt rounded-xl border shadow-sm overflow-hidden ${invalidC > 0 ? 'border-red-300 bg-red-50/20' : 'border-slate-200/70 bg-white'}`}
+                                    style={{ animationDelay: `${Math.min(empIdx, 12) * 30}ms` }}>
                                     <div className={`flex items-center justify-between px-4 py-2.5 border-b ${invalidC > 0 ? 'bg-red-50/50 border-red-100' : 'bg-slate-50/70 border-slate-100'}`}>
                                       <div className="flex items-center gap-2 min-w-0">
                                         <span className="font-bold text-slate-800 text-sm">{first?.name || '—'}</span>
@@ -551,9 +556,9 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                 const hasOut = parseTimeMinutes(rec.outTime) !== -1;
                                 const showTimeRow = hasIn || hasOut || mp !== null;
                                 return (
-                                  <div key={i} className={`bg-white rounded-xl border p-3.5 flex flex-col gap-2 hover:shadow-sm transition-all ${
+                                  <div key={i} className={`tp-reveal tp-tilt bg-white rounded-xl border p-3.5 flex flex-col gap-2 hover:shadow-sm transition-all ${
                                     mp ? 'border-red-300 bg-red-50/30 shadow-red-100' : isShort ? 'border-amber-200' : 'border-slate-100'
-                                  }`}>
+                                  }`} style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="min-w-0">
                                         <p className="font-bold text-slate-800 text-sm truncate">{rec.name || '—'}</p>

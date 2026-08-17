@@ -4,6 +4,7 @@ import {
   Loader2, AlertCircle, Clock, CheckCircle, Award,
 } from 'lucide-react';
 import { EOM_API } from '../../../features/eom/EOMPage';
+import { TOOL_STYLES } from '../../toolStyles';
 
 const MONTH_NAMES = ['','January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -147,10 +148,10 @@ function NominationCard({ nom, cycle, onUpdate }: {
   const grandTotal = (hodScore ?? 0) + ts + (Number(scores.sustainability_bonus) || 0);
 
   return (
-    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden tp-reveal tp-tilt">
       <div className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-slate-50 transition-all"
         onClick={() => setOpen(o => !o)}>
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 border border-indigo-200 flex items-center justify-center font-black text-indigo-700 text-sm shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 border border-indigo-200 flex items-center justify-center font-black text-indigo-700 text-sm shrink-0 tp-pop-in">
           {nom.employee_name?.[0]}
         </div>
         <div className="flex-1 min-w-0">
@@ -349,7 +350,7 @@ function NominationCard({ nom, cycle, onUpdate }: {
                           type="button"
                           disabled={isReviewed}
                           onClick={() => set('sustainability_bonus', current === star ? '0' : String(star))}
-                          className={`text-3xl leading-none transition-all select-none
+                          className={`text-3xl leading-none transition-all select-none tp-pop-in
                             ${isReviewed ? 'cursor-default' : 'cursor-pointer hover:scale-125 active:scale-110'}
                             ${filled ? 'text-amber-400 drop-shadow-sm' : 'text-slate-300 hover:text-amber-300'}`}
                           title={`${star} star${star > 1 ? 's' : ''} = ${star} bonus pt${star > 1 ? 's' : ''}`}
@@ -436,12 +437,12 @@ function NominationCard({ nom, cycle, onUpdate }: {
             {canReview && (
               <div className="flex items-center gap-3">
                 <button onClick={() => save()} disabled={saving || submitting}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-all">
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-all tp-tilt">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   {saving ? 'Saving…' : 'Save Draft'}
                 </button>
                 <button onClick={handleSubmit} disabled={saving || submitting}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all disabled:opacity-40 shadow-sm shadow-indigo-200">
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all disabled:opacity-40 shadow-sm shadow-indigo-200 tp-tilt tp-sheen">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                   {submitting ? 'Submitting…' : 'Submit Panel Evaluation'}
                 </button>
@@ -490,7 +491,8 @@ export function EOMPanelView({ panelUser }: { panelUser: any }) {
 
   if (cycles.length === 0) return (
     <div className="max-w-lg mx-auto px-4 py-16 text-center">
-      <Award className="w-14 h-14 text-slate-300 mx-auto mb-4" />
+      <style>{TOOL_STYLES}</style>
+      <Award className="w-14 h-14 text-slate-300 mx-auto mb-4 tp-pop-in" />
       <h2 className="text-base font-bold text-slate-700 mb-1">No Active Nomination Cycle</h2>
       <p className="text-sm text-slate-400">HR will open a cycle soon.</p>
     </div>
@@ -498,11 +500,13 @@ export function EOMPanelView({ panelUser }: { panelUser: any }) {
 
   if (!selectedCycle) return (
     <div className="max-w-lg mx-auto px-4 py-12">
+      <style>{TOOL_STYLES}</style>
       <h2 className="text-base font-bold text-slate-800 mb-4">Select Cycle</h2>
       <div className="space-y-3">
-        {cycles.map(c => (
+        {cycles.map((c, i) => (
           <button key={c.id} onClick={() => setSelectedCycle(c)}
-            className="w-full text-left px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-all">
+            style={{ animationDelay: `${i * 80}ms` }}
+            className="w-full text-left px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-all tp-reveal tp-tilt tp-sheen">
             <p className="font-semibold text-indigo-800 text-sm">{c.name}</p>
             <p className="text-xs text-indigo-600 mt-0.5">{MONTH_NAMES[c.month]} {c.year}</p>
           </button>
@@ -513,10 +517,11 @@ export function EOMPanelView({ panelUser }: { panelUser: any }) {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <style>{TOOL_STYLES}</style>
 
       {/* Header */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 border border-indigo-200 flex items-center justify-center font-black text-indigo-700 text-lg shrink-0">
+      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 flex items-center gap-4 tp-reveal">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 border border-indigo-200 flex items-center justify-center font-black text-indigo-700 text-lg shrink-0 tp-pop-in">
           {panelUser.name?.[0]}
         </div>
         <div className="flex-1">
@@ -549,10 +554,14 @@ export function EOMPanelView({ panelUser }: { panelUser: any }) {
       {awaiting.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-blue-500 tp-pulse-glow" />
             <p className="text-sm font-black text-slate-700 uppercase tracking-wide">Awaiting Panel Review ({awaiting.length})</p>
           </div>
-          {awaiting.map(n => <NominationCard key={n.id} nom={n} cycle={selectedCycle} onUpdate={updateNom} />)}
+          {awaiting.map((n, i) => (
+            <div key={n.id} style={{ animationDelay: `${i * 60}ms` }} className="tp-reveal">
+              <NominationCard nom={n} cycle={selectedCycle} onUpdate={updateNom} />
+            </div>
+          ))}
         </div>
       )}
 
@@ -562,7 +571,11 @@ export function EOMPanelView({ panelUser }: { panelUser: any }) {
             <div className="w-2 h-2 rounded-full bg-violet-500" />
             <p className="text-sm font-black text-slate-700 uppercase tracking-wide">Reviewed by Panel ({reviewed.length})</p>
           </div>
-          {reviewed.map(n => <NominationCard key={n.id} nom={n} cycle={selectedCycle} onUpdate={updateNom} />)}
+          {reviewed.map((n, i) => (
+            <div key={n.id} style={{ animationDelay: `${i * 60}ms` }} className="tp-reveal">
+              <NominationCard nom={n} cycle={selectedCycle} onUpdate={updateNom} />
+            </div>
+          ))}
         </div>
       )}
 

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { ArrowLeft, Users, BarChart3, LineChart, Mail, Zap } from 'lucide-react';
 import { EOMEmployeeView }  from '../../Components/EOM/employee/EOMEmployeeView';
 import { EOMHodView }       from '../../Components/EOM/hod/EOMHodView';
 import { EOMPanelView }     from '../../Components/EOM/panel/EOMPanelView';
 import { EOMHrView }        from '../../Components/EOM/hr/EOMHrView';
+import { TOOL_STYLES } from '../../Components/toolStyles';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const EOM_API = `${API_BASE}/api/eom`;
@@ -11,7 +12,29 @@ export const EOM_API = `${API_BASE}/api/eom`;
 type Role = 'employee' | 'hod' | 'panel' | 'hr';
 type LoginStep = 'id' | 'otp' | 'admin_otp';
 
-interface EOMPageProps { onNavigateBack: () => void; }
+/* ── Shared intranet motion helpers (mirrors IntranetHomePage) ───────────────
+   Cursor position is written into CSS vars the .ih-spotlight / .ih-tilt3d
+   rules read, so the glow + tilt track the pointer with zero re-renders. */
+function onSpotlightMove(e: MouseEvent<HTMLElement>) {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+}
+function onTilt3dMove(e: MouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width - 0.5;
+  const py = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty('--ry', `${px * 12}deg`);
+  el.style.setProperty('--rx', `${-py * 12}deg`);
+  onSpotlightMove(e);
+}
+function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
+  e.currentTarget.style.setProperty('--rx', '0deg');
+  e.currentTarget.style.setProperty('--ry', '0deg');
+}
+
+interface EOMPageProps { onNavigateBack?: () => void; }
 
 const ROLE_CONFIG = [
   {
@@ -50,8 +73,8 @@ const ROLE_CONFIG = [
 
 // ─── Hub ──────────────────────────────────────────────────────────────────────
 
-function EOMHub({ user, role, onLogout, onNavigateBack }: {
-  user: any; role: Role; onLogout: () => void; onNavigateBack: () => void;
+function EOMHub({ user, role, onLogout }: {
+  user: any; role: Role; onLogout: () => void;
 }) {
   const roleLabel = { employee: 'Employee', hod: 'HOD', panel: 'Panel Member', hr: 'Admin' }[role];
   const roleBadge = {
@@ -62,38 +85,29 @@ function EOMHub({ user, role, onLogout, onNavigateBack }: {
   }[role];
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white shadow-sm sticky top-0 z-50">
+    <div className="min-h-full bg-[#f5f7fa]">
+      <style>{TOOL_STYLES}</style>
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-xl shadow-sm relative z-20">
         <div className="px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => history.back()}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0">
-              <ArrowLeft className="w-4 h-4" />
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0 group">
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
             </button>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 flex items-center justify-center shrink-0">
-                <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow-sm" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-slate-900 font-bold text-sm leading-none truncate">Employee of the Month</p>
-                <p className="text-slate-500 text-[11px] mt-0.5 truncate">{user.name} · {user.designation}</p>
-              </div>
+            <div className="min-w-0">
+              <p className="text-slate-600 text-xs font-semibold truncate">{user.name} · {user.designation}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <span className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${roleBadge}`}>
-              {roleLabel}
+              <span className="w-1.5 h-1.5 rounded-full bg-current tp-pulse-glow ih-pulse-glow" />{roleLabel}
             </span>
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center text-emerald-700 font-black text-sm">
+            <div className="tp-pop-in w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center text-emerald-700 font-black text-sm">
               {(user.name || 'U')[0].toUpperCase()}
             </div>
             <button onClick={onLogout}
               className="text-slate-400 hover:text-rose-500 text-xs font-semibold transition-colors px-2 py-1 rounded-lg hover:bg-rose-50">
               Sign Out
-            </button>
-            <button onClick={onNavigateBack}
-              className="hidden lg:block text-slate-400 hover:text-slate-700 text-xs font-semibold transition-colors">
-              ← Home
             </button>
           </div>
         </div>
@@ -108,7 +122,7 @@ function EOMHub({ user, role, onLogout, onNavigateBack }: {
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 
-export function EOMPage({ onNavigateBack }: EOMPageProps) {
+export function EOMPage({}: EOMPageProps) {
   const VALID_ROLES: Role[] = ['employee', 'hod', 'panel', 'hr'];
 
   const [role, setRole]     = useState<Role | null>(() => {
@@ -134,6 +148,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
     if (role && user) localStorage.setItem('eom_role', role);
     else if (!user) localStorage.removeItem('eom_role');
   }, [role, user]);
+
 
   const parseJson = async (res: Response) => {
     const ct = res.headers.get('content-type') || '';
@@ -281,32 +296,31 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
   }, []);
 
   if (user && role) {
-    return <EOMHub user={user} role={role} onLogout={reset} onNavigateBack={onNavigateBack} />;
+    return <EOMHub user={user} role={role} onLogout={reset} />;
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-100 via-emerald-50 to-teal-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-full py-10 bg-gradient-to-br from-slate-100 via-emerald-50 to-teal-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <style>{TOOL_STYLES}</style>
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400" />
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-emerald-200/40 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-80 h-80 bg-teal-200/40 rounded-full blur-[100px] pointer-events-none" />
-
-      <button onClick={onNavigateBack}
-        className="absolute top-4 left-4 flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors text-sm font-medium group">
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        Data Tools
-      </button>
+      <div className="ih-aurora absolute top-1/4 -left-32 w-96 h-96 bg-emerald-200/40 rounded-full blur-[100px] pointer-events-none" />
+      <div className="ih-drift absolute bottom-1/4 -right-32 w-80 h-80 bg-teal-200/40 rounded-full blur-[100px] pointer-events-none" style={{ animationDelay: '4s' }} />
+      <div className="ih-aurora absolute top-1/2 left-1/3 w-72 h-72 bg-teal-300/25 rounded-full blur-[110px] pointer-events-none" style={{ animationDelay: '7s' }} />
 
       <div className="w-full max-w-md relative z-10">
         {/* Brand */}
-        <div className="text-center mb-4">
-          <div className="w-14 h-14 flex items-center justify-center mx-auto mb-2 drop-shadow-lg">
+        <div className="tp-reveal text-center mb-4">
+          <div className="tp-border-flow ih-float w-14 h-14 flex items-center justify-center mx-auto mb-2 rounded-2xl p-1.5 bg-white shadow-lg"
+            style={{ '--tp-c1': '#10b981', '--tp-c2': '#14b8a6' } as any}>
             <img src="/logo.png" alt="APIS" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Employee of the Month</h1>
+          <h1 className="ih-grad-text text-2xl font-black tracking-tight bg-gradient-to-r from-slate-900 via-emerald-600 to-teal-600">Employee of the Month</h1>
           <p className="text-slate-500 mt-1 text-xs font-medium">APIS Recognition Hub · Self-Nomination · Panel Evaluation</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/60">
+        <div
+          onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+          className="tp-reveal ih-inview ih-tilt3d ih-spotlight bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/60" style={{ animationDelay: '80ms' }}>
 
           {/* ── Admin OTP step ── */}
           {step === 'admin_otp' && (
@@ -316,7 +330,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
                 <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" /> Back
               </button>
               <div className="text-center mb-7">
-                <div className="w-14 h-14 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center mx-auto mb-4">
+                <div className="tp-pop-in ih-float w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center mx-auto mb-4">
                   <Mail className="w-7 h-7 text-rose-600" />
                 </div>
                 <h3 className="text-slate-900 font-bold text-base mb-1">Admin verification</h3>
@@ -329,7 +343,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
                 </div>
               </div>
               <div className="mb-5">
-                <label className="text-slate-500 text-xs font-bold uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
                 <input type="text" inputMode="numeric" placeholder="· · · · · ·" maxLength={6}
                   value={otpInput}
                   onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
@@ -349,7 +363,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
                 </div>
               )}
               <button onClick={handleAdminVerify} disabled={otpInput.length !== 6 || loading}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
+                className="ih-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-rose-200 hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2">
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Verifying...</>
                   : '🏢 Enter as Admin'}
@@ -369,7 +383,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
                 <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" /> Back
               </button>
               <div className="text-center mb-7">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
+                <div className="tp-pop-in ih-float w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
                   <Mail className="w-7 h-7 text-emerald-600" />
                 </div>
                 <h3 className="text-slate-900 font-bold text-base mb-1">Check your inbox</h3>
@@ -382,7 +396,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
                 </div>
               </div>
               <div className="mb-5">
-                <label className="text-slate-500 text-xs font-bold uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">Enter 6-digit OTP</label>
                 <input type="text" inputMode="numeric" placeholder="· · · · · ·" maxLength={6}
                   value={otpInput}
                   onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
@@ -402,7 +416,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
                 </div>
               )}
               <button onClick={handleVerifyOtp} disabled={otpInput.length !== 6 || loading}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-emerald-200 flex items-center justify-center gap-2">
+                className="ih-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-emerald-200 hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2">
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Verifying...</>
                   : '✓ Verify & Enter Hub'}
@@ -419,7 +433,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
             <>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center">1</span>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Select your role</p>
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Select your role</p>
               </div>
 
               <div className="space-y-2 mb-4">
@@ -431,7 +445,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
                     </div>
                     <div className="text-left flex-1">
                       <p className={`font-bold text-sm leading-none ${role === id ? '' : 'text-slate-700'}`}>{label}</p>
-                      <p className={`text-[11px] mt-0.5 ${role === id ? 'opacity-70' : 'text-slate-400'}`}>{sub}</p>
+                      <p className={`text-[11px] mt-0.5 ${role === id ? 'opacity-70' : 'text-slate-500'}`}>{sub}</p>
                     </div>
                     <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-all ${role === id ? 'border-current bg-current scale-100' : 'border-slate-300 scale-75'}`} />
                   </button>
@@ -440,7 +454,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
 
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center">2</span>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Enter your Employee Code</p>
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Enter your Employee Code</p>
               </div>
               <div className="relative mb-4">
                 <input type="text"
@@ -459,7 +473,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
               )}
 
               <button onClick={handleSendOtp} disabled={!role || !inputId.trim() || loading}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-emerald-200 flex items-center justify-center gap-2">
+                className="ih-sheen w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-emerald-200 hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2">
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending OTP...</>
                   : <><Mail className="w-4 h-4" /> Send OTP to Email</>}
@@ -474,7 +488,7 @@ export function EOMPage({ onNavigateBack }: EOMPageProps) {
                     : '🏢'}
                   First-time setup — Admin OTP Login
                 </button>
-                <p className="text-slate-400 text-[10px] text-center mt-1.5">OTP will be sent to the registered admin email</p>
+                <p className="text-slate-500 text-[10px] text-center mt-1.5">OTP will be sent to the registered admin email</p>
               </div>
             </>
           )}

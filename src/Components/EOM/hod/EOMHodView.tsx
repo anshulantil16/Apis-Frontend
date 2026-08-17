@@ -4,6 +4,7 @@ import {
   Loader2, AlertCircle, Users, Clock, CheckCircle, Award,
 } from 'lucide-react';
 import { EOM_API } from '../../../features/eom/EOMPage';
+import { TOOL_STYLES } from '../../toolStyles';
 
 const MONTH_NAMES = ['','January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -112,10 +113,10 @@ function NominationCard({ entry, cycle, onUpdate }: {
   const s1 = Number(scores.dim1_score) || 0;
 
   return (
-    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden tp-reveal tp-tilt">
       <div className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-slate-50 transition-all"
         onClick={() => setOpen(o => !o)}>
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200 flex items-center justify-center font-black text-violet-700 text-sm shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200 flex items-center justify-center font-black text-violet-700 text-sm shrink-0 tp-pop-in">
           {entry.name?.[0]}
         </div>
         <div className="flex-1 min-w-0">
@@ -348,12 +349,12 @@ function NominationCard({ entry, cycle, onUpdate }: {
             {canReview && (
               <div className="flex items-center gap-3">
                 <button onClick={() => save()} disabled={saving || submitting}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-all">
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-all tp-tilt">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   {saving ? 'Saving…' : 'Save Draft'}
                 </button>
                 <button onClick={handleSubmit} disabled={saving || submitting}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold transition-all disabled:opacity-40 shadow-sm shadow-violet-200">
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold transition-all disabled:opacity-40 shadow-sm shadow-violet-200 tp-tilt tp-sheen">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                   {submitting ? 'Submitting…' : 'Submit HOD Evaluation'}
                 </button>
@@ -405,7 +406,8 @@ export function EOMHodView({ hod }: { hod: any }) {
 
   if (cycles.length === 0) return (
     <div className="max-w-lg mx-auto px-4 py-16 text-center">
-      <Award className="w-14 h-14 text-slate-300 mx-auto mb-4" />
+      <style>{TOOL_STYLES}</style>
+      <Award className="w-14 h-14 text-slate-300 mx-auto mb-4 tp-pop-in" />
       <h2 className="text-base font-bold text-slate-700 mb-1">No Active Nomination Cycle</h2>
       <p className="text-sm text-slate-400">HR will open a cycle soon.</p>
     </div>
@@ -413,11 +415,13 @@ export function EOMHodView({ hod }: { hod: any }) {
 
   if (!selectedCycle) return (
     <div className="max-w-lg mx-auto px-4 py-12">
+      <style>{TOOL_STYLES}</style>
       <h2 className="text-base font-bold text-slate-800 mb-4">Select Cycle</h2>
       <div className="space-y-3">
-        {cycles.map(c => (
+        {cycles.map((c, i) => (
           <button key={c.id} onClick={() => setSelectedCycle(c)}
-            className="w-full text-left px-4 py-3 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 transition-all">
+            style={{ animationDelay: `${i * 80}ms` }}
+            className="w-full text-left px-4 py-3 rounded-xl border border-violet-200 bg-violet-50 hover:bg-violet-100 transition-all tp-reveal tp-tilt tp-sheen">
             <p className="font-semibold text-violet-800 text-sm">{c.name}</p>
             <p className="text-xs text-violet-600 mt-0.5">{MONTH_NAMES[c.month]} {c.year}</p>
           </button>
@@ -428,9 +432,10 @@ export function EOMHodView({ hod }: { hod: any }) {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <style>{TOOL_STYLES}</style>
 
-      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200 flex items-center justify-center font-black text-violet-700 text-lg shrink-0">
+      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-6 py-4 flex items-center gap-4 tp-reveal">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200 flex items-center justify-center font-black text-violet-700 text-lg shrink-0 tp-pop-in">
           {hod.name?.[0]}
         </div>
         <div className="flex-1">
@@ -469,10 +474,14 @@ export function EOMHodView({ hod }: { hod: any }) {
       {awaiting.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-blue-500 tp-pulse-glow" />
             <p className="text-sm font-black text-slate-700 uppercase tracking-wide">Awaiting Your Review ({awaiting.length})</p>
           </div>
-          {awaiting.map(e => <NominationCard key={e.employee_id} entry={e} cycle={selectedCycle} onUpdate={updateNom} />)}
+          {awaiting.map((e, i) => (
+            <div key={e.employee_id} style={{ animationDelay: `${i * 60}ms` }} className="tp-reveal">
+              <NominationCard entry={e} cycle={selectedCycle} onUpdate={updateNom} />
+            </div>
+          ))}
         </div>
       )}
 
@@ -482,7 +491,11 @@ export function EOMHodView({ hod }: { hod: any }) {
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
             <p className="text-sm font-black text-slate-700 uppercase tracking-wide">Reviewed ({reviewed.length})</p>
           </div>
-          {reviewed.map(e => <NominationCard key={e.employee_id} entry={e} cycle={selectedCycle} onUpdate={updateNom} />)}
+          {reviewed.map((e, i) => (
+            <div key={e.employee_id} style={{ animationDelay: `${i * 60}ms` }} className="tp-reveal">
+              <NominationCard entry={e} cycle={selectedCycle} onUpdate={updateNom} />
+            </div>
+          ))}
         </div>
       )}
 
@@ -492,8 +505,8 @@ export function EOMHodView({ hod }: { hod: any }) {
             <div className="w-2 h-2 rounded-full bg-slate-300" />
             <p className="text-sm font-black text-slate-400 uppercase tracking-wide">Not Submitted ({notSubmitted.length})</p>
           </div>
-          {notSubmitted.map(e => (
-            <div key={e.employee_id} className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-4 opacity-60">
+          {notSubmitted.map((e, i) => (
+            <div key={e.employee_id} style={{ animationDelay: `${i * 60}ms` }} className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-4 opacity-60 tp-reveal">
               <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 text-sm shrink-0">{e.name?.[0]}</div>
               <div className="flex-1">
                 <p className="text-slate-700 font-semibold text-sm">{e.name}</p>

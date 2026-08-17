@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
   ChevronUp, Search, X, BarChart3, PieChart, Zap, Star,
@@ -28,6 +28,28 @@ const POLICY: Record<string, { staff1: number; staff2: number; worker: number; w
   'C':  { staff1: 4,  staff2: 3,  worker: 100, wpromo: 0,   promo: 0, sustained: 0,   ptarget: '51–64%' },
   'D':  { staff1: 0,  staff2: 0,  worker: 0,   wpromo: 0,   promo: 0, sustained: 0,   ptarget: '< 50%' },
 };
+
+/* ── Shared intranet motion helpers (mirrors IntranetHomePage) ───────────────
+   Cursor position is written into CSS vars the .ih-spotlight / .ih-tilt3d
+   rules read, so the glow + tilt track the pointer with zero re-renders. */
+function onSpotlightMove(e: ReactMouseEvent<HTMLElement>) {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+}
+function onTilt3dMove(e: ReactMouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width - 0.5;
+  const py = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty('--ry', `${px * 12}deg`);
+  el.style.setProperty('--rx', `${-py * 12}deg`);
+  onSpotlightMove(e);
+}
+function onTilt3dLeave(e: ReactMouseEvent<HTMLElement>) {
+  e.currentTarget.style.setProperty('--rx', '0deg');
+  e.currentTarget.style.setProperty('--ry', '0deg');
+}
 
 const fmt   = (n: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n);
 const fmtCr = (n: number) => n >= 10000000 ? `₹${(n/10000000).toFixed(2)}Cr` : n >= 100000 ? `₹${(n/100000).toFixed(2)}L` : `₹${fmt(n)}`;
@@ -217,6 +239,7 @@ export default function PMSPage() {
     if (loggedIn) load();
   }, [loggedIn]);
 
+
   // Persist login state
   useEffect(() => {
     localStorage.setItem('pms_logged_in', loggedIn ? 'true' : 'false');
@@ -352,11 +375,11 @@ export default function PMSPage() {
 
   if (!loggedIn) {
     return (
-      <div className="h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 flex items-center justify-center p-4 overflow-hidden">
+      <div className="min-h-full py-10 bg-gradient-to-br from-slate-50 via-violet-50/40 to-fuchsia-50/30 flex items-center justify-center px-4 overflow-hidden">
         {/* Animated background shapes */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-300/15 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-violet-300/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-blue-300/10 rounded-full blur-3xl" style={{ animation: 'float 8s ease-in-out infinite' }} />
+        <div className="ih-aurora absolute top-20 left-10 w-72 h-72 bg-violet-300/25 rounded-full blur-3xl" />
+        <div className="ih-drift absolute bottom-20 right-10 w-96 h-96 bg-fuchsia-300/20 rounded-full blur-3xl" style={{ animationDelay: '4s' }} />
+        <div className="ih-aurora absolute top-1/2 left-1/4 w-64 h-64 bg-violet-300/15 rounded-full blur-3xl" style={{ animationDelay: '7s' }} />
 
         <style>{`
           @keyframes float {
@@ -384,30 +407,32 @@ export default function PMSPage() {
           {/* Centered Logo */}
           <div className="flex justify-center mb-4 animate-slideInLeft">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full blur-2xl opacity-25 animate-pulse" />
-              <img src="/logo.png" alt="APIS" className="w-20 h-20 object-contain drop-shadow-lg relative z-10" />
+              <div className="ih-aurora absolute inset-0 bg-gradient-to-r from-violet-400 to-fuchsia-400 rounded-full blur-2xl opacity-25" />
+              <img src="/logo.png" alt="APIS" className="ih-float w-20 h-20 object-contain drop-shadow-lg relative z-10" />
             </div>
           </div>
 
           {/* Title */}
           <div className="text-center mb-6 animate-slideInLeft space-y-1">
-            <h1 className="text-4xl font-black bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="ih-grad-text text-4xl font-black bg-gradient-to-r from-slate-900 via-violet-600 to-fuchsia-600">
               Performance<br />Simulator
             </h1>
-            <p className="text-base text-slate-600 font-bold">
+            <p className="text-base text-slate-500 font-bold">
               Advanced Salary & Grading Engine
             </p>
           </div>
 
           {/* Login Card */}
-          <div className="animate-slideInRight">
-            <div className="bg-white rounded-2xl border-2 border-indigo-100 shadow-2xl overflow-hidden">
+          <div className="animate-slideInRight ih-inview">
+            <div
+              onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+              className="ih-tilt3d ih-spotlight bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
               {/* Header */}
-              <div className="relative bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 px-6 py-8 text-white">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 animate-pulse" />
+              <div className="relative bg-gradient-to-br from-violet-600 via-violet-600 to-fuchsia-700 px-6 py-8 text-white">
+                <div className="ih-aurora absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
                 <div className="relative space-y-1">
                   <h2 className="text-2xl font-black">Welcome Back</h2>
-                  <p className="text-indigo-100 text-sm font-semibold">Access Your Dashboard</p>
+                  <p className="text-violet-100 text-sm font-semibold">Access Your Dashboard</p>
                 </div>
               </div>
 
@@ -416,7 +441,7 @@ export default function PMSPage() {
                 {loginStep === 'email' ? (
                   <div className="space-y-4 animate-scaleIn">
                     <div className="space-y-1.5">
-                      <label className="block text-slate-700 text-xs font-bold">Email</label>
+                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest">Email</label>
                       <input
                         type="email"
                         placeholder="your@email.com"
@@ -424,13 +449,13 @@ export default function PMSPage() {
                         onChange={e => setAdminEmail(e.target.value)}
                         onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
                         disabled={otpLoading}
-                        className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-60"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition-all disabled:opacity-60"
                       />
                     </div>
                     <button
                       onClick={handleEmailSubmit}
                       disabled={otpLoading}
-                      className="w-full px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
+                      className="ih-sheen w-full px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-black text-sm rounded-xl shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
                     >
                       {otpLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                       {otpLoading ? 'Sending...' : 'Continue'}
@@ -446,7 +471,7 @@ export default function PMSPage() {
                 ) : (
                   <div className="space-y-4 animate-scaleIn">
                     <div className="text-center space-y-1">
-                      <p className="text-slate-800 font-bold text-sm">Enter OTP</p>
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Enter OTP</p>
                       <p className="text-slate-500 text-xs">Check your email</p>
                     </div>
                     <input
@@ -457,12 +482,12 @@ export default function PMSPage() {
                       onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
                       disabled={otpLoading}
                       maxLength={4}
-                      className="w-full px-3 py-2 h-10 text-center text-2xl font-black border-2 border-indigo-300 rounded-lg text-indigo-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
+                      className="w-full px-3 py-2 h-10 text-center text-2xl font-black border border-violet-300 rounded-xl text-violet-600 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
                     />
                     <button
                       onClick={handleOtpSubmit}
                       disabled={otpLoading || otp.length !== 4}
-                      className="w-full px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
+                      className="ih-sheen w-full px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-black text-sm rounded-xl shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
                     >
                       {otpLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
                       {otpLoading ? 'Verifying...' : 'Verify'}
@@ -470,7 +495,7 @@ export default function PMSPage() {
                     <button
                       onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
                       disabled={otpLoading}
-                      className="w-full px-4 py-1 text-indigo-600 hover:text-indigo-700 font-bold text-xs transition-colors disabled:opacity-60"
+                      className="w-full px-4 py-1 text-violet-600 hover:text-violet-700 font-bold text-xs transition-colors disabled:opacity-60"
                     >
                       ← Back
                     </button>
@@ -486,8 +511,8 @@ export default function PMSPage() {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-3 bg-gradient-to-r from-slate-50 to-indigo-50 border-t border-indigo-100 text-center">
-                <p className="text-slate-600 text-xs font-semibold">
+              <div className="px-6 py-3 bg-gradient-to-r from-slate-50 to-violet-50 border-t border-slate-200 text-center">
+                <p className="text-slate-500 text-xs font-semibold">
                   🔒 Secure • 🚀 Fast
                 </p>
               </div>
@@ -499,36 +524,32 @@ export default function PMSPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-violet-50/30">
+    <div className="min-h-full bg-[#f5f7fa]">
 
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
+      <div className="relative z-20 bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4">
-          {/* Logo and title after back button */}
-          <div className="flex items-center gap-2 flex-1 ml-16">
-            <img src="/logo.png" alt="APIS" className="w-10 h-10 object-contain flex-shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-slate-900 font-black text-lg">PMS Simulator</h1>
-              <p className="text-slate-400 text-[11px]">{emps.length} employees loaded · FY 2025-26</p>
-            </div>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="ih-pulse-glow w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
+            <p className="text-slate-500 text-[11px]">{emps.length} employees loaded · FY 2025-26</p>
           </div>
 
           {/* Action buttons on right */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 rounded-xl text-xs font-bold transition-all">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 rounded-xl text-xs font-bold transition-all hover:-translate-y-0.5 hover:shadow-lg">
               <FileSpreadsheet className="w-3.5 h-3.5" /> Template
             </a>
             <button onClick={() => fileRef.current?.click()} disabled={importing}
               title="Adds to existing employees and merges by Employee Code (matching codes update, new codes are added). You can import Sales, then HQ, etc. — no need to Clear first."
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-200 transition-all disabled:opacity-60">
+              className="ih-sheen flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-600 hover:from-violet-600 hover:to-fuchsia-700 text-white rounded-xl text-xs font-black shadow-md shadow-violet-200 transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60">
               {importing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
               {importing ? 'Importing…' : emps.length > 0 ? 'Import / Add More' : 'Import Data'}
             </button>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
             {emps.length > 0 && (
               <a href={`${PMS}/export/`} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-200">
+                className="ih-sheen flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-200 transition-all hover:-translate-y-0.5 hover:shadow-lg">
                 <Download className="w-3.5 h-3.5" /> Export
               </a>
             )}
@@ -571,10 +592,10 @@ export default function PMSPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto">
+        <div className="ih-inview flex items-center gap-2 bg-white/80 backdrop-blur-xl rounded-2xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${tab===t.id ? `bg-gradient-to-r ${t.grad} text-white shadow-md` : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+              className={`ih-sheen flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all hover:-translate-y-0.5 ${tab===t.id ? `bg-gradient-to-r ${t.grad} text-white shadow-md hover:shadow-lg` : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
               <t.icon className="w-4 h-4" /> {t.label}
             </button>
           ))}
@@ -582,19 +603,21 @@ export default function PMSPage() {
 
         {/* Empty state */}
         {emps.length === 0 && (
-          <div className="bg-white rounded-2xl border-2 border-dashed border-indigo-200 p-16 text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-3xl flex items-center justify-center mx-auto mb-5">
-              <Sparkles className="w-10 h-10 text-indigo-400" />
+          <div
+            onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+            className="ih-inview ih-tilt3d ih-spotlight rounded-2xl bg-white/80 backdrop-blur-xl border border-dashed border-violet-200 shadow-sm p-16 text-center">
+            <div className="ih-float w-20 h-20 bg-gradient-to-br from-violet-50 to-fuchsia-50 rounded-3xl flex items-center justify-center mx-auto mb-5">
+              <Sparkles className="w-10 h-10 text-violet-600" />
             </div>
-            <p className="text-slate-800 font-black text-2xl">Ready to Simulate!</p>
-            <p className="text-slate-400 text-sm mt-2 max-w-sm mx-auto">Download the template → fill employee data with scores → Import to start live simulation</p>
+            <p className="ih-grad-text font-black text-2xl bg-gradient-to-r from-slate-900 via-violet-600 to-fuchsia-600">Ready to Simulate!</p>
+            <p className="text-slate-500 text-sm mt-2 max-w-sm mx-auto">Download the template → fill employee data with scores → Import to start live simulation</p>
             <div className="flex items-center justify-center gap-3 mt-6">
               <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 px-5 py-2.5 border-2 border-indigo-300 text-indigo-600 rounded-xl text-sm font-bold hover:bg-indigo-50">
+                className="flex items-center gap-2 px-5 py-2.5 border border-violet-300 text-violet-600 rounded-xl text-sm font-bold hover:bg-violet-50 transition-all hover:-translate-y-0.5 hover:shadow-lg">
                 <Download className="w-4 h-4" /> Download Template
               </a>
               <button onClick={() => fileRef.current?.click()}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl text-sm font-bold shadow-md shadow-indigo-200">
+                className="ih-sheen flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white rounded-xl text-sm font-black shadow-md shadow-violet-200 transition-all hover:-translate-y-0.5 hover:shadow-lg">
                 <Upload className="w-4 h-4" /> Import Data
               </button>
             </div>

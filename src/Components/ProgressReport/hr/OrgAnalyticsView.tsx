@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { BarChart3, Trophy, TrendingUp, Users, Target, Globe, Building } from 'lucide-react';
 import { getOrgAnalytics, getAllCycles } from '../../../Services/progressApi';
+import { TOOL_STYLES } from '../../toolStyles';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -27,15 +28,15 @@ const TOOLTIP_STYLE = {
   },
 };
 
-function StatCard({ label, value, sub, icon: Icon, color }: {
+function StatCard({ label, value, sub, icon: Icon, color, delay = 0 }: {
   label: string; value: string | number; sub?: string;
-  icon: typeof BarChart3; color: string;
+  icon: typeof BarChart3; color: string; delay?: number;
 }) {
   return (
-    <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
+    <div className="bg-white/3 border border-white/8 rounded-2xl p-5 tp-reveal tp-tilt" style={{ animationDelay: `${delay}ms` }}>
       <div className="flex items-center justify-between mb-3">
         <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{label}</p>
-        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${color}/15`}>
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center tp-pop-in ${color}/15`}>
           <Icon className={`w-4 h-4 ${color}`} />
         </div>
       </div>
@@ -102,8 +103,9 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      <style>{TOOL_STYLES}</style>
       {/* ── Header ── */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex items-start justify-between flex-wrap gap-4 tp-reveal">
         <div>
           <h2 className="text-white font-bold text-xl">Org Analytics Dashboard</h2>
           <p className="text-slate-400 text-sm mt-0.5">
@@ -131,14 +133,14 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
         <>
           {/* ── KPI Stats ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Total Goal Cards" value={summary.total_goal_cards} icon={Target} color="text-violet-400" />
-            <StatCard label="Submitted" value={summary.submitted_goal_cards} sub={`${summary.submission_rate}% rate`} icon={TrendingUp} color="text-emerald-400" />
-            <StatCard label="Finalized" value={summary.finalized_goal_cards} icon={Users} color="text-sky-400" />
-            <StatCard label="Published" value={summary.published_reviews} icon={Trophy} color="text-amber-400" />
+            <StatCard label="Total Goal Cards" value={summary.total_goal_cards} icon={Target} color="text-violet-400" delay={0} />
+            <StatCard label="Submitted" value={summary.submitted_goal_cards} sub={`${summary.submission_rate}% rate`} icon={TrendingUp} color="text-emerald-400" delay={70} />
+            <StatCard label="Finalized" value={summary.finalized_goal_cards} icon={Users} color="text-sky-400" delay={140} />
+            <StatCard label="Published" value={summary.published_reviews} icon={Trophy} color="text-amber-400" delay={210} />
           </div>
 
           {/* ── Tabs ── */}
-          <div className="flex gap-1 p-1 bg-white/3 rounded-2xl flex-wrap">
+          <div className="flex gap-1 p-1 bg-white/3 rounded-2xl flex-wrap tp-reveal">
             {([
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'departments', label: 'Departments', icon: Building },
@@ -149,7 +151,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                className={`tp-tilt flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
                   activeTab === id ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -162,7 +164,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Band distribution donut */}
-              <div className="bg-white/3 border border-white/8 rounded-2xl p-6">
+              <div className="bg-white/3 border border-white/8 rounded-2xl p-6 tp-reveal">
                 <h3 className="text-slate-300 text-sm font-bold mb-4">Performance Band Distribution</h3>
                 {bandDist.length > 0 ? (
                   <div className="h-64">
@@ -203,7 +205,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
               </div>
 
               {/* Submission progress */}
-              <div className="bg-white/3 border border-white/8 rounded-2xl p-6">
+              <div className="bg-white/3 border border-white/8 rounded-2xl p-6 tp-reveal" style={{ animationDelay: '80ms' }}>
                 <h3 className="text-slate-300 text-sm font-bold mb-4">Cycle Progress</h3>
                 <div className="space-y-4">
                   {[
@@ -248,7 +250,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
           {/* ── Departments Tab ── */}
           {activeTab === 'departments' && (
             <div className="space-y-4">
-              <div className="bg-white/3 border border-white/8 rounded-2xl p-6">
+              <div className="bg-white/3 border border-white/8 rounded-2xl p-6 tp-reveal">
                 <h3 className="text-slate-300 text-sm font-bold mb-4">Department Performance (Avg Score)</h3>
                 {deptChart.length > 0 ? (
                   <div className="h-72">
@@ -273,7 +275,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
 
               {/* Department table */}
               {deptChart.length > 0 && (
-                <div className="bg-white/3 border border-white/8 rounded-2xl overflow-hidden">
+                <div className="bg-white/3 border border-white/8 rounded-2xl overflow-hidden tp-reveal" style={{ animationDelay: '80ms' }}>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-white/5">
@@ -323,7 +325,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
           {/* ── Zones Tab ── */}
           {activeTab === 'zones' && (
             <div className="space-y-4">
-              <div className="bg-white/3 border border-white/8 rounded-2xl p-6">
+              <div className="bg-white/3 border border-white/8 rounded-2xl p-6 tp-reveal">
                 <h3 className="text-slate-300 text-sm font-bold mb-4">Zone-wise Performance</h3>
                 {zoneChart.length > 0 ? (
                   <div className="h-72">
@@ -349,7 +351,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
               {/* Zone cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {zoneChart.map((z: any, i: number) => (
-                  <div key={z.name} className="bg-white/3 border border-white/8 rounded-2xl p-4">
+                  <div key={z.name} className="bg-white/3 border border-white/8 rounded-2xl p-4 tp-reveal tp-tilt" style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-3 h-3 rounded-full" style={{ background: CAT_COLORS[i % CAT_COLORS.length] }} />
                       <p className="text-white font-bold text-sm">{z.name}</p>
@@ -367,7 +369,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
             <div className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Avg completion by category */}
-                <div className="bg-white/3 border border-white/8 rounded-2xl p-6">
+                <div className="bg-white/3 border border-white/8 rounded-2xl p-6 tp-reveal">
                   <h3 className="text-slate-300 text-sm font-bold mb-4">Avg Completion % by Category</h3>
                   {catChart.length > 0 ? (
                     <div className="h-56">
@@ -391,7 +393,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
                 </div>
 
                 {/* Avg score by category */}
-                <div className="bg-white/3 border border-white/8 rounded-2xl p-6">
+                <div className="bg-white/3 border border-white/8 rounded-2xl p-6 tp-reveal" style={{ animationDelay: '80ms' }}>
                   <h3 className="text-slate-300 text-sm font-bold mb-4">Avg Score by Category</h3>
                   {catChart.length > 0 ? (
                     <div className="h-56">
@@ -418,7 +420,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
               {/* Category detail cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {catChart.map((c: any, i: number) => (
-                  <div key={c.category} className="bg-white/3 border border-white/8 rounded-2xl p-4 text-center">
+                  <div key={c.category} className="bg-white/3 border border-white/8 rounded-2xl p-4 text-center tp-reveal tp-tilt" style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}>
                     <p className="text-lg mb-1">{c.label.split(' ')[0]}</p>
                     <p className="text-white text-xs font-bold mb-3 line-clamp-1">
                       {c.label.split(' ').slice(1).join(' ')}
@@ -458,8 +460,8 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
                         const rankColors = ['text-slate-300', 'text-amber-300', 'text-orange-300'];
                         const ranks = [2, 1, 3];
                         return (
-                          <div key={p.employee_id} className="flex flex-col items-center gap-2">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white font-bold text-sm">
+                          <div key={p.employee_id} className="flex flex-col items-center gap-2 tp-reveal" style={{ animationDelay: `${i * 100}ms` }}>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white font-bold text-sm tp-pop-in">
                               {p.name.charAt(0)}
                             </div>
                             <p className="text-white text-xs font-bold text-center w-20 line-clamp-1">{p.name.split(' ')[0]}</p>
@@ -474,7 +476,7 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
                   )}
 
                   {/* Full list */}
-                  <div className="bg-white/3 border border-white/8 rounded-2xl overflow-hidden">
+                  <div className="bg-white/3 border border-white/8 rounded-2xl overflow-hidden tp-reveal">
                     <div className="px-6 py-3 border-b border-white/5 grid grid-cols-12 text-xs text-slate-400 font-bold uppercase tracking-wider">
                       <span className="col-span-1">#</span>
                       <span className="col-span-4">Employee</span>
@@ -483,14 +485,15 @@ export function OrgAnalyticsView({ hrUser: _hrUser }: { hrUser: any }) {
                       <span className="col-span-2 text-right">Score / Band</span>
                     </div>
                     <div className="divide-y divide-white/5">
-                      {topPerformers.map((p: any) => {
+                      {topPerformers.map((p: any, pi: number) => {
                         const band = BAND_META[p.band];
                         return (
                           <div
                             key={p.employee_id}
-                            className={`px-6 py-3.5 grid grid-cols-12 items-center hover:bg-white/2 transition ${
+                            className={`px-6 py-3.5 grid grid-cols-12 items-center hover:bg-white/2 transition tp-reveal ${
                               p.rank === 1 ? 'bg-amber-500/5' : ''
                             }`}
+                            style={{ animationDelay: `${Math.min(pi, 10) * 40}ms` }}
                           >
                             <span className={`col-span-1 font-black text-lg ${
                               p.rank === 1 ? 'text-amber-400' : p.rank === 2 ? 'text-slate-300' : p.rank === 3 ? 'text-orange-400' : 'text-slate-500'

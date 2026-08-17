@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Radar, Users, MapPin, X, Plus, Send, Loader, AlertTriangle, CheckCircle2,
+  Users, MapPin, X, Plus, Send, Loader, AlertTriangle, CheckCircle2,
   Calendar as CalendarIcon, LogOut, ShieldCheck, LayoutGrid, ListChecks,
   ClipboardList, Package,
 } from 'lucide-react';
@@ -497,7 +497,7 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
 }
 
 /* ════════════════════════════════════════════════════════════════════════ */
-export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void }) {
+export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
   const [session, setSession] = useState<Session | null>(() => loadSession());
   const [tab, setTab] = useState<Tab>('rooms');
   const [rooms, setRooms] = useState<any[]>([]);
@@ -543,7 +543,6 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
     return (
       <RoomPulseLogin
         onSuccess={s => { const full = { ...s, role: s.role as any }; saveSession(full); setSession({ ...full, ts: Date.now() }); }}
-        onBack={onNavigateBack}
       />
     );
   }
@@ -564,7 +563,7 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
   const onItemRequestDone = () => { setShowItemRequest(false); setRefreshKey(k => k + 1); };
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] relative">
+    <div className="min-h-full bg-[#f5f7fa] relative">
       <style>{RP_STYLES}</style>
       <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="rp-mesh absolute inset-0">
@@ -575,28 +574,8 @@ export function RoomPulsePage({ onNavigateBack }: { onNavigateBack?: () => void 
       </div>
 
       {/* header */}
-      <div className="relative z-20 bg-white/85 backdrop-blur-xl border-b border-slate-200 sticky top-0">
+      <div className="relative z-20 bg-white/85 backdrop-blur-xl border-b border-slate-200">
         <div className="max-w-[1500px] mx-auto px-6 py-3 flex items-center gap-4">
-          {onNavigateBack && (
-            <button onClick={onNavigateBack}
-              className="px-3 py-1.5 rounded-lg text-[12px] font-bold text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all">
-              ← Back
-            </button>
-          )}
-          <div className="flex items-center gap-2.5">
-            <div className="rp-border-flow relative w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600
-                            flex items-center justify-center shadow-lg shadow-cyan-500/30">
-              <Radar className="w-5 h-5 text-white rp-spin-slow" />
-              <span className="rp-pulse-glow absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">AdminPulse</h1>
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400 mt-0.5">
-                Admin Requests & Facilities
-              </p>
-            </div>
-          </div>
-
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden md:flex items-center gap-4 pr-4 border-r border-slate-200">
               <div className="text-center">

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { PERF_API } from '../../../features/performance/PerformancePage';
 import { downloadScorecard } from '../../../utils/downloadScorecard';
+import { TOOL_STYLES } from '../../toolStyles';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -224,14 +225,15 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 lg:p-6">
+    <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+      <style>{TOOL_STYLES}</style>
       <div className="max-w-6xl mx-auto space-y-5">
 
         {/* ── HR Header ── */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden tp-reveal">
           <div className="h-1.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-400" />
           <div className="px-6 py-4 flex items-center gap-5">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-rose-200 shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-rose-200 shrink-0 tp-pop-in">
               {hrUser.name?.[0] || 'H'}
             </div>
             <div className="flex-1">
@@ -251,12 +253,12 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
             )}
             <a href={`${apiBase}/export/${selectedCycle ? `?cycle_id=${selectedCycle.id}` : ''}`}
               target="_blank" rel="noreferrer"
-              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all">
+              className="tp-sheen shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all">
               <Download className="w-3.5 h-3.5" />
               Export Excel
             </a>
             <button onClick={handleResetDatabase} disabled={resetting}
-              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs transition-all disabled:opacity-40">
+              className="tp-sheen shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs transition-all disabled:opacity-40">
               <AlertTriangle className="w-3.5 h-3.5" />
               {resetting ? 'Resetting…' : 'Reset DB'}
             </button>
@@ -264,7 +266,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
         </div>
 
         {/* ── Tab Nav ── */}
-        <div className="flex gap-1.5 bg-white border border-slate-200 shadow-sm rounded-2xl p-1.5 overflow-x-auto">
+        <div className="flex gap-1.5 bg-white border border-slate-200 shadow-sm rounded-2xl p-1.5 overflow-x-auto tp-reveal">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
@@ -287,7 +289,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest shrink-0">Cycle</span>
                 {cycles.map(c => (
                   <button key={c.id} onClick={() => setSelectedCycle(c)}
-                    className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all border ${
+                    className={`tp-tilt px-3 py-1.5 rounded-xl font-bold text-xs transition-all border ${
                       selectedCycle?.id === c.id
                         ? 'bg-rose-600 border-rose-600 text-white shadow-sm'
                         : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-rose-300 hover:text-rose-600'
@@ -302,9 +304,9 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
               <>
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {statCards.map(s => (
-                    <div key={s.label} className={`bg-white border shadow-sm rounded-2xl p-5 flex items-center gap-4 ${s.bg}`}>
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>
+                  {statCards.map((s, si) => (
+                    <div key={s.label} className={`bg-white border shadow-sm rounded-2xl p-5 flex items-center gap-4 tp-reveal tp-tilt ${s.bg}`} style={{ animationDelay: `${si * 70}ms` }}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 tp-pop-in ${s.bg}`}>
                         <s.icon className={`w-5 h-5 ${s.color}`} />
                       </div>
                       <div>
@@ -316,7 +318,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                 </div>
 
                 {/* Goal Card Status bar */}
-                <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
+                <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 tp-reveal">
                   <div className="flex items-center gap-3 mb-5">
                     <BarChart3 className="w-4 h-4 text-rose-500" />
                     <h4 className="text-slate-900 font-extrabold">Submission Status — {selectedCycle?.name}</h4>
@@ -369,7 +371,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                 <p className="text-indigo-500 text-xs mt-0.5">Pre-formatted CSV with all required columns and sample rows</p>
               </div>
               <button onClick={downloadTemplate}
-                className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-indigo-200">
+                className="tp-sheen shrink-0 flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-indigo-200">
                 <FileText className="w-4 h-4" /> Download Template
               </button>
             </div>
@@ -413,7 +415,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
             </div>
 
             <button onClick={handleImport} disabled={!importFile || importing}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-rose-200 transition-all active:scale-[0.99]">
+              className="tp-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-rose-200 transition-all active:scale-[0.99]">
               {importing
                 ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Importing...</>
                 : <><Upload className="w-4 h-4" /> Import Employees</>
@@ -442,7 +444,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                   <p className="text-sm text-slate-400 mt-0.5">Add employees individually, edit details, or deactivate. Use Import for bulk changes.</p>
                 </div>
                 <button onClick={() => setShowAddEmp(v => !v)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all">
+                  className="tp-sheen flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all">
                   + Add Employee
                 </button>
               </div>
@@ -578,7 +580,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                   />
                 </div>
                 <button onClick={handleCreateCycle} disabled={creatingCycle || !cycleName.trim()}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-emerald-200 transition-all">
+                  className="tp-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-emerald-200 transition-all">
                   {creatingCycle
                     ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Initializing...</>
                     : <><Calendar className="w-4 h-4" /> Initialize Cycle</>
@@ -593,7 +595,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
             ) : (
               /* Existing cycles — manage phase */
               cycles.map(c => (
-                <div key={c.id} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                <div key={c.id} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden tp-reveal">
                   <div className="px-6 py-4 flex items-center gap-4 border-b border-slate-100">
                     <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
                       <Calendar className="w-5 h-5 text-rose-500" />
@@ -613,7 +615,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {CYCLE_PHASES.map(({ value, label, icon: Icon, color }) => (
                         <button key={value} onClick={() => updateCyclePhase(c.id, value)}
-                          className={`flex flex-col items-center gap-2 py-4 px-3 rounded-xl border font-bold text-xs transition-all ${
+                          className={`tp-tilt flex flex-col items-center gap-2 py-4 px-3 rounded-xl border font-bold text-xs transition-all ${
                             c.status === value
                               ? color + ' ring-2 ring-offset-1 ring-current'
                               : color
@@ -650,7 +652,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                 <p className="text-slate-400 text-sm mt-1">Employees will appear here once they start their appraisal forms.</p>
               </div>
             ) : (
-              allCards.map((card: any) => {
+              allCards.map((card: any, cardIdx: number) => {
                 const gc = card.goal_card || card;
                 const statusCfg: Record<string, string> = {
                   draft:            'bg-slate-100 text-slate-600 border-slate-200',
@@ -668,7 +670,7 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
                 const selfAnswers = gc?.self_review_answers || [];
 
                 return (
-                  <div key={gc?.id || card.employee_id} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                  <div key={gc?.id || card.employee_id} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden tp-reveal" style={{ animationDelay: `${Math.min(cardIdx, 8) * 50}ms` }}>
                     <div
                       className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-slate-50 transition-all"
                       onClick={() => setExpandedCard(isExp ? null : gc?.id)}>
@@ -926,8 +928,8 @@ export function HRView({ hrUser, apiBase = PERF_API }: { hrUser: any; apiBase?: 
               </div>
             ) : leaderboard.map((entry, idx) => (
               <div key={entry.employee_id}
-                className={`bg-white border shadow-sm rounded-2xl flex items-center gap-5 p-5 ${idx === 0 ? 'border-amber-300' : idx === 1 ? 'border-slate-300' : idx === 2 ? 'border-orange-300' : 'border-slate-200'}`}>
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black shrink-0 text-2xl ${idx === 0 ? 'bg-amber-50 border border-amber-200' : idx === 1 ? 'bg-slate-100 border border-slate-200' : idx === 2 ? 'bg-orange-50 border border-orange-200' : 'bg-slate-50 border border-slate-200 text-sm text-slate-500'}`}>
+                className={`bg-white border shadow-sm rounded-2xl flex items-center gap-5 p-5 tp-reveal tp-tilt ${idx === 0 ? 'border-amber-300' : idx === 1 ? 'border-slate-300' : idx === 2 ? 'border-orange-300' : 'border-slate-200'}`} style={{ animationDelay: `${Math.min(idx, 8) * 60}ms` }}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black shrink-0 text-2xl tp-pop-in ${idx === 0 ? 'bg-amber-50 border border-amber-200' : idx === 1 ? 'bg-slate-100 border border-slate-200' : idx === 2 ? 'bg-orange-50 border border-orange-200' : 'bg-slate-50 border border-slate-200 text-sm text-slate-500'}`}>
                   {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
                 </div>
                 <div className="flex-1 min-w-0">
