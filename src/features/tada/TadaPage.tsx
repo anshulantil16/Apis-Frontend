@@ -95,6 +95,22 @@ const STATUS_STYLE: Record<string, string> = {
 const TRAVEL_MODES = ['Train', 'Flight', 'Bus', 'Cab / Taxi', 'Own Car', 'Own Two-Wheeler', 'Auto Rickshaw', 'Company Vehicle'];
 const LOCAL_MODES = ['Cab / Taxi', 'Auto Rickshaw', 'Bus', 'Metro', 'Own Car', 'Own Two-Wheeler', 'Bike Taxi', 'E-Rickshaw'];
 const LOCAL_TYPES = ['Outdoor Duty', 'Office Work', 'Client Visit', 'Bank / Govt Work', 'Site Visit', 'Vendor Meeting'];
+const TIME_PREFS = [
+  { v: 'early_morning', l: 'Early Morning (12 AM – 6 AM)' },
+  { v: 'morning', l: 'Morning (6 AM – 12 PM)' },
+  { v: 'afternoon', l: 'Afternoon (12 PM – 4 PM)' },
+  { v: 'evening', l: 'Evening (4 PM – 8 PM)' },
+  { v: 'night', l: 'Night (8 PM – 12 AM)' },
+];
+
+// inclusive day count between two yyyy-mm-dd strings; null if either is missing/invalid
+function tripDays(fromDate: string, toDate: string): number | null {
+  if (!fromDate || !toDate) return null;
+  const from = new Date(fromDate), to = new Date(toDate);
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) return null;
+  const days = Math.round((to.getTime() - from.getTime()) / 86400000) + 1;
+  return days > 0 ? days : null;
+}
 
 // Dropdown that always includes an "Other…" option → reveals a free-text input
 function SelectOther({ value, onChange, options, className, placeholder = 'Select…' }: {
@@ -312,7 +328,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   };
 
   // tour sanction
-  const [tour, setTour] = useState<any>({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '' });
+  const [tour, setTour] = useState<any>({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '', travel_mode_date: '', travel_mode_time_pref: '' });
   // travel expense
   const [texp, setTexp] = useState<any>({ destination_city: '', from_date: '', to_date: '', purpose: '', sanction_number: '' });
   const [items, setItems] = useState<any[]>([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]);
@@ -324,7 +340,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     setBusy(true); setMsg(null);
     const r = await fetch(`${API}/requests/tour-sanction/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...tour, employee_id: user.employee_id }) });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setTour({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '' }); cheer(d.message); }
+    if (r.ok) { setTour({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '', travel_mode_date: '', travel_mode_time_pref: '' }); cheer(d.message); }
   };
   const submitTexp = async () => {
     setBusy(true); setMsg(null);
@@ -391,10 +407,24 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose of Journey</label><input className={inp} value={tour.purpose} onChange={e => setTour({ ...tour, purpose: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label><input type="date" className={inp} value={tour.from_date} onChange={e => setTour({ ...tour, from_date: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">To Date</label><input type="date" className={inp} value={tour.to_date} onChange={e => setTour({ ...tour, to_date: e.target.value })} /></div>
+            {tripDays(tour.from_date, tour.to_date) !== null && (
+              <div className="md:col-span-2 -mt-1"><span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">{tripDays(tour.from_date, tour.to_date)} day{tripDays(tour.from_date, tour.to_date) === 1 ? '' : 's'} of travel</span></div>
+            )}
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Contact Number</label><input className={inp} value={tour.contact_number} onChange={e => setTour({ ...tour, contact_number: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction Number <span className="text-slate-300">(from manager)</span></label><input className={inp} value={tour.sanction_number} onChange={e => setTour({ ...tour, sanction_number: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Estimate of Expenses (₹)</label><input type="number" className={inp} value={tour.estimate_amount} onChange={e => setTour({ ...tour, estimate_amount: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode</label><SelectOther key={formKey} className={inp} value={tour.travel_mode} onChange={v => setTour({ ...tour, travel_mode: v })} options={TRAVEL_MODES} placeholder="Select mode…" /></div>
+            {tour.travel_mode && (
+              <>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Preferred Time</label>
+                  <select className={inp} value={tour.travel_mode_time_pref} onChange={e => setTour({ ...tour, travel_mode_time_pref: e.target.value })}>
+                    <option value="">Select time…</option>
+                    {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
           </div>
           <button onClick={submitTour} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
         </div>
@@ -519,9 +549,10 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
         <div className="grid md:grid-cols-3 gap-3 text-sm">
           {r.purpose && <div><p className="text-slate-400 text-xs">Purpose</p><p className="font-semibold">{r.purpose}</p></div>}
           {r.destination_city && <div><p className="text-slate-400 text-xs">Destination</p><p className="font-semibold">{r.destination_city} <span className="text-indigo-500">(Grade {r.city_grade})</span></p></div>}
-          {(r.from_date || r.to_date) && <div><p className="text-slate-400 text-xs">Dates</p><p className="font-semibold">{r.from_date} → {r.to_date}</p></div>}
+          {(r.from_date || r.to_date) && <div><p className="text-slate-400 text-xs">Dates</p><p className="font-semibold">{r.from_date} → {r.to_date}{r.number_of_days ? <span className="text-indigo-500"> ({r.number_of_days} day{r.number_of_days === 1 ? '' : 's'})</span> : null}</p></div>}
           {r.sanction_number && <div><p className="text-slate-400 text-xs">Sanction No.</p><p className="font-semibold">{r.sanction_number}</p></div>}
           {r.travel_mode && <div><p className="text-slate-400 text-xs">Mode</p><p className="font-semibold">{r.travel_mode}</p></div>}
+          {r.travel_mode_date && <div><p className="text-slate-400 text-xs">Ticket Date</p><p className="font-semibold">{r.travel_mode_date}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}</p></div>}
           {r.estimate_amount > 0 && <div><p className="text-slate-400 text-xs">Estimate</p><p className="font-semibold">₹{fmt(r.estimate_amount)}</p></div>}
           {r.total_claimed > 0 && <div><p className="text-slate-400 text-xs">Total Claimed</p><p className="font-black text-slate-800">₹{fmt(r.total_claimed)}</p></div>}
         </div>
