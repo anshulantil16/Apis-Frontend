@@ -103,6 +103,16 @@ const TIME_PREFS = [
   { v: 'night', l: 'Night (8 PM – 12 AM)' },
 ];
 
+const TOUR_BLANK = {
+  travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '',
+  contact_number: '', sanction_number: '', travel_mode: '',
+  travel_mode_date: '', travel_mode_time_pref: '', return_mode_date: '', return_mode_time_pref: '',
+  // estimate: ticket/misc are typed by the employee, lodging/food/local seed
+  // from policy and stay '' until the server sends the policy figure.
+  est_ticket_amount: '', est_lodging_amount: '', est_food_amount: '', est_local_amount: '',
+  est_misc_amount: '', advance_amount: '',
+};
+
 // inclusive day count between two yyyy-mm-dd strings; null if either is missing/invalid
 function tripDays(fromDate: string, toDate: string): number | null {
   if (!fromDate || !toDate) return null;
@@ -310,6 +320,83 @@ const Pill = ({ s, label }: { s: string; label: string }) => (
   <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${STATUS_STYLE[s] || 'bg-slate-100 text-slate-600'}`}>{label}</span>
 );
 
+/* ── Pre-travel cost estimate ──────────────────────────────────────────────────
+   Lodging / food / local conveyance are seeded from the policy matrices for the
+   employee's band × city grade × trip length. Ticket fare and miscellaneous are
+   entered by the employee — the policy defines an entitled travel *class*, not
+   rupee fares. Everything stays editable; over-ceiling values are flagged for
+   the approver rather than blocked. */
+function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
+  est: any; tour: any; setTour: (t: any) => void; total: number; warnings: string[]; inp: string;
+}) {
+  const money = (n: number) => `₹${(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  const rate = (v: any, unit: string) =>
+    v == null ? 'not set in policy' : v === 'actual' ? 'as per actuals' : `${money(v)} ${unit}`;
+
+  const field = (key: string, label: string, hint: string, locked?: boolean) => (
+    <div>
+      <label className="text-xs font-bold text-slate-500 mb-1 block">{label}</label>
+      <input type="number" min="0" className={inp} value={tour[key]}
+        onChange={e => setTour({ ...tour, [key]: e.target.value })} placeholder="0" />
+      <p className={`text-[11px] mt-1 ${locked ? 'text-slate-400' : 'text-indigo-500'}`}>{hint}</p>
+    </div>
+  );
+
+  const advance = parseFloat(tour.advance_amount) || 0;
+  return (
+    <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-indigo-100 rounded-2xl p-4 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h4 className="font-black text-slate-700 text-sm flex items-center gap-2"><Wallet className="w-4 h-4 text-indigo-500" />Estimated Cost of Travel</h4>
+        <div className="flex items-center gap-2 text-[11px] font-bold">
+          <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">Grade {est.city_grade} city</span>
+          <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">{est.days} day{est.days === 1 ? '' : 's'} · {est.nights} night{est.nights === 1 ? '' : 's'}</span>
+          {est.band && <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">Band {est.band}</span>}
+        </div>
+      </div>
+
+      {est.entitled_mode && (
+        <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-600 flex items-start gap-2">
+          <Shield className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+          <span>Approved travel class for your level: <b className="text-slate-800">{est.entitled_mode}</b></span>
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {field('est_ticket_amount', 'Ticket Fare (₹)', 'Onward + return, as per approved class')}
+        {field('est_lodging_amount', 'Hotel / Lodging (₹)', `Policy: ${rate(est.rates.stay_per_night, 'per night')} × ${est.nights}`)}
+        {field('est_food_amount', 'Food / DA (₹)', `Policy: ${rate(est.rates.da_per_day, 'per day')} × ${est.days}`)}
+        {field('est_local_amount', 'Local Conveyance (₹)', `Policy: ${rate(est.rates.local_per_day, 'per day')} × ${est.days}`)}
+        {field('est_misc_amount', 'Miscellaneous (₹)', 'Bills mandatory for reimbursement', true)}
+      </div>
+
+      {warnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 space-y-1">
+          {warnings.map((w, i) => (
+            <p key={i} className="text-xs text-amber-800 font-semibold flex items-start gap-2"><AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />{w}</p>
+          ))}
+          <p className="text-[11px] text-amber-600 pt-0.5">You can still submit — these are shown to your approver.</p>
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 gap-3 pt-1 border-t border-indigo-100">
+        <div className="pt-3">
+          <label className="text-xs font-bold text-slate-500 mb-1 block">Advance Required (₹)</label>
+          <input type="number" min="0" className={inp} value={tour.advance_amount}
+            onChange={e => setTour({ ...tour, advance_amount: e.target.value })} placeholder="0" />
+          <p className="text-[11px] text-slate-400 mt-1">Paid before departure · adjusted against your final claim</p>
+        </div>
+        <div className="pt-3 flex flex-col justify-center bg-white rounded-xl border border-indigo-100 px-4 py-3">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Estimated Expense</p>
+          <p className="text-2xl font-black text-slate-800 leading-tight">{money(total)}</p>
+          {advance > 0 && (
+            <p className="text-[11px] text-slate-500 mt-0.5">Advance {money(advance)} · balance on claim {money(Math.max(0, total - advance))}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Employee: New Request forms ───────────────────────────────────────────────
 function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   const [type, setType] = useState<'tour_sanction' | 'travel_expense' | 'local_travel'>('tour_sanction');
@@ -328,7 +415,8 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   };
 
   // tour sanction
-  const [tour, setTour] = useState<any>({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '', travel_mode_date: '', travel_mode_time_pref: '', return_mode_date: '', return_mode_time_pref: '' });
+  const [tour, setTour] = useState<any>(TOUR_BLANK);
+  const [est, setEst] = useState<any>(null);      // policy estimate from the server
   // travel expense
   const [texp, setTexp] = useState<any>({ destination_city: '', from_date: '', to_date: '', purpose: '', sanction_number: '' });
   const [items, setItems] = useState<any[]>([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]);
@@ -336,11 +424,64 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   const [local, setLocal] = useState<any>({ local_travel_type: 'Outdoor Duty', from_date: '', to_date: '', purpose: '' });
   const [lrows, setLrows] = useState<any[]>([{ date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }]);
 
+  /* Pull the policy estimate whenever destination / dates / mode change, and
+     seed the lodging-food-local fields with the policy figure. The employee can
+     override them; anything above the ceiling is flagged (here and again on the
+     server, which recomputes rather than trusting what the browser posts). */
+  useEffect(() => {
+    if (type !== 'tour_sanction') return;
+    const { destination_city, from_date, to_date, travel_mode } = tour;
+    if (!destination_city || !from_date || !to_date) { setEst(null); return; }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const qs = new URLSearchParams({
+          employee_id: user.employee_id, city: destination_city,
+          from_date, to_date, mode: travel_mode || '',
+        });
+        const r = await fetch(`${API}/estimate/?${qs}`);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (cancelled) return;
+        setEst(d);
+        // seed only the untouched policy-driven heads
+        setTour((prev: any) => ({
+          ...prev,
+          est_lodging_amount: prev.est_lodging_amount === '' ? String(d.lines.lodging) : prev.est_lodging_amount,
+          est_food_amount: prev.est_food_amount === '' ? String(d.lines.food) : prev.est_food_amount,
+          est_local_amount: prev.est_local_amount === '' ? String(d.lines.local) : prev.est_local_amount,
+        }));
+      } catch { /* estimate is advisory — a failed fetch must not block the form */ }
+    }, 300);   // debounce: destination_city is typed character by character
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [type, tour.destination_city, tour.from_date, tour.to_date, tour.travel_mode, user.employee_id]);
+
+  // Running total of the estimate heads — what actually goes for approval.
+  const estTotal = useMemo(() => {
+    const n = (v: any) => parseFloat(v) || 0;
+    return n(tour.est_ticket_amount) + n(tour.est_lodging_amount) + n(tour.est_food_amount)
+         + n(tour.est_local_amount) + n(tour.est_misc_amount);
+  }, [tour.est_ticket_amount, tour.est_lodging_amount, tour.est_food_amount, tour.est_local_amount, tour.est_misc_amount]);
+
+  // Client-side mirror of policy.validate_estimate — instant feedback only.
+  const estWarnings = useMemo(() => {
+    if (!est) return [];
+    const out: string[] = [];
+    const over = (val: any, cap: number | null, label: string) => {
+      if (cap != null && (parseFloat(val) || 0) > cap) out.push(`${label} is above the policy ceiling of ₹${cap.toLocaleString('en-IN')}`);
+    };
+    over(tour.est_lodging_amount, est.caps?.lodging, 'Lodging');
+    over(tour.est_food_amount, est.caps?.food, 'Food / DA');
+    over(tour.est_local_amount, est.caps?.local, 'Local conveyance');
+    if ((parseFloat(tour.advance_amount) || 0) > estTotal && estTotal > 0) out.push('Advance requested is more than the total estimate');
+    return [...out, ...(est.mode_flags || [])];
+  }, [est, tour.est_lodging_amount, tour.est_food_amount, tour.est_local_amount, tour.advance_amount, estTotal]);
+
   const submitTour = async () => {
     setBusy(true); setMsg(null);
     const r = await fetch(`${API}/requests/tour-sanction/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...tour, employee_id: user.employee_id }) });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setTour({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '', travel_mode_date: '', travel_mode_time_pref: '', return_mode_date: '', return_mode_time_pref: '' }); cheer(d.message); }
+    if (r.ok) { setTour(TOUR_BLANK); setEst(null); cheer(d.message); }
   };
   const submitTexp = async () => {
     setBusy(true); setMsg(null);
@@ -412,8 +553,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             )}
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Contact Number</label><input className={inp} value={tour.contact_number} onChange={e => setTour({ ...tour, contact_number: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction Number <span className="text-slate-300">(from manager)</span></label><input className={inp} value={tour.sanction_number} onChange={e => setTour({ ...tour, sanction_number: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Estimate of Expenses (₹)</label><input type="number" className={inp} value={tour.estimate_amount} onChange={e => setTour({ ...tour, estimate_amount: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode</label><SelectOther key={formKey} className={inp} value={tour.travel_mode} onChange={v => setTour({ ...tour, travel_mode: v })} options={TRAVEL_MODES} placeholder="Select mode…" /></div>
+            <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode</label><SelectOther key={formKey} className={inp} value={tour.travel_mode} onChange={v => setTour({ ...tour, travel_mode: v })} options={TRAVEL_MODES} placeholder="Select mode…" /></div>
             {tour.travel_mode && (
               <>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
@@ -433,6 +573,9 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
               </>
             )}
           </div>
+
+          {est && <EstimateBlock est={est} tour={tour} setTour={setTour} total={estTotal} warnings={estWarnings} inp={inp} />}
+
           <button onClick={submitTour} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
         </div>
       )}
@@ -561,9 +704,31 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
           {r.travel_mode && <div><p className="text-slate-400 text-xs">Mode</p><p className="font-semibold">{r.travel_mode}</p></div>}
           {r.travel_mode_date && <div><p className="text-slate-400 text-xs">Onward Ticket</p><p className="font-semibold">{r.travel_mode_date}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}</p></div>}
           {r.return_mode_date && <div><p className="text-slate-400 text-xs">Return Ticket</p><p className="font-semibold">{r.return_mode_date}{r.return_mode_time_pref_label ? ` · ${r.return_mode_time_pref_label}` : ''}</p></div>}
-          {r.estimate_amount > 0 && <div><p className="text-slate-400 text-xs">Estimate</p><p className="font-semibold">₹{fmt(r.estimate_amount)}</p></div>}
+          {r.estimate_amount > 0 && <div><p className="text-slate-400 text-xs">Total Estimate</p><p className="font-black text-slate-800">₹{fmt(r.estimate_amount)}</p></div>}
+          {r.advance_amount > 0 && <div><p className="text-slate-400 text-xs">Advance Required</p><p className="font-black text-indigo-600">₹{fmt(r.advance_amount)}</p></div>}
           {r.total_claimed > 0 && <div><p className="text-slate-400 text-xs">Total Claimed</p><p className="font-black text-slate-800">₹{fmt(r.total_claimed)}</p></div>}
         </div>
+
+        {r.estimate_amount > 0 && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <p className="text-slate-400 text-xs mb-1.5">Estimate breakdown</p>
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              {[['Ticket', r.est_ticket_amount], ['Lodging', r.est_lodging_amount], ['Food / DA', r.est_food_amount],
+                ['Local', r.est_local_amount], ['Misc', r.est_misc_amount]].map(([l, v]: any) => v > 0 && (
+                <span key={l} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-600">{l} ₹{fmt(v)}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {r.policy_flags?.length > 0 && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 space-y-1">
+            <p className="text-[11px] font-black text-amber-700 uppercase tracking-wide">Policy flags</p>
+            {r.policy_flags.map((f: string, i: number) => (
+              <p key={i} className="text-xs text-amber-800 font-semibold flex items-start gap-2"><AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />{f}</p>
+            ))}
+          </div>
+        )}
       </div>
 
       {r.expense_items?.length > 0 && (
