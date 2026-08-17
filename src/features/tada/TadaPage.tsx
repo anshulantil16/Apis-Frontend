@@ -110,7 +110,7 @@ const TOUR_BLANK = {
   // estimate: ticket/misc are typed by the employee, lodging/food/local seed
   // from policy and stay '' until the server sends the policy figure.
   est_ticket_amount: '', est_lodging_amount: '', est_food_amount: '', est_local_amount: '',
-  est_misc_amount: '', advance_amount: '',
+  est_misc_amount: '', advance_amount: '', mode_exception_reason: '',
 };
 
 // inclusive day count between two yyyy-mm-dd strings; null if either is missing/invalid
@@ -120,6 +120,62 @@ function tripDays(fromDate: string, toDate: string): number | null {
   if (isNaN(from.getTime()) || isNaN(to.getTime())) return null;
   const days = Math.round((to.getTime() - from.getTime()) / 86400000) + 1;
   return days > 0 ? days : null;
+}
+
+/* Travel-mode picker.
+   Leads with the modes the employee's grade actually entitles them to, and
+   keeps the rest available under a separate group — travel plans break, and a
+   sanction that cannot express "no train was available" is a sanction people
+   work around. Choosing from the second group is allowed but must carry a
+   reason, which the approver sees. */
+function TravelModePicker({ value, onChange, options, reason, onReason, className }: {
+  value: string; onChange: (v: string) => void; options: any;
+  reason: string; onReason: (v: string) => void; className: string;
+}) {
+  /* Sessions predating the entitlement grouping have a cached caps object with
+     no mode_options. Fall back to the plain list rather than rendering an empty
+     dropdown — an unusable form is far worse than an ungrouped one. */
+  const hasGroups = !!(options?.entitled?.length || options?.exception?.length);
+  const entitled: any[] = hasGroups ? options.entitled || [] : TRAVEL_MODES.map(m => ({ mode: m, note: '' }));
+  const exception: any[] = hasGroups ? options.exception || [] : [];
+  const isException = exception.some(o => o.mode === value);
+  const picked = [...entitled, ...exception].find(o => o.mode === value);
+
+  return (
+    <div className="space-y-2">
+      <select className={className} value={value} onChange={e => onChange(e.target.value)}>
+        <option value="">Select mode…</option>
+        {entitled.length > 0 && (
+          <optgroup label="✓ As per your grade">
+            {entitled.map(o => <option key={o.mode} value={o.mode}>{o.mode}</option>)}
+          </optgroup>
+        )}
+        {exception.length > 0 && (
+          <optgroup label="⚠ Needs approval — emergency / exception">
+            {exception.map(o => <option key={o.mode} value={o.mode}>{o.mode}</option>)}
+          </optgroup>
+        )}
+      </select>
+
+      {picked?.note && !isException && (
+        <p className="text-[11px] text-slate-500 flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px text-slate-400" />{picked.note}</p>
+      )}
+
+      {isException && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+          <p className="text-xs text-amber-800 font-bold flex items-start gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+            {picked?.note || `${value} is outside your grade's entitlement.`}
+          </p>
+          <div>
+            <label className="text-xs font-bold text-amber-700 mb-1 block">Reason for exception <span className="text-rose-500">*</span></label>
+            <textarea rows={2} className={className} value={reason} onChange={e => onReason(e.target.value)}
+              placeholder="e.g. no train available at short notice, medical emergency, client meeting moved up" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Dropdown that always includes an "Other…" option → reveals a free-text input
@@ -417,6 +473,18 @@ function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
 // ── Employee: New Request forms ───────────────────────────────────────────────
 function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   const [type, setType] = useState<'tour_sanction' | 'travel_expense' | 'local_travel'>('tour_sanction');
+  /* Refresh the policy caps on mount. The user object is cached in
+     localStorage at login, so a session opened before a policy change would
+     otherwise keep showing stale limits and mode entitlements. */
+  const [caps, setCaps] = useState<any>(user.caps);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/caps/?level=${encodeURIComponent(user.level || '')}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && !cancelled) setCaps(d); })
+      .catch(() => { /* keep the cached caps */ });
+    return () => { cancelled = true; };
+  }, [user.level]);
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
@@ -542,7 +610,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     <div className="space-y-4">
       <Confetti show={celebrate} />
       {toast && <Toast msg={toast.t} ok={toast.ok} onClose={() => setToast(null)} />}
-      <CapsBanner caps={user.caps} />
+      <CapsBanner caps={caps} />
       <div className="grid sm:grid-cols-3 gap-3 stagger">
         {TYPES.map(t => (
           <button key={t.k} onClick={() => { setType(t.k as any); setMsg(null); }}
@@ -570,7 +638,16 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             )}
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Contact Number</label><input className={inp} value={tour.contact_number} onChange={e => setTour({ ...tour, contact_number: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction Number <span className="text-slate-300">(from manager)</span></label><input className={inp} value={tour.sanction_number} onChange={e => setTour({ ...tour, sanction_number: e.target.value })} /></div>
-            <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode</label><SelectOther key={formKey} className={inp} value={tour.travel_mode} onChange={v => setTour({ ...tour, travel_mode: v })} options={TRAVEL_MODES} placeholder="Select mode…" /></div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode
+                {caps?.approved_travel_mode && <span className="text-slate-300 font-semibold"> · your grade allows {caps.approved_travel_mode}</span>}
+              </label>
+              <TravelModePicker key={formKey} className={inp} value={tour.travel_mode}
+                onChange={v => setTour({ ...tour, travel_mode: v, mode_exception_reason: '' })}
+                options={caps?.mode_options}
+                reason={tour.mode_exception_reason}
+                onReason={v => setTour({ ...tour, mode_exception_reason: v })} />
+            </div>
             {tour.travel_mode && (
               <>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
@@ -735,6 +812,13 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
                 <span key={l} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-600">{l} ₹{fmt(v)}</span>
               ))}
             </div>
+          </div>
+        )}
+
+        {r.mode_exception_reason && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <p className="text-[11px] font-black text-amber-700 uppercase tracking-wide">Reason for travel-mode exception</p>
+            <p className="text-xs text-amber-900 mt-0.5">{r.mode_exception_reason}</p>
           </div>
         )}
 
