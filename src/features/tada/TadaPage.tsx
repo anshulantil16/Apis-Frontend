@@ -328,7 +328,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   };
 
   // tour sanction
-  const [tour, setTour] = useState<any>({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '', travel_mode_date: '', travel_mode_time_pref: '' });
+  const [tour, setTour] = useState<any>({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '', travel_mode_date: '', travel_mode_time_pref: '', return_mode_date: '', return_mode_time_pref: '' });
   // travel expense
   const [texp, setTexp] = useState<any>({ destination_city: '', from_date: '', to_date: '', purpose: '', sanction_number: '' });
   const [items, setItems] = useState<any[]>([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]);
@@ -340,7 +340,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     setBusy(true); setMsg(null);
     const r = await fetch(`${API}/requests/tour-sanction/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...tour, employee_id: user.employee_id }) });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setTour({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '', travel_mode_date: '', travel_mode_time_pref: '' }); cheer(d.message); }
+    if (r.ok) { setTour({ travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '', contact_number: '', sanction_number: '', estimate_amount: '', travel_mode: '', travel_mode_date: '', travel_mode_time_pref: '', return_mode_date: '', return_mode_time_pref: '' }); cheer(d.message); }
   };
   const submitTexp = async () => {
     setBusy(true); setMsg(null);
@@ -416,9 +416,16 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode</label><SelectOther key={formKey} className={inp} value={tour.travel_mode} onChange={v => setTour({ ...tour, travel_mode: v })} options={TRAVEL_MODES} placeholder="Select mode…" /></div>
             {tour.travel_mode && (
               <>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Preferred Time</label>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Preferred Time</label>
                   <select className={inp} value={tour.travel_mode_time_pref} onChange={e => setTour({ ...tour, travel_mode_time_pref: e.target.value })}>
+                    <option value="">Select time…</option>
+                    {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
+                  </select>
+                </div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.return_mode_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
+                  <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
                     <option value="">Select time…</option>
                     {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
                   </select>
@@ -552,7 +559,8 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
           {(r.from_date || r.to_date) && <div><p className="text-slate-400 text-xs">Dates</p><p className="font-semibold">{r.from_date} → {r.to_date}{r.number_of_days ? <span className="text-indigo-500"> ({r.number_of_days} day{r.number_of_days === 1 ? '' : 's'})</span> : null}</p></div>}
           {r.sanction_number && <div><p className="text-slate-400 text-xs">Sanction No.</p><p className="font-semibold">{r.sanction_number}</p></div>}
           {r.travel_mode && <div><p className="text-slate-400 text-xs">Mode</p><p className="font-semibold">{r.travel_mode}</p></div>}
-          {r.travel_mode_date && <div><p className="text-slate-400 text-xs">Ticket Date</p><p className="font-semibold">{r.travel_mode_date}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}</p></div>}
+          {r.travel_mode_date && <div><p className="text-slate-400 text-xs">Onward Ticket</p><p className="font-semibold">{r.travel_mode_date}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}</p></div>}
+          {r.return_mode_date && <div><p className="text-slate-400 text-xs">Return Ticket</p><p className="font-semibold">{r.return_mode_date}{r.return_mode_time_pref_label ? ` · ${r.return_mode_time_pref_label}` : ''}</p></div>}
           {r.estimate_amount > 0 && <div><p className="text-slate-400 text-xs">Estimate</p><p className="font-semibold">₹{fmt(r.estimate_amount)}</p></div>}
           {r.total_claimed > 0 && <div><p className="text-slate-400 text-xs">Total Claimed</p><p className="font-black text-slate-800">₹{fmt(r.total_claimed)}</p></div>}
         </div>
