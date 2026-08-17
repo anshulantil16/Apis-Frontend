@@ -333,6 +333,23 @@ function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
   const rate = (v: any, unit: string) =>
     v == null ? 'not set in policy' : v === 'actual' ? 'as per actuals' : `${money(v)} ${unit}`;
 
+  /* The policy figures need a destination (for city grade) and both dates (for
+     nights/days). Until then show the section greyed out and say what's missing,
+     rather than hiding it — an invisible section reads as a missing feature. */
+  if (!est) {
+    const missing = [
+      !tour.destination_city && 'destination city',
+      !tour.from_date && 'from date',
+      !tour.to_date && 'to date',
+    ].filter(Boolean);
+    return (
+      <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4">
+        <h4 className="font-black text-slate-500 text-sm flex items-center gap-2"><Wallet className="w-4 h-4 text-slate-400" />Estimated Cost of Travel</h4>
+        <p className="text-xs text-slate-400 mt-1.5">Fill in the {missing.join(' and ')} above — your hotel, food and conveyance limits are then worked out from the travel policy for your level.</p>
+      </div>
+    );
+  }
+
   const field = (key: string, label: string, hint: string, locked?: boolean) => (
     <div>
       <label className="text-xs font-bold text-slate-500 mb-1 block">{label}</label>
@@ -574,7 +591,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             )}
           </div>
 
-          {est && <EstimateBlock est={est} tour={tour} setTour={setTour} total={estTotal} warnings={estWarnings} inp={inp} />}
+          <EstimateBlock est={est} tour={tour} setTour={setTour} total={estTotal} warnings={estWarnings} inp={inp} />
 
           <button onClick={submitTour} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
         </div>
