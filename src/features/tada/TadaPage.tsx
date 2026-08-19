@@ -388,12 +388,36 @@ const Pill = ({ s, label }: { s: string; label: string }) => (
    tidiness: allowances are set per city grade, so costing a Delhi (A) + Kanpur
    (C) trip against a single destination gets the entitlement wrong either way.
    The journey home stays on the request as the return ticket. */
-function ItineraryEditor({ legs, setLegs, modeOptions, est, inp }: {
+function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom, tripTo }: {
   legs: any[]; setLegs: (l: any[]) => void; modeOptions: any; est: any; inp: string;
+  tripFrom: string; tripTo: string;
 }) {
   const set = (i: number, patch: any) => setLegs(legs.map((l, j) => j === i ? { ...l, ...patch } : l));
   const legEst = (i: number) => est?.legs?.find((l: any) => l.seq === i);
   const money = (n: number) => `₹${(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  const nextDay = (d: string) => {
+    if (!d) return '';
+    const t = new Date(d); t.setDate(t.getDate() + 1);
+    return t.toISOString().slice(0, 10);
+  };
+
+  /* Stops can only fall inside the trip window, so the pickers are bounded by
+     it rather than letting a date through and flagging it afterwards. A stop
+     also cannot end before it starts, nor start before the previous stop ends. */
+  const addStop = () => {
+    const last = legs[legs.length - 1];
+    const start = last?.to_date ? nextDay(last.to_date) : tripFrom;
+    setLegs([...legs, { ...blankLeg(), from_date: start && (!tripTo || start <= tripTo) ? start : '' }]);
+  };
+
+  if (!tripFrom || !tripTo) {
+    return (
+      <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4">
+        <p className="text-xs text-slate-500 font-semibold">Set the overall From and To dates first</p>
+        <p className="text-[11px] text-slate-400 mt-1">Each stop is picked from within your travel dates, so they need to be set before you can break the trip down.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -422,9 +446,17 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp }: {
               <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose at this stop <span className="text-slate-300">(optional)</span></label>
                 <input className={inp} value={leg.purpose} onChange={e2 => set(i, { purpose: e2.target.value })} /></div>
               <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label>
-                <input type="date" className={inp} value={leg.from_date} onChange={e2 => set(i, { from_date: e2.target.value })} /></div>
+                <input type="date" className={inp} value={leg.from_date}
+                  min={legs[i - 1]?.to_date ? nextDay(legs[i - 1].to_date) : tripFrom} max={tripTo}
+                  onChange={e2 => {
+                    const v = e2.target.value;
+                    // keep the end from falling behind the new start
+                    set(i, { from_date: v, ...(leg.to_date && leg.to_date < v ? { to_date: v } : {}) });
+                  }} /></div>
               <div><label className="text-xs font-bold text-slate-500 mb-1 block">To Date</label>
-                <input type="date" className={inp} value={leg.to_date} onChange={e2 => set(i, { to_date: e2.target.value })} /></div>
+                <input type="date" className={inp} value={leg.to_date}
+                  min={leg.from_date || tripFrom} max={tripTo}
+                  onChange={e2 => set(i, { to_date: e2.target.value })} /></div>
 
               <div className="md:col-span-2">
                 <label className="text-xs font-bold text-slate-500 mb-1 block">How you travel to {leg.destination_city || 'this stop'}</label>
@@ -436,7 +468,8 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp }: {
               {leg.travel_mode && (
                 <>
                   <div><label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Date</label>
-                    <input type="date" className={inp} value={leg.ticket_date} onChange={e2 => set(i, { ticket_date: e2.target.value })} /></div>
+                    <input type="date" className={inp} value={leg.ticket_date} min={tripFrom} max={tripTo}
+                      onChange={e2 => set(i, { ticket_date: e2.target.value })} /></div>
                   <div><label className="text-xs font-bold text-slate-500 mb-1 block">Preferred Time</label>
                     <select className={inp} value={leg.ticket_time_pref} onChange={e2 => set(i, { ticket_time_pref: e2.target.value })}>
                       <option value="">Select time…</option>
@@ -464,7 +497,7 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp }: {
         );
       })}
 
-      <button onClick={() => setLegs([...legs, blankLeg()])}
+      <button onClick={addStop}
         className="w-full border-2 border-dashed border-indigo-200 text-indigo-500 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-2xl py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all">
         <Plus className="w-4 h-4" />Add another stop
       </button>
@@ -839,6 +872,8 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
                     destination_city: on ? '' : p.destination_city,
                     travel_address: on ? '' : p.travel_address,
                     travel_mode: on ? '' : p.travel_mode, mode_exception_reason: '' }));
+                  // first stop starts when the trip does — one less thing to retype
+                  if (on) setLegs(ls => ls.map((l, i) => i === 0 && !l.from_date ? { ...l, from_date: tour.from_date } : l));
                   setEst(null);
                 }}
                   className={`text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${multiCity ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'}`}>
@@ -885,11 +920,12 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
                 <h4 className="font-black text-slate-700 text-sm">Itinerary</h4>
                 <span className="text-[11px] text-slate-400">in the order you travel</span>
               </div>
-              <ItineraryEditor legs={legs} setLegs={setLegs} modeOptions={caps?.mode_options} est={est} inp={inp} />
+              <ItineraryEditor legs={legs} setLegs={setLegs} modeOptions={caps?.mode_options} est={est} inp={inp}
+                tripFrom={tour.from_date} tripTo={tour.to_date} />
 
               <div className="grid md:grid-cols-2 gap-3 bg-slate-50/70 border border-slate-200 rounded-2xl p-4">
                 <div className="md:col-span-2"><p className="text-xs font-bold text-slate-600">Journey home</p><p className="text-[11px] text-slate-400">Your return from the last stop</p></div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Ticket Date</label><input type="date" className={inp} value={tour.return_mode_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Ticket Date</label><input type="date" className={inp} value={tour.return_mode_date} min={tour.from_date} max={tour.to_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
                   <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
                     <option value="">Select time…</option>
