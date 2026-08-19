@@ -114,7 +114,7 @@ const TOUR_BLANK = {
 };
 
 const blankLeg = () => ({
-  from_date: '', to_date: '', destination_city: '', purpose: '',
+  from_date: '', to_date: '', destination_city: '', travel_address: '', purpose: '',
   travel_mode: '', ticket_date: '', ticket_time_pref: '',
   mode_exception_reason: '', est_ticket_amount: '',
 });
@@ -416,7 +416,10 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp }: {
               <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label>
                 <input className={inp} value={leg.destination_city} placeholder="e.g. Mumbai"
                   onChange={e2 => set(i, { destination_city: e2.target.value })} /></div>
-              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose at this stop <span className="text-slate-300">(optional)</span></label>
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address</label>
+                <input className={inp} value={leg.travel_address} placeholder="where you'll be at this stop"
+                  onChange={e2 => set(i, { travel_address: e2.target.value })} /></div>
+              <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose at this stop <span className="text-slate-300">(optional)</span></label>
                 <input className={inp} value={leg.purpose} onChange={e2 => set(i, { purpose: e2.target.value })} /></div>
               <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label>
                 <input type="date" className={inp} value={leg.from_date} onChange={e2 => set(i, { from_date: e2.target.value })} /></div>
@@ -802,9 +805,11 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4 animate-rise">
           {formHead(active)}
           <div className="grid md:grid-cols-2 gap-3">
-            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address</label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} /></div>
+            {/* Address and city belong to a destination, so in a multi-city trip
+                they live on each stop instead of once on the request. */}
+            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address</label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} /></div>}
             {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /></div>}
-            <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose of Journey</label><input className={inp} value={tour.purpose} onChange={e => setTour({ ...tour, purpose: e.target.value })} /></div>
+            <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose of Journey <span className="text-slate-300">{multiCity ? '(overall — each stop can add its own)' : ''}</span></label><input className={inp} value={tour.purpose} onChange={e => setTour({ ...tour, purpose: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label><input type="date" className={inp} value={tour.from_date} onChange={e => setTour({ ...tour, from_date: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">To Date</label><input type="date" className={inp} value={tour.to_date} onChange={e => setTour({ ...tour, to_date: e.target.value })} /></div>
             {tripDays(tour.from_date, tour.to_date) !== null && (
@@ -830,7 +835,9 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
                   setMultiCity(on);
                   // Drop the fields that belong to the mode being left, so a
                   // leftover single-city destination can't shadow the itinerary.
-                  setTour((p: any) => ({ ...p, destination_city: on ? '' : p.destination_city,
+                  setTour((p: any) => ({ ...p,
+                    destination_city: on ? '' : p.destination_city,
+                    travel_address: on ? '' : p.travel_address,
                     travel_mode: on ? '' : p.travel_mode, mode_exception_reason: '' }));
                   setEst(null);
                 }}
@@ -1041,6 +1048,7 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
                     {l.travel_mode && <span className="text-slate-500">· by {l.travel_mode}</span>}
                     {l.ticket_date && <span className="text-slate-400">· ticket {l.ticket_date}{l.ticket_time_pref_label ? ` ${l.ticket_time_pref_label}` : ''}</span>}
                   </div>
+                  {l.travel_address && <p className="text-slate-500 mt-0.5">{l.travel_address}</p>}
                   {l.purpose && <p className="text-slate-400 mt-0.5">{l.purpose}</p>}
                   {l.mode_exception_reason && <p className="text-amber-700 mt-0.5"><b>Mode exception:</b> {l.mode_exception_reason}</p>}
                 </div>
