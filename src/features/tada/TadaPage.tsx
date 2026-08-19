@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plane, LogOut, Plus, Trash2, Upload, CheckCircle, XCircle, Clock, FileText,
   Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Paperclip, Users, Shield,
@@ -638,6 +638,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   const [est, setEst] = useState<any>(null);      // policy estimate from the server
   const [multiCity, setMultiCity] = useState(false);
   const [legs, setLegs] = useState<any[]>([blankLeg()]);
+  const seededRef = useRef<any>({});   // last policy figures written into the form
   // travel expense
   const [texp, setTexp] = useState<any>({ destination_city: '', from_date: '', to_date: '', purpose: '', sanction_number: '' });
   const [items, setItems] = useState<any[]>([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]);
@@ -649,8 +650,12 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
      seed the lodging-food-local fields with the policy figure. The employee can
      override them; anything above the ceiling is flagged (here and again on the
      server, which recomputes rather than trusting what the browser posts). */
+  /* Carry each leg's own index so the server can hand costs back to the right
+     stop — it sorts legs by date internally, and incomplete legs are filtered
+     out here, so position in this array is not a stable identity. */
   const readyLegs = useMemo(
-    () => legs.filter(l => l.destination_city && l.from_date && l.to_date),
+    () => legs.map((l, i) => ({ ...l, seq: i }))
+              .filter(l => l.destination_city && l.from_date && l.to_date),
     [legs]);
 
   useEffect(() => {
@@ -676,14 +681,31 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
         const d = await r.json();
         if (cancelled) return;
         setEst(d);
-        // seed only the untouched policy-driven heads
-        setTour((prev: any) => ({
-          ...prev,
-          est_lodging_amount: prev.est_lodging_amount === '' ? String(d.lines.lodging) : prev.est_lodging_amount,
-          est_food_amount: prev.est_food_amount === '' ? String(d.lines.food) : prev.est_food_amount,
-          est_local_amount: prev.est_local_amount === '' ? String(d.lines.local) : prev.est_local_amount,
-          est_ticket_amount: multiCity ? String(d.lines.ticket) : prev.est_ticket_amount,
-        }));
+        /* Re-seed the policy-driven heads. A field counts as untouched if it is
+           still empty or still holds exactly what we last seeded into it — only
+           then do we overwrite. Comparing against the previous seed (rather than
+           just "is it empty") is what makes the figures follow a change of dates
+           or destination; keying off empty alone left the first seeded number
+           frozen in place while the policy hint beside it moved on. */
+        setTour((prev: any) => {
+          const next = { ...prev };
+          const seeded = seededRef.current;
+          for (const [key, val] of [
+            ['est_lodging_amount', d.lines.lodging],
+            ['est_food_amount', d.lines.food],
+            ['est_local_amount', d.lines.local],
+          ] as [string, number][]) {
+            if (prev[key] === '' || prev[key] === seeded[key]) next[key] = String(val);
+          }
+          // In multi-city the fare is the sum of the per-stop fares, not an input.
+          if (multiCity) next.est_ticket_amount = String(d.lines.ticket);
+          seededRef.current = {
+            est_lodging_amount: String(d.lines.lodging),
+            est_food_amount: String(d.lines.food),
+            est_local_amount: String(d.lines.local),
+          };
+          return next;
+        });
       } catch { /* estimate is advisory — a failed fetch must not block the form */ }
     }, 300);   // debounce: cities are typed character by character
     return () => { cancelled = true; clearTimeout(t); };
@@ -803,7 +825,15 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
                   <p className="text-xs font-bold text-slate-600">Travelling to more than one city?</p>
                   <p className="text-[11px] text-slate-400">Break the trip into stops — each is costed at its own city grade.</p>
                 </div>
-                <button type="button" onClick={() => setMultiCity(!multiCity)}
+                <button type="button" onClick={() => {
+                  const on = !multiCity;
+                  setMultiCity(on);
+                  // Drop the fields that belong to the mode being left, so a
+                  // leftover single-city destination can't shadow the itinerary.
+                  setTour((p: any) => ({ ...p, destination_city: on ? '' : p.destination_city,
+                    travel_mode: on ? '' : p.travel_mode, mode_exception_reason: '' }));
+                  setEst(null);
+                }}
                   className={`text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${multiCity ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'}`}>
                   {multiCity ? '✓ Multi-city trip' : 'Add stops'}
                 </button>
