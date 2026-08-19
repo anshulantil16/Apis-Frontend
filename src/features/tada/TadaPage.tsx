@@ -113,6 +113,12 @@ const TOUR_BLANK = {
   est_misc_amount: '', advance_amount: '', mode_exception_reason: '',
 };
 
+const blankLeg = () => ({
+  from_date: '', to_date: '', destination_city: '', purpose: '',
+  travel_mode: '', ticket_date: '', ticket_time_pref: '',
+  mode_exception_reason: '', est_ticket_amount: '',
+});
+
 // inclusive day count between two yyyy-mm-dd strings; null if either is missing/invalid
 function tripDays(fromDate: string, toDate: string): number | null {
   if (!fromDate || !toDate) return null;
@@ -376,6 +382,93 @@ const Pill = ({ s, label }: { s: string; label: string }) => (
   <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${STATUS_STYLE[s] || 'bg-slate-100 text-slate-600'}`}>{label}</span>
 );
 
+/* ── Multi-city itinerary ──────────────────────────────────────────────────────
+   A 13-day tour is rarely 13 days in one place. Each stop carries its own dates,
+   city and the mode used to reach it — which matters for money, not just
+   tidiness: allowances are set per city grade, so costing a Delhi (A) + Kanpur
+   (C) trip against a single destination gets the entitlement wrong either way.
+   The journey home stays on the request as the return ticket. */
+function ItineraryEditor({ legs, setLegs, modeOptions, est, inp }: {
+  legs: any[]; setLegs: (l: any[]) => void; modeOptions: any; est: any; inp: string;
+}) {
+  const set = (i: number, patch: any) => setLegs(legs.map((l, j) => j === i ? { ...l, ...patch } : l));
+  const legEst = (i: number) => est?.legs?.find((l: any) => l.seq === i);
+  const money = (n: number) => `₹${(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
+  return (
+    <div className="space-y-3">
+      {legs.map((leg, i) => {
+        const e = legEst(i);
+        return (
+          <div key={i} className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                Stop {i + 1}
+                {e && <span className="text-indigo-400 font-bold">· grade {e.city_grade} · {e.days}d / {e.nights}n</span>}
+              </span>
+              {legs.length > 1 && (
+                <button onClick={() => setLegs(legs.filter((_, j) => j !== i))}
+                  className="text-rose-400 hover:text-rose-600 flex items-center gap-1 text-xs font-bold"><Trash2 className="w-4 h-4" />Remove</button>
+              )}
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3">
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label>
+                <input className={inp} value={leg.destination_city} placeholder="e.g. Mumbai"
+                  onChange={e2 => set(i, { destination_city: e2.target.value })} /></div>
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose at this stop <span className="text-slate-300">(optional)</span></label>
+                <input className={inp} value={leg.purpose} onChange={e2 => set(i, { purpose: e2.target.value })} /></div>
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label>
+                <input type="date" className={inp} value={leg.from_date} onChange={e2 => set(i, { from_date: e2.target.value })} /></div>
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">To Date</label>
+                <input type="date" className={inp} value={leg.to_date} onChange={e2 => set(i, { to_date: e2.target.value })} /></div>
+
+              <div className="md:col-span-2">
+                <label className="text-xs font-bold text-slate-500 mb-1 block">How you travel to {leg.destination_city || 'this stop'}</label>
+                <TravelModePicker className={inp} value={leg.travel_mode} options={modeOptions}
+                  onChange={v => set(i, { travel_mode: v, mode_exception_reason: '' })}
+                  reason={leg.mode_exception_reason} onReason={v => set(i, { mode_exception_reason: v })} />
+              </div>
+
+              {leg.travel_mode && (
+                <>
+                  <div><label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Date</label>
+                    <input type="date" className={inp} value={leg.ticket_date} onChange={e2 => set(i, { ticket_date: e2.target.value })} /></div>
+                  <div><label className="text-xs font-bold text-slate-500 mb-1 block">Preferred Time</label>
+                    <select className={inp} value={leg.ticket_time_pref} onChange={e2 => set(i, { ticket_time_pref: e2.target.value })}>
+                      <option value="">Select time…</option>
+                      {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
+                    </select></div>
+                </>
+              )}
+
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Fare to this stop (₹)</label>
+                <input type="number" min="0" className={inp} value={leg.est_ticket_amount} placeholder="0"
+                  onChange={e2 => set(i, { est_ticket_amount: e2.target.value })} /></div>
+
+              {e && (
+                <div className="flex flex-col justify-end">
+                  <p className="text-[11px] text-slate-400 mb-1">Policy for {e.city} (grade {e.city_grade})</p>
+                  <div className="flex flex-wrap gap-1 text-[11px] font-semibold">
+                    <span className="bg-white border border-slate-200 rounded px-1.5 py-0.5">Stay {money(e.lines.lodging)}</span>
+                    <span className="bg-white border border-slate-200 rounded px-1.5 py-0.5">DA {money(e.lines.food)}</span>
+                    <span className="bg-white border border-slate-200 rounded px-1.5 py-0.5">Local {money(e.lines.local)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      <button onClick={() => setLegs([...legs, blankLeg()])}
+        className="w-full border-2 border-dashed border-indigo-200 text-indigo-500 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-2xl py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all">
+        <Plus className="w-4 h-4" />Add another stop
+      </button>
+    </div>
+  );
+}
+
 /* ── Pre-travel cost estimate ──────────────────────────────────────────────────
    Lodging / food / local conveyance are seeded from the policy matrices for the
    employee's band × city grade × trip length. Ticket fare and miscellaneous are
@@ -388,6 +481,11 @@ function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
   const money = (n: number) => `₹${(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
   const rate = (v: any, unit: string) =>
     v == null ? 'not set in policy' : v === 'actual' ? 'as per actuals' : `${money(v)} ${unit}`;
+
+  // A multi-stop estimate carries a legs[] array; a single-destination one carries rates/days.
+  const multi = Array.isArray(est?.legs) && est.legs.length > 0;
+  const days = multi ? est.total_days : est?.days;
+  const nights = multi ? est.total_nights : est?.nights;
 
   /* The policy figures need a destination (for city grade) and both dates (for
      nights/days). Until then show the section greyed out and say what's missing,
@@ -421,8 +519,10 @@ function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h4 className="font-black text-slate-700 text-sm flex items-center gap-2"><Wallet className="w-4 h-4 text-indigo-500" />Estimated Cost of Travel</h4>
         <div className="flex items-center gap-2 text-[11px] font-bold">
-          <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">Grade {est.city_grade} city</span>
-          <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">{est.days} day{est.days === 1 ? '' : 's'} · {est.nights} night{est.nights === 1 ? '' : 's'}</span>
+          {multi
+            ? <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">{est.legs.length} stop{est.legs.length === 1 ? '' : 's'}</span>
+            : <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">Grade {est.city_grade} city</span>}
+          <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">{days} day{days === 1 ? '' : 's'} · {nights} night{nights === 1 ? '' : 's'}</span>
           {est.band && <span className="bg-white border border-indigo-100 text-indigo-600 px-2.5 py-1 rounded-lg">Band {est.band}</span>}
         </div>
       </div>
@@ -434,11 +534,45 @@ function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
         </div>
       )}
 
+      {multi && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50 text-slate-400">
+                <tr>{['Stop', 'Grade', 'Days', 'Ticket', 'Stay', 'DA', 'Local', 'Subtotal'].map(h => (
+                  <th key={h} className={`px-2.5 py-1.5 font-bold ${h === 'Stop' ? 'text-left' : 'text-right'}`}>{h}</th>))}</tr>
+              </thead>
+              <tbody>
+                {est.legs.map((l: any) => (
+                  <tr key={l.seq} className="border-t border-slate-100">
+                    <td className="px-2.5 py-1.5 font-bold text-slate-700">{l.city || `Stop ${l.seq + 1}`}</td>
+                    <td className="px-2.5 py-1.5 text-right text-slate-500">{l.city_grade}</td>
+                    <td className="px-2.5 py-1.5 text-right text-slate-500">{l.days}d / {l.nights}n</td>
+                    <td className="px-2.5 py-1.5 text-right text-slate-600">{money(l.lines.ticket)}</td>
+                    <td className="px-2.5 py-1.5 text-right text-slate-600">{money(l.lines.lodging)}</td>
+                    <td className="px-2.5 py-1.5 text-right text-slate-600">{money(l.lines.food)}</td>
+                    <td className="px-2.5 py-1.5 text-right text-slate-600">{money(l.lines.local)}</td>
+                    <td className="px-2.5 py-1.5 text-right font-black text-slate-800">{money(l.subtotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-slate-400 px-2.5 py-1.5 border-t border-slate-100">Each stop is costed at its own city grade. Nights follow where you sleep — the last stop drops one night for the journey home.</p>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {field('est_ticket_amount', 'Ticket Fare (₹)', 'Onward + return, as per approved class')}
-        {field('est_lodging_amount', 'Hotel / Lodging (₹)', `Policy: ${rate(est.rates.stay_per_night, 'per night')} × ${est.nights}`)}
-        {field('est_food_amount', 'Food / DA (₹)', `Policy: ${rate(est.rates.da_per_day, 'per day')} × ${est.days}`)}
-        {field('est_local_amount', 'Local Conveyance (₹)', `Policy: ${rate(est.rates.local_per_day, 'per day')} × ${est.days}`)}
+        {multi
+          ? <div>
+              <label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Fare (₹)</label>
+              <div className="w-full border-2 border-slate-100 bg-slate-100 rounded-xl px-3 py-2.5 text-sm font-black text-slate-600">{money(est.lines.ticket)}</div>
+              <p className="text-[11px] text-slate-400 mt-1">Total of the per-stop fares above</p>
+            </div>
+          : field('est_ticket_amount', 'Ticket Fare (₹)', 'Onward + return, as per approved class')}
+        {field('est_lodging_amount', 'Hotel / Lodging (₹)', multi ? 'Sum across all stops, at each stop’s grade' : `Policy: ${rate(est.rates.stay_per_night, 'per night')} × ${est.nights}`)}
+        {field('est_food_amount', 'Food / DA (₹)', multi ? 'Sum across all stops, at each stop’s grade' : `Policy: ${rate(est.rates.da_per_day, 'per day')} × ${est.days}`)}
+        {field('est_local_amount', 'Local Conveyance (₹)', multi ? `Policy rate × ${days} days` : `Policy: ${rate(est.rates.local_per_day, 'per day')} × ${est.days}`)}
         {field('est_misc_amount', 'Miscellaneous (₹)', 'Bills mandatory for reimbursement', true)}
       </div>
 
@@ -502,6 +636,8 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   // tour sanction
   const [tour, setTour] = useState<any>(TOUR_BLANK);
   const [est, setEst] = useState<any>(null);      // policy estimate from the server
+  const [multiCity, setMultiCity] = useState(false);
+  const [legs, setLegs] = useState<any[]>([blankLeg()]);
   // travel expense
   const [texp, setTexp] = useState<any>({ destination_city: '', from_date: '', to_date: '', purpose: '', sanction_number: '' });
   const [items, setItems] = useState<any[]>([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]);
@@ -513,18 +649,29 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
      seed the lodging-food-local fields with the policy figure. The employee can
      override them; anything above the ceiling is flagged (here and again on the
      server, which recomputes rather than trusting what the browser posts). */
+  const readyLegs = useMemo(
+    () => legs.filter(l => l.destination_city && l.from_date && l.to_date),
+    [legs]);
+
   useEffect(() => {
     if (type !== 'tour_sanction') return;
     const { destination_city, from_date, to_date, travel_mode } = tour;
-    if (!destination_city || !from_date || !to_date) { setEst(null); return; }
+    // Multi-city costs the itinerary; single-destination costs the one city.
+    if (multiCity ? readyLegs.length === 0 : (!destination_city || !from_date || !to_date)) {
+      setEst(null); return;
+    }
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        const qs = new URLSearchParams({
-          employee_id: user.employee_id, city: destination_city,
-          from_date, to_date, mode: travel_mode || '',
-        });
-        const r = await fetch(`${API}/estimate/?${qs}`);
+        const r = multiCity
+          ? await fetch(`${API}/estimate/`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ employee_id: user.employee_id, from_date, to_date, legs: readyLegs }),
+            })
+          : await fetch(`${API}/estimate/?` + new URLSearchParams({
+              employee_id: user.employee_id, city: destination_city,
+              from_date, to_date, mode: travel_mode || '',
+            }));
         if (!r.ok) return;
         const d = await r.json();
         if (cancelled) return;
@@ -535,11 +682,12 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
           est_lodging_amount: prev.est_lodging_amount === '' ? String(d.lines.lodging) : prev.est_lodging_amount,
           est_food_amount: prev.est_food_amount === '' ? String(d.lines.food) : prev.est_food_amount,
           est_local_amount: prev.est_local_amount === '' ? String(d.lines.local) : prev.est_local_amount,
+          est_ticket_amount: multiCity ? String(d.lines.ticket) : prev.est_ticket_amount,
         }));
       } catch { /* estimate is advisory — a failed fetch must not block the form */ }
-    }, 300);   // debounce: destination_city is typed character by character
+    }, 300);   // debounce: cities are typed character by character
     return () => { cancelled = true; clearTimeout(t); };
-  }, [type, tour.destination_city, tour.from_date, tour.to_date, tour.travel_mode, user.employee_id]);
+  }, [type, multiCity, readyLegs, tour.destination_city, tour.from_date, tour.to_date, tour.travel_mode, user.employee_id]);
 
   // Running total of the estimate heads — what actually goes for approval.
   const estTotal = useMemo(() => {
@@ -559,14 +707,18 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     over(tour.est_food_amount, est.caps?.food, 'Food / DA');
     over(tour.est_local_amount, est.caps?.local, 'Local conveyance');
     if ((parseFloat(tour.advance_amount) || 0) > estTotal && estTotal > 0) out.push('Advance requested is more than the total estimate');
-    return [...out, ...(est.mode_flags || [])];
+    const legFlags = (est.legs || []).flatMap((l: any) =>
+      (l.mode_flags || []).map((f: string) => `${l.city || `Stop ${l.seq + 1}`}: ${f}`));
+    return [...out, ...(est.itinerary_flags || []), ...legFlags, ...(est.mode_flags || [])];
   }, [est, tour.est_lodging_amount, tour.est_food_amount, tour.est_local_amount, tour.advance_amount, estTotal]);
 
   const submitTour = async () => {
     setBusy(true); setMsg(null);
-    const r = await fetch(`${API}/requests/tour-sanction/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...tour, employee_id: user.employee_id }) });
+    const payload: any = { ...tour, employee_id: user.employee_id };
+    if (multiCity) payload.legs = readyLegs;
+    const r = await fetch(`${API}/requests/tour-sanction/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setTour(TOUR_BLANK); setEst(null); cheer(d.message); }
+    if (r.ok) { setTour(TOUR_BLANK); setEst(null); setLegs([blankLeg()]); setMultiCity(false); cheer(d.message); }
   };
   const submitTexp = async () => {
     setBusy(true); setMsg(null);
@@ -629,15 +781,36 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
           {formHead(active)}
           <div className="grid md:grid-cols-2 gap-3">
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address</label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} /></div>
-            <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /></div>
+            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /></div>}
             <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose of Journey</label><input className={inp} value={tour.purpose} onChange={e => setTour({ ...tour, purpose: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label><input type="date" className={inp} value={tour.from_date} onChange={e => setTour({ ...tour, from_date: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">To Date</label><input type="date" className={inp} value={tour.to_date} onChange={e => setTour({ ...tour, to_date: e.target.value })} /></div>
             {tripDays(tour.from_date, tour.to_date) !== null && (
-              <div className="md:col-span-2 -mt-1"><span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">{tripDays(tour.from_date, tour.to_date)} day{tripDays(tour.from_date, tour.to_date) === 1 ? '' : 's'} of travel</span></div>
+              <div className="md:col-span-2 -mt-1 flex items-center justify-between flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">{tripDays(tour.from_date, tour.to_date)} day{tripDays(tour.from_date, tour.to_date) === 1 ? '' : 's'} of travel</span>
+                {est && multiCity && (
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${est.total_days === tripDays(tour.from_date, tour.to_date) ? 'text-emerald-600 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>
+                    {est.total_days} of {tripDays(tour.from_date, tour.to_date)} days assigned to a city
+                  </span>
+                )}
+              </div>
             )}
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Contact Number</label><input className={inp} value={tour.contact_number} onChange={e => setTour({ ...tour, contact_number: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction Number <span className="text-slate-300">(from manager)</span></label><input className={inp} value={tour.sanction_number} onChange={e => setTour({ ...tour, sanction_number: e.target.value })} /></div>
+            <div className="md:col-span-2 pt-1">
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 gap-3 flex-wrap">
+                <div>
+                  <p className="text-xs font-bold text-slate-600">Travelling to more than one city?</p>
+                  <p className="text-[11px] text-slate-400">Break the trip into stops — each is costed at its own city grade.</p>
+                </div>
+                <button type="button" onClick={() => setMultiCity(!multiCity)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all ${multiCity ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'}`}>
+                  {multiCity ? '✓ Multi-city trip' : 'Add stops'}
+                </button>
+              </div>
+            </div>
+
+            {!multiCity && (
             <div className="md:col-span-2">
               <label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode
                 {caps?.approved_travel_mode && <span className="text-slate-300 font-semibold"> · your grade allows {caps.approved_travel_mode}</span>}
@@ -648,7 +821,8 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
                 reason={tour.mode_exception_reason}
                 onReason={v => setTour({ ...tour, mode_exception_reason: v })} />
             </div>
-            {tour.travel_mode && (
+            )}
+            {!multiCity && tour.travel_mode && (
               <>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Preferred Time</label>
@@ -667,6 +841,27 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
               </>
             )}
           </div>
+
+          {multiCity && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h4 className="font-black text-slate-700 text-sm">Itinerary</h4>
+                <span className="text-[11px] text-slate-400">in the order you travel</span>
+              </div>
+              <ItineraryEditor legs={legs} setLegs={setLegs} modeOptions={caps?.mode_options} est={est} inp={inp} />
+
+              <div className="grid md:grid-cols-2 gap-3 bg-slate-50/70 border border-slate-200 rounded-2xl p-4">
+                <div className="md:col-span-2"><p className="text-xs font-bold text-slate-600">Journey home</p><p className="text-[11px] text-slate-400">Your return from the last stop</p></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Ticket Date</label><input type="date" className={inp} value={tour.return_mode_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
+                  <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
+                    <option value="">Select time…</option>
+                    {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           <EstimateBlock est={est} tour={tour} setTour={setTour} total={estTotal} warnings={estWarnings} inp={inp} />
 
@@ -802,6 +997,27 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
           {r.advance_amount > 0 && <div><p className="text-slate-400 text-xs">Advance Required</p><p className="font-black text-indigo-600">₹{fmt(r.advance_amount)}</p></div>}
           {r.total_claimed > 0 && <div><p className="text-slate-400 text-xs">Total Claimed</p><p className="font-black text-slate-800">₹{fmt(r.total_claimed)}</p></div>}
         </div>
+
+        {r.legs?.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <p className="text-slate-400 text-xs mb-1.5">Itinerary · {r.legs.length} stop{r.legs.length === 1 ? '' : 's'}</p>
+            <div className="space-y-1.5">
+              {r.legs.map((l: any) => (
+                <div key={l.seq} className="bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="font-black text-slate-700">{l.seq + 1}. {l.destination_city}</span>
+                    <span className="text-indigo-500 font-semibold">grade {l.city_grade}</span>
+                    <span className="text-slate-500">{l.from_date} → {l.to_date} ({l.days}d)</span>
+                    {l.travel_mode && <span className="text-slate-500">· by {l.travel_mode}</span>}
+                    {l.ticket_date && <span className="text-slate-400">· ticket {l.ticket_date}{l.ticket_time_pref_label ? ` ${l.ticket_time_pref_label}` : ''}</span>}
+                  </div>
+                  {l.purpose && <p className="text-slate-400 mt-0.5">{l.purpose}</p>}
+                  {l.mode_exception_reason && <p className="text-amber-700 mt-0.5"><b>Mode exception:</b> {l.mode_exception_reason}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {r.estimate_amount > 0 && (
           <div className="mt-3 pt-3 border-t border-slate-100">
