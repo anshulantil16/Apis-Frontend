@@ -144,14 +144,114 @@ html.ih-reveal-ready .ih-inview.is-in { opacity:1; transform:none; }
 .ih-neon { transition: box-shadow .35s ease, border-color .35s ease; }
 .ih-neon:hover { box-shadow: 0 0 0 1px var(--ih-neon, #22d3ee), 0 10px 34px -10px var(--ih-neon, #22d3ee); }
 
+/* ── surfaces: glass, mesh, glow ───────────────────────────────────────────── */
+/* Frosted panel. Use over a mesh/aurora background — on flat white it just
+   looks like a slightly grey card and costs a paint layer for nothing. */
+.ih-glass {
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow: 0 8px 32px -12px rgba(15,23,42,.18), inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+/* Slow-drifting colour wash for page/hero backgrounds. Sits behind content —
+   always pair with a positioned child, never put text directly on it. */
+@keyframes ihMesh {
+  0%,100% { background-position: 0% 50%, 100% 50%, 50% 0%; }
+  50%     { background-position: 100% 50%, 0% 50%, 50% 100%; }
+}
+.ih-mesh {
+  background-image:
+    radial-gradient(at 20% 20%, rgba(34,211,238,.20) 0px, transparent 55%),
+    radial-gradient(at 80% 30%, rgba(139,92,246,.18) 0px, transparent 55%),
+    radial-gradient(at 50% 85%, rgba(244,114,182,.14) 0px, transparent 55%);
+  background-size: 180% 180%;
+  animation: ihMesh 22s ease-in-out infinite;
+}
+
+/* Soft accent halo behind a card. --ih-halo sets the colour. */
+.ih-halo { position: relative; }
+.ih-halo::before {
+  content:''; position:absolute; inset:-20%; border-radius:inherit; z-index:-1;
+  background: radial-gradient(closest-side, var(--ih-halo, rgba(99,102,241,.28)), transparent);
+  filter: blur(28px); opacity:.75; pointer-events:none;
+  animation: ihPulseGlow 5s ease-in-out infinite;
+}
+
+/* ── interaction: lift, magnetic, ripple, underline ────────────────────────── */
+/* Richer hover than ih-tilt: rises and blooms a coloured shadow. */
+.ih-lift { transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s cubic-bezier(.2,.8,.2,1); }
+.ih-lift:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -16px var(--ih-lift, rgba(15,23,42,.32)); }
+
+/* Cursor-tracked nudge — --mx/--my written by onMagneticMove. */
+.ih-magnetic { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.ih-magnetic:hover { transform: translate(calc(var(--mx,0px) * .12), calc(var(--my,0px) * .12)); }
+
+/* Animated underline for tabs and inline links. */
+.ih-underline { position: relative; }
+.ih-underline::after {
+  content:''; position:absolute; left:0; right:0; bottom:-2px; height:2px; border-radius:2px;
+  background: linear-gradient(90deg, #22d3ee, #8b5cf6);
+  transform: scaleX(0); transform-origin: left; transition: transform .3s cubic-bezier(.2,.8,.2,1);
+}
+.ih-underline:hover::after, .ih-underline[data-active='true']::after { transform: scaleX(1); }
+
+/* ── feedback: skeleton, scan, orbit ───────────────────────────────────────── */
+/* Loading placeholder. Prefer this over a spinner for content that has shape —
+   it tells the user what is coming, not merely that something is happening. */
+@keyframes ihSkeleton { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.ih-skeleton {
+  background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 50%, #eef2f7 75%);
+  background-size: 200% 100%; animation: ihSkeleton 1.4s ease-in-out infinite;
+  border-radius: .75rem; color: transparent !important;
+}
+
+/* Scanline passing over a surface — for "processing" states. */
+@keyframes ihScan { 0% { top:-30%; } 100% { top:130%; } }
+.ih-scan { position: relative; overflow: hidden; }
+.ih-scan::after {
+  content:''; position:absolute; left:0; right:0; height:30%; pointer-events:none;
+  background: linear-gradient(180deg, transparent, rgba(34,211,238,.16), transparent);
+  animation: ihScan 2.2s ease-in-out infinite;
+}
+
+/* Dot orbiting an icon chip — live/syncing indicator. */
+@keyframes ihOrbit { to { transform: rotate(360deg); } }
+.ih-orbit { position:relative; }
+.ih-orbit::after {
+  content:''; position:absolute; inset:-4px; border-radius:9999px; pointer-events:none;
+  background: conic-gradient(from 0deg, transparent 70%, var(--ih-orbit, #22d3ee));
+  -webkit-mask: radial-gradient(closest-side, transparent 84%, #000 86%);
+  mask: radial-gradient(closest-side, transparent 84%, #000 86%);
+  animation: ihOrbit 3s linear infinite;
+}
+
+/* ── stagger: children reveal in sequence ──────────────────────────────────── */
+/* Set on a parent; each child gets an increasing delay. Cheaper and tidier than
+   writing style={{animationDelay}} on every item. */
+.ih-stagger > * { animation: ihReveal .55s cubic-bezier(.2,.8,.2,1) both; }
+.ih-stagger > *:nth-child(1) { animation-delay: .03s }
+.ih-stagger > *:nth-child(2) { animation-delay: .07s }
+.ih-stagger > *:nth-child(3) { animation-delay: .11s }
+.ih-stagger > *:nth-child(4) { animation-delay: .15s }
+.ih-stagger > *:nth-child(5) { animation-delay: .19s }
+.ih-stagger > *:nth-child(6) { animation-delay: .23s }
+.ih-stagger > *:nth-child(7) { animation-delay: .27s }
+.ih-stagger > *:nth-child(8) { animation-delay: .31s }
+.ih-stagger > *:nth-child(n+9) { animation-delay: .35s }
+
 /* Respect the OS "reduce motion" setting — kill every looping animation.
    Ambient motion is decorative; for users who get motion sickness it is not
    a nice-to-have to switch it off. */
 @media (prefers-reduced-motion: reduce) {
   .ih-drift,.ih-aurora,.ih-grad-move,.ih-grad-text,.ih-sweep::after,.ih-pulse-glow,.ih-breathe,
-  .ih-border-flow::before,.ih-spin-slow,.ih-float,.ih-shimmer,.ih-ticker,.ih-particle
+  .ih-border-flow::before,.ih-spin-slow,.ih-float,.ih-shimmer,.ih-ticker,.ih-particle,
+  .ih-mesh,.ih-halo::before,.ih-skeleton,.ih-scan::after,.ih-orbit::after,.ih-stagger > *
   { animation: none !important; }
   html.ih-reveal-ready .ih-inview { opacity:1; transform:none; transition:none; }
-  .ih-tilt3d { transform:none; }
+  .ih-tilt3d,.ih-magnetic:hover,.ih-lift:hover { transform:none; }
+  /* the skeleton still needs to read as a placeholder without its shimmer */
+  .ih-skeleton { background:#eef2f7; }
 }
 `;

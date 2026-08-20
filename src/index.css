@@ -78,6 +78,19 @@
 .hover-lift { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease; }
 .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -12px rgba(79, 70, 229, 0.35); }
 
+/* `animate-rise` is the third motion vocabulary in this codebase (alongside
+   tp-* and ih-*). Inside the shell it becomes a scroll reveal like the others,
+   so a long page animates as you travel down it rather than firing everything
+   once on mount. Guarded on .ih-reveal-ready: the shell sets that only after
+   its observer is confirmed running, so without it these stay visible. */
+.animate-rise { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+html.ih-reveal-ready .animate-rise {
+  animation: none;
+  opacity: 0; transform: translateY(18px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.ih-reveal-ready .animate-rise.is-in { opacity: 1; transform: none; }
+
 /* shimmering sheen for hero cards */
 .sheen { position: relative; overflow: hidden; }
 .sheen::after {
@@ -89,4 +102,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   *, .stagger > * { animation: none !important; }
+  /* the reveal is a transition, not an animation, so it needs killing too —
+     otherwise these elements stay at opacity:0 with motion disabled */
+  html.ih-reveal-ready .animate-rise {
+    opacity: 1 !important; transform: none !important; transition: none !important;
+  }
 }

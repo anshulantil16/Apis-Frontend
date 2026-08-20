@@ -33,6 +33,10 @@ interface Props {
   subtitle?: string;
 }
 
+/* What the scroll-reveal observer watches. `.tp-reveal` is the legacy
+   equivalent used throughout the older view files — see the observer below. */
+const REVEAL_SEL = '.ih-inview, .tp-reveal, .animate-rise';
+
 /* Sub-views map back to the tool that owns them so the sidebar still
    highlights the right entry when you're deep inside a tool. */
 const PARENT_OF: Partial<Record<ShellView, QuickAccessId>> = {
@@ -66,7 +70,14 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
   /* Global scroll-reveal driver.
    *
    * Runs here — the one component wrapping every screen — so `.ih-inview`
-   * just works anywhere in the app and no page has to wire up its own hook. */
+   * just works anywhere in the app and no page has to wire up its own hook.
+   *
+   * `.tp-reveal` is observed too. The ten large view files that predate the
+   * design system are full of it, and on its own it is an entrance that plays
+   * once on mount — by the time you scroll to a card further down the page it
+   * has long finished, so the screen reads as static. Observing it here turns
+   * every one of those cards into a proper scroll reveal without touching
+   * those files. */
   useEffect(() => {
     if (!('IntersectionObserver' in window)) return;   // CSS leaves content visible
 
@@ -81,7 +92,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
     // swallow clicks, which is a far worse failure than "no animation".
     document.documentElement.classList.add('ih-reveal-ready');
 
-    document.querySelectorAll('.ih-inview').forEach(el => io.observe(el));
+    document.querySelectorAll(REVEAL_SEL).forEach(el => io.observe(el));
 
     /* Tool pages mount their content long after the shell and swap it on every
      * navigation, so we track adds AND removes.
@@ -96,8 +107,8 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
      * document) keeps this proportional to what actually changed. */
     const eachTarget = (n: Node, fn: (el: Element) => void) => {
       if (!(n instanceof Element)) return;
-      if (n.matches('.ih-inview')) fn(n);
-      n.querySelectorAll('.ih-inview').forEach(fn);
+      if (n.matches(REVEAL_SEL)) fn(n);
+      n.querySelectorAll(REVEAL_SEL).forEach(fn);
     };
     const mo = new MutationObserver(records => {
       for (const rec of records) {

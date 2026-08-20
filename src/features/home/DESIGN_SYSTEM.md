@@ -56,8 +56,48 @@ tool page is picked up automatically). Do **not** write a local
 element with `ih-inview` is `opacity:0` until observed, so never put it on
 something rendered outside the shell.
 
-Pointer helpers (`onTilt3dMove`, `onTilt3dLeave`, `onSpotlightMove`) are plain
-functions — copy the ~8-line implementations from `IntranetHomePage.tsx`.
+### Surfaces & feedback
+
+| Class | Use for |
+|---|---|
+| `ih-glass` | frosted panel — only over a mesh/aurora background, not flat white |
+| `ih-mesh` | slow-drifting colour wash for page/hero backgrounds (decorative layer, never under text) |
+| `ih-halo` + `--ih-halo` | soft accent bloom behind a card |
+| `ih-lift` + `--ih-lift` | hover rise with a coloured shadow bloom |
+| `ih-magnetic` + `magneticProps` | slight pull toward the cursor — buttons |
+| `ih-underline` | animated underline — tabs and inline links (`data-active` keeps it on) |
+| `ih-skeleton` | shimmer placeholder — prefer over a spinner when the content has a known shape |
+| `ih-scan` | scanline sweep — "processing" surfaces |
+| `ih-orbit` + `--ih-orbit` | orbiting arc on a round chip — live/syncing |
+| `ih-stagger` | children reveal in sequence (parent class, no per-item delay needed) |
+
+## The kit (`src/ui`)
+
+Import the primitives instead of rebuilding them — this is the design system as
+code, and it's why the tools stopped drifting apart:
+
+`Card` · `StatTile` (counts up in view) · `PageHero` · `SectionTitle` ·
+`Button` · `Pill` · `IconChip` · `EmptyState` · `Skeleton` · `Tabs` ·
+`tone()` for per-tool accents.
+
+Pointer helpers live there too — `onTilt3dMove`, `onTilt3dLeave`,
+`onSpotlightMove`, `onMagneticMove`, plus `tiltProps` / `magneticProps` to
+spread onto an element. Import them; do **not** paste copies into a page.
+
+## Three motion vocabularies
+
+Historical, all three still live, all three now behave the same inside the shell:
+
+| Prefix | Where | Notes |
+|---|---|---|
+| `ih-*` | `features/home/intranetStyles.ts` | current; global, largest set — **use for new work** |
+| `tp-*` | `Components/toolStyles.ts` | legacy; the ten big view files use it, injected per page |
+| bare (`stagger`, `hover-lift`, `animate-rise`, `sheen`) | `index.css` | oldest; mostly TA/DA |
+
+`IntranetShell` observes `.ih-inview`, `.tp-reveal` **and** `.animate-rise`, so
+all three scroll-reveal and replay on re-entry rather than firing once on mount.
+Each is guarded behind `html.ih-reveal-ready` and stays visible if the observer
+never attaches. Don't add a fourth vocabulary.
 
 `prefers-reduced-motion: reduce` disables every looping animation — do not
 re-add motion via inline styles that bypass that block.

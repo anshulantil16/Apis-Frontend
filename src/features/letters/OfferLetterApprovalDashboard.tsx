@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { CheckCircle, XCircle, Clock, TrendingUp } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, TrendingUp, Mail, Inbox, RefreshCw } from 'lucide-react';
+import { PageHero, StatTile, Card, Pill, EmptyState, Skeleton, Tabs } from '../../ui';
 
 interface OfferLetter {
   offer_letter_id: number;
@@ -68,156 +69,121 @@ export default function OfferLetterApprovalDashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'accepted':
-        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium"><CheckCircle size={16} /> Accepted</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[11px] font-black"><CheckCircle size={13} /> Accepted</span>;
       case 'rejected':
-        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium"><XCircle size={16} /> Rejected</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-600 rounded-full text-[11px] font-black"><XCircle size={13} /> Rejected</span>;
       case 'pending':
-        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium"><Clock size={16} /> Pending</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full text-[11px] font-black"><Clock size={13} /> Pending</span>;
       default:
-        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">Under Review</span>;
+        return <Pill>Under Review</Pill>;
     }
   };
 
+  /* Skeletons rather than a spinner: the shape of the page is known, so show it
+     filling in instead of a blank screen that jumps once data lands. */
   if (loading && !data) {
-    return <div className="p-6 text-center">Loading approval data...</div>;
+    return (
+      <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto space-y-4">
+          <div className="ih-skeleton h-24 rounded-2xl" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }, (_, i) => <div key={i} className="ih-skeleton h-24 rounded-2xl" style={{ animationDelay: `${i * 90}ms` }} />)}
+          </div>
+          <Skeleton rows={5} />
+        </div>
+      </div>
+    );
   }
 
   if (error && !data) {
-    return <div className="p-6 text-red-600">Error: {error}</div>;
+    return (
+      <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto">
+          <Card tone="rose" interactive={false}>
+            <EmptyState icon={XCircle} tone="rose" title="Couldn't load approval data" hint={error}
+              action={<button onClick={fetchApprovals} className="ih-sheen px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-black inline-flex items-center gap-2"><RefreshCw className="w-3.5 h-3.5" />Try again</button>} />
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   const filteredLetters = getFilteredLetters();
 
   return (
-    <div className="min-h-full bg-[#f5f7fa] p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Offer Letter Approvals</h1>
-          <p className="text-gray-600 mt-2">Track employee acceptance and rejection of offer letters</p>
-        </div>
+    <div className="min-h-full bg-[#f5f7fa] p-4 lg:p-6">
+      <div className="max-w-7xl mx-auto space-y-4">
+        <PageHero icon={Mail} tone="rose" title="Offer Letter Approvals"
+          subtitle="Track employee acceptance and rejection of offer letters"
+          badge={<span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur text-[11px] font-black">
+            <span className="ih-pulse-glow w-1.5 h-1.5 rounded-full bg-emerald-300" />Live
+          </span>} />
 
-        {/* Stats Cards */}
         {data && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm">Total Letters</p>
-                  <p className="text-3xl font-bold text-gray-900">{data.total}</p>
-                </div>
-                <TrendingUp className="text-blue-500" size={32} />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm">Accepted</p>
-                  <p className="text-3xl font-bold text-green-600">{data.accepted}</p>
-                </div>
-                <CheckCircle className="text-green-500" size={32} />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm">Rejected</p>
-                  <p className="text-3xl font-bold text-red-600">{data.rejected}</p>
-                </div>
-                <XCircle className="text-red-500" size={32} />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm">Acceptance Rate</p>
-                  <p className="text-3xl font-bold text-blue-600">{data.acceptance_rate}</p>
-                </div>
-                <TrendingUp className="text-blue-500" size={32} />
-              </div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatTile label="Total Letters" value={data.total} icon={TrendingUp} tone="indigo" />
+            <StatTile label="Accepted" value={data.accepted} icon={CheckCircle} tone="emerald" />
+            <StatTile label="Rejected" value={data.rejected} icon={XCircle} tone="rose" />
+            <StatTile label="Acceptance Rate" value={parseFloat(data.acceptance_rate) || 0} suffix="%"
+              icon={TrendingUp} tone="cyan" hint={`of ${data.total} sent`} />
           </div>
         )}
 
-        {/* Filter Buttons */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="flex gap-2 flex-wrap">
-            {(['all', 'accepted', 'rejected', 'pending'] as const).map(status => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  filter === status
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Card interactive={false} className="p-3">
+          <Tabs tone="rose" active={filter} onChange={setFilter}
+            tabs={[
+              { k: 'all' as const, label: `All${data ? ` (${data.total})` : ''}` },
+              { k: 'accepted' as const, label: `Accepted${data ? ` (${data.accepted})` : ''}`, icon: CheckCircle },
+              { k: 'rejected' as const, label: `Rejected${data ? ` (${data.rejected})` : ''}`, icon: XCircle },
+              { k: 'pending' as const, label: `Pending${data ? ` (${data.pending})` : ''}`, icon: Clock },
+            ]} />
+        </Card>
 
-        {/* Letters Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-100 border-b">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Employee</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Employee ID</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Letter Type</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Approved On</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email Sent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLetters.length === 0 ? (
+        <Card interactive={false} className="overflow-hidden">
+          {filteredLetters.length === 0 ? (
+            <EmptyState icon={Inbox} tone="rose"
+              title={filter === 'all' ? 'No letters yet' : `No ${filter} letters`}
+              hint={filter === 'all'
+                ? 'Letters you generate and send will show up here with their approval status.'
+                : 'Try another filter to see the rest.'} />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50/80 border-b border-slate-200">
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                      No letters found
-                    </td>
+                    {['Employee', 'Employee ID', 'Letter Type', 'Status', 'Approved On', 'Email'].map(h => (
+                      <th key={h} className="px-5 py-2.5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                    ))}
                   </tr>
-                ) : (
-                  filteredLetters.map(letter => (
-                    <tr key={letter.offer_letter_id} className="border-b hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium text-gray-900">{letter.employee_name}</p>
-                          <p className="text-sm text-gray-500">{letter.letter_type}</p>
-                        </div>
+                </thead>
+                <tbody className="ih-stagger">
+                  {filteredLetters.map(letter => (
+                    <tr key={letter.offer_letter_id} className="border-b border-slate-100 last:border-0 hover:bg-cyan-50/40 transition-colors">
+                      <td className="px-5 py-3">
+                        <p className="font-black text-slate-800 text-sm">{letter.employee_name}</p>
+                        <p className="text-[11px] text-slate-400 capitalize">{letter.letter_type}</p>
                       </td>
-                      <td className="px-6 py-4 text-gray-700">{letter.employee_id}</td>
-                      <td className="px-6 py-4 text-gray-700 capitalize">{letter.letter_type}</td>
-                      <td className="px-6 py-4">{getStatusBadge(letter.approval_status)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {formatDate(letter.accepted_at)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          letter.email_sent
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {letter.email_sent ? '✓ Sent' : '✗ Not Sent'}
+                      <td className="px-5 py-3 text-sm text-slate-600 font-semibold">{letter.employee_id}</td>
+                      <td className="px-5 py-3 text-sm text-slate-600 capitalize">{letter.letter_type}</td>
+                      <td className="px-5 py-3">{getStatusBadge(letter.approval_status)}</td>
+                      <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">{formatDate(letter.accepted_at)}</td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black ${
+                          letter.email_sent ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                          <Mail className="w-3 h-3" />{letter.email_sent ? 'Sent' : 'Not sent'}
                         </span>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
 
-        {/* Auto-refresh indicator */}
-        <div className="mt-4 text-center text-sm text-gray-500">
-          Auto-refreshing every 10 seconds
-        </div>
+        <p className="text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+          <span className="ih-pulse-glow w-1.5 h-1.5 rounded-full bg-emerald-400" />Auto-refreshing every 10 seconds
+        </p>
       </div>
     </div>
   );
