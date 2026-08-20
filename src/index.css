@@ -79,11 +79,11 @@
 .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -12px rgba(79, 70, 229, 0.35); }
 
 /* `animate-rise` is the third motion vocabulary in this codebase (alongside
-   tp-* and ih-*). Inside the shell it becomes a scroll reveal like the others,
-   so a long page animates as you travel down it rather than firing everything
-   once on mount. Guarded on .ih-reveal-ready: the shell sets that only after
-   its observer is confirmed running, so without it these stay visible. */
-.animate-rise { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+   tp-* and ih-*); the utility itself comes from the --animate-rise theme token
+   above. Inside the shell it becomes a scroll reveal like the others, so a long
+   page animates as you travel down it rather than firing everything once on
+   mount. Guarded on .ih-reveal-ready: the shell sets that only after its
+   observer is confirmed running, so without it these stay visible. */
 html.ih-reveal-ready .animate-rise {
   animation: none;
   opacity: 0; transform: translateY(18px);
