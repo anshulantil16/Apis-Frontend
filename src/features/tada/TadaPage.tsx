@@ -92,7 +92,14 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 // ── Shared option lists ───────────────────────────────────────────────────────
-const TRAVEL_MODES = ['Train', 'Flight', 'Bus', 'Cab / Taxi', 'Own Car', 'Own Two-Wheeler', 'Auto Rickshaw', 'Company Vehicle'];
+/* Modes for reaching another city. No auto rickshaw — that's for getting around
+   once you're there, and it stays in LOCAL_MODES below. */
+const TRAVEL_MODES = ['Train', 'Flight', 'Bus', 'Cab / Taxi', 'Own Car', 'Own Two-Wheeler', 'Company Vehicle'];
+
+/* "Ticket Date" only makes sense for something you buy a ticket for. Driving
+   yourself has a departure, not a ticket, so the wording follows the mode. */
+const journeyNoun = (mode: string) =>
+  /train|flight|air|bus/i.test(mode || '') ? 'Ticket' : 'Departure';
 const LOCAL_MODES = ['Cab / Taxi', 'Auto Rickshaw', 'Bus', 'Metro', 'Own Car', 'Own Two-Wheeler', 'Bike Taxi', 'E-Rickshaw'];
 const LOCAL_TYPES = ['Outdoor Duty', 'Office Work', 'Client Visit', 'Bank / Govt Work', 'Site Visit', 'Vendor Meeting'];
 const TIME_PREFS = [
@@ -437,11 +444,13 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom, tripT
             </div>
 
             <div className="grid md:grid-cols-2 gap-3">
-              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label>
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City
+                {e?.city_grade && <span className="ml-1.5 text-indigo-500">· grade {e.city_grade}</span>}</label>
                 <input className={inp} value={leg.destination_city} placeholder="e.g. Mumbai"
-                  onChange={e2 => set(i, { destination_city: e2.target.value })} /></div>
-              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address</label>
-                <input className={inp} value={leg.travel_address} placeholder="where you'll be at this stop"
+                  onChange={e2 => set(i, { destination_city: e2.target.value })} />
+                <p className="text-[11px] text-slate-400 mt-1">City only — sets this stop's limits</p></div>
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address <span className="text-slate-300">(optional)</span></label>
+                <input className={inp} value={leg.travel_address} placeholder="office / site / hotel address"
                   onChange={e2 => set(i, { travel_address: e2.target.value })} /></div>
               <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose at this stop <span className="text-slate-300">(optional)</span></label>
                 <input className={inp} value={leg.purpose} onChange={e2 => set(i, { purpose: e2.target.value })} /></div>
@@ -467,7 +476,7 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom, tripT
 
               {leg.travel_mode && (
                 <>
-                  <div><label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Date</label>
+                  <div><label className="text-xs font-bold text-slate-500 mb-1 block">{journeyNoun(leg.travel_mode)} Date</label>
                     <input type="date" className={inp} value={leg.ticket_date} min={tripFrom} max={tripTo}
                       onChange={e2 => set(i, { ticket_date: e2.target.value })} /></div>
                   <div><label className="text-xs font-bold text-slate-500 mb-1 block">Preferred Time</label>
@@ -478,7 +487,7 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom, tripT
                 </>
               )}
 
-              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Fare to this stop (₹)</label>
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">{journeyNoun(leg.travel_mode)} Cost to this stop (₹)</label>
                 <input type="number" min="0" className={inp} value={leg.est_ticket_amount} placeholder="0"
                   onChange={e2 => set(i, { est_ticket_amount: e2.target.value })} /></div>
 
@@ -511,8 +520,9 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom, tripT
    entered by the employee — the policy defines an entitled travel *class*, not
    rupee fares. Everything stays editable; over-ceiling values are flagged for
    the approver rather than blocked. */
-function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
+function EstimateBlock({ est, tour, setTour, total, warnings, inp, maxAdvance, advanceOver }: {
   est: any; tour: any; setTour: (t: any) => void; total: number; warnings: string[]; inp: string;
+  maxAdvance: number; advanceOver: boolean;
 }) {
   const money = (n: number) => `₹${(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
   const rate = (v: any, unit: string) =>
@@ -601,14 +611,14 @@ function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
         {multi
           ? <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Ticket Fare (₹)</label>
+              <label className="text-xs font-bold text-slate-500 mb-1 block">Travel Cost (₹)</label>
               <div className="w-full border-2 border-slate-100 bg-slate-100 rounded-xl px-3 py-2.5 text-sm font-black text-slate-600">{money(est.lines.ticket)}</div>
-              <p className="text-[11px] text-slate-400 mt-1">Total of the per-stop fares above</p>
+              <p className="text-[11px] text-slate-400 mt-1">Total of the per-stop costs above</p>
             </div>
-          : field('est_ticket_amount', 'Ticket Fare (₹)', 'Onward + return, as per approved class')}
+          : field('est_ticket_amount', 'Travel Cost (₹)', 'Onward + return, as per approved class')}
         {field('est_lodging_amount', 'Hotel / Lodging (₹)', multi ? 'Sum across all stops, at each stop’s grade' : `Policy: ${rate(est.rates.stay_per_night, 'per night')} × ${est.nights}`)}
         {field('est_food_amount', 'Food / DA (₹)', multi ? 'Sum across all stops, at each stop’s grade' : `Policy: ${rate(est.rates.da_per_day, 'per day')} × ${est.days}`)}
-        {field('est_local_amount', 'Local Conveyance (₹)', multi ? `Policy rate × ${days} days` : `Policy: ${rate(est.rates.local_per_day, 'per day')} × ${est.days}`)}
+        {field('est_local_amount', 'Conveyance (₹)', multi ? `Policy rate × ${days} days` : `Policy: ${rate(est.rates.local_per_day, 'per day')} × ${est.days}`)}
         {field('est_misc_amount', 'Miscellaneous (₹)', 'Bills mandatory for reimbursement', true)}
       </div>
 
@@ -624,9 +634,22 @@ function EstimateBlock({ est, tour, setTour, total, warnings, inp }: {
       <div className="grid md:grid-cols-2 gap-3 pt-1 border-t border-indigo-100">
         <div className="pt-3">
           <label className="text-xs font-bold text-slate-500 mb-1 block">Advance Required (₹)</label>
-          <input type="number" min="0" className={inp} value={tour.advance_amount}
-            onChange={e => setTour({ ...tour, advance_amount: e.target.value })} placeholder="0" />
-          <p className="text-[11px] text-slate-400 mt-1">Paid before departure · adjusted against your final claim</p>
+          <input type="number" min="0" max={maxAdvance || undefined} value={tour.advance_amount}
+            onChange={e => setTour({ ...tour, advance_amount: e.target.value })} placeholder="0"
+            className={advanceOver
+              ? 'w-full border-2 border-rose-300 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-700 bg-rose-50/60 focus:outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition-all'
+              : inp} />
+          {advanceOver ? (
+            <p className="text-[11px] text-rose-600 font-bold mt-1 flex items-start gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+              Most you can draw is {money(maxAdvance)} — the {money(total)} estimate plus 10%. Lower this to submit.
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-400 mt-1">
+              Paid before departure · adjusted against your final claim
+              {total > 0 && <> · up to {money(maxAdvance)}</>}
+            </p>
+          )}
         </div>
         <div className="pt-3 flex flex-col justify-center bg-white rounded-xl border border-indigo-100 px-4 py-3">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Estimated Expense</p>
@@ -754,6 +777,14 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
          + n(tour.est_local_amount) + n(tour.est_misc_amount);
   }, [tour.est_ticket_amount, tour.est_lodging_amount, tour.est_food_amount, tour.est_local_amount, tour.est_misc_amount]);
 
+  /* An advance may run a little over the estimate — trips do — but not
+     unboundedly, since this is cash released before departure. Over the
+     ceiling the form blocks submission rather than warning, matching the
+     server, which refuses it outright. */
+  const advanceTolerance = est?.advance_tolerance ?? 0.10;
+  const maxAdvance = useMemo(() => Math.round(estTotal * (1 + advanceTolerance)), [estTotal, advanceTolerance]);
+  const advanceOver = estTotal > 0 && (parseFloat(tour.advance_amount) || 0) > maxAdvance;
+
   // Client-side mirror of policy.validate_estimate — instant feedback only.
   const estWarnings = useMemo(() => {
     if (!est) return [];
@@ -763,12 +794,11 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     };
     over(tour.est_lodging_amount, est.caps?.lodging, 'Lodging');
     over(tour.est_food_amount, est.caps?.food, 'Food / DA');
-    over(tour.est_local_amount, est.caps?.local, 'Local conveyance');
-    if ((parseFloat(tour.advance_amount) || 0) > estTotal && estTotal > 0) out.push('Advance requested is more than the total estimate');
+    over(tour.est_local_amount, est.caps?.local, 'Conveyance');
     const legFlags = (est.legs || []).flatMap((l: any) =>
       (l.mode_flags || []).map((f: string) => `${l.city || `Stop ${l.seq + 1}`}: ${f}`));
     return [...out, ...(est.itinerary_flags || []), ...legFlags, ...(est.mode_flags || [])];
-  }, [est, tour.est_lodging_amount, tour.est_food_amount, tour.est_local_amount, tour.advance_amount, estTotal]);
+  }, [est, tour.est_lodging_amount, tour.est_food_amount, tour.est_local_amount]);
 
   const submitTour = async () => {
     setBusy(true); setMsg(null);
@@ -840,8 +870,8 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
           <div className="grid md:grid-cols-2 gap-3">
             {/* Address and city belong to a destination, so in a multi-city trip
                 they live on each stop instead of once on the request. */}
-            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address</label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} /></div>}
-            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /></div>}
+            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City{est?.city_grade && <span className="ml-1.5 text-indigo-500">· grade {est.city_grade}</span>}</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /><p className="text-[11px] text-slate-400 mt-1">City only — this sets your stay and DA limits</p></div>}
+            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address <span className="text-slate-300">(optional)</span></label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} placeholder="office / site / hotel address" /></div>}
             <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose of Journey <span className="text-slate-300">{multiCity ? '(overall — each stop can add its own)' : ''}</span></label><input className={inp} value={tour.purpose} onChange={e => setTour({ ...tour, purpose: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label><input type="date" className={inp} value={tour.from_date} onChange={e => setTour({ ...tour, from_date: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">To Date</label><input type="date" className={inp} value={tour.to_date} onChange={e => setTour({ ...tour, to_date: e.target.value })} /></div>
@@ -896,14 +926,14 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             )}
             {!multiCity && tour.travel_mode && (
               <>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward {journeyNoun(tour.travel_mode)} Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Preferred Time</label>
                   <select className={inp} value={tour.travel_mode_time_pref} onChange={e => setTour({ ...tour, travel_mode_time_pref: e.target.value })}>
                     <option value="">Select time…</option>
                     {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
                   </select>
                 </div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Ticket Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.return_mode_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return {journeyNoun(tour.travel_mode)} Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.return_mode_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
                   <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
                     <option value="">Select time…</option>
@@ -925,7 +955,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
 
               <div className="grid md:grid-cols-2 gap-3 bg-slate-50/70 border border-slate-200 rounded-2xl p-4">
                 <div className="md:col-span-2"><p className="text-xs font-bold text-slate-600">Journey home</p><p className="text-[11px] text-slate-400">Your return from the last stop</p></div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Ticket Date</label><input type="date" className={inp} value={tour.return_mode_date} min={tour.from_date} max={tour.to_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return {journeyNoun(legs[legs.length - 1]?.travel_mode)} Date</label><input type="date" className={inp} value={tour.return_mode_date} min={tour.from_date} max={tour.to_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
                   <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
                     <option value="">Select time…</option>
@@ -936,9 +966,10 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             </div>
           )}
 
-          <EstimateBlock est={est} tour={tour} setTour={setTour} total={estTotal} warnings={estWarnings} inp={inp} />
+          <EstimateBlock est={est} tour={tour} setTour={setTour} total={estTotal} warnings={estWarnings} inp={inp}
+            maxAdvance={maxAdvance} advanceOver={advanceOver} />
 
-          <button onClick={submitTour} disabled={busy} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
+          <button onClick={submitTour} disabled={busy || advanceOver} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
         </div>
       )}
 
@@ -1064,8 +1095,8 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
           {(r.from_date || r.to_date) && <div><p className="text-slate-400 text-xs">Dates</p><p className="font-semibold">{r.from_date} → {r.to_date}{r.number_of_days ? <span className="text-indigo-500"> ({r.number_of_days} day{r.number_of_days === 1 ? '' : 's'})</span> : null}</p></div>}
           {r.sanction_number && <div><p className="text-slate-400 text-xs">Sanction No.</p><p className="font-semibold">{r.sanction_number}</p></div>}
           {r.travel_mode && <div><p className="text-slate-400 text-xs">Mode</p><p className="font-semibold">{r.travel_mode}</p></div>}
-          {r.travel_mode_date && <div><p className="text-slate-400 text-xs">Onward Ticket</p><p className="font-semibold">{r.travel_mode_date}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}</p></div>}
-          {r.return_mode_date && <div><p className="text-slate-400 text-xs">Return Ticket</p><p className="font-semibold">{r.return_mode_date}{r.return_mode_time_pref_label ? ` · ${r.return_mode_time_pref_label}` : ''}</p></div>}
+          {r.travel_mode_date && <div><p className="text-slate-400 text-xs">Onward Journey</p><p className="font-semibold">{r.travel_mode_date}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}</p></div>}
+          {r.return_mode_date && <div><p className="text-slate-400 text-xs">Return Journey</p><p className="font-semibold">{r.return_mode_date}{r.return_mode_time_pref_label ? ` · ${r.return_mode_time_pref_label}` : ''}</p></div>}
           {r.estimate_amount > 0 && <div><p className="text-slate-400 text-xs">Total Estimate</p><p className="font-black text-slate-800">₹{fmt(r.estimate_amount)}</p></div>}
           {r.advance_amount > 0 && <div><p className="text-slate-400 text-xs">Advance Required</p><p className="font-black text-indigo-600">₹{fmt(r.advance_amount)}</p></div>}
           {r.total_claimed > 0 && <div><p className="text-slate-400 text-xs">Total Claimed</p><p className="font-black text-slate-800">₹{fmt(r.total_claimed)}</p></div>}
