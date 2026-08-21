@@ -10,6 +10,17 @@ import { Detail, ReqCard } from './RequestDetail';
 import { ApproverBoard } from './ApproverBoard';
 import { AdminDashboard } from './AdminDashboard';
 
+/* Cursor tilt, written to CSS vars so tracking costs no re-renders. */
+const onTilt = (e: React.MouseEvent<HTMLElement>) => {
+  const el = e.currentTarget, r = el.getBoundingClientRect();
+  el.style.setProperty('--ry', `${((e.clientX - r.left) / r.width - 0.5) * 10}deg`);
+  el.style.setProperty('--rx', `${-((e.clientY - r.top) / r.height - 0.5) * 10}deg`);
+};
+const offTilt = (e: React.MouseEvent<HTMLElement>) => {
+  e.currentTarget.style.setProperty('--rx', '0deg');
+  e.currentTarget.style.setProperty('--ry', '0deg');
+};
+
 export function Portal({ user, onLogout }: { user: User; onLogout: () => void }) {
   const isApprover = ['manager', 'hr', 'finance'].includes(user.role);
   const [tab, setTab] = useState<string>(isApprover ? 'approvals' : 'new');
@@ -34,7 +45,7 @@ export function Portal({ user, onLogout }: { user: User; onLogout: () => void })
         </div>
         {!isAdmin && (
           <div className="max-w-6xl mx-auto px-5 flex gap-1">
-            {tabs.map(t => <button key={t.k} onClick={() => { setTab(t.k); setSel(null); }} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all ${tab === t.k ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}><t.i className="w-4 h-4" />{t.l}</button>)}
+            {tabs.map(t => <button key={t.k} onClick={() => { setTab(t.k); setSel(null); }} data-active={tab === t.k} className={`ih-underline flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-all ${tab === t.k ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><t.i className="w-4 h-4" />{t.l}</button>)}
           </div>
         )}
       </header>
@@ -55,9 +66,10 @@ export function Portal({ user, onLogout }: { user: User; onLogout: () => void })
               return (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
                   {stats.map(s => (
-                    <div key={s.l} className={`hover-lift rounded-2xl p-4 text-white bg-gradient-to-br ${s.g} shadow-md relative overflow-hidden`}>
-                      <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-white/10" />
-                      <s.i className="w-5 h-5 opacity-90 mb-2" />
+                    <div key={s.l} onMouseMove={onTilt} onMouseLeave={offTilt}
+                      className={`ih-tilt3d ih-sweep hover-lift rounded-2xl p-4 text-white bg-gradient-to-br ${s.g} shadow-md relative overflow-hidden`}>
+                      <div className="ih-drift absolute -right-3 -top-3 w-16 h-16 rounded-full bg-white/10" />
+                      <s.i className="ih-float w-5 h-5 opacity-90 mb-2" />
                       <p className="text-3xl font-black leading-none"><Count n={s.v} prefix={s.money ? '₹' : ''} /></p>
                       <p className="text-xs text-white/85 font-semibold mt-1">{s.l}</p>
                     </div>

@@ -3,7 +3,7 @@
    because none is big enough for its own file. */
 import { useState, useEffect, useMemo } from 'react';
 import {
-  CheckCircle, AlertCircle,
+  CheckCircle, AlertCircle, XCircle, FileText, Shield, Wallet, UserCheck, BadgeCheck,
 } from 'lucide-react';
 import { STATUS_STYLE } from './shared';
 
@@ -101,6 +101,74 @@ export function CapsBanner({ caps }: { caps: any }) {
 }
 
 // ── Status pill ───────────────────────────────────────────────────────────────
+/* Where a request has reached, as a pipeline rather than a status word.
+   "Submitted · Pending Manager" tells you the stage; this tells you the shape
+   of the whole journey — what has cleared, what is live now, what is still
+   ahead — which is the question someone actually opens a request to answer. */
+const STAGES = [
+  { k: 'employee', l: 'Submitted', icon: FileText },
+  { k: 'manager', l: 'Manager', icon: UserCheck },
+  { k: 'hr', l: 'HR', icon: Shield },
+  { k: 'finance', l: 'Finance', icon: Wallet },
+  { k: 'paid', l: 'Paid', icon: BadgeCheck },
+];
+
+/** index of the stage a status has *cleared* up to, and whether it died there */
+function stageState(status: string) {
+  const done: Record<string, number> = {
+    submitted: 0, manager_approved: 1, hr_approved: 2, finance_approved: 3, paid: 4,
+    manager_rejected: 0, hr_rejected: 1, finance_rejected: 2,
+  };
+  const rejectedAt: Record<string, number> = {
+    manager_rejected: 1, hr_rejected: 2, finance_rejected: 3,
+  };
+  return { cleared: done[status] ?? 0, rejectedAt: rejectedAt[status] ?? null };
+}
+
+export function StageTrail({ status, statusLabel }: { status: string; statusLabel?: string }) {
+  const { cleared, rejectedAt } = stageState(status);
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Progress</p>
+        {statusLabel && (
+          <p className={`text-[11px] font-black ${rejectedAt !== null ? 'text-rose-600' : 'text-indigo-600'}`}>{statusLabel}</p>
+        )}
+      </div>
+      <div className="flex items-start">
+        {STAGES.map((st, i) => {
+          const isRejected = rejectedAt === i;
+          const isDone = !isRejected && i <= cleared && rejectedAt === null;
+          const isCurrent = !isRejected && rejectedAt === null && i === cleared + 1;
+          const Icon = isRejected ? XCircle : st.icon;
+          const ring = isRejected ? 'bg-rose-500 text-white'
+            : isDone ? 'bg-emerald-500 text-white'
+            : isCurrent ? 'bg-indigo-500 text-white ih-breathe'
+            : 'bg-slate-100 text-slate-300';
+          return (
+            <div key={st.k} className="flex-1 flex flex-col items-center relative min-w-0">
+              {/* connector to the previous node, coloured by what has cleared */}
+              {i > 0 && (
+                <span className={`absolute top-4 right-1/2 left-0 h-0.5 -translate-y-1/2 ${
+                  rejectedAt !== null && i > rejectedAt ? 'bg-slate-100'
+                    : i <= cleared || rejectedAt === i ? 'bg-emerald-400' : 'bg-slate-100'}`} />
+              )}
+              <span style={{ ['--ih-ring' as string]: 'rgba(99,102,241,.45)' }}
+                className={`relative w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all ${ring}`}>
+                <Icon className="w-4 h-4" />
+              </span>
+              <p className={`text-[10px] font-black mt-1.5 text-center truncate w-full px-0.5 ${
+                isRejected ? 'text-rose-600' : isDone ? 'text-emerald-600' : isCurrent ? 'text-indigo-600' : 'text-slate-300'}`}>
+                {isRejected ? 'Rejected' : st.l}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export const Pill = ({ s, label }: { s: string; label: string }) => (
   <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${STATUS_STYLE[s] || 'bg-slate-100 text-slate-600'}`}>{label}</span>
 );

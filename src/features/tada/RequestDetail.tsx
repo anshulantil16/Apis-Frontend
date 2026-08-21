@@ -6,7 +6,7 @@ import {
   CheckCircle, XCircle, FileText, Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Wallet,
 } from 'lucide-react';
 import { API, fmt, type User } from './shared';
-import { Confetti, Pill, Toast } from './components';
+import { Confetti, Pill, StageTrail, Toast } from './components';
 import { PolicyBreakdown } from './PolicyBreakdown';
 
 export function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBack: () => void; onActioned?: () => void }) {
@@ -15,20 +15,37 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
   const [busy, setBusy] = useState(false);
   const [party, setParty] = useState(false);
   const [toast, setToast] = useState<{ t: string; ok: boolean } | null>(null);
-  const load = () => fetch(`${API}/requests/${id}/`).then(x => x.json()).then(setR);
+  // employee_id identifies the viewer, which is how the server decides what
+  // this user may action on this request.
+  const load = () => fetch(`${API}/requests/${id}/?employee_id=${encodeURIComponent(user.employee_id)}`)
+    .then(x => x.json()).then(setR);
   useEffect(() => { load(); }, [id]);
   if (!r) return <div className="p-8 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto" /></div>;
 
-  const canAct = (user.role === 'manager' && r.status === 'submitted') || (user.role === 'hr' && r.status === 'manager_approved') || (user.role === 'finance' && r.status === 'hr_approved');
-  const canPay = user.role === 'finance' && r.status === 'finance_approved';
+  /* Authority comes from the server, which is also what the action endpoint
+     enforces — deriving it here from role and status alone offered Approve on
+     your own request, and on other teams' requests, only to be refused. */
+  const canAct = !!r.permission?.can_approve;
+  const canPay = !!r.permission?.can_pay;
+  const blockedReason: string | null = r.permission?.reason ?? null;
+
   const act = async (action: string) => {
     setBusy(true);
-    const res = await fetch(`${API}/requests/${id}/action/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: user.employee_id, action, remarks }) });
-    if (res.ok) {
-      await load(); if (onActioned) onActioned();
-      const label = action === 'reject' ? 'Request rejected' : action === 'paid' ? 'Marked as paid 💰' : 'Approved & forwarded ✓';
-      setToast({ t: label, ok: action !== 'reject' });
-      if (action !== 'reject') { setParty(true); setTimeout(() => setParty(false), 1600); }
+    try {
+      const res = await fetch(`${API}/requests/${id}/action/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: user.employee_id, action, remarks }) });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await load(); if (onActioned) onActioned();
+        const label = action === 'reject' ? 'Request rejected' : action === 'paid' ? 'Marked as paid 💰' : 'Approved & forwarded ✓';
+        setToast({ t: label, ok: action !== 'reject' });
+        if (action !== 'reject') { setParty(true); setTimeout(() => setParty(false), 1600); }
+      } else {
+        // A refusal used to do nothing at all — the click just vanished.
+        setToast({ t: body.error || 'That action could not be completed.', ok: false });
+        await load();
+      }
+    } catch {
+      setToast({ t: 'Could not reach the server. Check your connection and try again.', ok: false });
     }
     setBusy(false);
   };
@@ -38,6 +55,7 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
       <Confetti show={party} />
       {toast && <Toast msg={toast.t} ok={toast.ok} onClose={() => setToast(null)} />}
       <button onClick={onBack} className="flex items-center gap-1 text-slate-500 text-sm font-bold hover:text-indigo-600 transition-colors"><ChevronLeft className="w-4 h-4" />Back</button>
+      <StageTrail status={r.status} statusLabel={r.status_label} />
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
         <div className="flex justify-between items-start mb-3">
           <div><h3 className="font-black text-slate-800 text-lg">{r.type_label}</h3><p className="text-slate-400 text-sm">{r.employee_name} · {r.employee_id} · {r.department} · Level {r.level}</p></div>
@@ -103,8 +121,8 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
           <div className="mt-3 pt-3 border-t border-slate-100">
             <p className="text-slate-400 text-xs mb-1.5">Estimate breakdown</p>
             <div className="flex flex-wrap gap-1.5 text-[11px]">
-              {[['Ticket', r.est_ticket_amount], ['Lodging', r.est_lodging_amount], ['Food / DA', r.est_food_amount],
-                ['Local', r.est_local_amount], ['Misc', r.est_misc_amount]].map(([l, v]: any) => v > 0 && (
+              {[['Travel', r.est_ticket_amount], ['Lodging', r.est_lodging_amount], ['Food / DA', r.est_food_amount],
+                ['Conveyance', r.est_local_amount], ['Misc', r.est_misc_amount]].map(([l, v]: any) => v > 0 && (
                 <span key={l} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-600">{l} ₹{fmt(v)}</span>
               ))}
             </div>
@@ -178,6 +196,15 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
           {(!r.logs || r.logs.length === 0) && <p className="text-slate-300 text-sm">No actions yet.</p>}
         </div>
       </div>
+
+      {/* Say why there is nothing to do here. An approver landing on a request
+          with no controls and no explanation assumes the screen is broken. */}
+      {!canAct && !canPay && blockedReason && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-slate-500 font-semibold">{blockedReason}</p>
+        </div>
+      )}
 
       {(canAct || canPay) && (
         <div className="bg-white rounded-2xl border-2 border-indigo-100 shadow-sm p-5">
