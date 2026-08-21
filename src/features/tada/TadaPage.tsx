@@ -531,7 +531,8 @@ const SETTLE_HEADS: { k: string; l: string }[] = [
    filing is a matter of matching receipts to lines that are already laid out —
    and an over-run is attributable to the leg that caused it. */
 function BillCollector({ stops, heads, items, setItems, inp }: {
-  stops: { seq: number | null; label: string; sub: string; heads: Record<string, number> }[];
+  stops: { seq: number | null; label: string; sub: string;
+           heads: Record<string, number>; policy: Record<string, number | null> }[];
   heads: { k: string; l: string }[];
   items: any[]; setItems: (i: any[]) => void; inp: string;
 }) {
@@ -551,6 +552,7 @@ function BillCollector({ stops, heads, items, setItems, inp }: {
       {stops.map(stop => {
         const stopClaimed = heads.reduce((s, h) => s + sumFor(stop.seq, h.k), 0);
         const stopEst = heads.reduce((s, h) => s + (stop.heads[h.k] || 0), 0);
+        const stopPol = heads.reduce((s, h) => s + (stop.policy?.[h.k] || 0), 0);
         return (
           <div key={String(stop.seq)} className="border border-slate-200 rounded-2xl overflow-hidden">
             <div className="bg-slate-50/80 px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap border-b border-slate-200">
@@ -559,6 +561,7 @@ function BillCollector({ stops, heads, items, setItems, inp }: {
                 <p className="text-[11px] text-slate-400">{stop.sub}</p>
               </div>
               <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                <span className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-500">Policy {money(stopPol)}</span>
                 <span className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-500">Sanctioned {money(stopEst)}</span>
                 <span className={`rounded-lg px-2 py-1 border ${stopClaimed > stopEst && stopEst > 0
                   ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
@@ -570,17 +573,20 @@ function BillCollector({ stops, heads, items, setItems, inp }: {
             <div className="divide-y divide-slate-100">
               {heads.map(h => {
                 const est = stop.heads[h.k] || 0;
+                const pol = stop.policy?.[h.k] ?? null;   // null = no ceiling for this head
                 const act = sumFor(stop.seq, h.k);
                 const rows = rowsFor(stop.seq, h.k);
-                const over = est > 0 && act > est;
+                const overPol = pol != null && act > pol;
                 return (
                   <div key={h.k} className="px-4 py-3">
                     <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
                       <p className="font-bold text-slate-700 text-xs">{h.l}</p>
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold flex-wrap">
+                        {pol != null && <span className="text-slate-400">Policy {money(pol)}</span>}
                         {est > 0 && <span className="text-slate-400">Sanctioned {money(est)}</span>}
-                        {act > 0 && <span className={over ? 'text-rose-600' : 'text-slate-600'}>Claimed {money(act)}</span>}
-                        {over && <span className="text-rose-600">+{money(act - est)}</span>}
+                        {act > 0 && <span className={overPol ? 'text-rose-600' : 'text-slate-600'}>Claimed {money(act)}</span>}
+                        {overPol ? <span className="text-rose-600">{money(act - (pol as number))} over policy</span>
+                          : act > 0 && pol != null ? <span className="text-emerald-600">within policy</span> : null}
                       </div>
                     </div>
 
@@ -632,6 +638,121 @@ function BillCollector({ stops, heads, items, setItems, inp }: {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ── Policy vs sanctioned vs claimed ───────────────────────────────────────────
+   Three different numbers, and a claim can only be judged with all three in
+   view: the policy entitlement (the hard ceiling from the matrices), what was
+   sanctioned before the trip (seeded from policy but editable, so it may sit
+   above or below it), and what is actually being claimed.
+
+   The employee sees this while filing and every approver sees the same
+   component afterwards — the server computes the arithmetic once so the two
+   can never drift apart. */
+function PolicyBreakdown({ settlement, compact = false }: { settlement: any; compact?: boolean }) {
+  if (!settlement) return null;
+  const money = (n: number | null | undefined) =>
+    n === null || n === undefined ? '—' : `₹${Math.round(n).toLocaleString('en-IN')}`;
+  const t = settlement.totals || {};
+
+  return (
+    <div className="space-y-3">
+      {settlement.stops.map((st: any) => (
+        <div key={String(st.key)} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-slate-50/80 px-3 py-2 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap">
+            <p className="font-black text-slate-800 text-xs">
+              {st.seq !== null ? `Stop ${st.seq + 1} · ` : ''}{st.city}
+              {st.grade && <span className="text-indigo-500 font-bold"> · grade {st.grade}</span>}
+            </p>
+            <p className="text-[11px] text-slate-400">
+              {st.from_date} → {st.to_date}{st.days ? ` · ${st.days}d / ${st.nights}n` : ''}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-slate-400">
+                <tr>
+                  <th className="px-3 py-1.5 text-left font-black uppercase tracking-widest">Head</th>
+                  <th className="px-3 py-1.5 text-right font-black uppercase tracking-widest">Policy</th>
+                  <th className="px-3 py-1.5 text-right font-black uppercase tracking-widest">Sanctioned</th>
+                  <th className="px-3 py-1.5 text-right font-black uppercase tracking-widest">Claimed</th>
+                  <th className="px-3 py-1.5 text-right font-black uppercase tracking-widest">vs Policy</th>
+                </tr>
+              </thead>
+              <tbody>
+                {st.rows.map((row: any) => (
+                  <tr key={row.key} className="border-t border-slate-100 align-top">
+                    <td className="px-3 py-1.5 font-bold text-slate-700">{row.label}</td>
+                    <td className="px-3 py-1.5 text-right text-slate-500">{money(row.policy)}</td>
+                    <td className="px-3 py-1.5 text-right text-slate-500">{money(row.sanctioned)}</td>
+                    <td className="px-3 py-1.5 text-right font-black text-slate-800">{money(row.claimed)}</td>
+                    <td className="px-3 py-1.5 text-right">
+                      {row.policy === null ? <span className="text-slate-300">—</span>
+                        : row.over_policy ? <span className="font-black text-rose-600">+{money(row.over_policy)}</span>
+                        : row.claimed ? <span className="font-bold text-emerald-600">within</span>
+                        : <span className="text-slate-300">—</span>}
+                      {!compact && row.flags?.map((f: string, i: number) => (
+                        <p key={i} className="text-[10px] text-amber-700 font-semibold mt-0.5 text-left">{f}</p>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-slate-200 bg-slate-50/60">
+                  <td className="px-3 py-1.5 font-black text-slate-600">Stop total</td>
+                  <td className="px-3 py-1.5 text-right font-bold text-slate-500">{money(st.totals.policy)}</td>
+                  <td className="px-3 py-1.5 text-right font-bold text-slate-500">{money(st.totals.sanctioned)}</td>
+                  <td className="px-3 py-1.5 text-right font-black text-slate-900">{money(st.totals.claimed)}</td>
+                  <td className="px-3 py-1.5 text-right">
+                    {st.totals.claimed > st.totals.policy && st.totals.policy > 0
+                      ? <span className="font-black text-rose-600">+{money(st.totals.claimed - st.totals.policy)}</span>
+                      : <span className="text-slate-300">—</span>}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+
+      {settlement.unattributed?.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <p className="text-[11px] font-black text-amber-700 uppercase tracking-widest">Not linked to a stop</p>
+          {settlement.unattributed.map((x: any) => (
+            <p key={x.key} className="text-xs text-amber-800 font-semibold">{x.label} {money(x.claimed)}</p>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+        {[
+          { l: 'Policy allows', v: money(t.policy), c: 'text-slate-700' },
+          { l: 'Sanctioned', v: money(t.sanctioned), c: 'text-slate-700' },
+          { l: 'Claimed', v: money(t.claimed), c: 'text-slate-900' },
+          { l: 'Advance taken', v: `− ${money(settlement.advance)}`, c: 'text-amber-600' },
+        ].map(x => (
+          <div key={x.l} className="bg-white rounded-xl border border-slate-200 px-3 py-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{x.l}</p>
+            <p className={`text-base font-black ${x.c}`}>{x.v}</p>
+          </div>
+        ))}
+        <div className={`rounded-xl border px-3 py-2 ${settlement.net >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            {settlement.net >= 0 ? 'Payable' : 'To recover'}
+          </p>
+          <p className={`text-base font-black ${settlement.net >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+            {money(Math.abs(settlement.net))}
+          </p>
+        </div>
+      </div>
+
+      {settlement.over_policy > 0 && (
+        <p className="text-xs text-rose-700 font-bold bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          Claim is {money(settlement.over_policy)} above what policy allows for this trip.
+        </p>
+      )}
     </div>
   );
 }
@@ -952,6 +1073,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
         label: `Stop ${l.seq + 1} · ${l.destination_city}`,
         sub: `${l.from_date} → ${l.to_date}${l.days ? ` · ${l.days}d` : ''}${l.city_grade ? ` · grade ${l.city_grade}` : ''}`,
         heads: l.heads || {},
+        policy: l.policy_heads || {},
       }));
     }
     return [{
@@ -959,6 +1081,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
       label: sanction ? (sanction.destination_city || 'This trip') : 'Expenses',
       sub: sanction ? `${sanction.from_date} → ${sanction.to_date}` : 'Not against a sanctioned trip',
       heads: sanction?.heads || {},
+      policy: sanction?.policy_heads || {},
     }];
   }, [sanction]);
 
@@ -1450,9 +1573,21 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
         )}
       </div>
 
+      {/* What policy allows, what was sanctioned, what is being claimed — the
+          same breakdown the employee saw while filing, so every approver in the
+          chain judges the claim against the same figures. */}
+      {r.settlement && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <h4 className="font-black text-slate-700 flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-indigo-500" />Policy · Sanctioned · Claimed
+          </h4>
+          <PolicyBreakdown settlement={r.settlement} />
+        </div>
+      )}
+
       {r.expense_items?.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 overflow-x-auto">
-          <h4 className="font-black text-slate-700 mb-3">Expense Items</h4>
+          <h4 className="font-black text-slate-700 mb-3">Bills</h4>
           <table className="w-full text-xs"><thead><tr className="text-slate-400 border-b-2"><th className="text-left py-1">Category</th><th className="text-left">Date</th><th className="text-left">Detail</th><th className="text-right">Claimed</th><th className="text-right">Cap</th><th className="text-center">Bill</th><th className="text-left">Policy</th></tr></thead>
             <tbody>{r.expense_items.map((it: any) => (
               <tr key={it.id} className="border-b border-slate-100">
