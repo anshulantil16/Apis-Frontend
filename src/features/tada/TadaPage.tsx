@@ -524,6 +524,118 @@ const SETTLE_HEADS: { k: string; l: string }[] = [
   { k: 'local_transport', l: 'Conveyance' }, { k: 'misc', l: 'Miscellaneous' },
 ];
 
+/* ── Bills, collected the way the trip was sanctioned ──────────────────────────
+   One flat list with a category dropdown made the employee re-derive the
+   structure the sanction already describes. Bills are gathered per stop and per
+   head instead, each showing what that head was sanctioned for at that stop, so
+   filing is a matter of matching receipts to lines that are already laid out —
+   and an over-run is attributable to the leg that caused it. */
+function BillCollector({ stops, heads, items, setItems, inp }: {
+  stops: { seq: number | null; label: string; sub: string; heads: Record<string, number> }[];
+  heads: { k: string; l: string }[];
+  items: any[]; setItems: (i: any[]) => void; inp: string;
+}) {
+  const money = (n: number) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
+  const rowsFor = (seq: number | null, cat: string) =>
+    items.map((it, idx) => ({ it, idx })).filter(({ it }) => (it.leg_seq ?? null) === seq && it.category === cat);
+  const sumFor = (seq: number | null, cat: string) =>
+    rowsFor(seq, cat).reduce((s, { it }) => s + (parseFloat(it.claimed_amount) || 0), 0);
+  const patch = (idx: number, p: any) => setItems(items.map((x, j) => j === idx ? { ...x, ...p } : x));
+  const addRow = (seq: number | null, cat: string) => setItems([...items, {
+    category: cat, leg_seq: seq, date: '', description: '', from_location: '', to_location: '',
+    mode: '', km: '', claimed_amount: '', bill: null,
+  }]);
+
+  return (
+    <div className="space-y-3">
+      {stops.map(stop => {
+        const stopClaimed = heads.reduce((s, h) => s + sumFor(stop.seq, h.k), 0);
+        const stopEst = heads.reduce((s, h) => s + (stop.heads[h.k] || 0), 0);
+        return (
+          <div key={String(stop.seq)} className="border border-slate-200 rounded-2xl overflow-hidden">
+            <div className="bg-slate-50/80 px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap border-b border-slate-200">
+              <div>
+                <p className="font-black text-slate-800 text-sm">{stop.label}</p>
+                <p className="text-[11px] text-slate-400">{stop.sub}</p>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                <span className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-500">Sanctioned {money(stopEst)}</span>
+                <span className={`rounded-lg px-2 py-1 border ${stopClaimed > stopEst && stopEst > 0
+                  ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                  Claimed {money(stopClaimed)}
+                </span>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {heads.map(h => {
+                const est = stop.heads[h.k] || 0;
+                const act = sumFor(stop.seq, h.k);
+                const rows = rowsFor(stop.seq, h.k);
+                const over = est > 0 && act > est;
+                return (
+                  <div key={h.k} className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                      <p className="font-bold text-slate-700 text-xs">{h.l}</p>
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                        {est > 0 && <span className="text-slate-400">Sanctioned {money(est)}</span>}
+                        {act > 0 && <span className={over ? 'text-rose-600' : 'text-slate-600'}>Claimed {money(act)}</span>}
+                        {over && <span className="text-rose-600">+{money(act - est)}</span>}
+                      </div>
+                    </div>
+
+                    {rows.length === 0 ? (
+                      <button type="button" onClick={() => addRow(stop.seq, h.k)}
+                        className="w-full border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 text-slate-400 hover:text-indigo-600 rounded-xl py-2 text-[11px] font-bold transition-all flex items-center justify-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5" />Add {h.l.toLowerCase()} bill
+                      </button>
+                    ) : (
+                      <div className="space-y-2">
+                        {rows.map(({ it, idx }) => (
+                          <div key={idx} className="grid grid-cols-2 lg:grid-cols-12 gap-2 items-start bg-slate-50/60 rounded-xl p-2.5">
+                            <div className="lg:col-span-3">
+                              <input type="date" className={inp} value={it.date}
+                                onChange={e => patch(idx, { date: e.target.value })} />
+                            </div>
+                            <div className="lg:col-span-3">
+                              <input type="number" min="0" className={inp} placeholder="Amount ₹"
+                                value={it.claimed_amount} onChange={e => patch(idx, { claimed_amount: e.target.value })} />
+                            </div>
+                            <div className="col-span-2 lg:col-span-4">
+                              <input className={inp} placeholder="What was this for?"
+                                value={it.description} onChange={e => patch(idx, { description: e.target.value })} />
+                            </div>
+                            <div className="col-span-2 lg:col-span-2 flex items-center gap-1.5">
+                              <label className={`flex-1 cursor-pointer text-[11px] font-bold rounded-xl px-2 py-2.5 text-center border-2 transition-all truncate ${
+                                it.bill ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-dashed border-slate-300 text-slate-400 hover:border-indigo-300 hover:text-indigo-600'}`}>
+                                <input type="file" accept="image/*,application/pdf" className="hidden"
+                                  onChange={e => patch(idx, { bill: e.target.files?.[0] || null })} />
+                                {it.bill ? <span className="inline-flex items-center gap-1"><Paperclip className="w-3 h-3" />Attached</span> : 'Bill'}
+                              </label>
+                              <button type="button" onClick={() => setItems(items.filter((_, j) => j !== idx))}
+                                className="text-rose-300 hover:text-rose-600 shrink-0" title="Remove">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => addRow(stop.seq, h.k)}
+                          className="text-[11px] font-bold text-indigo-500 hover:text-indigo-700 inline-flex items-center gap-1">
+                          <Plus className="w-3 h-3" />Add another {h.l.toLowerCase()} bill
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SettlementTable({ sanction, claimedByCat, claimTotal }: {
   sanction: any; claimedByCat: Record<string, number>; claimTotal: number;
 }) {
@@ -815,7 +927,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     }));
   };
 
-  const [items, setItems] = useState<any[]>([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]);
+  const [items, setItems] = useState<any[]>([]);
   // local travel
   const [local, setLocal] = useState<any>({ local_travel_type: 'Outdoor Duty', from_date: '', to_date: '', purpose: '' });
   const [lrows, setLrows] = useState<any[]>([{ date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }]);
@@ -828,6 +940,27 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   }, [items]);
   const claimTotal = useMemo(
     () => items.reduce((s: number, it: any) => s + (parseFloat(it.claimed_amount) || 0), 0), [items]);
+
+  /* Bills are collected per stop. A multi-city sanction gives one section per
+     leg with that leg's own sanctioned heads; a single-destination trip gives
+     one section carrying the whole estimate; a standalone claim gives one
+     section with nothing sanctioned to compare against. */
+  const claimStops = useMemo(() => {
+    if (sanction?.legs?.length) {
+      return sanction.legs.map((l: any) => ({
+        seq: l.seq,
+        label: `Stop ${l.seq + 1} · ${l.destination_city}`,
+        sub: `${l.from_date} → ${l.to_date}${l.days ? ` · ${l.days}d` : ''}${l.city_grade ? ` · grade ${l.city_grade}` : ''}`,
+        heads: l.heads || {},
+      }));
+    }
+    return [{
+      seq: null,
+      label: sanction ? (sanction.destination_city || 'This trip') : 'Expenses',
+      sub: sanction ? `${sanction.from_date} → ${sanction.to_date}` : 'Not against a sanctioned trip',
+      heads: sanction?.heads || {},
+    }];
+  }, [sanction]);
 
   /* Pull the policy estimate whenever destination / dates / mode change, and
      seed the lodging-food-local fields with the policy figure. The employee can
@@ -942,7 +1075,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
     items.forEach((it, i) => { if (it.bill) fd.append(`bill_${i}`, it.bill); });
     const r = await fetch(`${API}/requests/travel-expense/`, { method: 'POST', body: fd });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setItems([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]); pickSanction(null); cheer(d.message); }
+    if (r.ok) { setItems([]); pickSanction(null); cheer(d.message); }
   };
   const submitLocal = async () => {
     setBusy(true); setMsg(null);
@@ -955,7 +1088,7 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   };
 
   const inp = 'w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all bg-slate-50/50 focus:bg-white';
-  const CATS = [{ k: 'travel', l: 'Travel Details' }, { k: 'lodging', l: 'Lodging' }, { k: 'food', l: 'Food / DA' }, { k: 'local_transport', l: 'Local Transport' }, { k: 'misc', l: 'Miscellaneous' }];
+  const CATS = [{ k: 'travel', l: 'Travel' }, { k: 'lodging', l: 'Lodging' }, { k: 'food', l: 'Food / DA' }, { k: 'local_transport', l: 'Conveyance' }, { k: 'misc', l: 'Miscellaneous' }];
 
   const TYPES = [
     { k: 'tour_sanction', l: 'Tour Programme Sanction', d: 'Pre-travel approval', i: FileText, grad: 'from-sky-500 to-blue-600' },
@@ -1148,36 +1281,12 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction No.</label><input className={inp} value={texp.sanction_number} onChange={e => setTexp({ ...texp, sanction_number: e.target.value })} /></div>
           </div>
           <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-xs text-rose-700 flex items-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /><b>ATTENTION:</b>&nbsp;Attaching bills/invoices is mandatory. Bills must show <b>Apis India Ltd</b> &amp; GSTIN <b>05AAACM0656K1ZL</b>. No bill → no approval.</div>
-          <div className="space-y-3">
-            {items.map((it, i) => (
-              <div key={i} className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">Expense Line {i + 1}</span>
-                  {items.length > 1 && <button onClick={() => setItems(items.filter((_, j) => j !== i))} className="text-rose-400 hover:text-rose-600 flex items-center gap-1 text-xs font-bold"><Trash2 className="w-4 h-4" />Remove</button>}
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                  <div className="col-span-2 lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Category</label>
-                    <select className={inp} value={it.category} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, category: e.target.value } : x))}>{CATS.map(c => <option key={c.k} value={c.k}>{c.l}</option>)}</select></div>
-                  <div className="lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Date</label><input type="date" className={inp} value={it.date} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} /></div>
-                  <div className="lg:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Amount ₹</label><input type="number" className={inp} value={it.claimed_amount} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, claimed_amount: e.target.value } : x))} placeholder="0" /></div>
-                  <div className="col-span-2 lg:col-span-3"><label className="text-xs font-bold text-slate-500 mb-1 block">Description</label><input className={inp} value={it.description} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} placeholder="What was this expense for?" /></div>
-                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">Mode</label><SelectOther key={formKey} className={inp} value={it.mode} onChange={v => setItems(items.map((x, j) => j === i ? { ...x, mode: v } : x))} options={TRAVEL_MODES} placeholder="Mode…" /></div>
-                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input className={inp} value={it.from_location} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, from_location: e.target.value } : x))} /></div>
-                  <div className="lg:col-span-1"><label className="text-xs font-bold text-slate-500 mb-1 block">To</label><input className={inp} value={it.to_location} onChange={e => setItems(items.map((x, j) => j === i ? { ...x, to_location: e.target.value } : x))} /></div>
-                </div>
-                <label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed text-sm font-bold cursor-pointer transition-all ${it.bill ? 'border-emerald-300 bg-emerald-50 text-emerald-600' : 'border-slate-300 text-slate-400 hover:border-indigo-300 hover:text-indigo-500'}`}>
-                  <Paperclip className="w-4 h-4" />{it.bill ? `Bill attached — ${it.bill.name}` : 'Attach Bill / Invoice (mandatory)'}
-                  <input type="file" className="hidden" onChange={e => setItems(items.map((x, j) => j === i ? { ...x, bill: e.target.files?.[0] || null } : x))} />
-                </label>
-              </div>
-            ))}
-            <button onClick={() => setItems([...items, { category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }])} className="flex items-center justify-center gap-1.5 w-full border-2 border-dashed border-indigo-200 text-indigo-500 hover:bg-indigo-50 rounded-xl py-2.5 text-sm font-bold transition-all"><Plus className="w-4 h-4" />Add Expense Line</button>
-          </div>
+          <BillCollector stops={claimStops} heads={CATS} items={items} setItems={setItems} inp={inp} />
           {sanction && <SettlementTable sanction={sanction} claimedByCat={claimedByCat} claimTotal={claimTotal} />}
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <span className="font-black text-slate-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">Total Claim: ₹{fmt(items.reduce((s, i) => s + (Number(i.claimed_amount) || 0), 0))}</span>
-            <button onClick={submitTexp} disabled={busy} className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Save &amp; Submit</>}</button>
+            <button onClick={submitTexp} disabled={busy || items.length === 0} className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Save &amp; Submit</>}</button>
           </div>
         </div>
       )}
