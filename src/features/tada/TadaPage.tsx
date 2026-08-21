@@ -514,6 +514,91 @@ function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom, tripT
   );
 }
 
+/* ── Settlement: what was sanctioned vs what is being claimed ──────────────────
+   An approver looking at a bare claim total has nothing to judge it against.
+   Shown side by side, an over-run is visible per head, and the advance already
+   paid is netted off so the figure at the bottom is the money that actually
+   still has to move. */
+const SETTLE_HEADS: { k: string; l: string }[] = [
+  { k: 'travel', l: 'Travel' }, { k: 'lodging', l: 'Lodging' }, { k: 'food', l: 'Food / DA' },
+  { k: 'local_transport', l: 'Conveyance' }, { k: 'misc', l: 'Miscellaneous' },
+];
+
+function SettlementTable({ sanction, claimedByCat, claimTotal }: {
+  sanction: any; claimedByCat: Record<string, number>; claimTotal: number;
+}) {
+  const money = (n: number) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
+  const heads = sanction.heads || {};
+  const advance = sanction.advance_amount || 0;
+  const net = claimTotal - advance;
+
+  return (
+    <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-indigo-100 rounded-2xl p-4 space-y-3">
+      <h4 className="font-black text-slate-700 text-sm flex items-center gap-2">
+        <Wallet className="w-4 h-4 text-indigo-500" />Sanctioned vs Claimed
+      </h4>
+
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 text-slate-400">
+              <tr>{['Head', 'Sanctioned', 'Claimed', 'Difference'].map((h, i) => (
+                <th key={h} className={`px-3 py-1.5 font-black uppercase tracking-widest ${i ? 'text-right' : 'text-left'}`}>{h}</th>))}</tr>
+            </thead>
+            <tbody>
+              {SETTLE_HEADS.map(({ k, l }) => {
+                const est = heads[k] || 0, act = claimedByCat[k] || 0;
+                if (!est && !act) return null;
+                const diff = act - est;
+                return (
+                  <tr key={k} className="border-t border-slate-100">
+                    <td className="px-3 py-1.5 font-bold text-slate-700">{l}</td>
+                    <td className="px-3 py-1.5 text-right text-slate-500">{money(est)}</td>
+                    <td className="px-3 py-1.5 text-right font-bold text-slate-800">{money(act)}</td>
+                    <td className={`px-3 py-1.5 text-right font-bold ${diff > 0 ? 'text-rose-600' : diff < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {diff === 0 ? '—' : `${diff > 0 ? '+' : '−'}${money(Math.abs(diff))}`}
+                    </td>
+                  </tr>
+                );
+              })}
+              <tr className="border-t-2 border-slate-200 bg-slate-50/60">
+                <td className="px-3 py-2 font-black text-slate-700">Total</td>
+                <td className="px-3 py-2 text-right font-bold text-slate-600">{money(sanction.estimate_amount)}</td>
+                <td className="px-3 py-2 text-right font-black text-slate-900">{money(claimTotal)}</td>
+                <td className={`px-3 py-2 text-right font-black ${claimTotal > sanction.estimate_amount ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {claimTotal === sanction.estimate_amount ? '—' : `${claimTotal > sanction.estimate_amount ? '+' : '−'}${money(Math.abs(claimTotal - sanction.estimate_amount))}`}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {claimTotal > sanction.estimate_amount && (
+        <p className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          Claim is {money(claimTotal - sanction.estimate_amount)} over what was sanctioned — expect your approver to ask why.
+        </p>
+      )}
+
+      <div className="grid sm:grid-cols-3 gap-2">
+        <div className="bg-white rounded-xl border border-slate-200 px-3 py-2">
+          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Total Claimed</p>
+          <p className="text-lg font-black text-slate-800">{money(claimTotal)}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 px-3 py-2">
+          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Advance Taken</p>
+          <p className="text-lg font-black text-amber-600">− {money(advance)}</p>
+        </div>
+        <div className={`rounded-xl border px-3 py-2 ${net >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{net >= 0 ? 'Payable to you' : 'You must return'}</p>
+          <p className={`text-lg font-black ${net >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{money(Math.abs(net))}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Pre-travel cost estimate ──────────────────────────────────────────────────
    Lodging / food / local conveyance are seeded from the policy matrices for the
    employee's band × city grade × trip length. Ticket fare and miscellaneous are
@@ -700,10 +785,49 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   const seededRef = useRef<any>({});   // last policy figures written into the form
   // travel expense
   const [texp, setTexp] = useState<any>({ destination_city: '', from_date: '', to_date: '', purpose: '', sanction_number: '' });
+  /* Approved trips still waiting on their bills. A claim filed against one is
+     settled line by line against what was sanctioned, and the advance already
+     drawn is netted off — so the claim form leads with picking that trip. */
+  const [claimable, setClaimable] = useState<any[]>([]);
+  const [sanctionId, setSanctionId] = useState<number | null>(null);
+  const sanction = useMemo(() => claimable.find(s => s.id === sanctionId) || null, [claimable, sanctionId]);
+
+  useEffect(() => {
+    if (type !== 'travel_expense') return;
+    let cancelled = false;
+    fetch(`${API}/requests/claimable/?employee_id=${encodeURIComponent(user.employee_id)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && !cancelled) setClaimable(d.sanctions || []); })
+      .catch(() => { /* claiming without a sanction stays possible */ });
+    return () => { cancelled = true; };
+  }, [type, user.employee_id, formKey]);   // formKey bumps after a submit, refetching the list
+
+  // Picking a trip fills in its details so they aren't retyped.
+  const pickSanction = (s: any | null) => {
+    setSanctionId(s ? s.id : null);
+    setTexp((p: any) => ({
+      ...p,
+      destination_city: s ? s.destination_city : '',
+      from_date: s ? s.from_date || '' : '',
+      to_date: s ? s.to_date || '' : '',
+      sanction_number: s ? s.sanction_number || '' : '',
+      purpose: s ? s.purpose || '' : '',
+    }));
+  };
+
   const [items, setItems] = useState<any[]>([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]);
   // local travel
   const [local, setLocal] = useState<any>({ local_travel_type: 'Outdoor Duty', from_date: '', to_date: '', purpose: '' });
   const [lrows, setLrows] = useState<any[]>([{ date: '', purpose: '', from_location: '', to_location: '', mode: 'Cab', km: '', amount: '' }]);
+
+  // Claimed so far per category, for the sanctioned-vs-claimed table.
+  const claimedByCat = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const it of items) m[it.category] = (m[it.category] || 0) + (parseFloat(it.claimed_amount) || 0);
+    return m;
+  }, [items]);
+  const claimTotal = useMemo(
+    () => items.reduce((s: number, it: any) => s + (parseFloat(it.claimed_amount) || 0), 0), [items]);
 
   /* Pull the policy estimate whenever destination / dates / mode change, and
      seed the lodging-food-local fields with the policy figure. The employee can
@@ -811,13 +935,14 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
   const submitTexp = async () => {
     setBusy(true); setMsg(null);
     const fd = new FormData();
-    const payload = { ...texp, employee_id: user.employee_id, items: items.map(({ bill, ...i }) => i) };
+    const payload = { ...texp, employee_id: user.employee_id, sanction_id: sanctionId,
+                      items: items.map(({ bill, ...i }) => i) };
     fd.append('payload', JSON.stringify(payload));
     fd.append('employee_id', user.employee_id);
     items.forEach((it, i) => { if (it.bill) fd.append(`bill_${i}`, it.bill); });
     const r = await fetch(`${API}/requests/travel-expense/`, { method: 'POST', body: fd });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setItems([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]); cheer(d.message); }
+    if (r.ok) { setItems([{ category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }]); pickSanction(null); cheer(d.message); }
   };
   const submitLocal = async () => {
     setBusy(true); setMsg(null);
@@ -976,6 +1101,46 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
       {type === 'travel_expense' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4 animate-rise">
           {formHead(active)}
+
+          {/* Which approved trip these bills belong to. Filing against the
+              sanction is what lets the approver see estimate vs actual and
+              net off the advance already paid. */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-xs font-black text-slate-600">Which trip are you claiming for?</p>
+              {claimable.length > 0 && <span className="text-[11px] font-bold text-indigo-500">{claimable.length} approved trip{claimable.length === 1 ? '' : 's'} awaiting bills</span>}
+            </div>
+
+            {claimable.length === 0 ? (
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl px-3 py-2.5">
+                <p className="text-xs text-slate-500 font-semibold">No approved trips waiting on bills</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">You can still file a standalone claim below for travel that wasn't pre-sanctioned.</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-2">
+                {claimable.map(s => {
+                  const on = s.id === sanctionId;
+                  return (
+                    <button key={s.id} type="button" onClick={() => pickSanction(on ? null : s)}
+                      className={`text-left p-3 rounded-xl border-2 transition-all ${on
+                        ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-indigo-300'}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-black text-sm text-slate-800 truncate">{s.destination_city || 'Trip'}</p>
+                        {on && <CheckCircle className="w-4 h-4 text-indigo-600 shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{s.from_date} → {s.to_date}{s.number_of_days ? ` · ${s.number_of_days}d` : ''}</p>
+                      <div className="flex flex-wrap gap-1 mt-1.5 text-[11px] font-bold">
+                        <span className="bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">Est ₹{fmt(s.estimate_amount)}</span>
+                        {s.advance_amount > 0 && <span className="bg-amber-50 text-amber-700 rounded px-1.5 py-0.5">Advance ₹{fmt(s.advance_amount)}</span>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="grid md:grid-cols-4 gap-3">
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City</label><input className={inp} value={texp.destination_city} onChange={e => setTexp({ ...texp, destination_city: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">From</label><input type="date" className={inp} value={texp.from_date} onChange={e => setTexp({ ...texp, from_date: e.target.value })} /></div>
@@ -1008,6 +1173,8 @@ function NewRequest({ user, onDone }: { user: User; onDone: () => void }) {
             ))}
             <button onClick={() => setItems([...items, { category: 'travel', date: '', description: '', from_location: '', to_location: '', mode: '', km: '', claimed_amount: '', bill: null }])} className="flex items-center justify-center gap-1.5 w-full border-2 border-dashed border-indigo-200 text-indigo-500 hover:bg-indigo-50 rounded-xl py-2.5 text-sm font-bold transition-all"><Plus className="w-4 h-4" />Add Expense Line</button>
           </div>
+          {sanction && <SettlementTable sanction={sanction} claimedByCat={claimedByCat} claimTotal={claimTotal} />}
+
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <span className="font-black text-slate-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">Total Claim: ₹{fmt(items.reduce((s, i) => s + (Number(i.claimed_amount) || 0), 0))}</span>
             <button onClick={submitTexp} disabled={busy} className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Save &amp; Submit</>}</button>
@@ -1101,6 +1268,27 @@ function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBa
           {r.advance_amount > 0 && <div><p className="text-slate-400 text-xs">Advance Required</p><p className="font-black text-indigo-600">₹{fmt(r.advance_amount)}</p></div>}
           {r.total_claimed > 0 && <div><p className="text-slate-400 text-xs">Total Claimed</p><p className="font-black text-slate-800">₹{fmt(r.total_claimed)}</p></div>}
         </div>
+
+        {/* A claim settling a sanction: show it against what was approved, and
+            net the advance, so the approver sees the money still to move. */}
+        {r.sanction && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <p className="text-slate-400 text-xs mb-1.5">Settles sanction #{r.sanction.id} · {r.sanction.destination_city}</p>
+            <div className="flex flex-wrap gap-1.5 text-[11px] font-semibold">
+              <span className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-600">Sanctioned ₹{fmt(r.sanction.estimate_amount)}</span>
+              <span className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-600">Claimed ₹{fmt(r.total_claimed)}</span>
+              {r.advance_adjusted > 0 && <span className="bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 text-amber-700">Advance ₹{fmt(r.advance_adjusted)}</span>}
+              <span className={`rounded-lg px-2 py-1 border ${r.net_settlement >= 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+                {r.net_settlement >= 0 ? 'Payable' : 'Recover'} ₹{fmt(Math.abs(r.net_settlement))}
+              </span>
+              {r.total_claimed > r.sanction.estimate_amount && (
+                <span className="bg-rose-50 border border-rose-200 rounded-lg px-2 py-1 text-rose-700">
+                  Over sanction by ₹{fmt(r.total_claimed - r.sanction.estimate_amount)}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {r.legs?.length > 0 && (
           <div className="mt-3 pt-3 border-t border-slate-100">
