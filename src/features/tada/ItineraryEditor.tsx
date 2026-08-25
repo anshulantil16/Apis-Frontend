@@ -4,7 +4,7 @@ import {
   Plus, Trash2,
 } from 'lucide-react';
 import { TIME_PREFS, blankLeg, journeyNoun } from './shared';
-import { TravelModePicker } from './TravelModePicker';
+import { BookingModePicker, TravelModePicker } from './TravelModePicker';
 
 export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom, tripTo }: {
   legs: any[]; setLegs: (l: any[]) => void; modeOptions: any; est: any; inp: string;
@@ -87,6 +87,11 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
 
               {leg.travel_mode && (
                 <>
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-bold text-slate-500 mb-1 block">Who books this ticket?</label>
+                    <BookingModePicker value={leg.booking_mode}
+                      onChange={v => set(i, { booking_mode: v })} />
+                  </div>
                   <div><label className="text-xs font-bold text-slate-500 mb-1 block">{journeyNoun(leg.travel_mode)} Date</label>
                     <input type="date" className={inp} value={leg.ticket_date} min={tripFrom} max={tripTo}
                       onChange={e2 => set(i, { ticket_date: e2.target.value })} /></div>

@@ -1,7 +1,7 @@
 /* The signed-in shell: tab bar, and whichever screen the tab selects. */
 import { useState, useEffect } from 'react';
 import {
-  LogOut, Plus, Clock, FileText, Shield, TrendingUp, Wallet,
+  LogOut, Plus, Clock, FileText, Shield, TrendingUp, Wallet, Plane,
 } from 'lucide-react';
 import { API, type User } from './shared';
 import { Count } from './components';
@@ -9,6 +9,7 @@ import { NewRequest } from './NewRequest';
 import { Detail, ReqCard } from './RequestDetail';
 import { ApproverBoard } from './ApproverBoard';
 import { AdminDashboard } from './AdminDashboard';
+import { BookingDesk } from './BookingDesk';
 
 /* Cursor tilt, written to CSS vars so tracking costs no re-renders. */
 const onTilt = (e: React.MouseEvent<HTMLElement>) => {
@@ -23,16 +24,21 @@ const offTilt = (e: React.MouseEvent<HTMLElement>) => {
 
 export function Portal({ user, onLogout }: { user: User; onLogout: () => void }) {
   const isApprover = ['manager', 'hr', 'finance'].includes(user.role);
-  const [tab, setTab] = useState<string>(isApprover ? 'approvals' : 'new');
+  // The Travel Help Desk raises tickets; it approves nothing, so it lands on
+  // its booking queue rather than an approvals tab it can never act on.
+  const isDesk = user.role === 'travel_desk';
+  const [tab, setTab] = useState<string>(isDesk ? 'bookings' : isApprover ? 'approvals' : 'new');
   const [refresh, setRefresh] = useState(0);
   const [sel, setSel] = useState<number | null>(null);
   const [mine, setMine] = useState<any[]>([]);
   useEffect(() => { if (tab === 'mine') fetch(`${API}/requests/mine/?employee_id=${user.employee_id}`).then(r => r.json()).then(d => setMine(d.requests || [])); }, [tab, refresh]);
 
   const isAdmin = user.role === 'admin';
-  const tabs = isApprover
-    ? [{ k: 'approvals', l: 'Approvals', i: Shield }, { k: 'new', l: 'My New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }]
-    : [{ k: 'new', l: 'New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }];
+  const tabs = isDesk
+    ? [{ k: 'bookings', l: 'Ticket Bookings', i: Plane }, { k: 'new', l: 'My New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }]
+    : isApprover
+      ? [{ k: 'approvals', l: 'Approvals', i: Shield }, { k: 'new', l: 'My New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }]
+      : [{ k: 'new', l: 'New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }];
 
   return (
     <div className="min-h-full bg-[#f5f7fa]">
@@ -52,6 +58,7 @@ export function Portal({ user, onLogout }: { user: User; onLogout: () => void })
       <main className="max-w-6xl mx-auto px-5 py-6">
         {isAdmin && <AdminDashboard user={user} />}
         {tab === 'approvals' && !isAdmin && <ApproverBoard user={user} />}
+        {tab === 'bookings' && !isAdmin && <BookingDesk user={user} />}
         {tab === 'new' && !isAdmin && <NewRequest user={user} onDone={() => { setRefresh(x => x + 1); setTab('mine'); }} />}
         {tab === 'mine' && !isAdmin && (sel ? <Detail id={sel} user={user} onBack={() => setSel(null)} /> : (
           <div className="space-y-4">

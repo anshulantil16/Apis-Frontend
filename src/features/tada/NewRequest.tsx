@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { API, LOCAL_MODES, LOCAL_TYPES, TIME_PREFS, TOUR_BLANK, blankLeg, fmt, journeyNoun, tripDays, type User } from './shared';
 import { CapsBanner, Confetti, Toast } from './components';
-import { SelectOther, TravelModePicker } from './TravelModePicker';
+import { BookingModePicker, SelectOther, TravelModePicker } from './TravelModePicker';
 import { ItineraryEditor } from './ItineraryEditor';
 import { BillCollector } from './BillCollector';
 import { SettlementTable } from './PolicyBreakdown';
@@ -372,6 +372,11 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
             )}
             {!multiCity && tour.travel_mode && (
               <>
+                <div className="md:col-span-2">
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">Who books this ticket?</label>
+                  <BookingModePicker value={tour.booking_mode}
+                    onChange={v => setTour({ ...tour, booking_mode: v })} />
+                </div>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward {journeyNoun(tour.travel_mode)} Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Preferred Time</label>
                   <select className={inp} value={tour.travel_mode_time_pref} onChange={e => setTour({ ...tour, travel_mode_time_pref: e.target.value })}>

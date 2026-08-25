@@ -29,6 +29,13 @@ export const journeyNoun = (mode: string) =>
   /train|flight|air|bus/i.test(mode || '') ? 'Ticket' : 'Departure';
 export const LOCAL_MODES = ['Cab / Taxi', 'Auto Rickshaw', 'Bus', 'Metro', 'Own Car', 'Own Two-Wheeler', 'Bike Taxi', 'E-Rickshaw'];
 export const LOCAL_TYPES = ['Outdoor Duty', 'Office Work', 'Client Visit', 'Bank / Govt Work', 'Site Visit', 'Vendor Meeting'];
+/* Who raises the ticket. A company booking is paid to the carrier directly, so
+   its fare never enters the employee's claim. */
+export const BOOKING_MODES = [
+  { v: 'self', l: 'I will book it myself', hint: 'You pay and claim the fare back with your bills' },
+  { v: 'company', l: 'Company books it (Travel Help Desk)', hint: 'The desk books and pays — nothing for you to claim' },
+];
+
 export const TIME_PREFS = [
   { v: 'early_morning', l: 'Early Morning (12 AM – 6 AM)' },
   { v: 'morning', l: 'Morning (6 AM – 12 PM)' },
@@ -44,12 +51,12 @@ export const TOUR_BLANK = {
   // estimate: ticket/misc are typed by the employee, lodging/food/local seed
   // from policy and stay '' until the server sends the policy figure.
   est_ticket_amount: '', est_lodging_amount: '', est_food_amount: '', est_local_amount: '',
-  est_misc_amount: '', advance_amount: '', mode_exception_reason: '',
+  est_misc_amount: '', advance_amount: '', mode_exception_reason: '', booking_mode: 'self',
 };
 
 export const blankLeg = () => ({
   from_date: '', to_date: '', destination_city: '', travel_address: '', purpose: '',
-  travel_mode: '', ticket_date: '', ticket_time_pref: '',
+  travel_mode: '', ticket_date: '', ticket_time_pref: '', booking_mode: 'self',
   mode_exception_reason: '', est_ticket_amount: '',
 });
 

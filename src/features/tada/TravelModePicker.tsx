@@ -5,7 +5,7 @@ import { useState } from 'react';
 import {
   AlertCircle,
 } from 'lucide-react';
-import { TRAVEL_MODES } from './shared';
+import { BOOKING_MODES, TRAVEL_MODES } from './shared';
 
 export function TravelModePicker({ value, onChange, options, reason, onReason, className }: {
   value: string; onChange: (v: string) => void; options: any;
@@ -79,3 +79,30 @@ export function SelectOther({ value, onChange, options, className, placeholder =
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
+
+/* Who is raising this ticket.
+   The choice has a consequence the employee should see before making it: a
+   company booking is paid to the carrier directly, so that fare cannot be
+   claimed back later. Saying so here avoids the claim being rejected. */
+export function BookingModePicker({ value, onChange, className }: {
+  value: string; onChange: (v: string) => void; className?: string;
+}) {
+  return (
+    <div className={`grid sm:grid-cols-2 gap-2 ${className || ''}`}>
+      {BOOKING_MODES.map(m => {
+        const on = (value || 'self') === m.v;
+        return (
+          <button key={m.v} type="button" onClick={() => onChange(m.v)}
+            className={`text-left p-2.5 rounded-xl border-2 transition-all ${on
+              ? 'border-indigo-500 bg-indigo-50/60' : 'border-slate-200 bg-white hover:border-indigo-300'}`}>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${on ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'}`} />
+              <p className="font-black text-xs text-slate-800">{m.l}</p>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5 ml-5">{m.hint}</p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
