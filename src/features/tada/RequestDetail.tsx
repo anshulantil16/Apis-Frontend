@@ -103,11 +103,40 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
           {r.sanction_number && <div><p className="text-slate-400 text-xs">Sanction No.</p><p className="font-semibold">{r.sanction_number}</p></div>}
           {r.travel_mode && <div><p className="text-slate-400 text-xs">Mode</p><p className="font-semibold">{r.travel_mode}</p></div>}
           {r.travel_mode_date && <div><p className="text-slate-400 text-xs">Onward Journey</p><p className="font-semibold">{r.travel_mode_date}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}</p></div>}
-          {r.return_mode_date && <div><p className="text-slate-400 text-xs">Return Journey</p><p className="font-semibold">{r.return_mode_date}{r.return_mode_time_pref_label ? ` · ${r.return_mode_time_pref_label}` : ''}</p></div>}
+          {r.type === 'tour_sanction' && r.trip_type_label && <div><p className="text-slate-400 text-xs">Trip</p><p className="font-semibold">{r.trip_type_label}</p></div>}
+          {r.trip_type === 'round_trip' && (r.return_mode_date || r.return_travel_mode) && (
+            <div>
+              <p className="text-slate-400 text-xs">Return Journey</p>
+              <p className="font-semibold">
+                {r.return_travel_mode || '—'}
+                {r.return_mode_date ? ` · ${r.return_mode_date}` : ''}
+                {r.return_mode_time_pref_label ? ` · ${r.return_mode_time_pref_label}` : ''}
+              </p>
+              {r.return_booking_mode === 'company' && (
+                <p className="text-[11px] text-indigo-500 font-bold">
+                  Booked by the Travel Help Desk
+                  {r.return_booking_reference ? ` · ${r.return_booking_reference}` : ''}
+                </p>
+              )}
+            </div>
+          )}
           {r.estimate_amount > 0 && <div><p className="text-slate-400 text-xs">Total Estimate</p><p className="font-black text-slate-800">₹{fmt(r.estimate_amount)}</p></div>}
           {r.advance_amount > 0 && <div><p className="text-slate-400 text-xs">Advance Required</p><p className="font-black text-indigo-600">₹{fmt(r.advance_amount)}</p></div>}
           {r.total_claimed > 0 && <div><p className="text-slate-400 text-xs">Total Claimed</p><p className="font-black text-slate-800">₹{fmt(r.total_claimed)}</p></div>}
         </div>
+
+        {/* Shown only when the company is booking — on a self-booked trip
+            nobody needs the employee's Aadhaar spelling on screen. */}
+        {r.traveller_name && (
+          <div className="mt-3 pt-3 border-t border-slate-100 grid md:grid-cols-3 gap-3 text-sm">
+            <div className="md:col-span-3">
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Traveller details for ticketing</p>
+            </div>
+            <div><p className="text-slate-400 text-xs">Name as per Aadhaar</p><p className="font-semibold">{r.traveller_name}</p></div>
+            {r.traveller_age && <div><p className="text-slate-400 text-xs">Age</p><p className="font-semibold">{r.traveller_age}</p></div>}
+            {r.contact_number && <div><p className="text-slate-400 text-xs">Contact while touring</p><p className="font-semibold">{r.contact_number}</p></div>}
+          </div>
+        )}
 
         {/* A claim settling a sanction: show it against what was approved, and
             net the advance, so the approver sees the money still to move. */}

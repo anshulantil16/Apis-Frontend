@@ -41,6 +41,11 @@ export const LOCAL_MODES = ['Cab / Taxi', 'Auto Rickshaw', 'Bus', 'Metro', 'Own 
 export const LOCAL_TYPES = ['Outdoor Duty', 'Office Work', 'Client Visit', 'Bank / Govt Work', 'Site Visit', 'Vendor Meeting'];
 /* Who raises the ticket. A company booking is paid to the carrier directly, so
    its fare never enters the employee's claim. */
+export const TRIP_TYPES = [
+  { v: 'round_trip', l: 'To & Fro', hint: 'You travel out and come back' },
+  { v: 'one_way', l: 'One Way', hint: 'No return journey on this programme' },
+];
+
 export const BOOKING_MODES = [
   { v: 'self', l: 'I will book it myself', hint: 'You pay and claim the fare back with your bills' },
   { v: 'company', l: 'Company books it (Travel Help Desk)', hint: 'The desk books and pays — nothing for you to claim' },
@@ -58,6 +63,12 @@ export const TOUR_BLANK = {
   travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '',
   contact_number: '', sanction_number: '', travel_mode: '',
   travel_mode_date: '', travel_mode_time_pref: '', return_mode_date: '', return_mode_time_pref: '',
+  // The way home is its own journey: its own mode, its own date, and its own
+  // answer to who is raising the ticket. Most tours come back, so that is the
+  // default and a one-way trip has to say so.
+  trip_type: 'round_trip', return_travel_mode: '', return_booking_mode: 'self',
+  // What a carrier asks for, and only the employee knows.
+  traveller_name: '', traveller_age: '',
   // estimate: ticket/misc are typed by the employee, lodging/food/local seed
   // from policy and stay '' until the server sends the policy figure.
   est_ticket_amount: '', est_lodging_amount: '', est_food_amount: '', est_local_amount: '',

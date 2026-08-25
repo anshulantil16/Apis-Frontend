@@ -9,7 +9,7 @@ import { BOOKING_MODES, TRAVEL_MODES } from './shared';
 
 export function TravelModePicker({ value, onChange, options, reason, onReason, className }: {
   value: string; onChange: (v: string) => void; options: any;
-  reason: string; onReason: (v: string) => void; className: string;
+  reason: string; onReason: (v: string) => void; className?: string;
 }) {
   /* Sessions predating the entitlement grouping have a cached caps object with
      no mode_options. Fall back to the plain list rather than rendering an empty
@@ -87,10 +87,21 @@ export function SelectOther({ value, onChange, options, className, placeholder =
 export function BookingModePicker({ value, onChange, className }: {
   value: string; onChange: (v: string) => void; className?: string;
 }) {
+  return <OptionPicker options={BOOKING_MODES} value={value} onChange={onChange} className={className} />;
+}
+
+/* The same two-card choice, for any either/or with a consequence worth
+   spelling out. Written once because "to & fro or one way" and "you book or we
+   book" are the same question shape, and a radio group hides the hint that
+   makes each answer make sense. */
+export function OptionPicker({ options, value, onChange, className }: {
+  options: { v: string; l: string; hint: string }[];
+  value: string; onChange: (v: string) => void; className?: string;
+}) {
   return (
     <div className={`grid sm:grid-cols-2 gap-2 ${className || ''}`}>
-      {BOOKING_MODES.map(m => {
-        const on = (value || 'self') === m.v;
+      {options.map(m => {
+        const on = (value || options[0].v) === m.v;
         return (
           <button key={m.v} type="button" onClick={() => onChange(m.v)}
             className={`text-left p-2.5 rounded-xl border-2 transition-all ${on

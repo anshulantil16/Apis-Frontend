@@ -9,13 +9,18 @@ import { API, fmt, type User } from './shared';
 import { Toast } from './components';
 
 type Journey = {
-  key: string; seq: number | null; city: string; mode: string;
+  key: string; seq: number | 'return' | null; city: string; mode: string;
   date: string | null; timePref: string | null; status: string;
   reference: string; carrier: string; fare: number; estimate: number;
 };
 
 /** Flatten a request into the journeys the desk actually has to raise. */
 function journeysOf(r: any): Journey[] {
+  const ret = returnJourneyOf(r);
+  return [...outboundJourneysOf(r), ...(ret ? [ret] : [])];
+}
+
+function outboundJourneysOf(r: any): Journey[] {
   const legs = (r.legs || []).filter((l: any) => l.booking_mode === 'company');
   if (legs.length) {
     return legs.map((l: any) => ({
@@ -32,6 +37,18 @@ function journeysOf(r: any): Journey[] {
     reference: r.booking_reference, carrier: r.booking_carrier, fare: r.booking_fare,
     estimate: r.est_ticket_amount,
   }];
+}
+
+/** The way home, if the desk is raising it. Its own ticket, its own PNR. */
+function returnJourneyOf(r: any): Journey | null {
+  if (r.trip_type !== 'round_trip' || r.return_booking_mode !== 'company') return null;
+  return {
+    key: `${r.id}-return`, seq: 'return', city: `Return to ${r.hq_city || 'base'}`,
+    mode: r.return_travel_mode, date: r.return_mode_date,
+    timePref: r.return_mode_time_pref_label, status: r.return_booking_status,
+    reference: r.return_booking_reference, carrier: r.return_booking_carrier,
+    fare: r.return_booking_fare, estimate: 0,
+  };
 }
 
 function BookingForm({ req, j, onDone }: { req: any; j: Journey; onDone: (msg: string, ok: boolean) => void }) {
@@ -137,7 +154,9 @@ export function BookingDesk({ user }: { user: User }) {
           <div key={j.key} className="border border-slate-100 rounded-xl overflow-hidden">
             <div className="bg-slate-50/80 px-3 py-2 flex items-center justify-between gap-2 flex-wrap border-b border-slate-100">
               <p className="font-black text-slate-700 text-xs">
-                {j.seq !== null ? `Stop ${j.seq + 1} · ` : ''}{j.city || 'Journey'}
+                {/* The way home is not a numbered stop — it already reads as
+                    "Return to <city>". */}
+                {typeof j.seq === 'number' ? `Stop ${j.seq + 1} · ` : ''}{j.city || 'Journey'}
                 {j.mode && <span className="text-slate-400 font-semibold"> · by {j.mode}</span>}
               </p>
               <p className="text-[11px] text-slate-500">

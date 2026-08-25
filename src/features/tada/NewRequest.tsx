@@ -5,9 +5,9 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plus, Trash2, CheckCircle, FileText, Receipt, Car, AlertCircle, RefreshCw,
 } from 'lucide-react';
-import { API, LOCAL_MODES, LOCAL_TYPES, TIME_PREFS, TOUR_BLANK, blankLeg, fmt, journeyNoun, tripDays, type User } from './shared';
+import { API, LOCAL_MODES, LOCAL_TYPES, TIME_PREFS, TOUR_BLANK, blankLeg, fmt, journeyNoun, tripDays, type User, TRIP_TYPES } from './shared';
 import { CapsBanner, Confetti, Toast } from './components';
-import { BookingModePicker, SelectOther, TravelModePicker } from './TravelModePicker';
+import { BookingModePicker, SelectOther, TravelModePicker, OptionPicker } from './TravelModePicker';
 import { ItineraryEditor } from './ItineraryEditor';
 import { BillCollector } from './BillCollector';
 import { SettlementTable } from './PolicyBreakdown';
@@ -235,6 +235,14 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
   /* A company booking is an instruction to the desk, so it has to say what to
      book. Caught here so the form explains it, rather than the server refusing
      a filled-in request. */
+  /* Whether the Travel Help Desk is raising anything on this trip — any stop,
+     the single outbound, or the way home. */
+  const deskIsBooking = useMemo(() =>
+    (tour.trip_type !== 'one_way' && tour.return_booking_mode === 'company')
+    || (multiCity ? readyLegs.some((l: any) => l.booking_mode === 'company')
+                  : tour.booking_mode === 'company'),
+    [multiCity, readyLegs, tour.booking_mode, tour.trip_type, tour.return_booking_mode]);
+
   const bookingGaps = useMemo(() => {
     const gaps: string[] = [];
     // The mode is always needed — the travel class is approved against it.
@@ -249,8 +257,23 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
     } else {
       want(tour.booking_mode, tour.travel_mode, tour.travel_mode_date, '');
     }
+    // The way home is a journey too — it was asked for as a bare date, so it
+    // was never checked against the travel class and the desk was never told
+    // to raise it.
+    if (tour.trip_type !== 'one_way') {
+      want(tour.return_booking_mode, tour.return_travel_mode, tour.return_mode_date, ' home');
+    }
+    // A ticket is raised for a person. Only the employee knows the spelling on
+    // their Aadhaar card and the number they will answer while away.
+    if (deskIsBooking) {
+      if (!tour.traveller_name.trim()) gaps.push('name as per Aadhaar');
+      if (!String(tour.traveller_age).trim()) gaps.push('age');
+      if (!tour.contact_number.trim()) gaps.push('contact number while touring');
+    }
     return gaps;
-  }, [multiCity, readyLegs, tour.booking_mode, tour.travel_mode, tour.travel_mode_date]);
+  }, [multiCity, readyLegs, deskIsBooking, tour.booking_mode, tour.travel_mode, tour.travel_mode_date,
+      tour.trip_type, tour.return_booking_mode, tour.return_travel_mode, tour.return_mode_date,
+      tour.traveller_name, tour.traveller_age, tour.contact_number]);
 
   // Client-side mirror of policy.validate_estimate — instant feedback only.
   const estWarnings = useMemo(() => {
@@ -418,13 +441,54 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
                     {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
                   </select>
                 </div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return {journeyNoun(tour.travel_mode)} Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.return_mode_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
-                  <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
-                    <option value="">Select time…</option>
-                    {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
-                  </select>
+              </>
+            )}
+            {/* Whether you come back does not depend on how you got there, so
+                this is not hidden behind the outbound mode — that gating is
+                what made the booking choice invisible before. */}
+            {!multiCity && (
+              <>
+                <div className="md:col-span-2 border-t border-slate-200 pt-3 mt-1">
+                  <p className="text-xs font-black text-slate-600 mb-1">Journey home</p>
+                  <p className="text-[11px] text-slate-400 mb-2">
+                    A separate ticket, so it is asked for separately — the mode is approved
+                    against your travel class either way.
+                  </p>
+                  <OptionPicker options={TRIP_TYPES} value={tour.trip_type}
+                    onChange={v => setTour({ ...tour, trip_type: v })} />
                 </div>
+                {tour.trip_type !== 'one_way' && (
+                  <>
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold text-slate-500 mb-1 block">
+                        Return Travel Mode <span className="text-rose-500">*</span>
+                      </label>
+                      <TravelModePicker value={tour.return_travel_mode}
+                        onChange={v => setTour({ ...tour, return_travel_mode: v })}
+                        options={caps?.mode_options} reason={tour.mode_exception_reason}
+                        onReason={(v: string) => setTour({ ...tour, mode_exception_reason: v })} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold text-slate-500 mb-1 block">Who books the return ticket?</label>
+                      <BookingModePicker value={tour.return_booking_mode}
+                        onChange={v => setTour({ ...tour, return_booking_mode: v })} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 mb-1 block">
+                        Return {journeyNoun(tour.return_travel_mode)} Date
+                        {tour.return_booking_mode === 'company' && <span className="text-rose-500"> *</span>}
+                      </label>
+                      <input type="date" className={inp} value={tour.return_mode_date} min={tour.from_date}
+                        onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} />
+                    </div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
+                      <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
+                        <option value="">Select time…</option>
+                        {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
+                      </select>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -439,13 +503,77 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
                 tripFrom={tour.from_date} tripTo={tour.to_date} />
 
               <div className="grid md:grid-cols-2 gap-3 bg-slate-50/70 border border-slate-200 rounded-2xl p-4">
-                <div className="md:col-span-2"><p className="text-xs font-bold text-slate-600">Journey home</p><p className="text-[11px] text-slate-400">Your return from the last stop</p></div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return {journeyNoun(legs[legs.length - 1]?.travel_mode)} Date</label><input type="date" className={inp} value={tour.return_mode_date} min={tour.from_date} max={tour.to_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
-                  <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
-                    <option value="">Select time…</option>
-                    {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
-                  </select>
+                <div className="md:col-span-2"><p className="text-xs font-bold text-slate-600">Journey home</p><p className="text-[11px] text-slate-400">Your return from the last stop — a ticket of its own</p></div>
+                <div className="md:col-span-2">
+                  <OptionPicker options={TRIP_TYPES} value={tour.trip_type}
+                    onChange={v => setTour({ ...tour, trip_type: v })} />
+                </div>
+                {tour.trip_type !== 'one_way' && (
+                  <>
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold text-slate-500 mb-1 block">
+                        Return Travel Mode <span className="text-rose-500">*</span>
+                      </label>
+                      <TravelModePicker value={tour.return_travel_mode}
+                        onChange={v => setTour({ ...tour, return_travel_mode: v })}
+                        options={caps?.mode_options} reason={tour.mode_exception_reason}
+                        onReason={(v: string) => setTour({ ...tour, mode_exception_reason: v })} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold text-slate-500 mb-1 block">Who books the return ticket?</label>
+                      <BookingModePicker value={tour.return_booking_mode}
+                        onChange={v => setTour({ ...tour, return_booking_mode: v })} />
+                    </div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">
+                      Return {journeyNoun(tour.return_travel_mode)} Date
+                      {tour.return_booking_mode === 'company' && <span className="text-rose-500"> *</span>}
+                    </label><input type="date" className={inp} value={tour.return_mode_date} min={tour.from_date} max={tour.to_date} onChange={e => setTour({ ...tour, return_mode_date: e.target.value })} /></div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">Return Preferred Time</label>
+                      <select className={inp} value={tour.return_mode_time_pref} onChange={e => setTour({ ...tour, return_mode_time_pref: e.target.value })}>
+                        <option value="">Select time…</option>
+                        {TIME_PREFS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
+                      </select>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Only asked when the desk is actually raising a ticket. A carrier
+              wants a person, and a ticket booked on a guessed spelling is
+              refused at the counter — but a self-booked trip needs none of it,
+              so it is not put in everybody's way. */}
+          {deskIsBooking && (
+            <div className="bg-indigo-50/50 border-2 border-indigo-100 rounded-2xl p-4 space-y-3">
+              <div>
+                <p className="text-xs font-black text-indigo-700">Traveller details for ticketing</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  The Travel Help Desk raises the ticket in your name, so these have to match
+                  the ID you will carry.
+                </p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-3">
+                <div className="md:col-span-2">
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">
+                    Name as per Aadhaar <span className="text-rose-500">*</span>
+                  </label>
+                  <input className={inp} value={tour.traveller_name} placeholder="Exactly as printed on the card"
+                    onChange={e => setTour({ ...tour, traveller_name: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">
+                    Age <span className="text-rose-500">*</span>
+                  </label>
+                  <input className={inp} type="number" min={14} max={100} value={tour.traveller_age}
+                    placeholder="Years" onChange={e => setTour({ ...tour, traveller_age: e.target.value })} />
+                </div>
+                <div className="md:col-span-3">
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">
+                    Contact number while touring <span className="text-rose-500">*</span>
+                  </label>
+                  <input className={inp} value={tour.contact_number} placeholder="The number you will answer while away"
+                    onChange={e => setTour({ ...tour, contact_number: e.target.value })} />
                 </div>
               </div>
             </div>
