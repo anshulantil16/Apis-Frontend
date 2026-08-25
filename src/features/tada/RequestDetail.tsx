@@ -12,6 +12,9 @@ import { PolicyBreakdown } from './PolicyBreakdown';
 export function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBack: () => void; onActioned?: () => void }) {
   const [r, setR] = useState<any>(null);
   const [remarks, setRemarks] = useState('');
+  const [briefing, setBriefing] = useState('');
+  const [advanceRemarks, setAdvanceRemarks] = useState('');
+  const [deviation, setDeviation] = useState('');
   const [busy, setBusy] = useState(false);
   const [party, setParty] = useState(false);
   const [toast, setToast] = useState<{ t: string; ok: boolean } | null>(null);
@@ -29,10 +32,27 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
   const canPay = !!r.permission?.can_pay;
   const blockedReason: string | null = r.permission?.reason ?? null;
 
+  /* A tour programme approval carries a briefing and a view on the advance,
+     and a justification too when the request breaks a policy limit. Claims are
+     a simpler decision and keep the plain remarks box. */
+  const needsDetail = canAct && r.type === 'tour_sanction' && ['manager', 'hr'].includes(user.role);
+  const hasFlags = needsDetail && (r.policy_flags?.length || 0) > 0;
+  const advanceAsked = (r.advance_amount || 0) > 0;
+  const isFinalApproval = canAct && r.type === 'tour_sanction' && user.role === 'hr';
+  const missing = !needsDetail ? [] : [
+    !briefing.trim() && 'briefing',
+    !advanceRemarks.trim() && 'advance remarks',
+    hasFlags && !deviation.trim() && 'deviation justification',
+  ].filter(Boolean) as string[];
+  const fieldCls = (empty: boolean) =>
+    `w-full rounded-xl px-3 py-2 text-sm border-2 transition-all focus:outline-none ${
+      empty ? 'border-slate-200 focus:border-indigo-400' : 'border-emerald-200 bg-emerald-50/30 focus:border-emerald-400'}`;
+
   const act = async (action: string) => {
     setBusy(true);
     try {
-      const res = await fetch(`${API}/requests/${id}/action/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: user.employee_id, action, remarks }) });
+      const res = await fetch(`${API}/requests/${id}/action/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: user.employee_id, action, remarks,
+        briefing, advance_remarks: advanceRemarks, deviation_justification: deviation }) });
       const body = await res.json().catch(() => ({}));
       if (res.ok) {
         await load(); if (onActioned) onActioned();
@@ -55,7 +75,7 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
       <Confetti show={party} />
       {toast && <Toast msg={toast.t} ok={toast.ok} onClose={() => setToast(null)} />}
       <button onClick={onBack} className="flex items-center gap-1 text-slate-500 text-sm font-bold hover:text-indigo-600 transition-colors"><ChevronLeft className="w-4 h-4" />Back</button>
-      <StageTrail status={r.status} statusLabel={r.status_label} />
+      <StageTrail status={r.status} statusLabel={r.status_label} type={r.type} />
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
         <div className="flex justify-between items-start mb-3">
           <div><h3 className="font-black text-slate-800 text-lg">{r.type_label}</h3><p className="text-slate-400 text-sm">{r.employee_name} · {r.employee_id} · {r.department} · Level {r.level}</p></div>
@@ -186,11 +206,36 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
         <h4 className="font-black text-slate-700 mb-3">Approval Trail</h4>
         <div className="space-y-2">
           {(r.logs || []).map((l: any, i: number) => (
-            <div key={i} className="flex items-center gap-3 text-sm">
-              {l.action.includes('reject') ? <XCircle className="w-4 h-4 text-rose-500" /> : <CheckCircle className="w-4 h-4 text-emerald-500" />}
-              <span className="font-bold capitalize">{l.stage}</span><span className="text-slate-500 capitalize">{l.action}</span>
-              <span className="text-slate-400">by {l.by_name}</span><span className="text-slate-300 ml-auto text-xs">{l.timestamp}</span>
-              {l.remarks && <span className="text-slate-400 italic text-xs">"{l.remarks}"</span>}
+            <div key={i} className="border-b border-slate-100 last:border-0 pb-2 last:pb-0">
+              <div className="flex items-center gap-3 text-sm flex-wrap">
+                {l.action.includes('reject') ? <XCircle className="w-4 h-4 text-rose-500 shrink-0" /> : <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />}
+                <span className="font-bold capitalize">{l.stage}</span><span className="text-slate-500 capitalize">{l.action}</span>
+                <span className="text-slate-400">by {l.by_name}</span><span className="text-slate-300 ml-auto text-xs">{l.timestamp}</span>
+              </div>
+              {l.remarks && <p className="text-slate-500 italic text-xs mt-1 ml-7">"{l.remarks}"</p>}
+              {/* What the approver actually recorded, not just that they clicked. */}
+              {(l.briefing || l.advance_remarks || l.deviation_justification) && (
+                <div className="ml-7 mt-1.5 space-y-1.5">
+                  {l.briefing && (
+                    <div className="bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Briefed the employee</p>
+                      <p className="text-xs text-slate-600 mt-0.5">{l.briefing}</p>
+                    </div>
+                  )}
+                  {l.advance_remarks && (
+                    <div className="bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">On the advance</p>
+                      <p className="text-xs text-slate-600 mt-0.5">{l.advance_remarks}</p>
+                    </div>
+                  )}
+                  {l.deviation_justification && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                      <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Policy deviation justified</p>
+                      <p className="text-xs text-amber-900 mt-0.5">{l.deviation_justification}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {(!r.logs || r.logs.length === 0) && <p className="text-slate-300 text-sm">No actions yet.</p>}
@@ -208,15 +253,85 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
 
       {(canAct || canPay) && (
         <div className="bg-white rounded-2xl border-2 border-indigo-100 shadow-sm p-5">
-          <h4 className="font-black text-slate-700 mb-2">Your Decision ({user.role.toUpperCase()})</h4>
-          <textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Remarks (optional)" className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm mb-3" rows={2} />
-          <div className="flex gap-2">
+          <h4 className="font-black text-slate-700 mb-1">Your Decision ({user.role.toUpperCase()})</h4>
+          {needsDetail && (
+            <p className="text-xs text-slate-400 mb-3">
+              Approving a tour programme is a judgement, so these go on the record with it.
+              Rejecting needs only a reason.
+            </p>
+          )}
+
+          {needsDetail && (
+            <div className="space-y-3 mb-3">
+              <div>
+                <label className="text-xs font-bold text-slate-600 mb-1 block">
+                  What did you brief the employee on? <span className="text-rose-500">*</span>
+                </label>
+                <textarea value={briefing} onChange={e => setBriefing(e.target.value)} rows={2}
+                  placeholder="Purpose of the programme, what it should achieve, what you expect back"
+                  className={fieldCls(!briefing.trim())} />
+                <p className="text-[11px] text-slate-400 mt-1">The benefit or use of this trip, as you explained it.</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-600 mb-1 block">
+                  Remarks on the advance{advanceAsked ? ` (${'\u20b9'}${fmt(r.advance_amount)} requested)` : ''} <span className="text-rose-500">*</span>
+                </label>
+                <textarea value={advanceRemarks} onChange={e => setAdvanceRemarks(e.target.value)} rows={2}
+                  placeholder={advanceAsked ? 'Is the amount appropriate for this trip?' : 'No advance requested — note anything relevant'}
+                  className={fieldCls(!advanceRemarks.trim())} />
+              </div>
+
+              {/* Only demanded when the request actually breaks a limit — asking
+                  for a justification on a compliant request trains people to
+                  type anything to get past it. */}
+              {hasFlags && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <p className="text-xs font-black text-amber-800 flex items-start gap-1.5 mb-2">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    This request departs from policy — justify it to approve
+                  </p>
+                  <ul className="text-[11px] text-amber-800 mb-2 space-y-0.5 list-disc list-inside">
+                    {r.policy_flags.map((f: string, i: number) => <li key={i}>{f}</li>)}
+                  </ul>
+                  <label className="text-xs font-bold text-amber-800 mb-1 block">
+                    Justification <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea value={deviation} onChange={e => setDeviation(e.target.value)} rows={2}
+                    placeholder="Why is this acceptable despite the deviation?"
+                    className={fieldCls(!deviation.trim())} />
+                </div>
+              )}
+            </div>
+          )}
+
+          <label className="text-xs font-bold text-slate-600 mb-1 block">
+            Remarks {needsDetail ? <span className="text-slate-300">(optional)</span> : ''}
+          </label>
+          <textarea value={remarks} onChange={e => setRemarks(e.target.value)}
+            placeholder="Anything else to record with your decision"
+            className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm mb-3" rows={2} />
+
+          {missing.length > 0 && (
+            <p className="text-[11px] text-slate-400 mb-2">
+              To approve, still needed: {missing.join(', ')}.
+            </p>
+          )}
+
+          <div className="flex gap-2 flex-wrap">
             {canAct && <>
-              <button onClick={() => act('approve')} disabled={busy} className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-lg hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50 transition-all"><CheckCircle className="w-4 h-4" />Approve</button>
+              <button onClick={() => act('approve')} disabled={busy || missing.length > 0}
+                title={missing.length > 0 ? `Still needed: ${missing.join(', ')}` : undefined}
+                className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-lg hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50 disabled:hover:scale-100 transition-all"><CheckCircle className="w-4 h-4" />Approve{isFinalApproval ? ' (final)' : ''}</button>
               <button onClick={() => act('reject')} disabled={busy} className="flex items-center gap-2 bg-gradient-to-r from-rose-500 to-red-600 hover:shadow-lg hover:shadow-rose-500/30 hover:scale-105 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50 transition-all"><XCircle className="w-4 h-4" />Reject</button>
             </>}
             {canPay && <button onClick={() => act('paid')} disabled={busy} className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-700 hover:shadow-lg hover:scale-105 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50 transition-all"><Wallet className="w-4 h-4" />Mark as Paid</button>}
           </div>
+          {isFinalApproval && (
+            <p className="text-[11px] text-slate-400 mt-2">
+              This is the last approval — Finance will be notified for their records, not for sign-off.
+            </p>
+          )}
         </div>
       )}
     </div>

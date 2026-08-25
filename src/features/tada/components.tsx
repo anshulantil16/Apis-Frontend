@@ -3,7 +3,7 @@
    because none is big enough for its own file. */
 import { useState, useEffect, useMemo } from 'react';
 import {
-  CheckCircle, AlertCircle, XCircle, FileText, Shield, Wallet, UserCheck, BadgeCheck,
+  CheckCircle, AlertCircle, XCircle, FileText, Shield, Wallet, UserCheck, BadgeCheck, Mail,
 } from 'lucide-react';
 import { STATUS_STYLE } from './shared';
 
@@ -105,12 +105,20 @@ export function CapsBanner({ caps }: { caps: any }) {
    "Submitted · Pending Manager" tells you the stage; this tells you the shape
    of the whole journey — what has cleared, what is live now, what is still
    ahead — which is the question someone actually opens a request to answer. */
-const STAGES = [
+/* A tour programme is finally approved by HR — Finance is told, not asked — so
+   its pipeline ends differently from a claim, where Finance approves and pays. */
+const CLAIM_STAGES = [
   { k: 'employee', l: 'Submitted', icon: FileText },
   { k: 'manager', l: 'Manager', icon: UserCheck },
   { k: 'hr', l: 'HR', icon: Shield },
   { k: 'finance', l: 'Finance', icon: Wallet },
   { k: 'paid', l: 'Paid', icon: BadgeCheck },
+];
+const TOUR_STAGES = [
+  { k: 'employee', l: 'Submitted', icon: FileText },
+  { k: 'manager', l: 'Manager', icon: UserCheck },
+  { k: 'hr', l: 'HR', icon: Shield },
+  { k: 'finance', l: 'Finance notified', icon: Mail },
 ];
 
 /** index of the stage a status has *cleared* up to, and whether it died there */
@@ -125,7 +133,11 @@ function stageState(status: string) {
   return { cleared: done[status] ?? 0, rejectedAt: rejectedAt[status] ?? null };
 }
 
-export function StageTrail({ status, statusLabel }: { status: string; statusLabel?: string }) {
+export function StageTrail({ status, statusLabel, type }: {
+  status: string; statusLabel?: string; type?: string;
+}) {
+  const isTour = type === 'tour_sanction';
+  const STAGES = isTour ? TOUR_STAGES : CLAIM_STAGES;
   const { cleared, rejectedAt } = stageState(status);
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
@@ -138,8 +150,11 @@ export function StageTrail({ status, statusLabel }: { status: string; statusLabe
       <div className="flex items-start">
         {STAGES.map((st, i) => {
           const isRejected = rejectedAt === i;
-          const isDone = !isRejected && i <= cleared && rejectedAt === null;
-          const isCurrent = !isRejected && rejectedAt === null && i === cleared + 1;
+          // HR approval finishes a tour programme, including its "Finance
+          // notified" end-cap — nothing is left pending after it.
+          const done = isTour && status === 'hr_approved' ? STAGES.length - 1 : cleared;
+          const isDone = !isRejected && i <= done && rejectedAt === null;
+          const isCurrent = !isRejected && rejectedAt === null && i === done + 1;
           const Icon = isRejected ? XCircle : st.icon;
           const ring = isRejected ? 'bg-rose-500 text-white'
             : isDone ? 'bg-emerald-500 text-white'
@@ -151,7 +166,8 @@ export function StageTrail({ status, statusLabel }: { status: string; statusLabe
               {i > 0 && (
                 <span className={`absolute top-4 right-1/2 left-0 h-0.5 -translate-y-1/2 ${
                   rejectedAt !== null && i > rejectedAt ? 'bg-slate-100'
-                    : i <= cleared || rejectedAt === i ? 'bg-emerald-400' : 'bg-slate-100'}`} />
+                    : i <= (isTour && status === 'hr_approved' ? STAGES.length - 1 : cleared)
+                      || rejectedAt === i ? 'bg-emerald-400' : 'bg-slate-100'}`} />
               )}
               <span style={{ ['--ih-ring' as string]: 'rgba(99,102,241,.45)' }}
                 className={`relative w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all ${ring}`}>
