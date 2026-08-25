@@ -181,18 +181,69 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
       {r.expense_items?.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 overflow-x-auto">
           <h4 className="font-black text-slate-700 mb-3">Bills</h4>
-          <table className="w-full text-xs"><thead><tr className="text-slate-400 border-b-2"><th className="text-left py-1">Category</th><th className="text-left">Date</th><th className="text-left">Detail</th><th className="text-right">Claimed</th><th className="text-right">Cap</th><th className="text-center">Bill</th><th className="text-left">Policy</th></tr></thead>
-            <tbody>{r.expense_items.map((it: any) => (
-              <tr key={it.id} className="border-b border-slate-100">
-                <td className="py-1.5 font-bold">{it.category_label}</td><td>{it.date}</td>
-                <td>{it.description || `${it.from_location}→${it.to_location}`} {it.mode && <span className="text-slate-400">({it.mode})</span>}</td>
-                <td className="text-right font-bold">₹{fmt(it.claimed_amount)}</td>
-                <td className="text-right text-slate-500">{it.policy_cap != null ? `₹${fmt(it.policy_cap)}` : '—'}</td>
-                <td className="text-center">{it.has_bill ? <a href={`${(import.meta.env.VITE_API_BASE_URL || '')}${it.bill_url}`} target="_blank" className="text-emerald-600 font-bold">View</a> : <span className="text-rose-400">None</span>}</td>
-                <td className="text-amber-600 text-[11px]">{it.policy_flag}</td>
-              </tr>))}</tbody></table>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-slate-400 border-b-2 border-slate-200">
+                <th className="text-left py-1.5">Head</th>
+                <th className="text-left">Particulars</th>
+                <th className="text-right">Claimed</th>
+                <th className="text-right">Limit</th>
+                <th className="text-center">Bill</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.expense_items.map((it: any) => (
+                <tr key={it.id} className="border-b border-slate-100 align-top">
+                  <td className="py-2 font-bold text-slate-700 whitespace-nowrap">
+                    {it.category_label}
+                    {it.leg_city && <span className="block text-[10px] font-semibold text-indigo-500">{it.leg_city}</span>}
+                  </td>
+
+                  {/* Everything the head recorded, so a query can be settled
+                      from this row rather than by ringing the employee. */}
+                  <td className="py-2">
+                    {it.vendor && <p className="font-bold text-slate-700">{it.vendor}</p>}
+                    {it.check_in && it.check_out ? (
+                      <p className="text-slate-500">
+                        In {it.check_in} → Out {it.check_out}
+                        {it.nights ? <span className="text-slate-400"> · {it.nights} night{it.nights === 1 ? '' : 's'}</span> : null}
+                        {it.per_night ? <span className="text-slate-400"> · ₹{fmt(it.per_night)}/night</span> : null}
+                      </p>
+                    ) : (
+                      <p className="text-slate-500">
+                        {it.date}{it.to_date && it.to_date !== it.date ? ` → ${it.to_date}` : ''}
+                        {it.days_covered > 1 ? <span className="text-slate-400"> · {it.days_covered} days</span> : null}
+                      </p>
+                    )}
+                    {(it.from_location || it.to_location) && (
+                      <p className="text-slate-500">{it.from_location} → {it.to_location}
+                        {it.mode && <span className="text-slate-400"> · {it.mode}</span>}
+                        {it.km > 0 && <span className="text-slate-400"> · {it.km} km</span>}
+                      </p>
+                    )}
+                    {it.reference_no && <p className="text-slate-400">Ref: {it.reference_no}</p>}
+                    {it.description && <p className="text-slate-500">{it.description}</p>}
+                    {it.policy_flag && <p className="text-amber-700 font-semibold mt-0.5">{it.policy_flag}</p>}
+                  </td>
+
+                  <td className="py-2 text-right font-black text-slate-800 whitespace-nowrap">₹{fmt(it.claimed_amount)}</td>
+                  <td className="py-2 text-right text-slate-500 whitespace-nowrap">
+                    {it.policy_cap != null ? `₹${fmt(it.policy_cap)}` : '—'}
+                    {/* the working, so the ceiling is never an unexplained total */}
+                    {it.cap_explained && <span className="block text-[10px] text-slate-400">{it.cap_explained.replace('Rs ', '₹')}</span>}
+                  </td>
+                  <td className="py-2 text-center">
+                    {it.has_bill
+                      ? <a href={`${(import.meta.env.VITE_API_BASE_URL || '')}${it.bill_url}`} target="_blank" rel="noreferrer" className="text-emerald-600 font-bold">View</a>
+                      : <span className="text-rose-400 font-bold">None</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
+
       {r.local_items?.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 overflow-x-auto">
           <h4 className="font-black text-slate-700 mb-3">Local Journeys</h4>

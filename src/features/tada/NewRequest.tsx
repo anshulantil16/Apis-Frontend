@@ -471,7 +471,7 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">Sanction No.</label><input className={inp} value={texp.sanction_number} onChange={e => setTexp({ ...texp, sanction_number: e.target.value })} /></div>
           </div>
           <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-xs text-rose-700 flex items-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /><b>ATTENTION:</b>&nbsp;Attaching bills/invoices is mandatory. Bills must show <b>Apis India Ltd</b> &amp; GSTIN <b>05AAACM0656K1ZL</b>. No bill → no approval.</div>
-          <BillCollector stops={claimStops} heads={CATS} items={items} setItems={setItems} inp={inp} />
+          <BillCollector stops={claimStops} heads={CATS} items={items} setItems={setItems} />
           {sanction && <SettlementTable sanction={sanction} claimedByCat={claimedByCat} claimTotal={claimTotal} />}
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
