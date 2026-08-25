@@ -1,5 +1,5 @@
 /* Travel Help Desk: trips awaiting tickets, and recording what was booked.
-   Only fully approved trips appear — booking a journey HR later rejects wastes
+   Only fully approved trips appear — booking a journey P&C (HR) later rejects wastes
    a fare and a cancellation charge. */
 import { useState, useEffect } from 'react';
 import {

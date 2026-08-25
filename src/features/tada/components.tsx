@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   CheckCircle, AlertCircle, XCircle, FileText, Shield, Wallet, UserCheck, BadgeCheck, Mail,
 } from 'lucide-react';
-import { STATUS_STYLE } from './shared';
+import { HR_LABEL, STATUS_STYLE } from './shared';
 
 // ── Animated helpers ──────────────────────────────────────────────────────────
 export function useCountUp(target: number, ms = 1100) {
@@ -78,7 +78,7 @@ export function PBar({ value, max, grad }: { value: number; max: number; grad: s
 }
 
 export function CapsBanner({ caps }: { caps: any }) {
-  if (!caps?.band) return <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">No policy band mapped for your level ({caps?.level || '—'}). Contact HR.</div>;
+  if (!caps?.band) return <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">No policy band mapped for your level ({caps?.level || '—'}). Contact P&C (HR).</div>;
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-sky-50 border border-indigo-100 rounded-2xl p-4">
       <p className="text-xs font-black text-indigo-600 uppercase tracking-wide mb-2">Your Policy Limits · Band {caps.band}</p>
@@ -105,19 +105,19 @@ export function CapsBanner({ caps }: { caps: any }) {
    "Submitted · Pending Manager" tells you the stage; this tells you the shape
    of the whole journey — what has cleared, what is live now, what is still
    ahead — which is the question someone actually opens a request to answer. */
-/* A tour programme is finally approved by HR — Finance is told, not asked — so
+/* A tour programme is finally approved by P&C (HR) — Finance is told, not asked — so
    its pipeline ends differently from a claim, where Finance approves and pays. */
 const CLAIM_STAGES = [
   { k: 'employee', l: 'Submitted', icon: FileText },
   { k: 'manager', l: 'Manager', icon: UserCheck },
-  { k: 'hr', l: 'HR', icon: Shield },
+  { k: 'hr', l: HR_LABEL, icon: Shield },
   { k: 'finance', l: 'Finance', icon: Wallet },
   { k: 'paid', l: 'Paid', icon: BadgeCheck },
 ];
 const TOUR_STAGES = [
   { k: 'employee', l: 'Submitted', icon: FileText },
   { k: 'manager', l: 'Manager', icon: UserCheck },
-  { k: 'hr', l: 'HR', icon: Shield },
+  { k: 'hr', l: HR_LABEL, icon: Shield },
   { k: 'finance', l: 'Finance notified', icon: Mail },
 ];
 
@@ -150,7 +150,7 @@ export function StageTrail({ status, statusLabel, type }: {
       <div className="flex items-start">
         {STAGES.map((st, i) => {
           const isRejected = rejectedAt === i;
-          // HR approval finishes a tour programme, including its "Finance
+          // P&C approval finishes a tour programme, including its "Finance
           // notified" end-cap — nothing is left pending after it.
           const done = isTour && status === 'hr_approved' ? STAGES.length - 1 : cleared;
           const isDone = !isRejected && i <= done && rejectedAt === null;

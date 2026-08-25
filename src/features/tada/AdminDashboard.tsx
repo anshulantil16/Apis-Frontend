@@ -3,14 +3,14 @@ import { useState, useEffect } from 'react';
 import {
   Trash2, Upload, CheckCircle, FileText, Receipt, Car, AlertCircle, RefreshCw, ChevronRight, Users, Shield, BarChart3, TrendingUp, Wallet, Activity,
 } from 'lucide-react';
-import { API, fmt, type User } from './shared';
+import { API, fmt, HR_LABEL, type User } from './shared';
 import { Count, PBar, Ring } from './components';
 import { Detail, ReqCard } from './RequestDetail';
 
 export const STATUS_LABELS: Record<string, string> = {
-  submitted: 'Pending Manager', manager_approved: 'Pending HR', hr_approved: 'Pending Finance',
+  submitted: 'Pending Manager', manager_approved: `Pending ${HR_LABEL}`, hr_approved: 'Pending Finance',
   finance_approved: 'Finance Approved', paid: 'Paid', manager_rejected: 'Rejected · Manager',
-  hr_rejected: 'Rejected · HR', finance_rejected: 'Rejected · Finance',
+  hr_rejected: `Rejected · ${HR_LABEL}`, finance_rejected: 'Rejected · Finance',
 };
 
 export function AdminDashboard({ user }: { user: User }) {
@@ -54,7 +54,7 @@ export function AdminDashboard({ user }: { user: User }) {
         const pipeline = [
           { l: 'Submitted', v: ov.by_status?.submitted || 0, c: '#f59e0b' },
           { l: 'Manager ✓', v: ov.by_status?.manager_approved || 0, c: '#3b82f6' },
-          { l: 'HR ✓', v: ov.by_status?.hr_approved || 0, c: '#8b5cf6' },
+          { l: `${HR_LABEL} ✓`, v: ov.by_status?.hr_approved || 0, c: '#8b5cf6' },
           { l: 'Finance ✓', v: ov.by_status?.finance_approved || 0, c: '#10b981' },
           { l: 'Paid', v: ov.by_status?.paid || 0, c: '#0d9488' },
         ];

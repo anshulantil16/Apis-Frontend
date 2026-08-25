@@ -1,4 +1,4 @@
-/* Manager / HR / Finance queue - what is waiting on this user, and what they
+/* Manager / P&C (HR) / Finance queue - what is waiting on this user, and what they
    have already actioned. */
 import { useState, useEffect } from 'react';
 import {

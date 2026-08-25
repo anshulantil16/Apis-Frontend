@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   LogOut, Plus, Clock, FileText, Shield, TrendingUp, Wallet, Plane,
 } from 'lucide-react';
-import { API, type User } from './shared';
+import { API, roleLabel, type User } from './shared';
 import { Count } from './components';
 import { NewRequest } from './NewRequest';
 import { Detail, ReqCard } from './RequestDetail';
@@ -45,7 +45,7 @@ export function Portal({ user, onLogout }: { user: User; onLogout: () => void })
       <header className="bg-white border-b border-slate-200 text-slate-800 relative z-20">
         <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-3 relative">
           <div className="flex-1"><p className="font-black leading-tight text-slate-900">{user.name}</p><p className="text-slate-500 text-xs">{user.designation} · {isAdmin ? 'Oversight & Setup' : `Level ${user.level}`}</p></div>
-          <span className="hidden sm:inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">{user.role}</span>
+          <span className="hidden sm:inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">{roleLabel(user.role)}</span>
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-sm">{(user.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
           <button onClick={onLogout} className="flex items-center gap-1 text-slate-500 hover:text-slate-900 text-sm transition-colors"><LogOut className="w-4 h-4" /><span className="hidden md:inline">Logout</span></button>
         </div>

@@ -4,7 +4,7 @@ import {
   Plane, CheckCircle, Clock, AlertCircle, RefreshCw, ChevronRight, Shield, KeyRound, ArrowRight, Sparkles,
   User as UserIcon,
 } from 'lucide-react';
-import { API, type User } from './shared';
+import { API, HR_LABEL, type User } from './shared';
 
 export function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [mode, setMode] = useState<'user' | 'admin'>('user');
@@ -38,11 +38,11 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
     setBusy(false);
   };
 
-  const steps = ['Employee', 'Manager', 'HR', 'Finance'];
+  const steps = ['Employee', 'Manager', HR_LABEL, 'Finance'];
   const features = [
     { i: Shield, t: 'Policy-checked', d: 'Every claim auto-validated against your band limits' },
     { i: Clock, t: '60-day tracking', d: 'Deadline flags so nothing lapses' },
-    { i: CheckCircle, t: 'Multi-level approval', d: 'Manager → HR → Finance, fully audited' },
+    { i: CheckCircle, t: 'Multi-level approval', d: `Manager → ${HR_LABEL} → Finance, fully audited` },
   ];
 
   return (

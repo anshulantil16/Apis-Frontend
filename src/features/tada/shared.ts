@@ -10,6 +10,16 @@ export type User = {
   designation: string; department: string; hq_city: string; caps: any;
 };
 
+/* The department is People & Culture; "HR" stays in brackets because that is
+   still what everyone calls it day to day, and a label nobody recognises is
+   worse than a slightly long one. One constant so a rename is one edit. */
+export const HR_LABEL = 'P&C (HR)';
+export const ROLE_LABELS: Record<string, string> = {
+  employee: 'Employee', manager: 'Manager', hr: HR_LABEL,
+  finance: 'Finance', travel_desk: 'Travel Help Desk', admin: 'Admin',
+};
+export const roleLabel = (r: string) => ROLE_LABELS[r] || r;
+
 export const STATUS_STYLE: Record<string, string> = {
   submitted: 'bg-amber-100 text-amber-700', manager_approved: 'bg-blue-100 text-blue-700',
   hr_approved: 'bg-violet-100 text-violet-700', finance_approved: 'bg-emerald-100 text-emerald-700',
