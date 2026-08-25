@@ -8,9 +8,9 @@ export const TOOL_STYLES = `
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
 }
-/* Entrance. IntranetShell's observer also tags these elements with .is-in as
+/* Entrance. IntranetShell's observer also tags these elements with data-in as
    they scroll past, which upgrades the one-shot entrance into a reveal that
-   replays — see the .tp-reveal.is-in rule below. */
+   replays — see the .tp-reveal[data-in] rule below. */
 .tp-reveal { animation: tpReveal .5s cubic-bezier(.2,.8,.2,1) both; }
 
 /* Cards lift and bloom a soft shadow rather than just moving up: a card that
@@ -19,7 +19,7 @@ export const TOOL_STYLES = `
 .tp-tilt:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -18px rgba(15,23,42,.28); }
 
 /* Inside the shell, tp-reveal becomes a scroll reveal instead of a one-shot
-   entrance: IntranetShell observes .tp-reveal and toggles .is-in, so cards
+   entrance: IntranetShell observes .tp-reveal and toggles data-in, so cards
    further down a long page animate when you actually reach them, and again on
    re-entry. Every legacy card also picks up a hover lift here, which is why
    the ten large view files needed no edits.
@@ -33,8 +33,8 @@ html.ih-reveal-ready .tp-reveal {
   transition: opacity .6s cubic-bezier(.2,.8,.2,1), transform .6s cubic-bezier(.2,.8,.2,1),
               box-shadow .3s cubic-bezier(.2,.8,.2,1);
 }
-html.ih-reveal-ready .tp-reveal.is-in { opacity: 1; transform: none; }
-html.ih-reveal-ready .tp-reveal.is-in:hover {
+html.ih-reveal-ready .tp-reveal[data-in] { opacity: 1; transform: none; }
+html.ih-reveal-ready .tp-reveal[data-in]:hover {
   transform: translateY(-3px);
   box-shadow: 0 16px 36px -18px rgba(15,23,42,.26);
 }
@@ -125,6 +125,7 @@ html.ih-reveal-ready .tp-reveal.is-in:hover {
 @keyframes tpSpinSlow { to { transform: rotate(360deg); } }
 .tp-spin-slow { animation: tpSpinSlow 18s linear infinite; }
 
+
 /* Same contract as the intranet shell: looping motion is decorative, and for
    anyone who has asked the OS to reduce motion it is not a nice-to-have. */
 @media (prefers-reduced-motion: reduce) {
@@ -133,7 +134,7 @@ html.ih-reveal-ready .tp-reveal.is-in:hover {
   { animation: none !important; }
   .tp-reveal,.tp-stagger > * { opacity: 1 !important; transform: none !important; }
   html.ih-reveal-ready .tp-reveal { opacity: 1 !important; transform: none !important; transition: none; }
-  html.ih-reveal-ready .tp-reveal.is-in:hover,.tp-tilt:hover { transform: none; }
+  html.ih-reveal-ready .tp-reveal[data-in]:hover,.tp-tilt:hover { transform: none; }
   .tp-skeleton { background: #eef2f7; }
 }
 `;

@@ -99,7 +99,7 @@ export const IH_STYLES = `
 @keyframes ihPaletteIn { from { opacity:0; transform:translateY(-10px) scale(.98); } to { opacity:1; transform:none; } }
 .ih-palette-in { animation: ihPaletteIn .2s cubic-bezier(.2,.9,.25,1.1) both; }
 
-/* Scroll-triggered reveal. IntranetShell adds .is-in via an IntersectionObserver
+/* Scroll-triggered reveal. IntranetShell sets data-in via an IntersectionObserver
    so cards animate every time they scroll into view, not only on first load.
 
    Deliberately VISIBLE by default: the hidden state is scoped to
@@ -111,7 +111,7 @@ export const IH_STYLES = `
    hidden. */
 .ih-inview { transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1); }
 html.ih-reveal-ready .ih-inview { opacity:0; transform: translateY(24px); }
-html.ih-reveal-ready .ih-inview.is-in { opacity:1; transform:none; }
+html.ih-reveal-ready .ih-inview[data-in] { opacity:1; transform:none; }
 
 /* ── interaction ───────────────────────────────────────────────────────── */
 .ih-tilt { transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s; }
@@ -240,6 +240,7 @@ html.ih-reveal-ready .ih-inview.is-in { opacity:1; transform:none; }
 .ih-stagger > *:nth-child(7) { animation-delay: .27s }
 .ih-stagger > *:nth-child(8) { animation-delay: .31s }
 .ih-stagger > *:nth-child(n+9) { animation-delay: .35s }
+
 
 /* Respect the OS "reduce motion" setting — kill every looping animation.
    Ambient motion is decorative; for users who get motion sickness it is not

@@ -81,10 +81,42 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
   useEffect(() => {
     if (!('IntersectionObserver' in window)) return;   // CSS leaves content visible
 
+    /* threshold 0, not a fraction: an element taller than the viewport can
+       never reach a ratio like 0.12, so tall panels would never reveal. */
     const io = new IntersectionObserver(
-      entries => entries.forEach(en => en.target.classList.toggle('is-in', en.isIntersecting)),
-      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' },
+      entries => entries.forEach(en => en.target.toggleAttribute('data-in', en.isIntersecting)),
+      { threshold: 0, rootMargin: '0px 0px -40px 0px' },
     );
+
+    /* Reveal anything already on screen.
+
+       IntersectionObserver's first callback can report not-intersecting for an
+       element React has just inserted, because layout has not settled — and it
+       does not reliably fire again without a scroll. That left freshly mounted
+       content at opacity:0 permanently, and an invisible element still takes
+       clicks, so a button could be pressed but not seen. Measuring directly on
+       the next frame closes that gap; the observer still drives everything
+       after.
+
+       The flag is an attribute rather than a class because React rewrites
+       className wholesale on re-render and would strip a class straight back
+       off; it never touches data-* it did not render. */
+    const showIfVisible = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      if ((r.width || r.height) && r.bottom > 0 && r.top < window.innerHeight
+          && r.right > 0 && r.left < window.innerWidth) {
+        el.setAttribute('data-in', '');
+      }
+    };
+    let sweepQueued = false;
+    const sweepSoon = () => {
+      if (sweepQueued) return;
+      sweepQueued = true;
+      requestAnimationFrame(() => {
+        sweepQueued = false;
+        document.querySelectorAll(REVEAL_SEL + ':not([data-in])').forEach(showIfVisible);
+      });
+    };
 
     // Only hide-then-reveal once we know the observer is actually running.
     // Without this the CSS would hide content unconditionally, and any failure
@@ -93,6 +125,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
     document.documentElement.classList.add('ih-reveal-ready');
 
     document.querySelectorAll(REVEAL_SEL).forEach(el => io.observe(el));
+    sweepSoon();
 
     /* Tool pages mount their content long after the shell and swap it on every
      * navigation, so we track adds AND removes.
@@ -111,16 +144,29 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
       n.querySelectorAll(REVEAL_SEL).forEach(fn);
     };
     const mo = new MutationObserver(records => {
+      let recheck = false;
       for (const rec of records) {
+        if (rec.type === 'attributes') { recheck = true; continue; }
         rec.removedNodes.forEach(n => eachTarget(n, el => io.unobserve(el)));
-        rec.addedNodes.forEach(n => eachTarget(n, el => io.observe(el)));
+        rec.addedNodes.forEach(n => eachTarget(n, el => { io.observe(el); recheck = true; }));
       }
+      // New content is measured on the next frame, once React has laid it out.
+      if (recheck) sweepSoon();
     });
-    mo.observe(document.body, { childList: true, subtree: true });
+    /* className is watched too: a re-render can change an element's size or
+       position (a panel expanding, a tab switching) without adding a node, and
+       the sweep then re-measures anything still hidden. Setting data-in is not
+       a class change, so this cannot feed itself. */
+    mo.observe(document.body, { childList: true, subtree: true,
+                                attributes: true, attributeFilter: ['class'] });
+
+    // Layout can change without a scroll — a panel expanding, a font landing.
+    window.addEventListener('resize', sweepSoon);
 
     return () => {
       io.disconnect();
       mo.disconnect();
+      window.removeEventListener('resize', sweepSoon);
       document.documentElement.classList.remove('ih-reveal-ready');
     };
   }, []);

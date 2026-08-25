@@ -89,7 +89,7 @@ html.ih-reveal-ready .animate-rise {
   opacity: 0; transform: translateY(18px);
   transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
-html.ih-reveal-ready .animate-rise.is-in { opacity: 1; transform: none; }
+html.ih-reveal-ready .animate-rise[data-in] { opacity: 1; transform: none; }
 
 /* shimmering sheen for hero cards */
 .sheen { position: relative; overflow: hidden; }
