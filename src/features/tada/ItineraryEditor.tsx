@@ -79,7 +79,7 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
                   onChange={e2 => set(i, { to_date: e2.target.value })} /></div>
 
               <div className="md:col-span-2">
-                <label className="text-xs font-bold text-slate-500 mb-1 block">How you travel to {leg.destination_city || 'this stop'}</label>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">How you travel to {leg.destination_city || 'this stop'} <span className="text-rose-500">*</span></label>
                 <TravelModePicker className={inp} value={leg.travel_mode} options={modeOptions}
                   onChange={v => set(i, { travel_mode: v, mode_exception_reason: '' })}
                   reason={leg.mode_exception_reason} onReason={v => set(i, { mode_exception_reason: v })} />

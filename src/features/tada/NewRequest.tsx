@@ -237,10 +237,11 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
      a filled-in request. */
   const bookingGaps = useMemo(() => {
     const gaps: string[] = [];
+    // The mode is always needed — the travel class is approved against it.
+    // The date only matters when the desk has to act on it.
     const want = (mode: string, tm: string, dt: string, where: string) => {
-      if (mode !== 'company') return;
       if (!tm) gaps.push(`travel mode${where}`);
-      if (!dt) gaps.push(`travel date${where}`);
+      if (mode === 'company' && !dt) gaps.push(`travel date${where}`);
     };
     if (multiCity) {
       readyLegs.forEach((l: any) =>
@@ -381,7 +382,7 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
 
             {!multiCity && (
             <div className="md:col-span-2">
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode
+              <label className="text-xs font-bold text-slate-500 mb-1 block">Travel Mode <span className="text-rose-500">*</span>
                 {caps?.approved_travel_mode && <span className="text-slate-300 font-semibold"> · your grade allows {caps.approved_travel_mode}</span>}
               </label>
               <TravelModePicker key={formKey} className={inp} value={tour.travel_mode}
@@ -456,7 +457,8 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
           {bookingGaps.length > 0 && (
             <p className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-start gap-2">
               <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              You have asked the company to book — the desk still needs the {bookingGaps.join(', ')}.
+              Still needed: the {bookingGaps.join(', ')}.
+              {bookingGaps.some(g => g.startsWith('travel mode')) && ' Your travel class is approved against the mode.'}
             </p>
           )}
           <button onClick={submitTour} disabled={busy || advanceOver || bookingGaps.length > 0} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
