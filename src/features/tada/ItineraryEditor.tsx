@@ -85,14 +85,21 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
                   reason={leg.mode_exception_reason} onReason={v => set(i, { mode_exception_reason: v })} />
               </div>
 
+              <div className="md:col-span-2">
+                <label className="text-xs font-bold text-slate-500 mb-1 block">Who books the ticket to {leg.destination_city || 'this stop'}?</label>
+                <BookingModePicker value={leg.booking_mode}
+                  onChange={v => set(i, { booking_mode: v })} />
+                {leg.booking_mode === 'company' && (
+                  <p className="text-[11px] font-bold text-indigo-600 mt-1.5">
+                    Set the mode and date below — that is what the Travel Help Desk will book.
+                  </p>
+                )}
+              </div>
+
               {leg.travel_mode && (
                 <>
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Who books this ticket?</label>
-                    <BookingModePicker value={leg.booking_mode}
-                      onChange={v => set(i, { booking_mode: v })} />
-                  </div>
-                  <div><label className="text-xs font-bold text-slate-500 mb-1 block">{journeyNoun(leg.travel_mode)} Date</label>
+                  <div><label className="text-xs font-bold text-slate-500 mb-1 block">{journeyNoun(leg.travel_mode)} Date
+                    {leg.booking_mode === 'company' && <span className="text-rose-500"> *</span>}</label>
                     <input type="date" className={inp} value={leg.ticket_date} min={tripFrom} max={tripTo}
                       onChange={e2 => set(i, { ticket_date: e2.target.value })} /></div>
                   <div><label className="text-xs font-bold text-slate-500 mb-1 block">Preferred Time</label>

@@ -98,6 +98,8 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
      reviewable. Filing against a sanction inherits them instead. */
   const claimIncomplete = !sanctionId && !(texp.destination_city && texp.from_date && texp.to_date);
 
+
+
   /* A claim filed without a sanction still has policy limits — they just come
      from what the employee types here rather than from an approved trip. This
      fetches them so the bill form shows entitlements either way; without it a
@@ -229,6 +231,25 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
   const advanceTolerance = est?.advance_tolerance ?? 0.10;
   const maxAdvance = useMemo(() => Math.round(estTotal * (1 + advanceTolerance)), [estTotal, advanceTolerance]);
   const advanceOver = estTotal > 0 && (parseFloat(tour.advance_amount) || 0) > maxAdvance;
+
+  /* A company booking is an instruction to the desk, so it has to say what to
+     book. Caught here so the form explains it, rather than the server refusing
+     a filled-in request. */
+  const bookingGaps = useMemo(() => {
+    const gaps: string[] = [];
+    const want = (mode: string, tm: string, dt: string, where: string) => {
+      if (mode !== 'company') return;
+      if (!tm) gaps.push(`travel mode${where}`);
+      if (!dt) gaps.push(`travel date${where}`);
+    };
+    if (multiCity) {
+      readyLegs.forEach((l: any) =>
+        want(l.booking_mode, l.travel_mode, l.ticket_date, ` for ${l.destination_city || 'a stop'}`));
+    } else {
+      want(tour.booking_mode, tour.travel_mode, tour.travel_mode_date, '');
+    }
+    return gaps;
+  }, [multiCity, readyLegs, tour.booking_mode, tour.travel_mode, tour.travel_mode_date]);
 
   // Client-side mirror of policy.validate_estimate — instant feedback only.
   const estWarnings = useMemo(() => {
@@ -370,14 +391,26 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
                 onReason={v => setTour({ ...tour, mode_exception_reason: v })} />
             </div>
             )}
+            {!multiCity && (
+              <div className="md:col-span-2">
+                <label className="text-xs font-bold text-slate-500 mb-1 block">Who books the ticket?</label>
+                <BookingModePicker value={tour.booking_mode}
+                  onChange={v => setTour({ ...tour, booking_mode: v })} />
+              </div>
+            )}
+            {/* When the company is booking, these stop being a note to self and
+                become the instruction the desk works from — so they are
+                required, and labelled as such. */}
+            {!multiCity && tour.booking_mode === 'company' && (
+              <div className="md:col-span-2 -mb-1">
+                <p className="text-[11px] font-bold text-indigo-600">
+                  Tell the Travel Help Desk what to book — the mode and date below are what they will act on.
+                </p>
+              </div>
+            )}
             {!multiCity && tour.travel_mode && (
               <>
-                <div className="md:col-span-2">
-                  <label className="text-xs font-bold text-slate-500 mb-1 block">Who books this ticket?</label>
-                  <BookingModePicker value={tour.booking_mode}
-                    onChange={v => setTour({ ...tour, booking_mode: v })} />
-                </div>
-                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward {journeyNoun(tour.travel_mode)} Date <span className="text-slate-300">({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward {journeyNoun(tour.travel_mode)} Date {tour.booking_mode === 'company' && <span className="text-rose-500">*</span>}<span className="text-slate-300"> ({tour.travel_mode})</span></label><input type="date" className={inp} value={tour.travel_mode_date} onChange={e => setTour({ ...tour, travel_mode_date: e.target.value })} /></div>
                 <div><label className="text-xs font-bold text-slate-500 mb-1 block">Onward Preferred Time</label>
                   <select className={inp} value={tour.travel_mode_time_pref} onChange={e => setTour({ ...tour, travel_mode_time_pref: e.target.value })}>
                     <option value="">Select time…</option>
@@ -420,7 +453,13 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
           <EstimateBlock est={est} tour={tour} setTour={setTour} total={estTotal} warnings={estWarnings} inp={inp}
             maxAdvance={maxAdvance} advanceOver={advanceOver} />
 
-          <button onClick={submitTour} disabled={busy || advanceOver} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
+          {bookingGaps.length > 0 && (
+            <p className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-start gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              You have asked the company to book — the desk still needs the {bookingGaps.join(', ')}.
+            </p>
+          )}
+          <button onClick={submitTour} disabled={busy || advanceOver || bookingGaps.length > 0} className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50 flex items-center gap-2 transition-all">{busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit for Approval</>}</button>
         </div>
       )}
 
