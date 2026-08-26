@@ -42,10 +42,12 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
   };
 
   // tour sanction
-  const [tour, setTour] = useState<any>(TOUR_BLANK);
+  // Prefilled from the employee's own base city — still required and still
+  // editable, since a trip can just as easily start somewhere else.
+  const [tour, setTour] = useState<any>({ ...TOUR_BLANK, from_city: user.hq_city || '' });
   const [est, setEst] = useState<any>(null);      // policy estimate from the server
   const [multiCity, setMultiCity] = useState(false);
-  const [legs, setLegs] = useState<any[]>([blankLeg()]);
+  const [legs, setLegs] = useState<any[]>([blankLeg(user.hq_city || '')]);
   const seededRef = useRef<any>({});   // last policy figures written into the form
   // travel expense
   const [texp, setTexp] = useState<any>({ destination_city: '', from_date: '', to_date: '', purpose: '', sanction_number: '' });
@@ -252,10 +254,15 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
       if (mode === 'company' && !dt) gaps.push(`travel date${where}`);
     };
     if (multiCity) {
-      readyLegs.forEach((l: any) =>
-        want(l.booking_mode, l.travel_mode, l.ticket_date, ` for ${l.destination_city || 'a stop'}`));
+      readyLegs.forEach((l: any) => {
+        want(l.booking_mode, l.travel_mode, l.ticket_date, ` for ${l.destination_city || 'a stop'}`);
+        // A destination on its own is a place, not a route — the approver and
+        // the Travel Help Desk both need to know where each stop is FROM.
+        if (!(l.from_city || '').trim()) gaps.push(`where the journey to ${l.destination_city || 'a stop'} starts from`);
+      });
     } else {
       want(tour.booking_mode, tour.travel_mode, tour.travel_mode_date, '');
+      if (!tour.from_city.trim()) gaps.push('where the journey starts');
     }
     // The way home is a journey too — it was asked for as a bare date, so it
     // was never checked against the travel class and the desk was never told
@@ -272,7 +279,7 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
     }
     return gaps;
   }, [multiCity, readyLegs, deskIsBooking, tour.booking_mode, tour.travel_mode, tour.travel_mode_date,
-      tour.trip_type, tour.return_booking_mode, tour.return_travel_mode, tour.return_mode_date,
+      tour.from_city, tour.trip_type, tour.return_booking_mode, tour.return_travel_mode, tour.return_mode_date,
       tour.traveller_name, tour.traveller_age, tour.contact_number]);
 
   // Client-side mirror of policy.validate_estimate — instant feedback only.
@@ -296,7 +303,7 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
     if (multiCity) payload.legs = readyLegs;
     const r = await fetch(`${API}/requests/tour-sanction/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const d = await r.json(); setMsg({ t: d.message || d.error, ok: r.ok }); setBusy(false);
-    if (r.ok) { setTour(TOUR_BLANK); setEst(null); setLegs([blankLeg()]); setMultiCity(false); cheer(d.message); }
+    if (r.ok) { setTour({ ...TOUR_BLANK, from_city: user.hq_city || '' }); setEst(null); setLegs([blankLeg(user.hq_city || '')]); setMultiCity(false); cheer(d.message); }
   };
   const submitTexp = async () => {
     setBusy(true); setMsg(null);
@@ -361,7 +368,8 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
           <div className="grid md:grid-cols-2 gap-3">
             {/* Address and city belong to a destination, so in a multi-city trip
                 they live on each stop instead of once on the request. */}
-            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City{est?.city_grade && <span className="ml-1.5 text-indigo-500">· grade {est.city_grade}</span>}</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /><p className="text-[11px] text-slate-400 mt-1">City only — this sets your stay and DA limits</p></div>}
+            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">From City <span className="text-rose-500">*</span></label><input className={inp} value={tour.from_city} onChange={e => setTour({ ...tour, from_city: e.target.value })} placeholder="e.g. Lucknow" /><p className="text-[11px] text-slate-400 mt-1">Where the journey actually starts</p></div>}
+            {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City <span className="text-rose-500">*</span>{est?.city_grade && <span className="ml-1.5 text-indigo-500">· grade {est.city_grade}</span>}</label><input className={inp} value={tour.destination_city} onChange={e => setTour({ ...tour, destination_city: e.target.value })} placeholder="e.g. Mumbai" /><p className="text-[11px] text-slate-400 mt-1">City only — this sets your stay and DA limits</p></div>}
             {!multiCity && <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address <span className="text-slate-300">(optional)</span></label><input className={inp} value={tour.travel_address} onChange={e => setTour({ ...tour, travel_address: e.target.value })} placeholder="office / site / hotel address" /></div>}
             <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose of Journey <span className="text-slate-300">{multiCity ? '(overall — each stop can add its own)' : ''}</span></label><input className={inp} value={tour.purpose} onChange={e => setTour({ ...tour, purpose: e.target.value })} /></div>
             <div><label className="text-xs font-bold text-slate-500 mb-1 block">From Date</label><input type="date" className={inp} value={tour.from_date} onChange={e => setTour({ ...tour, from_date: e.target.value })} /></div>

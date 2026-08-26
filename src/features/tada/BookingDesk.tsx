@@ -15,7 +15,7 @@ import { API, fmt, type User } from './shared';
 import { Toast } from './components';
 
 type Journey = {
-  key: string; journeyKey: string; seq: number | 'return' | null; city: string; mode: string;
+  key: string; journeyKey: string; seq: number | 'return' | null; from: string; city: string; mode: string;
   date: string | null; timePref: string | null; status: string;
   reference: string; carrier: string; fare: number; estimate: number;
   ticketUrl: string | null; options: any[];
@@ -34,7 +34,7 @@ function outboundJourneysOf(r: any): Journey[] {
   const legs = (r.legs || []).filter((l: any) => l.booking_mode === 'company');
   if (legs.length) {
     return legs.map((l: any) => ({
-      key: `${r.id}-${l.seq}`, journeyKey: String(l.seq), seq: l.seq, city: l.destination_city, mode: l.travel_mode,
+      key: `${r.id}-${l.seq}`, journeyKey: String(l.seq), seq: l.seq, from: l.from_city, city: l.destination_city, mode: l.travel_mode,
       date: l.ticket_date, timePref: l.ticket_time_pref_label, status: l.booking_status,
       reference: l.booking_reference, carrier: l.booking_carrier, fare: l.booking_fare,
       estimate: l.est_ticket_amount, ticketUrl: l.ticket_url, options: optionsFor(r, String(l.seq)),
@@ -42,7 +42,7 @@ function outboundJourneysOf(r: any): Journey[] {
   }
   if (r.booking_mode !== 'company') return [];
   return [{
-    key: `${r.id}`, journeyKey: 'trip', seq: null, city: r.destination_city, mode: r.travel_mode,
+    key: `${r.id}`, journeyKey: 'trip', seq: null, from: r.from_city, city: r.destination_city, mode: r.travel_mode,
     date: r.travel_mode_date, timePref: r.travel_mode_time_pref_label, status: r.booking_status,
     reference: r.booking_reference, carrier: r.booking_carrier, fare: r.booking_fare,
     estimate: r.est_ticket_amount, ticketUrl: r.ticket_url, options: optionsFor(r, 'trip'),
@@ -52,8 +52,13 @@ function outboundJourneysOf(r: any): Journey[] {
 /** The way home, if the desk is raising it. Its own ticket, its own PNR. */
 function returnJourneyOf(r: any): Journey | null {
   if (r.trip_type !== 'round_trip' || r.return_booking_mode !== 'company') return null;
+  // Where the return actually starts: the last stop on a multi-city trip, or
+  // the single destination otherwise — not the trip's own from_city, which is
+  // where the OUTBOUND began.
+  const lastLeg = (r.legs || [])[r.legs?.length - 1];
+  const startsFrom = lastLeg ? lastLeg.destination_city : r.destination_city;
   return {
-    key: `${r.id}-return`, journeyKey: 'return', seq: 'return', city: `Return to ${r.hq_city || 'base'}`,
+    key: `${r.id}-return`, journeyKey: 'return', seq: 'return', from: startsFrom, city: r.hq_city || 'base',
     mode: r.return_travel_mode, date: r.return_mode_date,
     timePref: r.return_mode_time_pref_label, status: r.return_booking_status,
     reference: r.return_booking_reference, carrier: r.return_booking_carrier,
@@ -320,9 +325,9 @@ export function BookingDesk({ user }: { user: User }) {
           <div key={j.key} className="border border-slate-100 rounded-xl overflow-hidden">
             <div className="bg-slate-50/80 px-3 py-2 flex items-center justify-between gap-2 flex-wrap border-b border-slate-100">
               <p className="font-black text-slate-700 text-xs">
-                {/* The way home is not a numbered stop — it already reads as
-                    "Return to <city>". */}
-                {typeof j.seq === 'number' ? `Stop ${j.seq + 1} · ` : ''}{j.city || 'Journey'}
+                {typeof j.seq === 'number' ? `Stop ${j.seq + 1} · ` : ''}
+                {j.seq === 'return' && 'Return · '}
+                {j.from ? `${j.from} → ` : ''}{j.city || 'Journey'}
                 {j.mode && <span className="text-slate-400 font-semibold"> · by {j.mode}</span>}
               </p>
               <p className="text-[11px] text-slate-500">

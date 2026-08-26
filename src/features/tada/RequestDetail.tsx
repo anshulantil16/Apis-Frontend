@@ -177,11 +177,33 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
         </div>
         <div className="grid md:grid-cols-3 gap-3 text-sm">
           {r.purpose && <div><p className="text-slate-400 text-xs">Purpose</p><p className="font-semibold">{r.purpose}</p></div>}
-          {r.destination_city && <div><p className="text-slate-400 text-xs">Destination</p><p className="font-semibold">{r.destination_city} <span className="text-indigo-500">(Grade {r.city_grade})</span></p></div>}
+          {r.destination_city && (
+            <div>
+              <p className="text-slate-400 text-xs">Route</p>
+              <p className="font-semibold">
+                {r.from_city ? `${r.from_city} → ` : ''}{r.destination_city} <span className="text-indigo-500">(Grade {r.city_grade})</span>
+              </p>
+            </div>
+          )}
           {(r.from_date || r.to_date) && <div><p className="text-slate-400 text-xs">Dates</p><p className="font-semibold">{r.from_date} → {r.to_date}{r.number_of_days ? <span className="text-indigo-500"> ({r.number_of_days} day{r.number_of_days === 1 ? '' : 's'})</span> : null}</p></div>}
           {r.sanction_number && <div><p className="text-slate-400 text-xs">Sanction No.</p><p className="font-semibold">{r.sanction_number}</p></div>}
           {r.travel_mode && <div><p className="text-slate-400 text-xs">Mode</p><p className="font-semibold">{r.travel_mode}</p></div>}
-          {r.travel_mode_date && <div><p className="text-slate-400 text-xs">Onward Journey</p><p className="font-semibold">{r.travel_mode_date}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}</p></div>}
+          {!r.legs?.length && r.type === 'tour_sanction' && (
+            <div>
+              <p className="text-slate-400 text-xs">Onward Journey</p>
+              <p className="font-semibold">
+                {r.travel_mode_date || '—'}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}
+              </p>
+              {/* Who is actually raising the ticket — an approver needs this
+                  as much as the desk does, and it was only ever shown for the
+                  return journey before. */}
+              <p className={`text-[11px] font-bold mt-0.5 ${r.booking_mode === 'company' ? 'text-indigo-500' : 'text-slate-400'}`}>
+                {r.booking_mode === 'company'
+                  ? `Booked by the Travel Help Desk${r.booking_reference ? ` · ${r.booking_reference}` : ''}`
+                  : 'Self-booked — employee claims the fare'}
+              </p>
+            </div>
+          )}
           {r.type === 'tour_sanction' && r.trip_type_label && <div><p className="text-slate-400 text-xs">Trip</p><p className="font-semibold">{r.trip_type_label}</p></div>}
           {r.trip_type === 'round_trip' && (r.return_mode_date || r.return_travel_mode) && (
             <div>
@@ -191,12 +213,11 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
                 {r.return_mode_date ? ` · ${r.return_mode_date}` : ''}
                 {r.return_mode_time_pref_label ? ` · ${r.return_mode_time_pref_label}` : ''}
               </p>
-              {r.return_booking_mode === 'company' && (
-                <p className="text-[11px] text-indigo-500 font-bold">
-                  Booked by the Travel Help Desk
-                  {r.return_booking_reference ? ` · ${r.return_booking_reference}` : ''}
-                </p>
-              )}
+              <p className={`text-[11px] font-bold mt-0.5 ${r.return_booking_mode === 'company' ? 'text-indigo-500' : 'text-slate-400'}`}>
+                {r.return_booking_mode === 'company'
+                  ? `Booked by the Travel Help Desk${r.return_booking_reference ? ` · ${r.return_booking_reference}` : ''}`
+                  : 'Self-booked — employee claims the fare'}
+              </p>
             </div>
           )}
           {r.estimate_amount > 0 && <div><p className="text-slate-400 text-xs">Total Estimate</p><p className="font-black text-slate-800">₹{fmt(r.estimate_amount)}</p></div>}
@@ -245,12 +266,17 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
               {r.legs.map((l: any) => (
                 <div key={l.seq} className="bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span className="font-black text-slate-700">{l.seq + 1}. {l.destination_city}</span>
+                    <span className="font-black text-slate-700">{l.seq + 1}. {l.from_city ? `${l.from_city} → ` : ''}{l.destination_city}</span>
                     <span className="text-indigo-500 font-semibold">grade {l.city_grade}</span>
                     <span className="text-slate-500">{l.from_date} → {l.to_date} ({l.days}d)</span>
                     {l.travel_mode && <span className="text-slate-500">· by {l.travel_mode}</span>}
                     {l.ticket_date && <span className="text-slate-400">· ticket {l.ticket_date}{l.ticket_time_pref_label ? ` ${l.ticket_time_pref_label}` : ''}</span>}
                   </div>
+                  <p className={`mt-0.5 font-bold ${l.booking_mode === 'company' ? 'text-indigo-500' : 'text-slate-400'}`}>
+                    {l.booking_mode === 'company'
+                      ? `Booked by the Travel Help Desk${l.booking_reference ? ` · ${l.booking_reference}` : ''}`
+                      : 'Self-booked — employee claims the fare'}
+                  </p>
                   {l.travel_address && <p className="text-slate-500 mt-0.5">{l.travel_address}</p>}
                   {l.purpose && <p className="text-slate-400 mt-0.5">{l.purpose}</p>}
                   {l.mode_exception_reason && <p className="text-amber-700 mt-0.5"><b>Mode exception:</b> {l.mode_exception_reason}</p>}

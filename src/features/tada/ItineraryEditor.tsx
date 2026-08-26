@@ -25,7 +25,11 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
   const addStop = () => {
     const last = legs[legs.length - 1];
     const start = last?.to_date ? nextDay(last.to_date) : tripFrom;
-    setLegs([...legs, { ...blankLeg(), from_date: start && (!tripTo || start <= tripTo) ? start : '' }]);
+    // A new stop is reached from wherever the previous one left off — a
+    // sensible default, but still editable, since travel doesn't always
+    // follow the itinerary in order.
+    setLegs([...legs, { ...blankLeg(last?.destination_city || ''),
+      from_date: start && (!tripTo || start <= tripTo) ? start : '' }]);
   };
 
   if (!tripFrom || !tripTo) {
@@ -55,12 +59,16 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
             </div>
 
             <div className="grid md:grid-cols-2 gap-3">
-              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">From City <span className="text-rose-500">*</span></label>
+                <input className={inp} value={leg.from_city} placeholder="e.g. Lucknow"
+                  onChange={e2 => set(i, { from_city: e2.target.value })} />
+                <p className="text-[11px] text-slate-400 mt-1">Where this leg of the journey starts</p></div>
+              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Destination City <span className="text-rose-500">*</span>
                 {e?.city_grade && <span className="ml-1.5 text-indigo-500">· grade {e.city_grade}</span>}</label>
                 <input className={inp} value={leg.destination_city} placeholder="e.g. Mumbai"
                   onChange={e2 => set(i, { destination_city: e2.target.value })} />
                 <p className="text-[11px] text-slate-400 mt-1">City only — sets this stop's limits</p></div>
-              <div><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address <span className="text-slate-300">(optional)</span></label>
+              <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Travel Address <span className="text-slate-300">(optional)</span></label>
                 <input className={inp} value={leg.travel_address} placeholder="office / site / hotel address"
                   onChange={e2 => set(i, { travel_address: e2.target.value })} /></div>
               <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500 mb-1 block">Purpose at this stop <span className="text-slate-300">(optional)</span></label>

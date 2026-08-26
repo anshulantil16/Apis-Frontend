@@ -60,7 +60,7 @@ export const TIME_PREFS = [
 ];
 
 export const TOUR_BLANK = {
-  travel_address: '', purpose: '', destination_city: '', from_date: '', to_date: '',
+  travel_address: '', purpose: '', from_city: '', destination_city: '', from_date: '', to_date: '',
   contact_number: '', sanction_number: '', travel_mode: '',
   travel_mode_date: '', travel_mode_time_pref: '', return_mode_date: '', return_mode_time_pref: '',
   // The way home is its own journey: its own mode, its own date, and its own
@@ -75,8 +75,8 @@ export const TOUR_BLANK = {
   est_misc_amount: '', advance_amount: '', mode_exception_reason: '', booking_mode: 'self',
 };
 
-export const blankLeg = () => ({
-  from_date: '', to_date: '', destination_city: '', travel_address: '', purpose: '',
+export const blankLeg = (fromCity: string = '') => ({
+  from_date: '', to_date: '', from_city: fromCity, destination_city: '', travel_address: '', purpose: '',
   travel_mode: '', ticket_date: '', ticket_time_pref: '', booking_mode: 'self',
   mode_exception_reason: '', est_ticket_amount: '',
 });
