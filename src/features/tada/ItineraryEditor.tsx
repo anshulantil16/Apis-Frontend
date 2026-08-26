@@ -84,7 +84,26 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
               <div><label className="text-xs font-bold text-slate-500 mb-1 block">To Date</label>
                 <input type="date" className={inp} value={leg.to_date}
                   min={leg.from_date || tripFrom} max={tripTo}
-                  onChange={e2 => set(i, { to_date: e2.target.value })} /></div>
+                  onChange={e2 => {
+                    /* Pushing this stop's end forward can swallow the next
+                       stop's start - the next stop's own picker only bounds it
+                       at pick time, so nothing re-checked it afterwards and the
+                       shared day got DA counted twice. Move the next stop out of
+                       the way here, the same way from/to keep each other honest
+                       within a single stop. */
+                    const v = e2.target.value;
+                    const next = legs[i + 1];
+                    const patched = legs.map((l, j) => j === i ? { ...l, to_date: v } : l);
+                    if (next?.from_date && v && next.from_date <= v) {
+                      const after = nextDay(v);
+                      patched[i + 1] = {
+                        ...next,
+                        from_date: (!tripTo || after <= tripTo) ? after : '',
+                        ...(next.to_date && next.to_date < after ? { to_date: '' } : {}),
+                      };
+                    }
+                    setLegs(patched);
+                  }} /></div>
 
               <div className="md:col-span-2">
                 <label className="text-xs font-bold text-slate-500 mb-1 block">How you travel to {leg.destination_city || 'this stop'} <span className="text-rose-500">*</span></label>
