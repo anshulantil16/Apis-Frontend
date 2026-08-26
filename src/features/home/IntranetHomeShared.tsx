@@ -8,7 +8,7 @@ import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
   LifeBuoy, Globe2, CalendarClock, Landmark,
-  Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale,
+  Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp, Headset,
 } from 'lucide-react';
 
 /* lucide-react dropped brand icons, so these are small hand-rolled SVG marks
@@ -161,9 +161,30 @@ export const UPCOMING_EVENTS: UpcomingEvent[] = [
   { label: 'Company Townhall', date: 'Aug 30', time: '4:00 PM', icon: Building2, soft: 'bg-emerald-50', accent: 'text-emerald-600' },
 ];
 
+export interface CelebrationEntry { name: string; date: string; }
+
+/* No real HRMS/birthday feed is wired up yet — sample rows showing the
+   Birthdays/Anniversaries widget's intended shape (IntranetHomePage.tsx),
+   not real employees or dates. Same honest "sample data" pattern as
+   UPCOMING_EVENTS above — replace with a real HR feed and drop the caveat
+   rendered under the widget heading once one exists. */
+export const SAMPLE_BIRTHDAYS: CelebrationEntry[] = [
+  { name: 'Neha Sharma', date: '22 Aug' },
+  { name: 'Rahul Verma', date: '27 Aug' },
+  { name: 'Pooja Singh', date: '28 Aug' },
+  { name: 'Arjun Mehta', date: '7 Mar' },
+];
+export const SAMPLE_ANNIVERSARIES: CelebrationEntry[] = [
+  { name: 'Kritika Rao', date: '14 Sep' },
+  { name: 'Manish Gupta', date: '3 Jun' },
+  { name: 'Sneha Kapoor', date: '19 Jan' },
+];
+
 export const COMING_SOON = [
   { label: 'Budget', icon: Wallet, soft: 'bg-emerald-50', accent: 'text-emerald-500' },
   { label: 'Compliance', icon: Scale, soft: 'bg-violet-50', accent: 'text-violet-500' },
+  { label: 'Sanction Approvals', icon: Stamp, soft: 'bg-indigo-50', accent: 'text-indigo-500' },
+  { label: 'Helpdesk', icon: Headset, soft: 'bg-rose-50', accent: 'text-rose-500' },
   { label: 'Announcements', icon: Megaphone, soft: 'bg-amber-50', accent: 'text-amber-500' },
   { label: 'Help & Support', icon: LifeBuoy, soft: 'bg-sky-50', accent: 'text-sky-500' },
 ];

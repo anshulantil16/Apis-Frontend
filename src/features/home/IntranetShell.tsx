@@ -228,24 +228,35 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
 
       {/* ── Sidebar — identical on every screen ─────────────────────────── */}
       <aside className={`${collapsed ? 'w-[76px]' : 'w-64'} bg-gradient-to-b from-[#5c4413] via-[#3d2f0c] to-[#241a06] flex flex-col flex-shrink-0 h-screen
-                         sticky top-0 overflow-y-auto overflow-x-hidden transition-all duration-300`}>
+                         sticky top-0 overflow-hidden transition-all duration-300`}>
         {/* Brand panel — the app's one deliberately-amber surface, echoing
             the honey business; everything else in the shell stays neutral
             dark/light so this reads as an accent, not a theme change. */}
         <div className="relative overflow-hidden flex-shrink-0">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600" />
-          <div className={`relative flex items-center gap-2.5 ${collapsed ? 'justify-center px-2 py-4' : 'px-4 py-4'}`}>
-            <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0 drop-shadow" />
-            {!collapsed && (
-              <div className="leading-none min-w-0">
-                <p className="text-[15px] font-black text-white tracking-tight truncate">APIS</p>
-                <p className="text-[10px] font-bold text-amber-950/70 uppercase tracking-widest truncate">Intranet Tools</p>
-              </div>
-            )}
+          <div className={`relative flex items-center justify-between gap-2 ${collapsed ? 'px-2 py-4' : 'px-4 py-4'}`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0 drop-shadow" />
+              {!collapsed && (
+                <div className="leading-none min-w-0">
+                  <p className="text-[15px] font-black text-white tracking-tight truncate">APIS</p>
+                  <p className="text-[10px] font-bold text-amber-950/70 uppercase tracking-widest truncate">Intranet Tools</p>
+                </div>
+              )}
+            </div>
+            {/* Collapse toggle — small, sits fully inside the brand header
+                (never straddles the sidebar's edge), same spot in both
+                collapsed and expanded states so it's always where you left
+                it. */}
+            <button onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="w-5 h-5 rounded-md bg-white/15 hover:bg-white/25 text-white flex items-center
+                         justify-center flex-shrink-0 transition-all">
+              {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+            </button>
           </div>
         </div>
 
-        <nav className="flex-1 p-2.5 pt-4">
+        <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2.5 pt-4">
           <button onClick={() => go('home')} title="Home"
             className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-[13px] font-black mb-1.5 transition-all
                        ${active === 'home'
@@ -358,18 +369,13 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
           )}
         </nav>
 
-        
-        <div className={`p-3 border-t border-white/[0.06] flex items-center flex-shrink-0 ${collapsed ? 'justify-center' : 'justify-between gap-2'}`}>
-          <button onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="p-1.5 rounded-lg text-amber-100/60 hover:text-white hover:bg-white/10 transition-all flex-shrink-0">
-            {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-          </button>
-          {!collapsed && (
+        {!collapsed && (
+          <div className="p-3 border-t border-white/[0.06] flex-shrink-0">
             <p className="text-[9px] text-amber-100/40 font-semibold text-right truncate">
               © {now.getFullYear()} APIS Enterprise Platform
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
