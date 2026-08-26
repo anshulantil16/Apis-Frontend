@@ -7,7 +7,8 @@ import type { ComponentType, SVGProps } from 'react';
 import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
-  ShieldCheck, LifeBuoy, Globe2, CalendarClock, Landmark,
+  LifeBuoy, Globe2, CalendarClock, Landmark,
+  Shield, BookOpen, Lightbulb, Target, Heart,
 } from 'lucide-react';
 
 /* lucide-react dropped brand icons, so these are small hand-rolled SVG marks
@@ -54,10 +55,17 @@ export type QuickAccessId =
   | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms'
   | 'offer-letters' | 'roompulse' | 'salesiq' | 'tada';
 
+/* Business-function grouping shown as filter tabs on the "Your Tools" grid.
+   Purely a UI grouping — has no bearing on access control. */
+export const TOOL_CATEGORIES = ['All', 'HR', 'Finance', 'Operations', 'Sales', 'Travel'] as const;
+export type ToolCategoryFilter = typeof TOOL_CATEGORIES[number];
+export type ToolCategory = Exclude<ToolCategoryFilter, 'All'>;
+
 export interface QuickAccessItem {
   id: QuickAccessId;
   label: string;
   desc: string;
+  category: ToolCategory;
   icon: ComponentType<{ className?: string }>;
   gradient: string;   // tailwind gradient classes — used on the fuller "Explore All Tools" cards
   glow: string;        // rgba used for the hover glow
@@ -66,15 +74,34 @@ export interface QuickAccessItem {
 }
 
 export const QUICK_ACCESS: QuickAccessItem[] = [
-  { id: 'extractor', label: 'Data Extractor', desc: 'Joining forms, medical & payroll data tools', icon: FileSpreadsheet, gradient: 'from-amber-400 to-orange-500', glow: 'rgba(245,158,11,.35)', accent: 'text-amber-600', soft: 'bg-amber-50' },
-  { id: 'performance', label: 'Performance Hub', desc: 'Goals, reviews & performance tracking', icon: TrendingUp, gradient: 'from-violet-400 to-purple-600', glow: 'rgba(139,92,246,.35)', accent: 'text-violet-600', soft: 'bg-violet-50' },
-  { id: 'appraisal', label: 'Appraisal Hub', desc: 'Annual appraisal cycle management', icon: TrendingUp, gradient: 'from-blue-400 to-indigo-600', glow: 'rgba(59,130,246,.35)', accent: 'text-blue-600', soft: 'bg-blue-50' },
-  { id: 'eom', label: 'EOM Hub', desc: 'Employee of the Month nominations', icon: Sparkles, gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.35)', accent: 'text-emerald-600', soft: 'bg-emerald-50' },
-  { id: 'pms', label: 'PMS Simulator', desc: 'Performance & salary revision simulator', icon: BarChart3, gradient: 'from-violet-500 to-fuchsia-600', glow: 'rgba(168,85,247,.35)', accent: 'text-fuchsia-600', soft: 'bg-fuchsia-50' },
-  { id: 'offer-letters', label: 'Letters Generator', desc: 'Appraisal & warning letter pipeline', icon: FileSpreadsheet, gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.35)', accent: 'text-rose-600', soft: 'bg-rose-50' },
-  { id: 'roompulse', label: 'AdminPulse', desc: 'Room bookings & admin item requests', icon: Radar, gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.35)', accent: 'text-cyan-600', soft: 'bg-cyan-50' },
-  { id: 'salesiq', label: 'SalesIQ', desc: 'Sales intelligence & forecasting', icon: Zap, gradient: 'from-indigo-400 to-violet-600', glow: 'rgba(99,102,241,.35)', accent: 'text-indigo-600', soft: 'bg-indigo-50' },
-  { id: 'tada', label: 'TA/DA Portal', desc: 'Travel & daily allowance claims', icon: Plane, gradient: 'from-sky-400 to-cyan-600', glow: 'rgba(14,165,233,.35)', accent: 'text-sky-600', soft: 'bg-sky-50' },
+  { id: 'extractor', label: 'Data Extractor', desc: 'Joining forms, medical & payroll data tools', category: 'Operations', icon: FileSpreadsheet, gradient: 'from-amber-400 to-orange-500', glow: 'rgba(245,158,11,.35)', accent: 'text-amber-600', soft: 'bg-amber-50' },
+  { id: 'performance', label: 'Performance Hub', desc: 'Goals, reviews & performance tracking', category: 'HR', icon: TrendingUp, gradient: 'from-violet-400 to-purple-600', glow: 'rgba(139,92,246,.35)', accent: 'text-violet-600', soft: 'bg-violet-50' },
+  { id: 'appraisal', label: 'Appraisal Hub', desc: 'Annual appraisal cycle management', category: 'HR', icon: TrendingUp, gradient: 'from-blue-400 to-indigo-600', glow: 'rgba(59,130,246,.35)', accent: 'text-blue-600', soft: 'bg-blue-50' },
+  { id: 'eom', label: 'EOM Hub', desc: 'Employee of the Month nominations', category: 'Finance', icon: Sparkles, gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.35)', accent: 'text-emerald-600', soft: 'bg-emerald-50' },
+  { id: 'pms', label: 'PMS Simulator', desc: 'Performance & salary revision simulator', category: 'HR', icon: BarChart3, gradient: 'from-violet-500 to-fuchsia-600', glow: 'rgba(168,85,247,.35)', accent: 'text-fuchsia-600', soft: 'bg-fuchsia-50' },
+  { id: 'offer-letters', label: 'Letters Generator', desc: 'Appraisal & warning letter pipeline', category: 'HR', icon: FileSpreadsheet, gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.35)', accent: 'text-rose-600', soft: 'bg-rose-50' },
+  { id: 'roompulse', label: 'AdminPulse', desc: 'Room bookings & admin item requests', category: 'Operations', icon: Radar, gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.35)', accent: 'text-cyan-600', soft: 'bg-cyan-50' },
+  { id: 'salesiq', label: 'SalesIQ', desc: 'Sales intelligence & forecasting', category: 'Sales', icon: Zap, gradient: 'from-indigo-400 to-violet-600', glow: 'rgba(99,102,241,.35)', accent: 'text-indigo-600', soft: 'bg-indigo-50' },
+  { id: 'tada', label: 'TA/DA Portal', desc: 'Travel & daily allowance claims', category: 'Travel', icon: Plane, gradient: 'from-sky-400 to-cyan-600', glow: 'rgba(14,165,233,.35)', accent: 'text-sky-600', soft: 'bg-sky-50' },
+];
+
+/* APIS's "UPLIFT" core values — the initials spell the acronym. Supplied
+   directly (not independently verified against a published source page),
+   same provenance caveat as APIS_FACTS. Replaces the old WORKSPACE_STATS
+   placeholder rail on the home page. */
+export interface UpliftValue {
+  letter: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  color: 'blue' | 'orange' | 'emerald' | 'amber' | 'pink';
+}
+export const UPLIFT_VALUES: UpliftValue[] = [
+  { letter: 'U', label: 'Unwavering Integrity', icon: Shield, color: 'blue' },
+  { letter: 'P', label: 'People First', icon: Users, color: 'orange' },
+  { letter: 'L', label: 'Lifelong Learning', icon: BookOpen, color: 'emerald' },
+  { letter: 'I', label: 'Innovative Thinking', icon: Lightbulb, color: 'amber' },
+  { letter: 'F', label: 'Futuristic Focus', icon: Target, color: 'blue' },
+  { letter: 'T', label: 'Trusted Excellence', icon: Heart, color: 'pink' },
 ];
 
 export interface NavGroup {
@@ -114,18 +141,56 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+export interface UpcomingEvent {
+  label: string;
+  date: string;
+  time: string;
+  icon: ComponentType<{ className?: string }>;
+  soft: string;
+  accent: string;
+}
+
+/* No real events/calendar source is wired up yet — these are sample rows
+   showing the intended shape of the widget, not scheduled company events.
+   The UI surfaces this honestly (see the caveat rendered under the section
+   heading) rather than presenting invented dates as real. Replace with a
+   real calendar feed and drop the caveat once one exists. */
+export const UPCOMING_EVENTS: UpcomingEvent[] = [
+  { label: 'Team Meeting', date: 'Aug 20', time: '11:00 AM', icon: Users, soft: 'bg-cyan-50', accent: 'text-cyan-600' },
+  { label: 'Performance Review', date: 'Aug 25', time: '2:00 PM', icon: TrendingUp, soft: 'bg-rose-50', accent: 'text-rose-600' },
+  { label: 'Company Townhall', date: 'Aug 30', time: '4:00 PM', icon: Building2, soft: 'bg-emerald-50', accent: 'text-emerald-600' },
+];
+
 export const COMING_SOON = [
   { label: 'Announcements', icon: Megaphone, soft: 'bg-amber-50', accent: 'text-amber-500' },
-  { label: 'Policies & Guidelines', icon: ShieldCheck, soft: 'bg-emerald-50', accent: 'text-emerald-500' },
   { label: 'Help & Support', icon: LifeBuoy, soft: 'bg-sky-50', accent: 'text-sky-500' },
 ];
 
 /* Real APIS India Limited product photography, sourced from apisindia.com —
-   same images used in the hero carousel. Linked from the sidebar's "About
-   APIS" group so the two aren't disconnected. */
-export const OUR_PRODUCTS = [
-  { label: 'Organic Honey', image: '/products/organic-honey.png', desc: 'Sourced from the Kashmir Valley, organic-certified' },
-  { label: 'Premium Dates', image: '/products/fruit.png', desc: 'Hand-picked and packed for freshness' },
+   same images used in the hero carousel. Linked from the sidebar's "Our
+   Products" entry so the two aren't disconnected.
+   `image` paths beyond the first two don't have a file in
+   public/products/ yet — <ProductPhoto> (IntranetHomePage.tsx) falls back
+   to a neutral icon tile until the real photo is dropped in at that exact
+   path, so nothing renders broken in the meantime. */
+/* `packagingImages` powers the "Packaging Types" popup on each product card
+   (IntranetHomePage.tsx) — real packaging photography, uploaded directly
+   into public/packaging/, mapped to the product it was named after. No
+   weight/type metadata is included since none was supplied with the
+   photos; the popup just shows the pack photo(s) as-is. */
+export interface OurProduct {
+  label: string; image: string; desc: string; weight?: string;
+  packagingImages?: string[];
+}
+export const OUR_PRODUCTS: OurProduct[] = [
+  { label: 'Organic Honey', image: '/products/organic-honey.png', desc: 'Sourced from the Kashmir Valley, organic-certified', weight: '500g', packagingImages: ['/packaging/Honey_Packaging.png'] },
+  { label: 'Royal Zahidi Dates', image: '/products/royal-zahidi-dates.png', desc: 'Premium dates, hand-picked and packed for freshness', weight: '1kg', packagingImages: ['/packaging/Dates_packaging.png', '/packaging/Dates_packaging1.png'] },
+  { label: 'Mixed Fruit Jam', image: '/products/mixed-fruit-jam.png', desc: 'A blend of real fruit, no artificial colours', weight: '500g', packagingImages: ['/packaging/Jam_packaging.png'] },
+  { label: 'Corn Flakes', image: '/products/cornflakes.png', desc: 'A wholesome start to the day', weight: '500g', packagingImages: ['/packaging/cornflakes_packaging.png'] },
+  { label: 'Vermicelli', image: '/products/vermicelli.png', desc: 'Roasted and ready in minutes', weight: '200g', packagingImages: ['/packaging/vermicilli_packaging.png'] },
+  { label: 'Ginger Garlic Paste', image: '/products/ginger-garlic-paste.png', desc: 'Freshly ground, everyday kitchen essential', weight: '200g', packagingImages: ['/packaging/GInger_garlic_packaging.png'] },
+  { label: 'Lemon Honey Green Tea', image: '/products/lemon-honey-green-tea.png', desc: 'Green tea with real honey and lemon', weight: '25 bags', packagingImages: ['/packaging/GreenTea_packaging.png'] },
+  { label: 'Saffron', image: '/products/saffron.png', desc: 'Pure, aromatic Kashmiri saffron', weight: '1g', packagingImages: ['/packaging/saffron_packaging.png'] },
 ];
 
 export interface NewsItem { title: string; body: string; tag: string; tagColour: string; bar: string; dot: string; }
@@ -135,13 +200,6 @@ export const WHATS_NEW: NewsItem[] = [
   { title: 'PMS Simulator: Current CTC is now editable', body: 'You can now edit an employee’s Current CTC after the master upload, without re-uploading the whole sheet.', tag: 'PMS', tagColour: 'text-violet-600 bg-violet-50 ring-violet-200', bar: 'from-violet-400 to-fuchsia-500', dot: 'bg-violet-500' },
   { title: 'Warning Letters launched', body: 'A full disciplinary letter pipeline — upload, generate, track history — now lives inside Letters Generator.', tag: 'Letters Generator', tagColour: 'text-rose-600 bg-rose-50 ring-rose-200', bar: 'from-rose-400 to-pink-500', dot: 'bg-rose-500' },
   { title: 'AdminPulse visual refresh', body: 'Glow rings, animated borders and live particles across the whole booking & requests experience.', tag: 'AdminPulse', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
-];
-
-export const PLATFORM_STATS = [
-  { label: 'Tools Live', value: 9, dot: 'bg-cyan-400' },
-  { label: 'Unified Platform', value: 1, dot: 'bg-violet-400' },
-  { label: 'Built In-house', value: 100, suffix: '%', dot: 'bg-emerald-400' },
-  { label: 'Environment', value: 0, display: 'QA', dot: 'bg-amber-400' },
 ];
 
 /* No real leadership content exists for this internal-tools dashboard, so
@@ -172,12 +230,83 @@ export const APIS_GLANCE = [
   { label: 'Publicly Listed', value: 'BSE 506166', sub: 'Ticker: APIS', trend: null, trendUp: null, icon: Landmark, ring: 'ring-indigo-200', soft: 'bg-indigo-50', accent: 'text-indigo-600' },
 ];
 
-/* Real recent company milestones, same sourcing as APIS_GLANCE above. */
+/* Real recent company milestones, same sourcing as APIS_GLANCE above.
+   `image` photos are real APIS facility/product photography, uploaded
+   directly into public/milestones/ — Milestones1-5.png, mapped here in
+   upload order. The last entry is still a placeholder (year/label/body all
+   TBD) kept in the same shape as the real ones — update it in place once
+   its real content is decided; remove it if a 5th milestone never
+   materialises (its photo is real even though the text isn't yet). */
 export const COMPANY_MILESTONES = [
-  { year: '1924', label: 'APIS founded', body: 'A century-long journey begins in pure, natural honey.' },
-  { year: 'FY25-26', label: 'Highest-ever turnover', body: '₹390.51 Cr consolidated revenue, up 11.5% year-on-year.' },
-  { year: 'FY25-26', label: 'MISK Masala Dates launched', body: 'A new flavoured line expands the dates portfolio.' },
-  { year: 'FY25-26', label: 'Roorkee jam facility approved', body: '₹1.66 Cr government-approved subsidy for a new 2,400 MT/year jam line.' },
+  { year: '1924', label: 'APIS founded', body: 'A century-long journey begins in pure, natural honey.', image: '/milestones/Milestones1.png' as string | undefined },
+  { year: 'FY25-26', label: 'Highest-ever turnover', body: '₹390.51 Cr consolidated revenue, up 11.5% year-on-year.', image: '/milestones/Milestones2.png' as string | undefined },
+  { year: 'FY25-26', label: 'MISK Masala Dates launched', body: 'A new flavoured line expands the dates portfolio.', image: '/milestones/Milestones6.png' as string | undefined },
+  { year: 'FY25-26', label: 'Roorkee jam facility approved', body: '₹1.66 Cr government-approved subsidy for a new 2,400 MT/year jam line.', image: '/milestones/Milestones1.png' as string | undefined },
+  { year: 'TBD', label: 'Milestone coming soon', body: 'Details to be added.', image: '/milestones/Milestones7.png' as string | undefined },
+];
+
+/* Real lines pulled verbatim from apisindia.com — About Us, Brand and
+   Investors pages — not written for this app. Same "hand-entered, no live
+   scraper" reasoning as APIS_GLANCE: the site's copy doesn't change often
+   enough to justify a runtime fetch (which would also hit CORS, since
+   apisindia.com doesn't serve permissive cross-origin headers), and a
+   scraper silently breaking or pulling the wrong text is worse than a
+   short, manually-refreshed list. Update this by re-checking the site
+   occasionally, same cadence as APIS_GLANCE. */
+export const APIS_QUOTES = [
+  { text: 'To inspire consumers with products that enable living a healthier and fitter lifestyle through continuous product innovation.', source: 'Vision statement, apisindia.com/en/about-us' },
+  { text: 'A name synonymous with honeyed quality and modernism in the global market.', source: 'apisindia.com/en/about-us' },
+  { text: 'With a legacy of doing business spanning 100 years, APIS India has been a pioneer spanning three generations of bee-loving entrepreneurs.', source: 'apisindia.com/en/about-us' },
+  { text: 'Our rigorous commitment to quality has propelled us to the forefront of honey exports.', source: 'apisindia.com/en/about-us' },
+  { text: 'We endeavor to strive together with passion, unity of purpose, and unconventional thinking.', source: 'apisindia.com/en/brand' },
+  { text: 'Presence is about showing up fully, authentically, and with an open heart.', source: 'apisindia.com/en/brand' },
+  { text: "Nature's golden nectar, pure and organic.", source: 'apisindia.com/en/brand' },
+  { text: 'Apis India is one of the leaders in the field of organized honey trade in India.', source: 'apisindia.com/en/investors' },
+];
+
+/* "Our Vision"/"Our Mission" cards on the home page (IntranetHomePage.tsx).
+   Vision reuses the same statement already sourced above (APIS_QUOTES[0]).
+   Mission points were supplied directly as company copy rather than
+   independently re-verified against apisindia.com — same provenance
+   caveat as APIS_FACTS below. */
+export const APIS_VISION = APIS_QUOTES[0].text;
+export const APIS_MISSION_POINTS = [
+  'We relentlessly continue to pursue exceptional value for our customers, fueled by innovation and unwavering ethical practices.',
+  'We champion responsible business practices, driving profitability and continuing to secure the well-being of our customers and stakeholders.',
+  'We cultivate a thriving workplace and uphold high standards that promote a strong sense of belonging, empowering our people to achieve their life and our business goals.',
+];
+
+/* Company facts as supplied directly (not independently re-verified by
+   scraping a source page the way APIS_QUOTES/APIS_GLANCE were) — kept as a
+   separate array so that provenance stays honest rather than implying the
+   same verification level as the rest of this file. Cleaned up from a
+   plain numbered list, wording otherwise unchanged. */
+export const APIS_FACTS = [
+  'Founded in the year 1924.',
+  'Headquartered in New Delhi, India.',
+  'Formerly known as eWeb Univ Limited.',
+  'Leader in the organized honey trade in India.',
+  'Operates 13 manufacturing and supply chain facilities across India.',
+  'Owns a 7-acre main manufacturing facility in Roorkee, Uttarakhand.',
+  'The Roorkee plant can process over 100 tonnes of honey daily.',
+  'Certified Grade A by LRQA under BRCGS Global Standard.',
+  'Holds ISO 22000 quality management certification.',
+  'Complies with USFDA and FSSAI standards.',
+  'Major exporter to the EU, USA, Canada, and the Middle East.',
+  'Offers organic honey variants.',
+  'Sells specialized honey like ginger, lemon, and comb honey.',
+  'Expanded product line to include jams and preserves.',
+  'Manufactures spicelicious pickles in various flavors.',
+  'Sells breakfast cereals like corn flakes and choco flakes.',
+  'Offers muesli and vermicelli (seviyan).',
+  'Introduced various date variants like Masala Dates and Royal Zahidi.',
+  'Sells green tea and ginger-garlic paste.',
+  'Sells a range of health and wellness products.',
+  'Popular on e-commerce platforms like Amazon and Flipkart.',
+  'Awarded ET Promising Brand in 2018 and 2019.',
+  'Maintains a processing facility in Dubai.',
+  'Focuses on light-coloured, high F/G pure honey.',
+  'Engages in ethical beekeeping and sustainable sourcing.',
 ];
 
 /* India's central-government gazetted (compulsory) public holidays for
@@ -208,23 +337,54 @@ export const HOLIDAYS_2026 = [
 ];
 
 /* Recently-opened tools, tracked purely client-side (no server round-trip
-   needed for something this low-stakes). Newest first, capped at 4. */
+   needed for something this low-stakes). Newest first, capped at 4. Stored
+   with a real open timestamp so "Recently Used" can show a genuine relative
+   time instead of an invented one. */
 const RECENT_KEY = 'apis_recent_tools';
+
+export interface RecentToolEntry { id: QuickAccessId; ts: number; }
+
+function readRecentRaw(): RecentToolEntry[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    if (!Array.isArray(raw)) return [];
+    // Back-compat: the previous format stored a plain string[] of ids with
+    // no timestamp. ts:0 means "unknown recency" — formatRelativeTime below
+    // renders that honestly rather than making up a time for old entries.
+    return raw
+      .map((r: unknown) => typeof r === 'string' ? { id: r, ts: 0 } : r)
+      .filter((r: any): r is RecentToolEntry => !!r && typeof r.id === 'string' && typeof r.ts === 'number');
+  } catch { return []; }
+}
 
 export function pushRecentTool(id: QuickAccessId) {
   try {
-    const cur: string[] = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-    const next = [id, ...cur.filter(x => x !== id)].slice(0, 4);
+    const next = [{ id, ts: Date.now() }, ...readRecentRaw().filter(x => x.id !== id)].slice(0, 4);
     localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   } catch { /* localStorage unavailable — recents just won't persist */ }
 }
 
 export function getRecentTools(): QuickAccessId[] {
-  try {
-    const raw: string[] = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-    const valid = new Set(QUICK_ACCESS.map(t => t.id));
-    return raw.filter((id): id is QuickAccessId => valid.has(id as QuickAccessId));
-  } catch { return []; }
+  const valid = new Set(QUICK_ACCESS.map(t => t.id));
+  return readRecentRaw().map(r => r.id).filter((id): id is QuickAccessId => valid.has(id as QuickAccessId));
+}
+
+export function getRecentToolsWithTime(): RecentToolEntry[] {
+  const valid = new Set(QUICK_ACCESS.map(t => t.id));
+  return readRecentRaw().filter(r => valid.has(r.id as QuickAccessId));
+}
+
+export function formatRelativeTime(ts: number): string {
+  if (!ts) return 'Previously';
+  const min = Math.round((Date.now() - ts) / 60000);
+  if (min < 1) return 'Just now';
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.round(hr / 24);
+  if (day === 1) return 'Yesterday';
+  if (day < 7) return `${day} days ago`;
+  return `${Math.round(day / 7)}w ago`;
 }
 
 
