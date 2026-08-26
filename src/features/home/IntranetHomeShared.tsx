@@ -8,7 +8,7 @@ import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
   LifeBuoy, Globe2, CalendarClock, Landmark,
-  Shield, BookOpen, Lightbulb, Target, Heart,
+  Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale,
 } from 'lucide-react';
 
 /* lucide-react dropped brand icons, so these are small hand-rolled SVG marks
@@ -162,6 +162,8 @@ export const UPCOMING_EVENTS: UpcomingEvent[] = [
 ];
 
 export const COMING_SOON = [
+  { label: 'Budget', icon: Wallet, soft: 'bg-emerald-50', accent: 'text-emerald-500' },
+  { label: 'Compliance', icon: Scale, soft: 'bg-violet-50', accent: 'text-violet-500' },
   { label: 'Announcements', icon: Megaphone, soft: 'bg-amber-50', accent: 'text-amber-500' },
   { label: 'Help & Support', icon: LifeBuoy, soft: 'bg-sky-50', accent: 'text-sky-500' },
 ];

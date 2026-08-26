@@ -182,7 +182,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
             {!collapsed && (
               <div className="leading-none min-w-0">
                 <p className="text-[15px] font-black text-white tracking-tight truncate">APIS</p>
-                <p className="text-[10px] font-bold text-amber-950/70 uppercase tracking-widest truncate">Internal Tools</p>
+                <p className="text-[10px] font-bold text-amber-950/70 uppercase tracking-widest truncate">Intranet Tools</p>
               </div>
             )}
           </div>
@@ -327,7 +327,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               <div className="hidden lg:block pr-5 border-r border-slate-200 leading-tight">
                 <p className="text-[15px] font-black text-slate-900 tracking-tight flex items-center gap-1.5">
                   {now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'}
-                  <span aria-hidden>Rainy</span>
+                  <span aria-hidden></span>
                 </p>
                 <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
                   Here's what's happening across your workspace today.
@@ -338,7 +338,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                 <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0" />
                 <div className="leading-none">
                   <p className="text-[13px] font-black text-slate-900 tracking-tight">
-                    {title || 'APIS Internal Tools'}
+                    {title || 'APIS Intranet Tools'}
                   </p>
                   <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">
                     {subtitle || 'Enterprise Platform'}

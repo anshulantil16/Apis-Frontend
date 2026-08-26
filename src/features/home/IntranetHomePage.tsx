@@ -497,65 +497,40 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
               )}
             </div>
 
-            {/* Your Tools — filterable launcher grid, the intranet's app hub */}
-            <section id="all-tools" className="scroll-mt-20">
-              <div className="flex items-center justify-between mb-1 flex-wrap gap-3">
-                <div>
-                  <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Your Tools</h2>
-                  <p className="text-[12px] text-slate-400 mt-0.5">Everything you need, one click away.</p>
-                </div>
-                <button onClick={() => setDense(d => !d)} title={dense ? 'Wider cards' : 'Denser grid'}
-                  className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-300 transition-all">
-                  <LayoutGrid className="w-4 h-4" />
-                </button>
+            {/* APIS at a glance — real, publicly-reported figures (BSE: 506166) */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">APIS at a Glance</h2>
+                <span className="text-[10px] font-bold text-slate-300">Public filings · FY 2025-26</span>
               </div>
-
-              <div className="flex items-center gap-2 flex-wrap mt-4 mb-4">
-                {TOOL_CATEGORIES.map(c => (
-                  <button key={c} onClick={() => setCategory(c)}
-                    className={`px-3.5 py-1.5 rounded-full text-[11px] font-black transition-all ${
-                      category === c
-                        ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
-                        : 'bg-white border border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600'}`}>
-                    {c}
-                  </button>
-                ))}
-              </div>
-
-              <div className={`grid grid-cols-1 sm:grid-cols-2 ${dense ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
-                {filteredTools.map((t, i) => {
-                  const Icon = t.icon;
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {APIS_GLANCE.map((s, i) => {
+                  const Icon = s.icon;
                   return (
-                    <button key={t.id} onClick={() => onNavigate(t.id)} onMouseMove={onSpotlightMove}
-                      className="ih-inview ih-tilt3d ih-spotlight ih-neon group relative text-left rounded-xl bg-white border
-                                 border-slate-200 p-4 shadow-sm overflow-hidden"
-                      style={{ transitionDelay: `${i * 40}ms`, '--ih-neon': t.glow } as any}>
-                      <div className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full
-                                      opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl"
-                        style={{ background: t.glow }} />
-                      <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center
-                                       justify-center shadow-md mb-3 transition-transform duration-300
-                                       group-hover:scale-110 group-hover:-rotate-6">
-                        <Icon className="w-5 h-5 text-white" />
+                    <div key={s.label} onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+                      className="ih-inview ih-tilt3d ih-spotlight ih-sweep relative rounded-2xl bg-white border border-slate-200 p-4 shadow-sm overflow-hidden text-center"
+                      style={{ transitionDelay: `${i * 60}ms` }}>
+                      <div className="ih-float mx-auto w-11 h-11 rounded-full bg-amber-50 ring-4 ring-amber-50 flex items-center justify-center mb-2.5"
+                        style={{ animationDelay: `${i * 300}ms` }}>
+                        <Icon className="w-5 h-5 text-amber-500" />
                       </div>
-                      <p className="relative text-[14px] font-black text-slate-900">{t.label}</p>
-                      <p className="relative text-[12px] text-slate-400 mt-1 leading-relaxed">{t.desc}</p>
-                      <div className="relative flex items-center justify-between mt-3">
-                        <span className={`text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded-full ${t.soft} ${t.accent}`}>
-                          {t.category}
-                        </span>
-                        <span className="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center
-                                         text-slate-400 group-hover:bg-amber-500 group-hover:border-amber-500 group-hover:text-white transition-all">
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </span>
-                      </div>
-                    </button>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{s.label}</p>
+                      <p className="text-base font-black text-slate-900 leading-tight mt-1 tabular-nums">
+                        <AnimatedValue value={s.value} run={statsVisible} />
+                      </p>
+                      {s.trend ? (
+                        <p className={`inline-flex items-center gap-0.5 text-[10px] font-bold mt-1.5 ${
+                          s.trendUp === true ? 'text-emerald-600' : s.trendUp === false ? 'text-rose-600' : 'text-slate-400'}`}>
+                          {s.trendUp === true ? <ArrowUpRight className="w-3 h-3" /> : s.trendUp === false ? null : <Minus className="w-3 h-3" />}
+                          {s.trend}
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-slate-400 mt-1.5">{s.sub}</p>
+                      )}
+                    </div>
                   );
                 })}
               </div>
-              {filteredTools.length === 0 && (
-                <p className="text-center text-[12px] text-slate-400 py-8">No tools in this category yet.</p>
-              )}
             </section>
 
             {/* Uplift Values — APIS's UPLIFT core values, shown as a static grid. */}
@@ -630,7 +605,7 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
                     </div>
                     <h2 className="text-[13px] font-black text-amber-900 uppercase tracking-wide">Our Vision</h2>
                   </div>
-                  <p className="text-amber-950/70 text-[12.5px] leading-relaxed">{APIS_VISION}</p>
+                  <p className="text-amber-950/90 text-[16px] leading-relaxed font-medium">{APIS_VISION}</p>
                 </div>
                 <MountainScape variant="vision" />
               </div>
@@ -681,40 +656,56 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
 
             {openProduct && <PackagingPopup product={openProduct} onClose={() => setOpenProduct(null)} />}
 
-            {/* APIS at a glance — real, publicly-reported figures (BSE: 506166) */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">APIS at a Glance</h2>
-                <span className="text-[10px] font-bold text-slate-300">Public filings · FY 2025-26</span>
+            {/* Your Tools — filterable launcher grid, the intranet's app hub */}
+            <section id="all-tools" className="scroll-mt-20">
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-3">
+                <div>
+                  <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Your Tools</h2>
+                  <p className="text-[12px] text-slate-400 mt-0.5">Everything you need, one click away.</p>
+                </div>
+                <button onClick={() => setDense(d => !d)} title={dense ? 'Wider cards' : 'Denser grid'}
+                  className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-300 transition-all">
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {APIS_GLANCE.map((s, i) => {
-                  const Icon = s.icon;
+
+              <div className="flex items-center gap-2 flex-wrap mt-4 mb-4">
+                {TOOL_CATEGORIES.map(c => (
+                  <button key={c} onClick={() => setCategory(c)}
+                    className={`px-3.5 py-1.5 rounded-full text-[11px] font-black transition-all ${
+                      category === c
+                        ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
+                        : 'bg-white border border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600'}`}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+
+              <div className={`grid grid-cols-1 sm:grid-cols-2 ${dense ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
+                {filteredTools.map((t, i) => {
+                  const Icon = t.icon;
                   return (
-                    <div key={s.label} onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-                      className="ih-inview ih-tilt3d ih-spotlight ih-sweep relative rounded-2xl bg-white border border-slate-200 p-4 shadow-sm overflow-hidden text-center"
-                      style={{ transitionDelay: `${i * 60}ms` }}>
-                      <div className="ih-float mx-auto w-11 h-11 rounded-full bg-amber-50 ring-4 ring-amber-50 flex items-center justify-center mb-2.5"
-                        style={{ animationDelay: `${i * 300}ms` }}>
-                        <Icon className="w-5 h-5 text-amber-500" />
+                    <button key={t.id} onClick={() => onNavigate(t.id)} onMouseMove={onSpotlightMove}
+                      className="ih-inview ih-tilt3d ih-spotlight ih-neon group relative text-left rounded-xl bg-white border
+                                 border-slate-200 p-4 shadow-sm overflow-hidden"
+                      style={{ transitionDelay: `${i * 40}ms`, '--ih-neon': t.glow } as any}>
+                      <div className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full
+                                      opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl"
+                        style={{ background: t.glow }} />
+                      <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center
+                                       justify-center shadow-md mb-3 transition-transform duration-300
+                                       group-hover:scale-110 group-hover:-rotate-6">
+                        <Icon className="w-5 h-5 text-white" />
                       </div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{s.label}</p>
-                      <p className="text-base font-black text-slate-900 leading-tight mt-1 tabular-nums">
-                        <AnimatedValue value={s.value} run={statsVisible} />
-                      </p>
-                      {s.trend ? (
-                        <p className={`inline-flex items-center gap-0.5 text-[10px] font-bold mt-1.5 ${
-                          s.trendUp === true ? 'text-emerald-600' : s.trendUp === false ? 'text-rose-600' : 'text-slate-400'}`}>
-                          {s.trendUp === true ? <ArrowUpRight className="w-3 h-3" /> : s.trendUp === false ? null : <Minus className="w-3 h-3" />}
-                          {s.trend}
-                        </p>
-                      ) : (
-                        <p className="text-[10px] text-slate-400 mt-1.5">{s.sub}</p>
-                      )}
-                    </div>
+                      <p className="relative text-[14px] font-black text-slate-900">{t.label}</p>
+                      <p className="relative text-[12px] text-slate-400 mt-1 leading-relaxed">{t.desc}</p>
+                    </button>
                   );
                 })}
               </div>
+              {filteredTools.length === 0 && (
+                <p className="text-center text-[12px] text-slate-400 py-8">No tools in this category yet.</p>
+              )}
             </section>
 
             {/* Our Journey / Milestones — same real COMPANY_MILESTONES data as
