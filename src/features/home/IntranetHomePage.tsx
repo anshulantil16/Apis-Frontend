@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import {
-  ArrowRight, LayoutGrid, Sparkles, Link2, Building2, History, Lightbulb,
+  ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
   ArrowUpRight, Minus, CalendarDays, CalendarClock, ChevronLeft, ChevronRight, PartyPopper,
-  X, Trophy, Eye, Flag, CheckCircle2,
+  X, Trophy, Eye, Flag, CheckCircle2, Heart,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, UPCOMING_EVENTS, WHATS_NEW,
-  OUR_PRODUCTS, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS, SOCIAL_LINKS, HOLIDAYS_2026,
+  OUR_PRODUCTS, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
+  SAMPLE_BIRTHDAYS, SAMPLE_ANNIVERSARIES, SOCIAL_LINKS, HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct, type UpliftValue,
 } from './IntranetHomeShared';
@@ -289,16 +290,10 @@ function Particles() {
   );
 }
 
-// Product cards shown 4-at-a-time in the hero showcase below.
-const HERO_PAGE_SIZE = 4;
-
 export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
-  const heroPageCount = Math.ceil(OUR_PRODUCTS.length / HERO_PAGE_SIZE);
-  const [heroPage, setHeroPage] = useState(0);
-
-  // Top-level hero carousel: slide 0 is the existing "Our Products"
-  // showcase (untouched, including its own internal heroPage pagination
-  // above); slides 1+ are the leadership profiles.
+  // Top-level hero carousel: slide 0 is the "Our Products" showcase, with
+  // its own continuously-sliding product strip; slides 1+ are the
+  // leadership profiles.
   const heroSlideCount = 1 + LEADERSHIP_SLIDES.length;
   const [heroSlide, setHeroSlide] = useState(0);
 
@@ -310,6 +305,7 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
   const [category, setCategory] = useState<ToolCategoryFilter>('All');
   const [dense, setDense] = useState(true);
   const [openProduct, setOpenProduct] = useState<OurProduct | null>(null);
+  const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
   const filteredTools = category === 'All' ? QUICK_ACCESS : QUICK_ACCESS.filter(t => t.category === category);
 
   const upcomingHolidays = useMemo(() => {
@@ -344,11 +340,6 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
     return () => io.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (heroPageCount < 2) return;
-    const iv = setInterval(() => setHeroPage(p => (p + 1) % heroPageCount), 6000);
-    return () => clearInterval(iv);
-  }, [heroPageCount]);
   useEffect(() => {
     if (heroSlideCount < 2) return;
     const iv = setInterval(() => setHeroSlide(s => (s + 1) % heroSlideCount), 7000);
@@ -413,41 +404,20 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
                     </button>
                   </div>
 
-                  {/* right: paginated product card strip */}
-                  <div className="relative flex-1 min-w-0">
-                    <div className="overflow-hidden">
-                      <div className="flex transition-transform duration-500 ease-out"
-                        style={{ transform: `translateX(-${heroPage * 100}%)` }}>
-                        {Array.from({ length: heroPageCount }, (_, pageIdx) => (
-                          <div key={pageIdx} className="w-full shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {OUR_PRODUCTS.slice(pageIdx * HERO_PAGE_SIZE, pageIdx * HERO_PAGE_SIZE + HERO_PAGE_SIZE).map((p, i) => (
-                              <div key={p.label}
-                                className="ih-pop-in ih-tilt3d ih-spotlight rounded-2xl p-3"
-                                style={{ animationDelay: `${i * 80}ms` }} onMouseMove={onSpotlightMove}>
-                                <div className="aspect-square flex items-center justify-center overflow-hidden">
-                                  <ProductPhoto src={p.image} alt={p.label} className="w-4/5 h-4/5 object-contain" />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
+                  {/* right: continuously auto-sliding product strip — no
+                      manual arrows, just a seamless marquee (pauses on
+                      hover). OUR_PRODUCTS is duplicated back-to-back so the
+                      ihTicker keyframe's translateX(-50%) loops with no
+                      visible seam; see .ih-ticker in intranetStyles.ts. */}
+                  <div className="ih-ticker-track relative flex-1 min-w-0 overflow-hidden">
+                    <div className="ih-ticker flex items-center gap-3 w-max">
+                      {[...OUR_PRODUCTS, ...OUR_PRODUCTS].map((p, i) => (
+                        <div key={`${p.label}-${i}`}
+                          className="w-24 sm:w-28 shrink-0 aspect-square rounded-2xl p-3 flex items-center justify-center overflow-hidden">
+                          <ProductPhoto src={p.image} alt={p.label} className="w-4/5 h-4/5 object-contain" />
+                        </div>
+                      ))}
                     </div>
-
-                    {heroPageCount > 1 && (
-                      <>
-                        <button onClick={() => setHeroPage(p => (p - 1 + heroPageCount) % heroPageCount)} title="Previous product page"
-                          className="hidden sm:flex absolute -left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90
-                                     items-center justify-center text-slate-600 shadow-lg hover:bg-white transition-all z-10">
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => setHeroPage(p => (p + 1) % heroPageCount)} title="Next product page"
-                          className="hidden sm:flex absolute -right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90
-                                     items-center justify-center text-slate-600 shadow-lg hover:bg-white transition-all z-10">
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
                   </div>
                 </div>
               ) : (
@@ -896,24 +866,44 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
               </div>
             </div>
 
+            {/* Birthdays / Anniversaries — no real HRMS feed is wired up yet,
+                so this is explicitly sample data (see SAMPLE_BIRTHDAYS /
+                SAMPLE_ANNIVERSARIES in IntranetHomeShared.tsx), same honest
+                pattern as Upcoming Events above. Replaces the old Quick
+                Links grid; container sizing (rounded-xl/border/shadow/p-5)
+                is unchanged. */}
             <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-5" style={{ animationDelay: '80ms' }}>
-              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <Link2 className="w-3.5 h-3.5 text-amber-500" />Quick Links
-              </h2>
-              <div className="grid grid-cols-3 gap-2">
-                {QUICK_ACCESS.map(t => {
-                  const Icon = t.icon;
-                  return (
-                    <button key={t.id} onClick={() => onNavigate(t.id)}
-                      className="ih-tilt flex flex-col items-center gap-1.5 p-2.5 rounded-xl hover:bg-slate-50 transition-all">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-white" />
-                      </div>
-                      <p className="text-[9px] font-bold text-slate-500 text-center leading-tight">{t.label}</p>
-                    </button>
-                  );
-                })}
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                  <button onClick={() => setCelebrationTab('birthdays')}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-black transition-all ${
+                      celebrationTab === 'birthdays' ? 'bg-white text-amber-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <Heart className="w-3 h-3" />Birthdays
+                  </button>
+                  <button onClick={() => setCelebrationTab('anniversaries')}
+                    className={`px-2 py-1 rounded-md text-[10.5px] font-black transition-all ${
+                      celebrationTab === 'anniversaries' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                    Anniversaries
+                  </button>
+                </div>
+                <span className="text-[10px] font-bold text-amber-500 cursor-default">View all</span>
               </div>
+              <p className="text-[9.5px] text-slate-300 mb-3">Sample data — not yet connected to a real HR feed</p>
+              <div className="space-y-1">
+                {(celebrationTab === 'birthdays' ? SAMPLE_BIRTHDAYS : SAMPLE_ANNIVERSARIES).map(p => (
+                  <div key={p.name} className="flex items-center gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-black
+                                     ${celebrationTab === 'birthdays' ? 'bg-amber-50 text-amber-500' : 'bg-orange-50 text-orange-600'}`}>
+                      {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <p className="text-[12.5px] font-bold text-slate-800 flex-1 truncate">{p.name}</p>
+                    <span className="text-[10.5px] font-bold text-slate-400 flex-shrink-0">{p.date}</span>
+                  </div>
+                ))}
+              </div>
+              <button className="w-full mt-2 flex items-center justify-center gap-1 text-[10.5px] font-bold text-amber-500 hover:text-amber-600 transition-colors">
+                See all {celebrationTab === 'birthdays' ? 'Birthdays' : 'Anniversaries'}<ArrowRight className="w-3 h-3" />
+              </button>
             </div>
 
             {/* Recently Used — real, derived from this browser's own history,
