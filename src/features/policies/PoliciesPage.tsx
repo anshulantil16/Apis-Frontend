@@ -74,7 +74,7 @@ interface CategoryCard {
    theme, this is just per-category variety within it. */
 const CATEGORY_CARDS: CategoryCard[] = [
   { label: 'SOP', count: 6, icon: FileText, action: 'View All', gradient: 'from-amber-400 to-orange-500', glow: 'rgba(245,158,11,.4)', bar: 'bg-amber-500' },
-  { label: 'Manual Policy', count: 2, icon: ClipboardList, action: 'Manage', gradient: 'from-violet-400 to-purple-600', glow: 'rgba(139,92,246,.4)', bar: 'bg-violet-500' },
+  { label: 'Manual Policy', count: 2, icon: ClipboardList, action: 'Browse', gradient: 'from-violet-400 to-purple-600', glow: 'rgba(139,92,246,.4)', bar: 'bg-violet-500' },
   { label: 'Templates', count: 206, icon: LayoutTemplate, action: 'Browse', gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.4)', bar: 'bg-cyan-500' },
   { label: 'Work Instructions', count: 3, icon: ListChecks, action: 'View All', gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.4)', bar: 'bg-emerald-500' },
   { label: 'Formats', count: 10, icon: FileStack, action: 'Browse', gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.4)', bar: 'bg-rose-500' },
@@ -88,7 +88,7 @@ interface PolicyRow {
 const POLICY_ROWS: PolicyRow[] = [
   { doc: 'AIL/DEP | File Name', category: 'SOP', version: 2, pages: 10, approvedBy: 'Mr. Vimal Anand', approvalDate: '25/8', amended: false },
   { doc: 'AIL | P&C', category: 'Manual Policy', version: 3, pages: 20, approvedBy: 'Mr. Amit Anand', approvalDate: '25/8', amended: true },
-  { doc: 'TD & DA Policy', category: 'Templates', version: 4, pages: 40, approvedBy: 'Mr. Pankaj', approvalDate: '20/8', amended: false },
+  { doc: 'TA & DA Policy', category: 'Templates', version: 4, pages: 40, approvedBy: 'Mr. Pankaj', approvalDate: '20/8', amended: false },
   { doc: 'DEP Name Format', category: 'Formats', version: 1, pages: 20, approvedBy: 'Mr. Arun', approvalDate: '16/8', amended: false },
 ];
 
