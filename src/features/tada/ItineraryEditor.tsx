@@ -96,7 +96,10 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
               <div className="md:col-span-2">
                 <label className="text-xs font-bold text-slate-500 mb-1 block">Who books the ticket to {leg.destination_city || 'this stop'}?</label>
                 <BookingModePicker value={leg.booking_mode}
-                  onChange={v => set(i, { booking_mode: v })} />
+                  onChange={v => set(i, { booking_mode: v,
+                    // The company pays this fare directly — a figure typed in
+                    // before switching over would be stale, not real.
+                    est_ticket_amount: v === 'company' ? '' : leg.est_ticket_amount })} />
                 {leg.booking_mode === 'company' && (
                   <p className="text-[11px] font-bold text-indigo-600 mt-1.5">
                     Set the mode and date below — that is what the Travel Help Desk will book.
@@ -118,9 +121,17 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
                 </>
               )}
 
-              <div><label className="text-xs font-bold text-slate-500 mb-1 block">{journeyNoun(leg.travel_mode)} Cost to this stop (₹)</label>
-                <input type="number" min="0" className={inp} value={leg.est_ticket_amount} placeholder="0"
-                  onChange={e2 => set(i, { est_ticket_amount: e2.target.value })} /></div>
+              {leg.booking_mode === 'company' ? (
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">{journeyNoun(leg.travel_mode)} Cost to this stop (₹)</label>
+                  <div className="w-full border-2 border-slate-100 bg-slate-100 rounded-xl px-3 py-2.5 text-sm font-black text-slate-400">Booked by the Travel Help Desk</div>
+                  <p className="text-[11px] text-slate-400 mt-1">The company pays this fare directly — nothing to estimate here</p>
+                </div>
+              ) : (
+                <div><label className="text-xs font-bold text-slate-500 mb-1 block">{journeyNoun(leg.travel_mode)} Cost to this stop (₹)</label>
+                  <input type="number" min="0" className={inp} value={leg.est_ticket_amount} placeholder="0"
+                    onChange={e2 => set(i, { est_ticket_amount: e2.target.value })} /></div>
+              )}
 
               {e && (
                 <div className="flex flex-col justify-end">

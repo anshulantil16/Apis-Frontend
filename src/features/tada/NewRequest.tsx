@@ -427,7 +427,10 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
               <div className="md:col-span-2">
                 <label className="text-xs font-bold text-slate-500 mb-1 block">Who books the ticket?</label>
                 <BookingModePicker value={tour.booking_mode}
-                  onChange={v => setTour({ ...tour, booking_mode: v })} />
+                  onChange={v => setTour({ ...tour, booking_mode: v,
+                    // The company pays this fare directly, so a figure typed
+                    // in before switching over would be stale, not real.
+                    est_ticket_amount: v === 'company' ? '' : tour.est_ticket_amount })} />
               </div>
             )}
             {/* When the company is booking, these stop being a note to self and

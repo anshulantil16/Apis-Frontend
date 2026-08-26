@@ -97,7 +97,13 @@ export function EstimateBlock({ est, tour, setTour, total, warnings, inp, maxAdv
           ? <div>
               <label className="text-xs font-bold text-slate-500 mb-1 block">Travel Cost (₹)</label>
               <div className="w-full border-2 border-slate-100 bg-slate-100 rounded-xl px-3 py-2.5 text-sm font-black text-slate-600">{money(est.lines.ticket)}</div>
-              <p className="text-[11px] text-slate-400 mt-1">Total of the per-stop costs above</p>
+              <p className="text-[11px] text-slate-400 mt-1">Total of the per-stop costs above — company-booked stops contribute nothing here</p>
+            </div>
+          : tour.booking_mode === 'company'
+          ? <div>
+              <label className="text-xs font-bold text-slate-500 mb-1 block">Travel Cost (₹)</label>
+              <div className="w-full border-2 border-slate-100 bg-slate-100 rounded-xl px-3 py-2.5 text-sm font-black text-slate-400">Booked by the Travel Help Desk</div>
+              <p className="text-[11px] text-slate-400 mt-1">The company pays this fare directly — nothing to estimate here</p>
             </div>
           : field('est_ticket_amount', 'Travel Cost (₹)', 'Onward + return, as per approved class')}
         {field('est_lodging_amount', 'Hotel / Lodging (₹)', multi ? 'Sum across all stops, at each stop’s grade' : `Policy: ${rate(est.rates.stay_per_night, 'per night')} × ${est.nights}`)}
