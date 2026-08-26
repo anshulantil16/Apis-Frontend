@@ -3,6 +3,26 @@
    arithmetic only — no components — so any screen can import it freely. */
 
 export const API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/tada`;
+/* Dates come off the API as ISO (yyyy-mm-dd), which is right for storage and
+   for <input type="date">, but nobody here reads a date that way. Rendered as
+   dd-mm-yyyy everywhere it is shown to a person. Anything unparseable is
+   passed through untouched rather than turned into "Invalid Date". */
+export const d = (v: string | null | undefined): string => {
+  if (!v) return '';
+  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : String(v);
+};
+
+/* Same, for a value that carries a time too (check-in / check-out, booked-at):
+   dd-mm-yyyy hh:mm, dropping seconds. */
+export const dt = (v: string | null | undefined): string => {
+  if (!v) return '';
+  const str = String(v);
+  const day = d(str);
+  const t = str.match(/[T ](\d{2}:\d{2})/);
+  return t ? `${day} ${t[1]}` : day;
+};
+
 export const fmt = (n: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n || 0);
 
 export type User = {
@@ -69,11 +89,19 @@ export const TOUR_BLANK = {
   trip_type: 'round_trip', return_travel_mode: '', return_booking_mode: 'self',
   // What a carrier asks for, and only the employee knows.
   traveller_name: '', traveller_age: '',
+  // Where the employee plans to stay, night by night.
+  stays: [] as any[],
   // estimate: ticket/misc are typed by the employee, lodging/food/local seed
   // from policy and stay '' until the server sends the policy figure.
   est_ticket_amount: '', est_lodging_amount: '', est_food_amount: '', est_local_amount: '',
   est_misc_amount: '', advance_amount: '', mode_exception_reason: '', booking_mode: 'self',
 };
+
+/* One planned stay. Pre-travel and separate from the lodging bill filed
+   afterwards: this is what the approver judges the lodging estimate against. */
+export const blankStay = (legSeq: number | null = null) => ({
+  location: '', check_in: '', check_out: '', leg_seq: legSeq,
+});
 
 export const blankLeg = (fromCity: string = '') => ({
   from_date: '', to_date: '', from_city: fromCity, destination_city: '', travel_address: '', purpose: '',

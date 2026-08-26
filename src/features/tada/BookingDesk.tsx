@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import {
   Plane, CheckCircle, XCircle, RefreshCw, Clock, AlertCircle, Ticket, ListPlus, Plus, Trash2, Paperclip, Mail,
 } from 'lucide-react';
-import { API, fmt, type User } from './shared';
+import { API, d, fmt, type User } from './shared';
 import { Toast } from './components';
 
 type Journey = {
@@ -196,7 +196,7 @@ function TicketForm({ req, j, chosen, onDone }: {
     <div className="bg-slate-50/70 border border-slate-200 rounded-xl p-3 space-y-2">
       {chosen && (
         <p className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2 py-1">
-          Employee chose: {chosen.mode} {chosen.carrier} {chosen.detail} · {chosen.date} {chosen.time} · ₹{fmt(chosen.amount)}
+          Employee chose: {chosen.mode} {chosen.carrier} {chosen.detail} · {d(chosen.date)} {chosen.time} · ₹{fmt(chosen.amount)}
         </p>
       )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -263,7 +263,7 @@ function JourneyBody({ req, j, onDone }: { req: any; j: Journey; onDone: (msg: s
         </p>
         {j.options.map((o: any) => (
           <p key={o.id} className="text-[11px] text-amber-700 pl-5">
-            {o.mode} {o.carrier} {o.detail} · {o.date} {o.time} · ₹{fmt(o.amount)}
+            {o.mode} {o.carrier} {o.detail} · {d(o.date)} {o.time} · ₹{fmt(o.amount)}
           </p>
         ))}
       </div>
@@ -311,7 +311,7 @@ export function BookingDesk({ user }: { user: User }) {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <p className="font-black text-slate-800 text-sm">{r.employee_name} <span className="text-slate-400 font-semibold">· {r.employee_id}</span></p>
-            <p className="text-[11px] text-slate-400">{r.department} · {r.from_date} → {r.to_date} · {r.purpose || 'Tour programme'}</p>
+            <p className="text-[11px] text-slate-400">{r.department} · {d(r.from_date)} → {d(r.to_date)} · {r.purpose || 'Tour programme'}</p>
             {r.traveller_name && (
               <p className="text-[11px] text-indigo-500 font-semibold mt-0.5">
                 Book as: {r.traveller_name}{r.traveller_age ? `, ${r.traveller_age}y` : ''}{r.contact_number ? ` · ${r.contact_number}` : ''}
@@ -331,7 +331,7 @@ export function BookingDesk({ user }: { user: User }) {
                 {j.mode && <span className="text-slate-400 font-semibold"> · by {j.mode}</span>}
               </p>
               <p className="text-[11px] text-slate-500">
-                {j.date ? `Travel ${j.date}` : 'No date given'}{j.timePref ? ` · ${j.timePref}` : ''}
+                {j.date ? `Travel ${d(j.date)}` : 'No date given'}{j.timePref ? ` · ${j.timePref}` : ''}
                 {j.estimate > 0 && <span className="text-slate-400"> · est. ₹{fmt(j.estimate)}</span>}
               </p>
             </div>

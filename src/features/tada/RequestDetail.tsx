@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import {
   CheckCircle, XCircle, FileText, Receipt, Car, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Wallet,
 } from 'lucide-react';
-import { API, fmt, HR_LABEL, roleLabel, type User } from './shared';
+import { API, d, dt, fmt, HR_LABEL, roleLabel, type User } from './shared';
 import { Confetti, Pill, StageTrail, Toast } from './components';
 import { PolicyBreakdown } from './PolicyBreakdown';
 
@@ -71,7 +71,7 @@ function TicketChoicePanel({ r, user, onChosen }: { r: any; user: User; onChosen
               <div key={o.id} className="border-2 border-slate-200 rounded-lg p-2.5 bg-white flex flex-col gap-1.5">
                 <p className="text-xs font-bold text-slate-800">{o.mode} {o.carrier}</p>
                 <p className="text-[11px] text-slate-500">{o.detail}</p>
-                <p className="text-[11px] text-slate-500">{o.date} {o.time && `· ${o.time}`}</p>
+                <p className="text-[11px] text-slate-500">{d(o.date)} {o.time && `· ${o.time}`}</p>
                 <p className="text-sm font-black text-indigo-600">₹{fmt(o.amount)}</p>
                 {o.remarks && <p className="text-[10px] text-slate-400">{o.remarks}</p>}
                 <button onClick={() => choose(journeyKey, o.id)} disabled={busy === `${journeyKey}-${o.id}`}
@@ -185,14 +185,14 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
               </p>
             </div>
           )}
-          {(r.from_date || r.to_date) && <div><p className="text-slate-400 text-xs">Dates</p><p className="font-semibold">{r.from_date} → {r.to_date}{r.number_of_days ? <span className="text-indigo-500"> ({r.number_of_days} day{r.number_of_days === 1 ? '' : 's'})</span> : null}</p></div>}
+          {(r.from_date || r.to_date) && <div><p className="text-slate-400 text-xs">Dates</p><p className="font-semibold">{d(r.from_date)} → {d(r.to_date)}{r.number_of_days ? <span className="text-indigo-500"> ({r.number_of_days} day{r.number_of_days === 1 ? '' : 's'})</span> : null}</p></div>}
           {r.sanction_number && <div><p className="text-slate-400 text-xs">Sanction No.</p><p className="font-semibold">{r.sanction_number}</p></div>}
           {r.travel_mode && <div><p className="text-slate-400 text-xs">Mode</p><p className="font-semibold">{r.travel_mode}</p></div>}
           {!r.legs?.length && r.type === 'tour_sanction' && (
             <div>
               <p className="text-slate-400 text-xs">Onward Journey</p>
               <p className="font-semibold">
-                {r.travel_mode_date || '—'}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}
+                {d(r.travel_mode_date) || '—'}{r.travel_mode_time_pref_label ? ` · ${r.travel_mode_time_pref_label}` : ''}
               </p>
               {/* Who is actually raising the ticket — an approver needs this
                   as much as the desk does, and it was only ever shown for the
@@ -210,7 +210,7 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
               <p className="text-slate-400 text-xs">Return Journey</p>
               <p className="font-semibold">
                 {r.return_travel_mode || '—'}
-                {r.return_mode_date ? ` · ${r.return_mode_date}` : ''}
+                {r.return_mode_date ? ` · ${d(r.return_mode_date)}` : ''}
                 {r.return_mode_time_pref_label ? ` · ${r.return_mode_time_pref_label}` : ''}
               </p>
               <p className={`text-[11px] font-bold mt-0.5 ${r.return_booking_mode === 'company' ? 'text-indigo-500' : 'text-slate-400'}`}>
@@ -268,9 +268,9 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span className="font-black text-slate-700">{l.seq + 1}. {l.from_city ? `${l.from_city} → ` : ''}{l.destination_city}</span>
                     <span className="text-indigo-500 font-semibold">grade {l.city_grade}</span>
-                    <span className="text-slate-500">{l.from_date} → {l.to_date} ({l.days}d)</span>
+                    <span className="text-slate-500">{d(l.from_date)} → {d(l.to_date)} ({l.days}d)</span>
                     {l.travel_mode && <span className="text-slate-500">· by {l.travel_mode}</span>}
-                    {l.ticket_date && <span className="text-slate-400">· ticket {l.ticket_date}{l.ticket_time_pref_label ? ` ${l.ticket_time_pref_label}` : ''}</span>}
+                    {l.ticket_date && <span className="text-slate-400">· ticket {d(l.ticket_date)}{l.ticket_time_pref_label ? ` ${l.ticket_time_pref_label}` : ''}</span>}
                   </div>
                   <p className={`mt-0.5 font-bold ${l.booking_mode === 'company' ? 'text-indigo-500' : 'text-slate-400'}`}>
                     {l.booking_mode === 'company'
@@ -280,6 +280,28 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
                   {l.travel_address && <p className="text-slate-500 mt-0.5">{l.travel_address}</p>}
                   {l.purpose && <p className="text-slate-400 mt-0.5">{l.purpose}</p>}
                   {l.mode_exception_reason && <p className="text-amber-700 mt-0.5"><b>Mode exception:</b> {l.mode_exception_reason}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* The stay the lodging figure below is actually for — shown right
+            above the estimate so the two are read together. */}
+        {r.stays?.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <p className="text-slate-400 text-xs mb-1.5">Planned stay · {r.stays.length} booking{r.stays.length === 1 ? '' : 's'}</p>
+            <div className="space-y-1.5">
+              {r.stays.map((sp: any, i: number) => (
+                <div key={i} className="bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="font-black text-slate-700">{sp.location}</span>
+                    <span className="text-slate-500">{d(sp.check_in)} → {d(sp.check_out)}</span>
+                    {sp.nights != null && (
+                      <span className="text-indigo-500 font-semibold">{sp.nights} night{sp.nights === 1 ? '' : 's'}</span>
+                    )}
+                    {sp.leg_seq != null && <span className="text-slate-400">· stop {sp.leg_seq + 1}</span>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -354,13 +376,13 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
                     {it.vendor && <p className="font-bold text-slate-700">{it.vendor}</p>}
                     {it.check_in && it.check_out ? (
                       <p className="text-slate-500">
-                        In {it.check_in} → Out {it.check_out}
+                        In {dt(it.check_in)} → Out {dt(it.check_out)}
                         {it.nights ? <span className="text-slate-400"> · {it.nights} night{it.nights === 1 ? '' : 's'}</span> : null}
                         {it.per_night ? <span className="text-slate-400"> · ₹{fmt(it.per_night)}/night</span> : null}
                       </p>
                     ) : (
                       <p className="text-slate-500">
-                        {it.date}{it.to_date && it.to_date !== it.date ? ` → ${it.to_date}` : ''}
+                        {d(it.date)}{it.to_date && it.to_date !== it.date ? ` → ${d(it.to_date)}` : ''}
                         {it.days_covered > 1 ? <span className="text-slate-400"> · {it.days_covered} days</span> : null}
                       </p>
                     )}
@@ -397,7 +419,7 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 overflow-x-auto">
           <h4 className="font-black text-slate-700 mb-3">Local Journeys</h4>
           <table className="w-full text-xs"><thead><tr className="text-slate-400 border-b-2"><th className="text-left py-1">Date</th><th className="text-left">Purpose</th><th className="text-left">From→To</th><th className="text-left">Mode</th><th className="text-right">Amount</th><th className="text-left">Policy</th></tr></thead>
-            <tbody>{r.local_items.map((it: any) => (<tr key={it.id} className="border-b border-slate-100"><td className="py-1.5">{it.date}</td><td>{it.purpose}</td><td>{it.from_location}→{it.to_location}</td><td>{it.mode}</td><td className="text-right font-bold">₹{fmt(it.amount)}</td><td className="text-amber-600 text-[11px]">{it.policy_flag}</td></tr>))}</tbody></table>
+            <tbody>{r.local_items.map((it: any) => (<tr key={it.id} className="border-b border-slate-100"><td className="py-1.5">{d(it.date)}</td><td>{it.purpose}</td><td>{it.from_location}→{it.to_location}</td><td>{it.mode}</td><td className="text-right font-bold">₹{fmt(it.amount)}</td><td className="text-amber-600 text-[11px]">{it.policy_flag}</td></tr>))}</tbody></table>
         </div>
       )}
 
@@ -410,7 +432,7 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
               <div className="flex items-center gap-3 text-sm flex-wrap">
                 {l.action.includes('reject') ? <XCircle className="w-4 h-4 text-rose-500 shrink-0" /> : <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />}
                 <span className="font-bold">{roleLabel(l.stage)}</span><span className="text-slate-500 capitalize">{l.action}</span>
-                <span className="text-slate-400">by {l.by_name}</span><span className="text-slate-300 ml-auto text-xs">{l.timestamp}</span>
+                <span className="text-slate-400">by {l.by_name}</span><span className="text-slate-300 ml-auto text-xs">{dt(l.timestamp)}</span>
               </div>
               {l.remarks && <p className="text-slate-500 italic text-xs mt-1 ml-7">"{l.remarks}"</p>}
               {/* What the approver actually recorded, not just that they clicked. */}
@@ -592,7 +614,7 @@ export function ReqCard({ r, onClick }: { r: any; onClick: () => void }) {
       <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform`}><Icon className="w-5 h-5" /></div>
       <div className="min-w-0 flex-1">
         <p className="font-bold text-slate-800 text-sm truncate">{r.type_label} {r.destination_city && `· ${r.destination_city}`}</p>
-        <p className="text-slate-400 text-xs">{r.employee_name} · {r.created_at} {r.total_claimed > 0 && `· ₹${fmt(r.total_claimed)}`}</p>
+        <p className="text-slate-400 text-xs">{r.employee_name} · {dt(r.created_at)} {r.total_claimed > 0 && `· ₹${fmt(r.total_claimed)}`}</p>
       </div>
       {pending && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse-ring shrink-0" />}
       <Pill s={r.status} label={r.status_label} />

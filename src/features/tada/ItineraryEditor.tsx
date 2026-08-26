@@ -1,9 +1,9 @@
 /* Multi-city itinerary: one card per stop, each with its own dates, city,
    travel mode and ticket, bounded by the overall trip window. */
 import {
-  Plus, Trash2,
+  Plus, Trash2, Hotel,
 } from 'lucide-react';
-import { TIME_PREFS, blankLeg, journeyNoun } from './shared';
+import { TIME_PREFS, blankLeg, blankStay, journeyNoun } from './shared';
 import { BookingModePicker, TravelModePicker } from './TravelModePicker';
 
 export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom, tripTo }: {
@@ -151,6 +151,94 @@ export function ItineraryEditor({ legs, setLegs, modeOptions, est, inp, tripFrom
       <button onClick={addStop}
         className="w-full border-2 border-dashed border-indigo-200 text-indigo-500 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-2xl py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all">
         <Plus className="w-4 h-4" />Add another stop
+      </button>
+    </div>
+  );
+}
+
+/* ── Where the employee plans to stay ─────────────────────────────────────────
+   Pre-travel, and deliberately separate from the lodging bill filed afterwards:
+   an approver releasing a lodging estimate and a cash advance against it was
+   previously shown only a rupee figure, never the stay it was for. Rows are
+   date-wise because a trip has as many stays as it has stops - and sometimes
+   more than one at a stop, if the employee changes hotel mid-way. */
+export function StayPlanner({ stays, setStays, inp, tripFrom, tripTo, stopOptions }: {
+  stays: any[]; setStays: (s: any[]) => void; inp: string;
+  tripFrom: string; tripTo: string;
+  stopOptions: { seq: number; label: string }[];
+}) {
+  const set = (i: number, patch: any) => setStays(stays.map((s, j) => j === i ? { ...s, ...patch } : s));
+  const nights = (s: any) => {
+    if (!s.check_in || !s.check_out) return null;
+    const n = Math.round((new Date(s.check_out).getTime() - new Date(s.check_in).getTime()) / 86400000);
+    return n >= 0 ? n : null;
+  };
+
+  if (!tripFrom || !tripTo) {
+    return (
+      <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4">
+        <p className="text-xs text-slate-500 font-semibold">Set the overall From and To dates first</p>
+        <p className="text-[11px] text-slate-400 mt-1">Check-in and check-out are picked from within your travel dates.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {stays.map((stay, i) => {
+        const n = nights(stay);
+        return (
+          <div key={i} className="bg-slate-50/70 border border-slate-200 rounded-2xl p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                <Hotel className="w-3.5 h-3.5" />Stay {i + 1}
+                {n != null && <span className="text-indigo-400 font-bold">· {n} night{n === 1 ? '' : 's'}</span>}
+              </span>
+              <button onClick={() => setStays(stays.filter((_, j) => j !== i))}
+                className="text-rose-400 hover:text-rose-600 flex items-center gap-1 text-xs font-bold">
+                <Trash2 className="w-4 h-4" />Remove
+              </button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-2">
+              <div className={stopOptions.length ? '' : 'md:col-span-2'}>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">Location <span className="text-rose-500">*</span></label>
+                <input className={inp} value={stay.location} placeholder="Hotel name / area"
+                  onChange={e => set(i, { location: e.target.value })} />
+              </div>
+              {/* Only worth asking which stop a stay belongs to once there is
+                  more than one stop to choose between. */}
+              {stopOptions.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">Which stop <span className="text-slate-300">(optional)</span></label>
+                  <select className={inp} value={stay.leg_seq ?? ''}
+                    onChange={e => set(i, { leg_seq: e.target.value === '' ? null : Number(e.target.value) })}>
+                    <option value="">Not tied to a stop</option>
+                    {stopOptions.map(o => <option key={o.seq} value={o.seq}>{o.label}</option>)}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">Check-in <span className="text-rose-500">*</span></label>
+                <input type="date" className={inp} value={stay.check_in} min={tripFrom} max={tripTo}
+                  onChange={e => {
+                    const v = e.target.value;
+                    // keep check-out from falling behind the new check-in
+                    set(i, { check_in: v, ...(stay.check_out && stay.check_out < v ? { check_out: v } : {}) });
+                  }} />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">Check-out <span className="text-rose-500">*</span></label>
+                <input type="date" className={inp} value={stay.check_out} min={stay.check_in || tripFrom} max={tripTo}
+                  onChange={e => set(i, { check_out: e.target.value })} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      <button onClick={() => setStays([...stays, blankStay()])}
+        className="w-full border-2 border-dashed border-indigo-200 text-indigo-500 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-2xl py-2.5 font-bold text-sm flex items-center justify-center gap-2 transition-all">
+        <Plus className="w-4 h-4" />{stays.length ? 'Add another stay' : 'Add where you are staying'}
       </button>
     </div>
   );

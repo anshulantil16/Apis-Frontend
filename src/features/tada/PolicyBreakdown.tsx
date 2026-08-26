@@ -5,6 +5,7 @@ import {
   AlertCircle, Wallet,
 } from 'lucide-react';
 import { SETTLE_HEADS } from './BillCollector';
+import { d } from './shared';
 
 export function PolicyBreakdown({ settlement, compact = false }: { settlement: any; compact?: boolean }) {
   if (!settlement) return null;
@@ -30,7 +31,7 @@ export function PolicyBreakdown({ settlement, compact = false }: { settlement: a
               {st.grade && <span className="text-indigo-500 font-bold"> · grade {st.grade}</span>}
             </p>
             <p className="text-[11px] text-slate-400">
-              {st.from_date} → {st.to_date}{st.days ? ` · ${st.days}d / ${st.nights}n` : ''}
+              {d(st.from_date)} → {d(st.to_date)}{st.days ? ` · ${st.days}d / ${st.nights}n` : ''}
             </p>
           </div>
           <div className="overflow-x-auto">

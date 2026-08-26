@@ -5,10 +5,10 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plus, Trash2, CheckCircle, FileText, Receipt, Car, AlertCircle, RefreshCw,
 } from 'lucide-react';
-import { API, LOCAL_MODES, LOCAL_TYPES, TIME_PREFS, TOUR_BLANK, blankLeg, fmt, journeyNoun, tripDays, type User, TRIP_TYPES } from './shared';
+import { API, LOCAL_MODES, LOCAL_TYPES, TIME_PREFS, TOUR_BLANK, blankLeg, d, fmt, journeyNoun, tripDays, type User, TRIP_TYPES } from './shared';
 import { CapsBanner, Confetti, Toast } from './components';
 import { BookingModePicker, SelectOther, TravelModePicker, OptionPicker } from './TravelModePicker';
-import { ItineraryEditor } from './ItineraryEditor';
+import { ItineraryEditor, StayPlanner } from './ItineraryEditor';
 import { BillCollector } from './BillCollector';
 import { SettlementTable } from './PolicyBreakdown';
 import { EstimateBlock } from './EstimateBlock';
@@ -138,7 +138,7 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
       return sanction.legs.map((l: any) => ({
         seq: l.seq,
         label: `Stop ${l.seq + 1} · ${l.destination_city}`,
-        sub: `${l.from_date} → ${l.to_date}${l.days ? ` · ${l.days}d` : ''}${l.city_grade ? ` · grade ${l.city_grade}` : ''}`,
+        sub: `${d(l.from_date)} → ${d(l.to_date)}${l.days ? ` · ${l.days}d` : ''}${l.city_grade ? ` · grade ${l.city_grade}` : ''}`,
         heads: l.heads || {},
         policy: l.policy_heads || {},
       }));
@@ -146,8 +146,8 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
     return [{
       seq: null,
       label: sanction ? (sanction.destination_city || 'This trip') : (texp.destination_city || 'Expenses'),
-      sub: sanction ? `${sanction.from_date} → ${sanction.to_date}`
-        : (texp.from_date && texp.to_date ? `${texp.from_date} → ${texp.to_date}`
+      sub: sanction ? `${d(sanction.from_date)} → ${d(sanction.to_date)}`
+        : (texp.from_date && texp.to_date ? `${d(texp.from_date)} → ${d(texp.to_date)}`
            : 'Add a destination and dates above to see your policy limits'),
       heads: sanction?.heads || {},
       policy: sanction?.policy_heads || loosePolicy || {},
@@ -245,6 +245,11 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
                   : tour.booking_mode === 'company'),
     [multiCity, readyLegs, tour.booking_mode, tour.trip_type, tour.return_booking_mode]);
 
+  /* Lodging money with no stay behind it leaves the approver releasing an
+     advance against nothing they can check — the same rule the server enforces
+     against the computed lodging figure, mirrored here for instant feedback. */
+  const stayRequired = (parseFloat(tour.est_lodging_amount) || 0) > 0;
+
   const bookingGaps = useMemo(() => {
     const gaps: string[] = [];
     // The mode is always needed — the travel class is approved against it.
@@ -270,6 +275,16 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
     if (tour.trip_type !== 'one_way') {
       want(tour.return_booking_mode, tour.return_travel_mode, tour.return_mode_date, ' home');
     }
+    // Lodging is being asked for, so the stay it pays for has to be named.
+    const realStays = (tour.stays || []).filter((s: any) =>
+      (s.location || '').trim() || s.check_in || s.check_out);
+    if (stayRequired && realStays.length === 0) gaps.push('where you plan to stay');
+    realStays.forEach((s: any, i: number) => {
+      const at = realStays.length > 1 ? ` for stay ${i + 1}` : '';
+      if (!(s.location || '').trim()) gaps.push(`the location${at}`);
+      if (!s.check_in || !s.check_out) gaps.push(`check-in and check-out${at}`);
+      else if (s.check_out < s.check_in) gaps.push(`a check-out after check-in${at}`);
+    });
     // A ticket is raised for a person. Only the employee knows the spelling on
     // their Aadhaar card and the number they will answer while away.
     if (deskIsBooking) {
@@ -280,7 +295,8 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
     return gaps;
   }, [multiCity, readyLegs, deskIsBooking, tour.booking_mode, tour.travel_mode, tour.travel_mode_date,
       tour.from_city, tour.trip_type, tour.return_booking_mode, tour.return_travel_mode, tour.return_mode_date,
-      tour.traveller_name, tour.traveller_age, tour.contact_number]);
+      tour.traveller_name, tour.traveller_age, tour.contact_number,
+      stayRequired, tour.stays]);
 
   // Client-side mirror of policy.validate_estimate — instant feedback only.
   const estWarnings = useMemo(() => {
@@ -590,6 +606,23 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
             </div>
           )}
 
+          {/* Where the employee plans to stay. Asked before the estimate, so
+              the lodging figure below reads as the cost of THIS stay rather
+              than a number on its own. */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <h4 className="font-black text-slate-700 text-sm">Hotel / Stay Details</h4>
+              <span className="text-[11px] text-slate-400">
+                {stayRequired ? 'Required — you have estimated lodging' : 'Add one if you are staying overnight'}
+              </span>
+            </div>
+            <StayPlanner stays={tour.stays} setStays={(v: any[]) => setTour({ ...tour, stays: v })}
+              inp={inp} tripFrom={tour.from_date} tripTo={tour.to_date}
+              stopOptions={multiCity ? readyLegs.map((l: any) => ({
+                seq: l.seq, label: `Stop ${l.seq + 1} · ${l.destination_city || 'unnamed'}`,
+              })) : []} />
+          </div>
+
           <EstimateBlock est={est} tour={tour} setTour={setTour} total={estTotal} warnings={estWarnings} inp={inp}
             maxAdvance={maxAdvance} advanceOver={advanceOver} />
 
@@ -635,7 +668,7 @@ export function NewRequest({ user, onDone }: { user: User; onDone: () => void })
                         <p className="font-black text-sm text-slate-800 truncate">{s.destination_city || 'Trip'}</p>
                         {on && <CheckCircle className="w-4 h-4 text-indigo-600 shrink-0" />}
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5">{s.from_date} → {s.to_date}{s.number_of_days ? ` · ${s.number_of_days}d` : ''}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{d(s.from_date)} → {d(s.to_date)}{s.number_of_days ? ` · ${s.number_of_days}d` : ''}</p>
                       <div className="flex flex-wrap gap-1 mt-1.5 text-[11px] font-bold">
                         <span className="bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">Est ₹{fmt(s.estimate_amount)}</span>
                         {s.advance_amount > 0 && <span className="bg-amber-50 text-amber-700 rounded px-1.5 py-0.5">Advance ₹{fmt(s.advance_amount)}</span>}
