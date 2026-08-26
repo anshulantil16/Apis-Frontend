@@ -202,13 +202,6 @@ export const WHATS_NEW: NewsItem[] = [
   { title: 'AdminPulse visual refresh', body: 'Glow rings, animated borders and live particles across the whole booking & requests experience.', tag: 'AdminPulse', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
 ];
 
-/* No real leadership content exists for this internal-tools dashboard, so
-   this stays unattributed rather than inventing a name, photo or quote. */
-export const LEADERSHIP_NOTE = {
-  heading: 'A note on this platform',
-  body: 'This dashboard brings every internal tool the team has built — PMS, appraisals, letters, room bookings, sales intelligence and more — onto one screen. It keeps growing as new tools ship.',
-};
-
 /* Real, publicly-reported APIS India Limited figures — the company is
    BSE-listed (506166), so this is public record, not invented. Sourced from
    apisindia.com/en/about-us and FY 2025-26 results coverage (May 2026).
