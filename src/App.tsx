@@ -13,11 +13,13 @@ import { LettersGeneratorPage, OfferLetterApprovalDashboard } from './features/l
 import { TadaPage } from './features/tada';
 import { SalesIQPage } from './features/salesiq';
 import { RoomPulsePage } from './features/roompulse';
+import { ApisTreePage } from './features/tree';
+import { PoliciesPage } from './features/policies';
 import { IntranetHomePage } from './features/home';
 import { IntranetShell } from './features/home/IntranetShell';
 import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHomeShared';
 
-type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse';
+type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies';
 
 /* Header caption per view. The shell renders the sidebar and header for every
    screen, so tools never draw their own top-level chrome. */
@@ -33,6 +35,8 @@ const VIEW_META: Record<AppView, { title: string; subtitle: string }> = {
   'tada':            { title: 'TA/DA Portal',        subtitle: 'Travel & Allowance' },
   'salesiq':         { title: 'SalesIQ',             subtitle: 'Sales Intelligence' },
   'roompulse':       { title: 'AdminPulse',          subtitle: 'Admin Requests & Facilities' },
+  'apis-tree':       { title: 'APIS Tree',           subtitle: 'Organisation Structure' },
+  'policies':        { title: 'Policies',            subtitle: 'Policies & Guidelines' },
 };
 
 // 'appraisal' = appraisal only (legacy), 'hub' = appraisal + eom only, anything else = all
@@ -130,6 +134,10 @@ export default function App() {
         <LettersGeneratorPage onNavigateToApprovals={() => navigate('offer-approvals')} />
       ) : view === 'offer-approvals' ? (
         <OfferLetterApprovalDashboard />
+      ) : view === 'apis-tree' ? (
+        <ApisTreePage />
+      ) : view === 'policies' ? (
+        <PoliciesPage />
       ) : (
         <AppraisalPage />
       )}

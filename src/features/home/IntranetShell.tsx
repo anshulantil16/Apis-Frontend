@@ -12,7 +12,8 @@
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
-  Search, Bell, ChevronDown, Home as HomeIcon, LayoutGrid, Menu, Building2, Command, CornerDownLeft,
+  Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
+  LayoutDashboard, Briefcase, HelpCircle, User, Network, ShieldCheck,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, NAV_GROUPS, COMING_SOON, IH_STYLES, type QuickAccessId,
@@ -20,7 +21,7 @@ import {
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
    sub-views that live under a parent tool (approvals sits under letters). */
-export type ShellView = QuickAccessId | 'home' | 'offer-approvals';
+export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies';
 
 interface Props {
   active: ShellView;
@@ -226,27 +227,51 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
       <style>{IH_STYLES}</style>
 
       {/* ── Sidebar — identical on every screen ─────────────────────────── */}
-      <aside className={`${collapsed ? 'w-[76px]' : 'w-64'} bg-[#0a0d14] flex flex-col flex-shrink-0 h-screen
+      <aside className={`${collapsed ? 'w-[76px]' : 'w-64'} bg-gradient-to-b from-[#5c4413] via-[#3d2f0c] to-[#241a06] flex flex-col flex-shrink-0 h-screen
                          sticky top-0 overflow-y-auto overflow-x-hidden transition-all duration-300`}>
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3 py-3 border-b border-white/[0.06]`}>
-          <button onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all">
-            <Menu className="w-5 h-5" />
-          </button>
-          {!collapsed && <span className="text-[9px] font-bold uppercase tracking-widest text-slate-600">Menu</span>}
+        {/* Brand panel — the app's one deliberately-amber surface, echoing
+            the honey business; everything else in the shell stays neutral
+            dark/light so this reads as an accent, not a theme change. */}
+        <div className="relative overflow-hidden flex-shrink-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600" />
+          <div className={`relative flex items-center gap-2.5 ${collapsed ? 'justify-center px-2 py-4' : 'px-4 py-4'}`}>
+            <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0 drop-shadow" />
+            {!collapsed && (
+              <div className="leading-none min-w-0">
+                <p className="text-[15px] font-black text-white tracking-tight truncate">APIS</p>
+                <p className="text-[10px] font-bold text-amber-950/70 uppercase tracking-widest truncate">Internal Tools</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <nav className="flex-1 p-2.5 pt-4">
           <button onClick={() => go('home')} title="Home"
             className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-[13px] font-black mb-1.5 transition-all
                        ${active === 'home'
-                         ? 'bg-gradient-to-r from-cyan-500/15 to-violet-500/15 text-cyan-300 ring-1 ring-cyan-500/20'
-                         : 'text-slate-400 hover:bg-white/5 hover:text-white'}
+                         ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
+                         : 'text-amber-100/70 hover:bg-white/10 hover:text-white'}
                        ${collapsed ? 'justify-center' : ''}`}>
             <HomeIcon className="w-4 h-4 flex-shrink-0" />{!collapsed && 'Home'}
           </button>
 
-          {!collapsed && <p className="px-2.5 pt-3 pb-1.5 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Tools</p>}
+          {!collapsed && <p className="px-2.5 pt-3 pb-1.5 text-[9px] font-bold text-amber-100/40 uppercase tracking-widest">Workspace</p>}
+          <button onClick={() => go('home')} title="Dashboard"
+            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold mb-0.5 transition-all
+                       text-amber-50/80 hover:bg-white/10 hover:text-white ${collapsed ? 'justify-center' : ''}`}>
+            <LayoutDashboard className="w-3.5 h-3.5 flex-shrink-0" />{!collapsed && 'Dashboard'}
+          </button>
+          {/* Not a real route yet — kept visibly non-interactive (same
+              cursor-not-allowed/"Soon" treatment as the Resources items
+              below) rather than wiring it to a page that doesn't exist. */}
+          <div title="My Workspace — not built yet"
+            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-semibold mb-0.5
+                       text-amber-100/50 cursor-not-allowed opacity-60 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+            <span className="flex items-center gap-2.5"><Briefcase className="w-3.5 h-3.5 flex-shrink-0" />{!collapsed && 'My Workspace'}</span>
+            {!collapsed && <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/20 text-amber-100/60">Soon</span>}
+          </div>
+
+          {!collapsed && <p className="px-2.5 pt-4 pb-1.5 text-[9px] font-bold text-amber-100/40 uppercase tracking-widest">Tools</p>}
           {NAV_GROUPS.map(group => {
             const GIcon = group.icon;
             const open = !!openGroups[group.label];
@@ -257,7 +282,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                   onClick={() => { if (collapsed) setCollapsed(false); toggleGroup(group.label); }}
                   title={group.label}
                   className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
-                             ${hasActive ? group.accent : 'text-slate-400 hover:text-slate-200'} hover:bg-white/5
+                             ${hasActive ? group.accent : 'text-amber-100/70 hover:text-white'} hover:bg-white/10
                              ${collapsed ? 'justify-center' : 'justify-between'}`}>
                   <span className="flex items-center gap-2.5"><GIcon className="w-3.5 h-3.5 flex-shrink-0" />{!collapsed && group.label}</span>
                   {!collapsed && <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />}
@@ -272,8 +297,8 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                       return (
                         <button key={item.id} onClick={() => go(item.id)}
                           className={`w-full flex items-center gap-2 pl-9 pr-2.5 py-2 rounded-lg text-[12px] font-semibold transition-all
-                                     ${on ? `bg-white/10 ${group.accent}` : `text-slate-300 hover:bg-white/5 ${group.hoverAccent}`}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${on ? `${group.dot} ih-pulse-glow` : 'bg-slate-500'}`} />
+                                     ${on ? `bg-white/10 ${group.accent}` : `text-amber-50/80 hover:bg-white/10 ${group.hoverAccent}`}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${on ? `${group.dot} ih-pulse-glow` : 'bg-amber-100/40'}`} />
                           {item.label}
                         </button>
                       );
@@ -289,25 +314,43 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
 
           {!collapsed && (
             <>
-              <p className="px-2.5 pt-4 pb-1.5 text-[9px] font-bold text-slate-600 uppercase tracking-widest">About APIS</p>
-              <button onClick={() => go('home')}
+              <p className="px-2.5 pt-4 pb-1.5 text-[9px] font-bold text-amber-100/40 uppercase tracking-widest">Resources</p>
+              <button onClick={() => {
+                go('home');
+                setTimeout(() => document.getElementById('our-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+              }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold
-                           text-slate-300 hover:bg-white/5 hover:text-amber-300 transition-all">
+                           text-amber-50/80 hover:bg-white/10 hover:text-white transition-all">
                 <Building2 className="w-3.5 h-3.5" />Our Products
+              </button>
+
+              <button onClick={() => go('apis-tree')} title="APIS Tree"
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
+                           ${active === 'apis-tree'
+                             ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
+                             : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
+                <Network className="w-3.5 h-3.5" />APIS Tree
+              </button>
+
+              <button onClick={() => go('policies')} title="Policies & Guidelines"
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
+                           ${active === 'policies'
+                             ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
+                             : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
+                <ShieldCheck className="w-3.5 h-3.5" />Policies & Guidelines
               </button>
 
               {/* These are genuinely not built yet. They're dimmed and
                   `cursor-not-allowed` on purpose so it's obvious they differ
                   from the live tools above — which must NOT look dimmed. */}
-              <p className="px-2.5 pt-4 pb-1.5 text-[9px] font-bold text-slate-600 uppercase tracking-widest">More</p>
               {COMING_SOON.map(c => {
                 const CIcon = c.icon;
                 return (
                   <div key={c.label} title={`${c.label} — not available yet`}
                     className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-lg text-[12px]
-                               font-semibold text-slate-600 cursor-not-allowed opacity-60">
+                               font-semibold text-amber-100/50 cursor-not-allowed opacity-60">
                     <span className="flex items-center gap-2.5"><CIcon className="w-3.5 h-3.5" />{c.label}</span>
-                    <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5 text-slate-500">Soon</span>
+                    <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/20 text-amber-100/60">Soon</span>
                   </div>
                 );
               })}
@@ -315,30 +358,51 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
           )}
         </nav>
 
-        {!collapsed && (
-          <div className="p-3.5 border-t border-white/[0.06]">
-            <p className="text-[9px] text-slate-600 font-semibold text-center">
-              {now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+        
+        <div className={`p-3 border-t border-white/[0.06] flex items-center flex-shrink-0 ${collapsed ? 'justify-center' : 'justify-between gap-2'}`}>
+          <button onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="p-1.5 rounded-lg text-amber-100/60 hover:text-white hover:bg-white/10 transition-all flex-shrink-0">
+            {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+          </button>
+          {!collapsed && (
+            <p className="text-[9px] text-amber-100/40 font-semibold text-right truncate">
+              © {now.getFullYear()} APIS Enterprise Platform
             </p>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col">
         <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-slate-200">
           <div className="px-7 py-3 flex items-center gap-5">
-            <div className="hidden lg:flex items-center gap-3 pr-5 border-r border-slate-200">
-              <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0" />
-              <div className="leading-none">
-                <p className="text-[13px] font-black text-slate-900 tracking-tight">
-                  {title || 'APIS Internal Tools'}
+            {active === 'home' ? (
+              // Greeting header for the dashboard itself — no name attached:
+              // there's no app-wide identity system (session state is
+              // per-tool, e.g. AdminPulse/SalesIQ's OTP-remembered email),
+              // so every teammate would otherwise see the same hardcoded name.
+              <div className="hidden lg:block pr-5 border-r border-slate-200 leading-tight">
+                <p className="text-[15px] font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+                  {now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'}
+                  <span aria-hidden>Rainy</span>
                 </p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">
-                  {subtitle || 'Enterprise Platform'}
+                <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
+                  Here's what's happening across your workspace today.
                 </p>
               </div>
-            </div>
+            ) : (
+              <div className="hidden lg:flex items-center gap-3 pr-5 border-r border-slate-200">
+                <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0" />
+                <div className="leading-none">
+                  <p className="text-[13px] font-black text-slate-900 tracking-tight">
+                    {title || 'APIS Internal Tools'}
+                  </p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+                    {subtitle || 'Enterprise Platform'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             <button onClick={openPalette}
               className="relative flex-1 max-w-md flex items-center gap-2 pl-9 pr-3 py-2 rounded-xl bg-slate-100
@@ -351,19 +415,18 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               </span>
             </button>
 
-            <div className="ml-auto flex items-center gap-3">
-              <span className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-50
-                               ring-1 ring-emerald-200 text-[10px] font-black uppercase tracking-wide text-emerald-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ih-pulse-glow" />Live · QA
-              </span>
-              <button className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
+            <div className="ml-auto flex items-center gap-2">
+              <button title="Notifications" className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                 <Bell className="w-4 h-4" />
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500" />
               </button>
-              <button onClick={() => go('home')} title="All tools"
-                className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600 flex items-center
-                           justify-center text-white shadow-md shadow-cyan-500/25 hover:scale-105 transition-transform">
-                <LayoutGrid className="w-4 h-4" />
+              <button title="Help & Support — not available yet" className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
+                <HelpCircle className="w-4 h-4" />
+              </button>
+              <button onClick={() => go('home')} title="Home"
+                className="w-8 h-8 rounded-full bg-slate-100 ring-1 ring-slate-200 flex items-center
+                           justify-center text-slate-500 hover:text-amber-600 hover:ring-amber-300 transition-all">
+                <User className="w-4 h-4" />
               </button>
             </div>
           </div>
