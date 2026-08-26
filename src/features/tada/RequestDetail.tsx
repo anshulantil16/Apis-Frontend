@@ -9,6 +9,84 @@ import { API, fmt, HR_LABEL, roleLabel, type User } from './shared';
 import { Confetti, Pill, StageTrail, Toast } from './components';
 import { PolicyBreakdown } from './PolicyBreakdown';
 
+/** Every journey on this request that is sitting at options_sent — the desk
+    found more than one flight or train, and it is this employee's turn to say
+    which one to book. A journey with only one obvious answer never reaches
+    this state, so nothing shows for it here. */
+function openChoices(r: any) {
+  const out: { journeyKey: string; label: string; options: any[] }[] = [];
+  const push = (journeyKey: string, status: string, label: string) => {
+    if (status !== 'options_sent') return;
+    const options = (r.booking_options || []).filter((o: any) => o.journey_key === journeyKey);
+    if (options.length) out.push({ journeyKey, label, options });
+  };
+  if ((r.legs || []).length) {
+    r.legs.forEach((l: any) => push(String(l.seq), l.booking_status, `Stop ${l.seq + 1} · ${l.destination_city}`));
+  } else {
+    push('trip', r.booking_status, r.destination_city || 'Your journey');
+  }
+  push('return', r.return_booking_status, `Return to ${r.hq_city || 'base'}`);
+  return out;
+}
+
+/** The employee's turn: pick one of the fares the desk found. */
+function TicketChoicePanel({ r, user, onChosen }: { r: any; user: User; onChosen: () => void }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ t: string; ok: boolean } | null>(null);
+  const choices = openChoices(r);
+  if (!choices.length) return null;
+
+  const choose = async (journeyKey: string, optionId: number) => {
+    setBusy(`${journeyKey}-${optionId}`);
+    try {
+      const res = await fetch(`${API}/requests/${r.id}/booking/select/`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: user.employee_id, journey_key: journeyKey, option_id: optionId }),
+      });
+      const body = await res.json().catch(() => ({}));
+      setToast({ t: res.ok ? 'Choice confirmed — the desk will now book it.' : (body.error || 'Could not record your choice.'), ok: res.ok });
+      if (res.ok) onChosen();
+    } catch {
+      setToast({ t: 'Could not reach the server.', ok: false });
+    }
+    setBusy(null);
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-indigo-50 to-sky-50 border-2 border-indigo-200 rounded-2xl p-5 space-y-4">
+      {toast && <Toast msg={toast.t} ok={toast.ok} onClose={() => setToast(null)} />}
+      <div>
+        <p className="font-black text-indigo-800 flex items-center gap-1.5">
+          <AlertCircle className="w-4 h-4" />Choose your ticket
+        </p>
+        <p className="text-xs text-indigo-600 mt-0.5">
+          The Travel Help Desk found more than one option — pick the one you want booked.
+        </p>
+      </div>
+      {choices.map(({ journeyKey, label, options }) => (
+        <div key={journeyKey} className="bg-white/70 border border-indigo-100 rounded-xl p-3 space-y-2">
+          <p className="text-xs font-black text-slate-600">{label}</p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {options.map((o: any) => (
+              <div key={o.id} className="border-2 border-slate-200 rounded-lg p-2.5 bg-white flex flex-col gap-1.5">
+                <p className="text-xs font-bold text-slate-800">{o.mode} {o.carrier}</p>
+                <p className="text-[11px] text-slate-500">{o.detail}</p>
+                <p className="text-[11px] text-slate-500">{o.date} {o.time && `· ${o.time}`}</p>
+                <p className="text-sm font-black text-indigo-600">₹{fmt(o.amount)}</p>
+                {o.remarks && <p className="text-[10px] text-slate-400">{o.remarks}</p>}
+                <button onClick={() => choose(journeyKey, o.id)} disabled={busy === `${journeyKey}-${o.id}`}
+                  className="mt-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-indigo-500 to-sky-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs disabled:opacity-50 hover:shadow-lg transition-all">
+                  <CheckCircle className="w-3.5 h-3.5" />Book this one
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Detail({ id, user, onBack, onActioned }: { id: number; user: User; onBack: () => void; onActioned?: () => void }) {
   const [r, setR] = useState<any>(null);
   const [remarks, setRemarks] = useState('');
@@ -91,6 +169,7 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
       {toast && <Toast msg={toast.t} ok={toast.ok} onClose={() => setToast(null)} />}
       <button onClick={onBack} className="flex items-center gap-1 text-slate-500 text-sm font-bold hover:text-indigo-600 transition-colors"><ChevronLeft className="w-4 h-4" />Back</button>
       <StageTrail status={r.status} statusLabel={r.status_label} type={r.type} />
+      {r.employee_id === user.employee_id && <TicketChoicePanel r={r} user={user} onChosen={load} />}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
         <div className="flex justify-between items-start mb-3">
           <div><h3 className="font-black text-slate-800 text-lg">{r.type_label}</h3><p className="text-slate-400 text-sm">{r.employee_name} · {r.employee_id} · {r.department} · Level {r.level}</p></div>
