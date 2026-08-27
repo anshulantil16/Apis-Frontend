@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Briefcase, HelpCircle, User, Network, ShieldCheck,
 } from 'lucide-react';
 import {
-  QUICK_ACCESS, NAV_GROUPS, COMING_SOON, IH_STYLES, type QuickAccessId,
+  QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, type QuickAccessId,
 } from './IntranetHomeShared';
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
@@ -240,7 +240,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               {!collapsed && (
                 <div className="leading-none min-w-0">
                   <p className="text-[15px] font-black text-white tracking-tight truncate">APIS</p>
-                  <p className="text-[10px] font-bold text-amber-950/70 uppercase tracking-widest truncate">Intranet Tools</p>
+                  <p className="text-[10px] font-bold text-amber-950/70 uppercase tracking-widest truncate">Intranet</p>
                 </div>
               )}
             </div>
@@ -420,6 +420,30 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                 <Command className="w-2.5 h-2.5" />K
               </span>
             </button>
+
+            {/* Stay Connected — moved out of the home page's right-column
+                widget and into the header itself, right beside search, so
+                it's visible immediately rather than requiring a scroll.
+                Home-only (matches the greeting block above, same
+                active === 'home' gate) since the header is shared by every
+                screen in the shell. Amber ring + neon glow-on-hover ties it
+                into the mustard theme while each icon keeps its own real
+                brand colour underneath. */}
+            {active === 'home' && (
+              <div className="hidden md:flex items-center gap-1.5 pl-4 ml-1 border-l border-slate-200">
+                {SOCIAL_LINKS.map(s => {
+                  const Icon = s.icon;
+                  return (
+                    <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" title={s.label}
+                      style={{ ['--ih-neon' as string]: 'rgba(245,158,11,.5)' }}
+                      className={`ih-tilt ih-neon w-7 h-7 rounded-full ${s.bg} flex items-center justify-center text-white
+                                 ring-1 ring-amber-300/50 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-110`}>
+                      <Icon className="w-3.5 h-3.5" />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="ml-auto flex items-center gap-2">
               <button title="Notifications" className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">

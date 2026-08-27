@@ -16,9 +16,9 @@
  * are shown exactly as filed rather than normalised, so nothing here states
  * something the source file didn't.
  */
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import {
-  Building2, Crown, Info, Network, Search, Users, X,
+  ArrowLeft, Building2, ChevronDown, ChevronUp, Crown, Info, Network, Search, User, Users, X,
 } from 'lucide-react';
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
 import arunMishraPhoto from '../../assets/hierarchy/arun-mishra.jpeg';
@@ -68,6 +68,50 @@ const hods: Person[] = [
   { id: 'dinesh', name: 'Dinesh', role: 'Manager', department: 'NPD', level: 'hod', photo: dineshPhoto },
   { id: 'ershad-alam', name: 'Ershad Alam', role: 'Manager', department: 'Export',level: 'hod', photo: ershadAlamPhoto },
 ];
+
+/* Full reporting structure below a HOD — real names/roles as provided,
+   parsed the same "shown exactly as filed, not normalised" way as `hods`
+   above. Only P&C, Admin & IT (Pankaj Tripathi) has been supplied so far;
+   SUB_TREES is keyed by hod id so other departments fall back to the plain
+   card-select behaviour until their structure is provided too. */
+type TeamMember = { name: string; role: string; hod?: boolean; reports?: TeamMember[] };
+
+const SUB_TREES: Record<string, TeamMember[]> = {
+  'pankaj-tripathi': [
+    {
+      name: 'Hemant Tripathi', role: 'M2- HRBP- HO',
+      reports: [
+        { name: 'Sandhya Singh', role: 'M1- AM- TA & TM- HO' },
+        { name: 'Gopa', role: 'O5- Sr. Executive- TA & ER- HO' },
+        { name: 'Manoj Kumar', role: 'O5- Sr. Executive- Payroll- HO' },
+        { name: 'Sujat Alam', role: 'O5- Sr. Executive- P&C- HO' },
+        { name: 'Kanchan', role: 'O5- Sr. Executive- Admin & Facilities- HO' },
+        { name: 'Shobhit', role: 'O4-  EA Front Desk Executive- Admin & Facilities- HO' },
+      ],
+    },
+    {
+      name: 'Devender Kumar', role: 'M2- Dy. Manager - HO',
+      reports: [
+        // Anshul Antil sits to the left of Kunal, with Rainy Chaudhary
+        // nested one level under him; Ravi follows.
+        {
+          name: 'Anshul Antil', role: 'O5- Lead Automation- IT- HO',
+          reports: [{ name: 'Rainy Chaudhary', role: 'AI & ML Automation- IT- HO' }],
+        },
+        { name: 'Kunal', role: 'IT Support- IT- HO' },
+        { name: 'Ravi', role: 'O5- IT- Roorkee' },
+      ],
+    },
+    {
+      name: 'Praveen Sharma', role: 'M3- Manager- HR & Admin- Roorkee',
+      reports: [
+        { name: 'Anju', role: 'M- AM- HR & Admin- Roorkee' },
+        { name: 'Mohit', role: 'O5- P&C- Roorkee' },
+        { name: 'Amandeep', role: 'O5- Admin & Facilities- Roorkee' },
+      ],
+    },
+  ],
+};
 
 /* Page-scoped keyframes only — everything else (pop-in, tilt, spotlight,
  * neon, breathing ring, ambient blobs) reuses the shared `ih-*` toolkit
@@ -179,6 +223,234 @@ function PersonCard({ person, selected, dim, delayMs, onClick }: {
   );
 }
 
+/* Smooth open/close for any branch of the tree — a CSS grid-rows trick
+   (0fr → 1fr) rather than a conditional unmount, so collapsing a branch
+   animates its height down instead of just vanishing. */
+function Collapsible({ open, children }: { open: boolean; children: ReactNode }) {
+  return (
+    <div className="grid w-full transition-[grid-template-rows] duration-300 ease-out"
+      style={{ gridTemplateRows: open ? '1fr' : '0fr' }}>
+      <div className="overflow-hidden min-h-0">{children}</div>
+    </div>
+  );
+}
+
+/* Small round chevron used to collapse/expand a node — same control at
+   every level (the HOD box, each manager box), just repositioned per use. */
+function CollapseToggle({ collapsed, onClick, title }: { collapsed: boolean; onClick: () => void; title: string }) {
+  return (
+    <button onClick={onClick} title={title}
+      className="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-white border border-amber-200 shadow-sm
+                 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:border-amber-300
+                 hover:scale-110 transition-all z-10">
+      {collapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
+/* Level-2 manager box in a department sub-tree — cream/amber card (matches
+   the HOD box above it) with a violet HOD badge, so the whole drill-down
+   reads as one consistent "amber tree", not a different UI bolted on. No
+   photo: none were supplied for this level. */
+function ManagerCard({ member }: { member: TeamMember }) {
+  return (
+    <div onMouseMove={onSpotlightMove}
+      className="ih-spotlight ih-neon relative w-full rounded-2xl border border-amber-200
+                 bg-gradient-to-br from-amber-50 to-white shadow-sm p-4"
+      style={{ ['--ih-neon' as string]: '#8b5cf6' }}>
+      {member.hod && (
+        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">
+          HOD
+        </span>
+      )}
+      <p className="font-black text-slate-900 text-base mt-1">{member.name}</p>
+      <p className="text-[12.5px] font-bold text-amber-700 mt-0.5 leading-snug">{member.role}</p>
+    </div>
+  );
+}
+
+/* Flat individual-contributor row — small amber avatar tile + name/role,
+   hung off a green vertical spine via a short stub. Used for a manager
+   whose direct reports are all leaves (no further reports of their own),
+   e.g. Hemant Tripathi's and Praveen Sharma's teams. */
+function ReportLeafRow({ member, delayMs }: { member: TeamMember; delayMs: number }) {
+  return (
+    <div className="ih-pop-in relative pl-6" style={{ animationDelay: `${delayMs}ms` }}>
+      <span aria-hidden className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-px bg-emerald-400" />
+      <div className="ih-tilt flex items-center gap-2.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 min-w-[195px]">
+        <div className="w-7 h-7 rounded-md bg-amber-400 flex items-center justify-center shrink-0">
+          <User className="w-4 h-4 text-white" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-black text-slate-900 leading-tight truncate">{member.name}</p>
+          <p className="text-[11px] font-bold text-amber-600 leading-snug truncate">{member.role}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* The green-spine list wrapping ReportLeafRow — one continuous line down
+   the left edge with a stub into each row. */
+function ReportLeafList({ members, baseDelay }: { members: TeamMember[]; baseDelay: number }) {
+  return (
+    <div className="relative pl-5 ml-2 border-l-2 border-emerald-300 space-y-3">
+      {members.map((m, i) => <ReportLeafRow key={m.name} member={m} delayMs={baseDelay + i * 70} />)}
+    </div>
+  );
+}
+
+/* Boxed card for a report who is themself a small node in the tree (has
+   their own reports) — recurses via a blue stem, same connector language
+   as the HOD→managers T-connector above, just smaller. This is what makes
+   Kunal → Rainy Chaudhary read as "one more branch of the org chart"
+   rather than a flat list entry. */
+function ReportBoxCard({ member, delayMs }: { member: TeamMember; delayMs: number }) {
+  const kids = member.reports ?? [];
+  return (
+    <div className="ih-pop-in flex flex-col items-center" style={{ animationDelay: `${delayMs}ms` }}>
+      <div className="ih-tilt rounded-xl bg-amber-50 border border-amber-200 shadow-sm px-2 py-1.5 min-w-[92px] max-w-[122px]">
+        <p className="text-[11.5px] font-black text-slate-900 leading-tight">{member.name}</p>
+        <p className="text-[10px] font-bold text-amber-600 mt-0.5 leading-snug">{member.role}</p>
+      </div>
+      {kids.length > 0 && (
+        <>
+          <div aria-hidden className="w-px h-5 bg-sky-300" />
+          <div className="flex flex-col items-center gap-2">
+            {kids.map(r => <ReportBoxCard key={r.name} member={r} delayMs={delayMs + 90} />)}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* True whenever at least one of a manager's direct reports has their own
+   reports — that's the signal to render this manager's team as a small
+   nested org-chart (ReportBranchGrid, blue T-connector) instead of a flat
+   green-spine list, matching Devender Kumar's branch in the reference vs.
+   Hemant's/Praveen's flatter teams. Not hardcoded to any name, so it keeps
+   working if the underlying data changes. */
+function hasNestedReports(members: TeamMember[]) {
+  return members.some(m => m.reports && m.reports.length > 0);
+}
+
+/* Boxed-grid branch — a small T-connector (blue, mirrors the HOD-level one)
+   fanning out to each of this manager's reports, each of which can itself
+   recurse via ReportBoxCard. */
+function ReportBranchGrid({ members, baseDelay }: { members: TeamMember[]; baseDelay: number }) {
+  const multi = members.length > 1;
+  return (
+    <div className="relative w-full flex justify-center">
+      {/* Cards wrap instead of forcing one fixed row — a manager's own grid
+          column is narrower than 3 side-by-side boxed cards need, and
+          wrapping to a second row keeps every card fully visible instead of
+          letting the row overflow and clip against its neighbours. */}
+      <div className={`flex flex-wrap items-start justify-center gap-1.5 max-w-full ${multi ? 'pt-3' : ''}`}>
+        {members.map((m, i) => (
+          <div key={m.name} className="relative flex flex-col items-center">
+            <ReportBoxCard member={m} delayMs={baseDelay + i * 90} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* One HOD's full department structure, drawn as an actual org-chart flow:
+   HOD box → a T-connector down to each level-2 manager → each manager's own
+   branch (a flat green-spine list, or a nested blue box-grid when that
+   manager's reports themselves have reports). Pure CSS lines (border/
+   absolute divs), no canvas or charting library — matches how the rest of
+   this page is built. Every level collapses independently and animates in
+   with a staggered pop-in, same toolkit the main tree already uses. */
+function DeptSubTree({ hod, members, onBack }: { hod: Person; members: TeamMember[]; onBack: () => void }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [closedBranches, setClosedBranches] = useState<Set<string>>(new Set());
+  const toggleBranch = (name: string) => setClosedBranches(prev => {
+    const next = new Set(prev);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    return next;
+  });
+
+  return (
+    <div className="ih-fade">
+      <button onClick={onBack}
+        className="inline-flex items-center gap-1.5 mb-6 px-3 py-1.5 rounded-lg border border-slate-200 bg-white
+                   text-xs font-bold text-slate-500 hover:text-amber-600 hover:border-amber-300 shadow-sm transition-all">
+        <ArrowLeft className="w-3.5 h-3.5" />Back to All Heads of Department
+      </button>
+
+      <div className="flex flex-col items-center">
+        {/* level 1 — the HOD */}
+        <div className="ih-pop-in relative w-full max-w-md">
+          <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5">
+            <div className="flex items-center gap-3.5">
+              <PersonAvatar person={hod} big />
+              <div className="min-w-0 flex-1">
+                <p className="font-black text-slate-900 text-lg">{hod.name}</p>
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 inline-block mt-1">
+                  HOD
+                </span>
+                <p className="text-sm font-bold text-amber-700 mt-1">{hod.role}- {hod.department}- HO</p>
+                <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                  <Building2 className="w-4 h-4" />
+                  <span className="truncate">{hod.department}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed(c => !c)}
+            title={collapsed ? 'Expand team' : 'Collapse team'} />
+        </div>
+
+        <Collapsible open={!collapsed}>
+          {/* stem from the HOD down to the T-bar */}
+          <div aria-hidden className="w-px h-10 bg-sky-300 mx-auto" />
+
+          <div className="relative w-full">
+            {/* T-bar spanning the outer two managers' centres */}
+            <div aria-hidden className="hidden sm:block absolute top-0 left-[16.6%] right-[16.6%] h-px bg-sky-300" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-10 pt-10">
+              {members.map((mgr, i) => {
+                const branchOpen = !closedBranches.has(mgr.name);
+                const reports = mgr.reports ?? [];
+                const nested = hasNestedReports(reports);
+                return (
+                  <div key={mgr.name} className="ih-pop-in relative flex flex-col items-center"
+                    style={{ animationDelay: `${140 + i * 100}ms` }}>
+                    {/* stem from the T-bar down to this manager's box */}
+                    <div aria-hidden className="hidden sm:block absolute -top-10 left-1/2 -translate-x-1/2 w-px h-10 bg-sky-300" />
+
+                    <div className="relative w-full max-w-[260px]">
+                      <ManagerCard member={mgr} />
+                      {reports.length > 0 && (
+                        <CollapseToggle collapsed={!branchOpen} onClick={() => toggleBranch(mgr.name)}
+                          title={branchOpen ? `Collapse ${mgr.name}'s team` : `Expand ${mgr.name}'s team`} />
+                      )}
+                    </div>
+
+                    {reports.length > 0 && (
+                      <Collapsible open={branchOpen}>
+                        <div className="pt-5 w-full flex justify-center">
+                          {nested
+                            ? <ReportBranchGrid members={reports} baseDelay={300 + i * 60} />
+                            : <ReportLeafList members={reports} baseDelay={300 + i * 60} />}
+                        </div>
+                      </Collapsible>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Collapsible>
+      </div>
+    </div>
+  );
+}
+
 export function ApisTreePage() {
   const [selectedId, setSelectedId] = useState<string>(managingDirector.id);
   const [department, setDepartment] = useState('All');
@@ -196,6 +468,25 @@ export function ApisTreePage() {
 
   const q = query.trim().toLowerCase();
   const matches = (...fields: (string | undefined)[]) => !q || fields.some(f => (f ?? '').toLowerCase().includes(q));
+
+  // Drill-down into a HOD's full reporting structure — only wired up for
+  // departments SUB_TREES actually has data for (P&C, Admin & IT so far).
+  // Clicking a HOD card with data opens it directly; picking that HOD's
+  // department from the filter pills opens it too, since there's nothing
+  // else useful to show for a single-department filter once the structure
+  // exists. Departments without data keep the old dim/highlight behaviour.
+  const [drillHodId, setDrillHodId] = useState<string | null>(null);
+  const drillHod = drillHodId ? hods.find(h => h.id === drillHodId) : undefined;
+
+  const selectHod = (hod: Person) => {
+    if (SUB_TREES[hod.id]) { setDrillHodId(hod.id); return; }
+    setSelectedId(hod.id);
+  };
+  const selectDepartment = (d: string) => {
+    setDepartment(d);
+    const hod = hods.find(h => h.department === d && SUB_TREES[h.id]);
+    setDrillHodId(hod ? hod.id : null);
+  };
 
   return (
     <div className="min-h-full bg-[#f8fafc] relative">
@@ -266,7 +557,7 @@ export function ApisTreePage() {
 
               <div className="flex flex-wrap items-center gap-1.5">
                 {['All', ...departments].map(d => (
-                  <button key={d} onClick={() => setDepartment(d)}
+                  <button key={d} onClick={() => selectDepartment(d)}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all
                                ${department === d
                                  ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
@@ -280,37 +571,42 @@ export function ApisTreePage() {
 
           {/* ── Tree ─────────────────────────────────────────────────────── */}
           <div className="ih-reveal rounded-3xl border border-slate-200 bg-white shadow-sm p-6 md:p-10" style={{ animationDelay: '80ms' }}>
-            <div className="flex justify-center">
-              <PersonCard person={managingDirector} selected={selectedId === managingDirector.id}
-                dim={!matches(managingDirector.name, managingDirector.role, managingDirector.department)}
-                delayMs={0} onClick={() => setSelectedId(managingDirector.id)} />
-            </div>
-
-            {filteredHods.length === 0 ? (
-              <p className="text-center text-sm text-slate-400 py-10">No departments match this filter.</p>
+            {drillHod ? (
+              <DeptSubTree hod={drillHod} members={SUB_TREES[drillHod.id]}
+                onBack={() => { setDrillHodId(null); setDepartment('All'); }} />
             ) : (
               <>
-                <div className="pt-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {filteredHods.map((hod, i) => {
-                      const hodDelay = 460 + i * 70;
-                      return (
-                        <PersonCard key={hod.id} person={hod} selected={selectedId === hod.id}
-                          dim={!matches(hod.name, hod.role, hod.department)}
-                          delayMs={hodDelay} onClick={() => setSelectedId(hod.id)} />
-                      );
-                    })}
+                <div className="flex justify-center">
+                  <PersonCard person={managingDirector} selected={selectedId === managingDirector.id}
+                    dim={!matches(managingDirector.name, managingDirector.role, managingDirector.department)}
+                    delayMs={0} onClick={() => setSelectedId(managingDirector.id)} />
+                </div>
+
+                {filteredHods.length === 0 ? (
+                  <p className="text-center text-sm text-slate-400 py-10">No departments match this filter.</p>
+                ) : (
+                  <div className="pt-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {filteredHods.map((hod, i) => {
+                        const hodDelay = 460 + i * 70;
+                        return (
+                          <PersonCard key={hod.id} person={hod} selected={selectedId === hod.id}
+                            dim={!matches(hod.name, hod.role, hod.department)}
+                            delayMs={hodDelay} onClick={() => selectHod(hod)} />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-8 flex justify-center">
+                  <div className="ih-pop-in inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-100 text-amber-700 text-xs font-bold">
+                    <Info className="w-3.5 h-3.5" />
+                    Total {hods.length} Heads of Department
                   </div>
                 </div>
               </>
             )}
-
-            <div className="mt-8 flex justify-center">
-              <div className="ih-pop-in inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-100 text-amber-700 text-xs font-bold">
-                <Info className="w-3.5 h-3.5" />
-                Total {hods.length} Heads of Department
-              </div>
-            </div>
           </div>
         </div>
       </div>

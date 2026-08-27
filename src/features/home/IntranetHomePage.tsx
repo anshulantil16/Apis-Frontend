@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
   ArrowUpRight, Minus, CalendarDays, CalendarClock, ChevronLeft, ChevronRight, PartyPopper,
-  X, Trophy, Eye, Flag, CheckCircle2, Heart,
+  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, UPCOMING_EVENTS, WHATS_NEW,
   OUR_PRODUCTS, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
-  SAMPLE_BIRTHDAYS, SAMPLE_ANNIVERSARIES, SOCIAL_LINKS, HOLIDAYS_2026,
+  SAMPLE_BIRTHDAYS, SAMPLE_ANNIVERSARIES, BSE_TICKER, HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct, type UpliftValue,
 } from './IntranetHomeShared';
@@ -368,6 +368,26 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
           <div className="ih-aurora absolute -top-40 -left-40 w-[38rem] h-[38rem] rounded-full bg-cyan-300/25 blur-[130px]" />
           <div className="ih-aurora absolute top-1/3 -right-40 w-[34rem] h-[34rem] rounded-full bg-violet-300/25 blur-[130px]" style={{ animationDelay: '6s' }} />
           <div className="ih-aurora absolute -bottom-40 left-1/3 w-[30rem] h-[30rem] rounded-full bg-amber-300/20 blur-[130px]" style={{ animationDelay: '12s' }} />
+        </div>
+
+        {/* BSE quote + tagline ticker — continuously auto-scrolling strip
+            above the hero, same marquee technique (.ih-ticker, pauses on
+            hover) as the product strip further down. The one segment is
+            repeated several times before being duplicated for the loop, so
+            there's no gap even on very wide screens. */}
+        <div className="ih-ticker-track relative overflow-hidden bg-white border-b border-amber-100 py-2">
+          <div className="ih-ticker flex items-center w-max whitespace-nowrap" style={{ animationDuration: '75s' }}>
+            {Array.from({ length: 12 }, (_, i) => (
+              <div key={i} className="flex items-center gap-2.5 px-6 shrink-0">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="text-[12px] font-bold text-slate-700">{BSE_TICKER.quote}</span>
+                <span className="text-[12px] font-black text-emerald-600">({BSE_TICKER.changePct})</span>
+                <span className="text-amber-300">|</span>
+                <span className="text-[12px] text-slate-500">{BSE_TICKER.tagline}</span>
+                <span className="text-amber-300">•</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="relative max-w-[1600px] mx-auto px-6 py-5 flex gap-5 items-start">
@@ -938,24 +958,6 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
               </div>
             )}
 
-            {/* Stay Connected — compact version of the main-content strip */}
-            <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-5" style={{ animationDelay: '200ms' }}>
-              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Stay Connected</h2>
-              <p className="text-[11px] text-slate-400 mb-3">Follow APIS India for the latest updates</p>
-              <div className="grid grid-cols-5 gap-2">
-                {SOCIAL_LINKS.map((s, i) => {
-                  const Icon = s.icon;
-                  return (
-                    <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" title={s.label}
-                      className={`ih-reveal ih-tilt aspect-square rounded-lg ${s.bg} flex items-center justify-center
-                                 text-white shadow-sm transition-all duration-300 hover:shadow-lg hover:scale-110`}
-                      style={{ animationDelay: `${i * 50}ms` }}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
           </aside>
         </div>
 
