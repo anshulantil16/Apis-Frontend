@@ -29,10 +29,10 @@ import heeraSwamiPhoto from '../../assets/hierarchy/heera-swami.jpeg';
 import manigandanPhoto from '../../assets/hierarchy/manigandan.jpeg';
 import naageshMishraPhoto from '../../assets/hierarchy/naagesh-mishra.jpeg';
 import narendraGangwarPhoto from '../../assets/hierarchy/narendra-gangwar.jpeg';
-import pankajTripathiPhoto from '../../assets/hierarchy/pankaj-tripathi.jpeg';
 import pradeepKrishaliPhoto from '../../assets/hierarchy/pradeep-krishali.jpeg';
 import vaibhavMishraPhoto from '../../assets/hierarchy/vaibhav-mishra.jpeg';
 import vikashAggarwalPhoto from '../../assets/hierarchy/vikash-aggarwal.jpeg';
+
 
 type Level = 'md' | 'hod';
 
@@ -60,7 +60,7 @@ const hods: Person[] = [
   { id: 'narendra-gangwar', name: 'Narendra Gangwar', role: 'Sr. Manager',department: 'B2B', level: 'hod', photo: narendraGangwarPhoto },
   { id: 'naagesh-mishra', name: 'Naagesh Mishra', role: 'GM', department: 'Marketing', level: 'hod', photo: naageshMishraPhoto },
   { id: 'ankit-nagar', name: 'Ankit Nagar', role: 'CFO', department: 'F&A/Internal Audit', level: 'hod', photo: ankitNagarPhoto },
-  { id: 'pankaj-tripathi', name: 'Pankaj Tripathi', role: 'GM', department: 'P&C Admin & IT', level: 'hod', photo: pankajTripathiPhoto },
+  { id: 'pankaj-tripathi', name: 'Pankaj Tripathi', role: 'GM', department: 'P&C Admin & IT', level: 'hod', photo: '/hierarchy/Pankaj_Tripathi1.png' },
   { id: 'pradeep-krishali', name: 'Pradeep Krishali', role: 'AGM', department: 'Procurement', level: 'hod', photo: pradeepKrishaliPhoto },
   { id: 'vikash-aggarwal', name: 'Vikash Aggarwal', role: 'AGM', department: 'CS & Legal', level: 'hod', photo: vikashAggarwalPhoto },
   { id: 'manigandan', name: 'Manigandan', role: 'GM', department: 'BEX & SCM', level: 'hod', photo: manigandanPhoto },
@@ -74,12 +74,13 @@ const hods: Person[] = [
    above. Only P&C, Admin & IT (Pankaj Tripathi) has been supplied so far;
    SUB_TREES is keyed by hod id so other departments fall back to the plain
    card-select behaviour until their structure is provided too. */
-type TeamMember = { name: string; role: string; hod?: boolean; reports?: TeamMember[] };
+type TeamMember = { name: string; role: string; hod?: boolean; photo?: string; reports?: TeamMember[] };
 
 const SUB_TREES: Record<string, TeamMember[]> = {
   'pankaj-tripathi': [
     {
       name: 'Hemant Tripathi', role: 'M2- HRBP- HO',
+      photo: '/hierarchy/Hemant Tripathi- Dy. Manager- HRBP.jpeg',
       reports: [
         { name: 'Sandhya Singh', role: 'M1- AM- TA & TM- HO' },
         { name: 'Gopa', role: 'O5- Sr. Executive- TA & ER- HO' },
@@ -91,6 +92,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     },
     {
       name: 'Devender Kumar', role: 'M2- Dy. Manager - HO',
+      photo: '/hierarchy/Devender Kumar- Dy. Manager - IT  .jpeg',
       reports: [
         // Anshul Antil sits to the left of Kunal, with Rainy Chaudhary
         // nested one level under him; Ravi follows.
@@ -104,6 +106,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     },
     {
       name: 'Praveen Sharma', role: 'M3- Manager- HR & Admin- Roorkee',
+      photo: '/hierarchy/Praveen Sharma- Manager- P&C- Roorkee.jpeg',
       reports: [
         { name: 'Anju', role: 'M- AM- HR & Admin- Roorkee' },
         { name: 'Mohit', role: 'O5- P&C- Roorkee' },
@@ -248,23 +251,46 @@ function CollapseToggle({ collapsed, onClick, title }: { collapsed: boolean; onC
   );
 }
 
+/* Real photo when a manager has one on file, initials tile as a graceful
+   fallback — same broken-image pattern as PersonAvatar above, just sized
+   for the smaller manager card. encodeURI handles the spaces/"&" in these
+   filenames (they're uploaded as-shot, not slugified). */
+function TeamMemberAvatar({ name, photo }: { name: string; photo?: string }) {
+  const [broken, setBroken] = useState(false);
+  if (photo && !broken) {
+    return (
+      <img src={encodeURI(photo)} alt={name} onError={() => setBroken(true)}
+        className="w-12 h-12 shrink-0 rounded-full object-cover object-top ring-2 ring-white shadow" />
+    );
+  }
+  return (
+    <div className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center font-black bg-amber-100 text-amber-700 text-sm">
+      {initials(name)}
+    </div>
+  );
+}
+
 /* Level-2 manager box in a department sub-tree — cream/amber card (matches
    the HOD box above it) with a violet HOD badge, so the whole drill-down
-   reads as one consistent "amber tree", not a different UI bolted on. No
-   photo: none were supplied for this level. */
+   reads as one consistent "amber tree", not a different UI bolted on. */
 function ManagerCard({ member }: { member: TeamMember }) {
   return (
     <div onMouseMove={onSpotlightMove}
       className="ih-spotlight ih-neon relative w-full rounded-2xl border border-amber-200
                  bg-gradient-to-br from-amber-50 to-white shadow-sm p-4"
       style={{ ['--ih-neon' as string]: '#8b5cf6' }}>
-      {member.hod && (
-        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">
-          HOD
-        </span>
-      )}
-      <p className="font-black text-slate-900 text-base mt-1">{member.name}</p>
-      <p className="text-[12.5px] font-bold text-amber-700 mt-0.5 leading-snug">{member.role}</p>
+      <div className="flex items-center gap-3">
+        <TeamMemberAvatar name={member.name} photo={member.photo} />
+        <div className="min-w-0 flex-1">
+          {member.hod && (
+            <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">
+              HOD
+            </span>
+          )}
+          <p className="font-black text-slate-900 text-base mt-1 truncate">{member.name}</p>
+          <p className="text-[12.5px] font-bold text-amber-700 mt-0.5 leading-snug">{member.role}</p>
+        </div>
+      </div>
     </div>
   );
 }
