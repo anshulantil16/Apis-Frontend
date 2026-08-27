@@ -239,8 +239,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0 drop-shadow" />
               {!collapsed && (
                 <div className="leading-none min-w-0">
-                  <p className="text-[15px] font-black text-white tracking-tight truncate">APIS</p>
-                  <p className="text-[10px] font-bold text-amber-950/70 uppercase tracking-widest truncate">Intranet</p>
+                  <p className="text-lg font-black text-white uppercase tracking-tight truncate">Intranet</p>
                 </div>
               )}
             </div>
