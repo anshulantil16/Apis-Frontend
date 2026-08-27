@@ -245,13 +245,25 @@ export const LEADERSHIP_NOTE = {
    enough to justify a backend fetch, and a manual, deliberate update is
    safer than a scraper that could silently break or show stale/wrong data. */
 export const APIS_GLANCE = [
-  { label: 'Revenue (FY25-26)', value: '₹390.51 Cr', sub: 'Highest-ever turnover', trend: '+11.5% YoY', trendUp: true, icon: TrendingUp, ring: 'ring-amber-200', soft: 'bg-amber-50', accent: 'text-amber-600' },
-  { label: 'Net Profit (FY25-26)', value: '₹25.32 Cr', sub: 'Consolidated', trend: '~flat YoY', trendUp: null, icon: BarChart3, ring: 'ring-emerald-200', soft: 'bg-emerald-50', accent: 'text-emerald-600' },
+  { label: 'Revenue (YTD)', value: '₹400 Cr', sub: 'Highest-ever turnover', trend: null, trendUp: true, icon: TrendingUp, ring: 'ring-amber-200', soft: 'bg-amber-50', accent: 'text-amber-600' },
+  { label: 'Revenue (MTD)', value: '₹40 Cr', sub: 'Consolidated', trend: null, trendUp: null, icon: BarChart3, ring: 'ring-emerald-200', soft: 'bg-emerald-50', accent: 'text-emerald-600' },
   { label: 'Manufacturing Units', value: '13 + Dubai', sub: 'Across India & UAE', trend: null, trendUp: null, icon: Building2, ring: 'ring-violet-200', soft: 'bg-violet-50', accent: 'text-violet-600' },
   { label: 'Years in Business', value: '100+', sub: 'Since 1924', trend: null, trendUp: null, icon: CalendarClock, ring: 'ring-sky-200', soft: 'bg-sky-50', accent: 'text-sky-600' },
   { label: 'Global Presence', value: '6 Regions', sub: 'EU · USA · Canada · SEA · Africa · ME', trend: null, trendUp: null, icon: Globe2, ring: 'ring-cyan-200', soft: 'bg-cyan-50', accent: 'text-cyan-600' },
   { label: 'Publicly Listed', value: 'BSE 506166', sub: 'Ticker: APIS', trend: null, trendUp: null, icon: Landmark, ring: 'ring-indigo-200', soft: 'bg-indigo-50', accent: 'text-indigo-600' },
 ];
+
+/* Scrolling ticker strip above the home page hero. Same "static,
+   hand-entered, no live feed" reasoning as APIS_GLANCE — a real BSE quote
+   snapshot rather than a fabricated number, but not wired to a live market
+   feed, so it needs the same manual refresh when checking the latest
+   price. */
+export const BSE_TICKER = {
+  quote: 'Apis India Ltd BSE Price: ₹54.72',
+  changePct: '+1.03%',
+  trendUp: true,
+  tagline: 'We here at AIL keep quality on top preference as we believe your trust is our presence..',
+};
 
 /* Real recent company milestones, same sourcing as APIS_GLANCE above.
    `image` photos are real APIS facility/product photography, uploaded
