@@ -36,7 +36,16 @@ export function AdminConsole({ me }: { me: PortalUser }) {
   ];
 
   return (
-    <div className="space-y-5">
+    /* The same ground, wash and container every other page uses. Without the
+       wrapper this screen had no max-width and no padding, so wide content
+       ran straight off the right edge. */
+    <div className="min-h-full bg-[#f8fafc] relative">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="ih-aurora absolute -top-40 -left-32 w-[32rem] h-[32rem] rounded-full bg-violet-300/20 blur-[130px]" />
+        <div className="ih-drift absolute top-1/3 -right-32 w-[30rem] h-[30rem] rounded-full bg-amber-300/20 blur-[130px]" style={{ animationDelay: '6s' }} />
+      </div>
+
+      <div className="relative max-w-[1400px] mx-auto px-6 py-5 space-y-5">
       {toast && (
         <div className={`ih-pop-in fixed top-5 right-5 z-50 px-4 py-3 rounded-xl border font-bold text-sm shadow-xl
           ${toast.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
@@ -45,13 +54,24 @@ export function AdminConsole({ me }: { me: PortalUser }) {
         </div>
       )}
 
-      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 text-white p-5 flex items-center gap-4 shadow-lg sheen">
-        <div className="w-12 h-12 bg-amber-400/20 backdrop-blur rounded-xl flex items-center justify-center shrink-0">
-          <Crown className="w-6 h-6 text-amber-300" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-white/70 text-sm font-semibold">Administrator console</p>
-          <p className="text-xl font-black leading-tight truncate">{me.name}</p>
+      <div className="ih-sweep relative rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900
+                      text-white p-5 shadow-lg overflow-hidden">
+        <div aria-hidden className="absolute inset-0 opacity-30" style={{
+          backgroundImage: 'radial-gradient(circle at 85% 20%, rgba(245,158,11,.35), transparent 55%)' }} />
+        <div className="relative flex items-center gap-4 flex-wrap">
+          <div className="ih-halo w-12 h-12 bg-amber-400/20 backdrop-blur rounded-xl flex items-center
+                          justify-center shrink-0" style={{ ['--ih-halo' as any]: 'rgba(245,158,11,.35)' }}>
+            <Crown className="w-6 h-6 text-amber-300" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-white/60 text-[11px] font-black uppercase tracking-widest">Administrator console</p>
+            <p className="text-xl font-black leading-tight truncate">{me.name}</p>
+            <p className="text-white/50 text-xs font-semibold truncate">{me.email}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-white/50 text-[11px] font-bold">Signed in</p>
+            <p className="text-sm font-black text-amber-300">{me.last_login_at || 'just now'}</p>
+          </div>
         </div>
       </div>
 
@@ -69,6 +89,7 @@ export function AdminConsole({ me }: { me: PortalUser }) {
       {tab === 'people' && <PeopleTab onToast={setToast} />}
       {tab === 'hrms' && <HrmsTab onToast={setToast} />}
       {tab === 'sessions' && <SessionsTab onToast={setToast} />}
+      </div>
     </div>
   );
 }
@@ -169,15 +190,73 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-        {[['People', data.total], ['Can sign in', data.active],
-          ['Administrators', data.superadmins],
-          ['HRMS link', data.hrms_configured ? 'Connected' : 'Not set up']].map(([l, v]: any) => (
-          <div key={l} className="bg-white border border-slate-200 rounded-xl px-3.5 py-2.5">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{l}</p>
-            <p className="text-lg font-black text-slate-800">{v ?? '—'}</p>
+      {/* Headline counts. Each carries the one thing it implies, so the row
+          answers "is anything wrong?" rather than only "how many?". */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        {[
+          { l: 'People', v: data.total, sub: `${all.length} loaded`, icon: Users, tone: 'text-slate-800' },
+          { l: 'Can sign in', v: data.active,
+            sub: `${(data.total ?? 0) - (data.active ?? 0)} disabled`, icon: ShieldCheck,
+            tone: 'text-emerald-600' },
+          { l: 'Administrators', v: data.superadmins, sub: 'full access', icon: Crown,
+            tone: 'text-amber-600' },
+          { l: 'Awaiting access', v: facetCount('no-access'), sub: 'no tools granted',
+            icon: AlertCircle,
+            tone: facetCount('no-access') > 0 ? 'text-rose-600' : 'text-slate-800' },
+        ].map(k => (
+          <div key={k.l} className="ih-tilt bg-white border border-slate-200 rounded-xl px-3.5 py-3
+                                    flex items-start gap-3 shadow-sm">
+            <span className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+              <k.icon className="w-4 h-4 text-slate-400" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{k.l}</p>
+              <p className={`text-xl font-black leading-none mt-0.5 ${k.tone}`}>{k.v ?? '—'}</p>
+              <p className="text-[10px] font-semibold text-slate-400 mt-1 truncate">{k.sub}</p>
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Tool access coverage — how many people can open each tool.
+          One measure across categories, so one hue light-to-dark rather than a
+          categorical palette; the count is direct-labelled so nobody has to
+          read a length off an axis that isn't there. */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4">
+        <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
+          <div>
+            <p className="font-black text-slate-700 text-sm">Tool access coverage</p>
+            <p className="text-[11px] text-slate-400 font-semibold">
+              People who can open each tool. Administrators count toward every one.
+            </p>
+          </div>
+          <p className="text-[11px] font-bold text-slate-400">of {all.length} people</p>
+        </div>
+        <div className="space-y-1.5">
+          {(data.apps || []).map((a: any) => {
+            const n = all.filter(u => u.is_superadmin || (u.allowed_apps || []).includes(a.key)).length;
+            const pct = all.length ? Math.round((n / all.length) * 100) : 0;
+            const on = appFilter === a.key;
+            return (
+              <button key={a.key} onClick={() => setAppFilter(on ? '' : a.key)}
+                title={`Show only people who can open ${a.label}`}
+                className={`w-full flex items-center gap-3 rounded-lg px-2 py-1 text-left transition-colors
+                  ${on ? 'bg-amber-50 ring-1 ring-amber-200' : 'hover:bg-slate-50'}`}>
+                <span className="w-32 shrink-0 text-[11px] font-bold text-slate-600 truncate">{a.label}</span>
+                <span className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  {/* 4px rounded end, anchored to the baseline; a floor of 2%
+                      so "one person" is still a visible mark rather than nothing. */}
+                  <span className="block h-full rounded-full transition-all"
+                    style={{ width: `${Math.max(pct, n > 0 ? 2 : 0)}%`,
+                             backgroundColor: pct >= 66 ? '#b45309' : pct >= 33 ? '#f59e0b' : '#fcd34d' }} />
+                </span>
+                <span className="w-14 shrink-0 text-right text-[11px] font-black text-slate-700 tabular-nums">
+                  {n}<span className="text-slate-300 font-bold"> · {pct}%</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="relative">
@@ -240,8 +319,8 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+        <div className="overflow-x-auto max-w-full">
+          <table className="w-full min-w-[900px] text-xs">
             <thead className="bg-slate-50 text-slate-400">
               <tr>{['Person', 'Code', 'Department', 'Designation', 'Location', 'Source',
                     'Tools', 'Last sign-in', 'Status', ''].map(h => (
@@ -513,8 +592,8 @@ function HrmsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <p className="font-black text-slate-700 text-sm px-4 py-3 border-b border-slate-100">Sync history</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+        <div className="overflow-x-auto max-w-full">
+          <table className="w-full min-w-[900px] text-xs">
             <thead className="bg-slate-50 text-slate-400">
               <tr>{['When', 'By', 'Fetched', 'New', 'Updated', 'Disabled', 'No email', 'Result'].map(h => (
                 <th key={h} className="px-3 py-2 text-left font-black">{h}</th>))}</tr>
@@ -570,8 +649,8 @@ function SessionsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => 
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+      <div className="overflow-x-auto max-w-full">
+        <table className="w-full min-w-[900px] text-xs">
           <thead className="bg-slate-50 text-slate-400">
             <tr>{['Person', 'From', 'Device', 'Last seen', ''].map(h => (
               <th key={h} className="px-3 py-2 text-left font-black">{h}</th>))}</tr>
