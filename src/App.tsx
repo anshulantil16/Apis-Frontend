@@ -1,24 +1,36 @@
-import { useState } from 'react';
-import { Sparkles, TrendingUp } from 'lucide-react';
+import { useState, lazy, Suspense } from 'react';
+import { Sparkles, TrendingUp, Loader2 } from 'lucide-react';
 
 /* One import per project, each through its feature barrel — this file is the
    map of what exists, not a list of file paths. Everything a project owns
-   lives under src/features/<project>/. */
-import { DataExtractorPage } from './features/extractor';
-import { PerformancePage } from './features/performance';
-import { AppraisalPage } from './features/appraisal';
-import { EOMPage } from './features/eom';
-import { PMSPage } from './features/pms';
-import { LettersGeneratorPage, OfferLetterApprovalDashboard } from './features/letters';
-import { TadaPage } from './features/tada';
-import { SalesIQPage } from './features/salesiq';
-import { RoomPulsePage } from './features/roompulse';
-import { ApisTreePage } from './features/tree';
-import { PoliciesPage } from './features/policies';
+   lives under src/features/<project>/.
+ *
+ * Every tool is lazy. Importing them eagerly meant opening the dashboard
+ * downloaded and evaluated all ten — nearly 2 MB of JavaScript, most of it for
+ * tools this user was never going to open — before the first screen could
+ * paint. Parsing that is main-thread work, which is why the app felt slow to
+ * start rather than merely slow to download.
+ *
+ * IntranetHomePage is the exception and stays eager: it is what the app opens
+ * on, so deferring it would only put a spinner on the critical path. */
+const DataExtractorPage = lazy(() => import('./features/extractor').then(m => ({ default: m.DataExtractorPage })));
+const PerformancePage = lazy(() => import('./features/performance').then(m => ({ default: m.PerformancePage })));
+const AppraisalPage = lazy(() => import('./features/appraisal').then(m => ({ default: m.AppraisalPage })));
+const EOMPage = lazy(() => import('./features/eom').then(m => ({ default: m.EOMPage })));
+const PMSPage = lazy(() => import('./features/pms').then(m => ({ default: m.PMSPage })));
+const LettersGeneratorPage = lazy(() => import('./features/letters').then(m => ({ default: m.LettersGeneratorPage })));
+const OfferLetterApprovalDashboard = lazy(() => import('./features/letters').then(m => ({ default: m.OfferLetterApprovalDashboard })));
+const TadaPage = lazy(() => import('./features/tada').then(m => ({ default: m.TadaPage })));
+const SalesIQPage = lazy(() => import('./features/salesiq').then(m => ({ default: m.SalesIQPage })));
+const RoomPulsePage = lazy(() => import('./features/roompulse').then(m => ({ default: m.RoomPulsePage })));
+const ApisTreePage = lazy(() => import('./features/tree').then(m => ({ default: m.ApisTreePage })));
+const PoliciesPage = lazy(() => import('./features/policies').then(m => ({ default: m.PoliciesPage })));
+const AdminConsoleLazy = lazy(() => import('./features/portal').then(m => ({ default: m.AdminConsole })));
+
 import { IntranetHomePage } from './features/home';
 import { IntranetShell } from './features/home/IntranetShell';
 import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHomeShared';
-import { PortalGate, AdminConsole, type PortalUser } from './features/portal';
+import { PortalGate, type PortalUser } from './features/portal';
 
 type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'admin-console';
 
@@ -108,7 +120,12 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
 
   // Legacy appraisal-only mode
   if (APP_MODE === 'appraisal') {
-    return <AppraisalPage onNavigateBack={() => {}} />;
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-amber-500 animate-spin" /></div>}>
+        <AppraisalPage onNavigateBack={() => {}} />
+      </Suspense>
+    );
   }
 
   // Hub builds expose only Appraisal + EOM, and keep their own minimal landing.
@@ -155,8 +172,13 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       title={meta.title} subtitle={meta.subtitle}
       userName={session.user.name} onSignOut={session.signOut}
       isSuperadmin={session.user.is_superadmin}>
+      <Suspense fallback={
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+        </div>
+      }>
       {view === 'admin-console' ? (
-        <AdminConsole me={session.user} />
+        <AdminConsoleLazy me={session.user} />
       ) : view === 'home' ? (
         <IntranetHomePage onNavigate={navigate} />
       ) : view === 'extractor' ? (
@@ -184,6 +206,7 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       ) : (
         <AppraisalPage />
       )}
+      </Suspense>
     </IntranetShell>
   );
 }

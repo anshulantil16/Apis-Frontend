@@ -167,21 +167,30 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
       n.querySelectorAll(REVEAL_SEL).forEach(fn);
     };
     const mo = new MutationObserver(records => {
-      let recheck = false;
+      let added = false;
       for (const rec of records) {
-        if (rec.type === 'attributes') { recheck = true; continue; }
         rec.removedNodes.forEach(n => eachTarget(n, el => io.unobserve(el)));
-        rec.addedNodes.forEach(n => eachTarget(n, el => { io.observe(el); recheck = true; }));
+        rec.addedNodes.forEach(n => eachTarget(n, el => { io.observe(el); added = true; }));
       }
-      // New content is measured on the next frame, once React has laid it out.
-      if (recheck) sweepSoon();
+      // Only newly mounted content needs measuring; everything already
+      // observed is the IntersectionObserver's job.
+      if (added) sweepSoon();
     });
-    /* className is watched too: a re-render can change an element's size or
-       position (a panel expanding, a tab switching) without adding a node, and
-       the sweep then re-measures anything still hidden. Setting data-in is not
-       a class change, so this cannot feed itself. */
-    mo.observe(document.body, { childList: true, subtree: true,
-                                attributes: true, attributeFilter: ['class'] });
+    /* childList ONLY, deliberately.
+     *
+     * This used to watch attributes: ['class'] as well, to catch an element
+     * whose size or position changed without a node being added. React
+     * rewrites className on every render, so that fired constantly, and each
+     * record scheduled a full-document querySelectorAll — a document-wide
+     * selector match running continuously on the main thread, which is what
+     * made the whole app feel slow.
+     *
+     * IntersectionObserver already re-fires when an observed element crosses
+     * the threshold for ANY reason, layout shifts included, so the attribute
+     * watch was buying almost nothing. A freshly mounted node is the one case
+     * it genuinely cannot see, because it was never observed — and that is
+     * exactly childList. */
+    mo.observe(document.body, { childList: true, subtree: true });
 
     // Layout can change without a scroll — a panel expanding, a font landing.
     window.addEventListener('resize', sweepSoon);

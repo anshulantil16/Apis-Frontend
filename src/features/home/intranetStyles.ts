@@ -16,13 +16,16 @@ export const IH_STYLES = `
   33% { transform: translate(4%,-5%) rotate(2deg) scale(1.06); }
   66% { transform: translate(-3%,4%) rotate(-1.5deg) scale(.96); }
 }
-.ih-drift { animation: ihDrift 24s ease-in-out infinite; }
+/* will-change: these animate transform for the entire life of the page, and
+   carry a very large blur. Without a compositor layer the blur is re-rasterised
+   every frame — the single most expensive thing on the dashboard. */
+.ih-drift { animation: ihDrift 24s ease-in-out infinite; will-change: transform; }
 
 @keyframes ihAurora {
   0%,100% { transform: translate(-8%,-6%) scale(1); opacity:.5; }
   50% { transform: translate(8%,6%) scale(1.25); opacity:.85; }
 }
-.ih-aurora { animation: ihAurora 18s ease-in-out infinite; }
+.ih-aurora { animation: ihAurora 18s ease-in-out infinite; will-change: transform, opacity; }
 
 /* ── ambient: animated gradient fills + gradient text ──────────────────── */
 @keyframes ihGradShift { 0%,100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
@@ -62,10 +65,10 @@ export const IH_STYLES = `
 
 /* ── ambient: slow spin, float, shimmer ────────────────────────────────── */
 @keyframes ihSpinSlow { to { transform: rotate(360deg); } }
-.ih-spin-slow { animation: ihSpinSlow 18s linear infinite; }
+.ih-spin-slow { will-change: transform; animation: ihSpinSlow 18s linear infinite; }
 
 @keyframes ihFloatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-.ih-float { animation: ihFloatY 4.5s ease-in-out infinite; }
+.ih-float { will-change: transform; animation: ihFloatY 4.5s ease-in-out infinite; }
 
 @keyframes ihShimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
 .ih-shimmer {
@@ -84,7 +87,8 @@ export const IH_STYLES = `
   10% { opacity:1; } 90% { opacity:1; }
   100% { transform: translateY(-120vh); opacity:0; }
 }
-.ih-particle { animation-name: ihFloatUp; animation-timing-function: linear; animation-iteration-count: infinite; }
+.ih-particle { animation-name: ihFloatUp; animation-timing-function: linear;
+               animation-iteration-count: infinite; will-change: transform, opacity; }
 
 /* ── entrances (one-shot) ──────────────────────────────────────────────── */
 @keyframes ihReveal { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
@@ -148,9 +152,16 @@ html.ih-reveal-ready .ih-inview[data-in] { opacity:1; transform:none; }
 /* Frosted panel. Use over a mesh/aurora background — on flat white it just
    looks like a slightly grey card and costs a paint layer for nothing. */
 .ih-glass {
+  /* 10px, not 20px. backdrop-filter re-reads and re-blurs everything painted
+     behind the element, and what is behind it here is a set of permanently
+     animating aurora blobs — so the cost is paid every frame, not once. At
+     72% opacity the difference between a 10px and a 20px backdrop blur is
+     not visible; the difference in compositing cost is roughly fourfold.
+     No contain:paint here — it would clip anything a panel overflows (a
+     dropdown, a tooltip) for a saving that does not matter on a static card. */
   background: rgba(255,255,255,.72);
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(10px) saturate(1.5);
+  -webkit-backdrop-filter: blur(10px) saturate(1.5);
   border: 1px solid rgba(255,255,255,.85);
   box-shadow: 0 8px 32px -12px rgba(15,23,42,.18), inset 0 1px 0 rgba(255,255,255,.9);
 }
