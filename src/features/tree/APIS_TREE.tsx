@@ -16,9 +16,9 @@
  * are shown exactly as filed rather than normalised, so nothing here states
  * something the source file didn't.
  */
-import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import {
-  ArrowLeft, Building2, ChevronDown, ChevronUp, Crown, Info, Network, Search, User, Users, X,
+  ArrowLeft, Building2, ChevronDown, ChevronUp, Crown, Info, MapPin, Network, Search, User, Users, X,
 } from 'lucide-react';
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
 import arunMishraPhoto from '../../assets/hierarchy/arun-mishra.jpeg';
@@ -74,7 +74,25 @@ const hods: Person[] = [
    above. Only P&C, Admin & IT (Pankaj Tripathi) has been supplied so far;
    SUB_TREES is keyed by hod id so other departments fall back to the plain
    card-select behaviour until their structure is provided too. */
-type TeamMember = { name: string; role: string; hod?: boolean; photo?: string; reports?: TeamMember[] };
+type TeamMember = {
+  name: string; role: string; hod?: boolean; photo?: string; location?: string; reports?: TeamMember[];
+  /** True for a member who reports to their own functional head elsewhere
+   * rather than straight into this department's top node — drawn as its
+   * own bracketed sub-group off the main bus, not a plain direct stem (see
+   * FlatBranch). */
+  functional?: boolean;
+};
+
+/* A sub-tree's top node isn't always the HOD who was clicked — PPC's Plant
+   Head position is vacant, so that title (not Heera Swami herself) is what
+   sits at the top of her department's chart. SUB_TREE_ROOTS overrides the
+   top node for any department where that's the case; departments without
+   an entry here just show the clicked HOD's own card (Pankaj Tripathi's
+   tree, e.g.). */
+type SubTreeRoot = { title: string; vacant?: boolean; department?: string };
+const SUB_TREE_ROOTS: Record<string, SubTreeRoot> = {
+  'heera-swami': { title: 'Plant Head- Roorkee', vacant: true, department: 'PPC' },
+};
 
 const SUB_TREES: Record<string, TeamMember[]> = {
   'pankaj-tripathi': [
@@ -113,6 +131,26 @@ const SUB_TREES: Record<string, TeamMember[]> = {
         { name: 'Amandeep', role: 'O5- Admin & Facilities- Roorkee' },
       ],
     },
+  ],
+  // Flat structure (see SUB_TREE_ROOTS above for the vacant "Plant Head"
+  // top node) — six people reporting into that vacant position, no further
+  // nesting. No photos were supplied for this department, so every card
+  // here uses the generic person icon rather than attempting one.
+  //
+  // Four (Rahul Dutt Sharma, Sarovan Kumar, Amir Khan, Sunil Kumar) report
+  // straight into the seat; Nischal Bharadwaj and Praveen Sharma are
+  // `functional: true` — per the org chart supplied, they report to their
+  // own functional head elsewhere, so FlatBranch draws them as a separate
+  // bracketed pair off the main bus rather than two more plain direct
+  // stems. Order matters here: direct members first, functional pair last,
+  // so they render left-group/right-group as in that chart.
+  'heera-swami': [
+    { name: 'Rahul Dutt Sharma', role: 'M5- AGM- Production- Roorkee', location: 'Roorkee' },
+    { name: 'Sarovan Kumar', role: 'M3- Manager- Engineering- Roorkee', location: 'Roorkee' },
+    { name: 'Amir Khan', role: 'M1- AM- Store & Dispatch- Roorkee', location: 'Roorkee' },
+    { name: 'Sunil Kumar', role: 'M3- Manager- QA & QC- Roorkee', location: 'Roorkee' },
+    { name: 'Nischal Bharadwaj', role: 'M4- Sr. Manager- Finance & Accounts- Roorkee- Functional Reporting', location: 'Roorkee', functional: true },
+    { name: 'Praveen Sharma', role: 'M3- Manager- P&C- Roorkee- Functional Reporting', location: 'Roorkee', functional: true },
   ],
 };
 
@@ -383,14 +421,235 @@ function ReportBranchGrid({ members, baseDelay }: { members: TeamMember[]; baseD
   );
 }
 
-/* One HOD's full department structure, drawn as an actual org-chart flow:
-   HOD box → a T-connector down to each level-2 manager → each manager's own
-   branch (a flat green-spine list, or a nested blue box-grid when that
-   manager's reports themselves have reports). Pure CSS lines (border/
-   absolute divs), no canvas or charting library — matches how the rest of
-   this page is built. Every level collapses independently and animates in
-   with a staggered pop-in, same toolkit the main tree already uses. */
-function DeptSubTree({ hod, members, onBack }: { hod: Person; members: TeamMember[]; onBack: () => void }) {
+/* Generic amber person-icon avatar — used wherever a real photo isn't
+   available: the vacant "Plant Head" root, and every card in a flat
+   department tree (none of PPC's six people have photos on file). */
+function GenericAvatar({ big }: { big?: boolean }) {
+  const size = big ? 'w-16 h-16' : 'w-11 h-11';
+  return (
+    <div className={`${size} shrink-0 rounded-full bg-amber-400 flex items-center justify-center ring-2 ring-white shadow`}>
+      <User className={big ? 'w-8 h-8 text-white' : 'w-5 h-5 text-white'} />
+    </div>
+  );
+}
+
+/* Top node for a "flat" department tree — a position title rather than a
+   real HOD card, with "(Vacant)" called out in red when nobody currently
+   holds it. */
+function SubTreeRootCard({ root }: { root: SubTreeRoot }) {
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5">
+      <div className="flex items-center gap-3.5">
+        <GenericAvatar big />
+        <div className="min-w-0 flex-1">
+          <p className="font-black text-slate-900 text-lg">{root.title}</p>
+          {root.vacant && <p className="text-sm font-black text-rose-500 mt-0.5">(Vacant)</p>}
+          {root.department && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+              <Building2 className="w-4 h-4" />
+              <span className="truncate">{root.department}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* One card in a flat department tree — generic icon (no photos supplied
+   for this department), name, role, and a location line, all in the same
+   cream/amber card language as ManagerCard. */
+function FlatMemberCard({ member }: { member: TeamMember }) {
+  return (
+    <div onMouseMove={onSpotlightMove}
+      className="ih-spotlight ih-neon relative w-full h-full rounded-2xl border border-amber-200
+                 bg-gradient-to-br from-amber-50 to-white shadow-sm p-4"
+      style={{ ['--ih-neon' as string]: '#f59e0b' }}>
+      <div className="flex items-center gap-3">
+        <GenericAvatar />
+        <div className="min-w-0 flex-1">
+          <p className="font-black text-slate-900 text-[13px] leading-tight">{member.name}</p>
+          <p className="text-[11px] font-semibold text-slate-600 mt-1 leading-snug">{member.role}</p>
+        </div>
+      </div>
+      {member.location && (
+        <div className="flex items-center gap-1 mt-2.5 text-[10.5px] text-slate-400">
+          <MapPin className="w-3 h-3" />
+          <span>{member.location}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* T-connector fanning out to every member in a flat department tree — same
+   idea as the HOD→managers connector, all in amber (this tree has no
+   further nesting, so there's no need for the blue/green split the nested
+   variant uses to distinguish branch types).
+   Per-card stems were dropped for the plain case: with flex-wrap and many
+   members, cards wrap onto new rows on most widths, and a stem anchored
+   "above" a wrapped card lands in the gap right under whichever card
+   happens to sit above it in the wrap — reading as a bogus reporting line
+   between two unrelated people rather than a connection to the shared bus.
+   The single top bus line already conveys "all of these report to the
+   same position".
+   When some members are `functional` (report to their own functional head
+   elsewhere, per the org chart supplied), that plain layout can't show
+   it, so this switches to a fixed, non-wrapping row instead — direct
+   members hang straight off the bus with individual stems, and the
+   functional members are grouped as their own bracketed pair with a
+   "Reporting to their functional head" label underneath. Horizontal
+   overflow scrolls on narrow screens rather than wrapping, so the stems
+   stay meaningful. */
+function FlatBranch({ members }: { members: TeamMember[] }) {
+  const direct = members.filter(m => !m.functional);
+  const functional = members.filter(m => m.functional);
+  const hasFunctionalGroup = functional.length > 0;
+
+  // Two straight connectors — one from the vacant seat straight down to
+  // the centre of the 4-card direct group, one to the centre of the
+  // 2-card functional pair — drawn as a single SVG so each is one
+  // continuous line by construction. (A separate CSS horizontal bar +
+  // vertical stems needing to land on the exact same pixel kept drifting
+  // apart at this scale; a line between two known points can't
+  // "disconnect".) Real DOM measurement, not hand-computed card-width
+  // arithmetic, since that's what was drifting. Hooks run unconditionally
+  // (before the early return below) since React requires the same hooks
+  // in the same order on every render.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const branchARef = useRef<HTMLDivElement>(null);
+  const branchBRef = useRef<HTMLDivElement>(null);
+  const [lines, setLines] = useState<{ width: number; aX: number; bX: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!hasFunctionalGroup) return;
+    const row = rowRef.current, a = branchARef.current, b = branchBRef.current;
+    if (!row || !a || !b) return;
+    const measure = () => {
+      const rowRect = row.getBoundingClientRect();
+      setLines({
+        width: rowRect.width,
+        aX: a.getBoundingClientRect().left + a.offsetWidth / 2 - rowRect.left,
+        bX: b.getBoundingClientRect().left + b.offsetWidth / 2 - rowRect.left,
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(row);
+    return () => ro.disconnect();
+  }, [hasFunctionalGroup, direct.length, functional.length]);
+
+  if (!hasFunctionalGroup) {
+    const multi = members.length > 1;
+    return (
+      <div className="relative w-full">
+        {multi && (
+          <div aria-hidden className="hidden sm:block absolute top-0 left-[6%] right-[6%] h-px bg-amber-300" />
+        )}
+        <div className={`flex flex-wrap items-start justify-center gap-4 ${multi ? 'pt-8' : ''}`}>
+          {members.map((m, i) => (
+            <div key={m.name} className="ih-pop-in relative w-[205px] shrink-0" style={{ animationDelay: `${140 + i * 90}ms` }}>
+              <FlatMemberCard member={m} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full overflow-x-auto">
+      {/* pb-20 reserves real room below the row for the functional group's
+          bracket + label, which hang below the cards via absolute
+          positioning — without it, overflow-x-auto forces overflow-y to
+          auto too (per spec) and that invisible scrollbox would clip them,
+          same class of bug as the milestone badges elsewhere on this app. */}
+      <div ref={rowRef} className="relative min-w-max mx-auto pb-20 px-1">
+        {/* Two straight lines from the vacant seat (top-centre, where
+            DeptSubTree's incoming stem lands) to each branch's own centre
+            — four direct reports down one line, the two functional-report
+            cards down the other. Not a shared bus across all six: that
+            used to read as a bogus direct line between Sunil Kumar and
+            Nischal Bharadwaj, the two cards that happened to sit next to
+            each other. Rendered only once measured (`lines`), so it never
+            flashes at the wrong spot before layout settles. */}
+        {lines && (
+          <svg aria-hidden className="hidden sm:block absolute top-0 left-0 pointer-events-none"
+            width={lines.width} height={32} viewBox={`0 0 ${lines.width} 32`}>
+            <line x1={lines.width / 2} y1={0} x2={lines.aX} y2={32} stroke="#fcd34d" strokeWidth={1} />
+            <line x1={lines.width / 2} y1={0} x2={lines.bX} y2={32} stroke="#fcd34d" strokeWidth={1} />
+          </svg>
+        )}
+
+        <div className="flex items-start justify-center gap-10 pt-8">
+          {/* Branch A: direct group — reached by its own line above, own
+              local bus spanning just its 4 cards. */}
+          <div ref={branchARef} className="relative flex items-stretch gap-4">
+            {direct.length > 1 && (
+              <div aria-hidden className="hidden sm:block absolute top-0 left-[8%] right-[8%] h-px bg-amber-300" />
+            )}
+            {direct.map((m, i) => (
+              <div key={m.name} className="ih-pop-in relative w-[190px] shrink-0" style={{ animationDelay: `${140 + i * 90}ms` }}>
+                {direct.length > 1 && !['Rahul Dutt Sharma', 'Sarovan Kumar'].includes(m.name) && (
+                  <div aria-hidden className="hidden sm:block absolute -top-4 left-1/2 -translate-x-1/2 w-px h-4 bg-amber-300" />
+                )}
+                <FlatMemberCard member={m} />
+              </div>
+            ))}
+          </div>
+
+          {/* Branch B: functional pair — reached by its own line above,
+              own local bus splitting to each card, then a bracket + label
+              underneath since they don't report into this seat the same
+              way the direct group does. */}
+          <div ref={branchBRef} className="ih-pop-in relative flex items-stretch gap-3 shrink-0" style={{ animationDelay: `${140 + direct.length * 90}ms` }}>
+            {functional.length > 1 && (
+              <div aria-hidden className="hidden sm:block absolute top-0 left-[15%] right-[15%] h-px bg-amber-300" />
+            )}
+            {functional.map(m => (
+              <div key={m.name} className="relative w-[190px] shrink-0">
+                {functional.length > 1 && m.name !== 'Praveen Sharma' && (
+                  <div aria-hidden className="hidden sm:block absolute -top-4 left-1/2 -translate-x-1/2 w-px h-4 bg-amber-300" />
+                )}
+                <FlatMemberCard member={m} />
+              </div>
+            ))}
+
+            {functional.length > 1 && (
+              <>
+                <div aria-hidden className="hidden sm:block absolute left-[15%] top-full h-5 w-px bg-amber-300" />
+                <div aria-hidden className="hidden sm:block absolute right-[15%] top-full h-5 w-px bg-amber-300" />
+                <div aria-hidden className="hidden sm:block absolute left-[15%] right-[15%] top-[calc(100%+20px)] h-px bg-amber-300" />
+                <div aria-hidden className="hidden sm:block absolute left-1/2 -translate-x-1/2 top-[calc(100%+20px)] h-4 w-px bg-amber-300" />
+                <span className="hidden sm:block absolute left-1/2 -translate-x-1/2 top-[calc(100%+36px)] whitespace-nowrap
+                                 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 shadow-sm">
+                  Reporting to their functional head
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* One HOD's full department structure, drawn as an actual org-chart flow.
+   Two variants share this component:
+   - 'nested' (default, e.g. Pankaj Tripathi): HOD box → blue T-connector →
+     level-2 managers → each manager's own branch (a flat green-spine list,
+     or a nested blue box-grid when that manager's reports themselves have
+     reports).
+   - 'flat' (e.g. Heera Swami / PPC, whose Plant Head seat is vacant):
+     a position-title root (SUB_TREE_ROOTS) → one amber T-connector straight
+     to every direct report, no further nesting.
+   Pure CSS lines (border/absolute divs), no canvas or charting library —
+   matches how the rest of this page is built. Every level collapses
+   independently and animates in with a staggered pop-in, same toolkit the
+   main tree already uses. */
+function DeptSubTree({ hod, root, members, onBack }: {
+  hod: Person; root?: SubTreeRoot; members: TeamMember[]; onBack: () => void;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const [closedBranches, setClosedBranches] = useState<Set<string>>(new Set());
   const toggleBranch = (name: string) => setClosedBranches(prev => {
@@ -408,69 +667,83 @@ function DeptSubTree({ hod, members, onBack }: { hod: Person; members: TeamMembe
       </button>
 
       <div className="flex flex-col items-center">
-        {/* level 1 — the HOD */}
+        {/* level 1 — the HOD, or a vacant position title for flat trees */}
         <div className="ih-pop-in relative w-full max-w-md">
-          <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5">
-            <div className="flex items-center gap-3.5">
-              <PersonAvatar person={hod} big />
-              <div className="min-w-0 flex-1">
-                <p className="font-black text-slate-900 text-lg">{hod.name}</p>
-                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 inline-block mt-1">
-                  HOD
-                </span>
-                <p className="text-sm font-bold text-amber-700 mt-1">{hod.role}- {hod.department}- HO</p>
-                <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
-                  <Building2 className="w-4 h-4" />
-                  <span className="truncate">{hod.department}</span>
+          {root ? (
+            <SubTreeRootCard root={root} />
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5">
+              <div className="flex items-center gap-3.5">
+                <PersonAvatar person={hod} big />
+                <div className="min-w-0 flex-1">
+                  <p className="font-black text-slate-900 text-lg">{hod.name}</p>
+                  <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 inline-block mt-1">
+                    HOD
+                  </span>
+                  <p className="text-sm font-bold text-amber-700 mt-1">{hod.role}- {hod.department}- HO</p>
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                    <Building2 className="w-4 h-4" />
+                    <span className="truncate">{hod.department}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
           <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed(c => !c)}
             title={collapsed ? 'Expand team' : 'Collapse team'} />
         </div>
 
         <Collapsible open={!collapsed}>
-          {/* stem from the HOD down to the T-bar */}
-          <div aria-hidden className="w-px h-10 bg-sky-300 mx-auto" />
+          {root ? (
+            <>
+              {/* flat tree: one amber stem straight into the T-connector, no manager tier */}
+              <div aria-hidden className="w-px h-8 bg-amber-300 mx-auto" />
+              <FlatBranch members={members} />
+            </>
+          ) : (
+            <>
+              {/* stem from the HOD down to the T-bar */}
+              <div aria-hidden className="w-px h-10 bg-sky-300 mx-auto" />
 
-          <div className="relative w-full">
-            {/* T-bar spanning the outer two managers' centres */}
-            <div aria-hidden className="hidden sm:block absolute top-0 left-[16.6%] right-[16.6%] h-px bg-sky-300" />
+              <div className="relative w-full">
+                {/* T-bar spanning the outer two managers' centres */}
+                <div aria-hidden className="hidden sm:block absolute top-0 left-[16.6%] right-[16.6%] h-px bg-sky-300" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-10 pt-10">
-              {members.map((mgr, i) => {
-                const branchOpen = !closedBranches.has(mgr.name);
-                const reports = mgr.reports ?? [];
-                const nested = hasNestedReports(reports);
-                return (
-                  <div key={mgr.name} className="ih-pop-in relative flex flex-col items-center"
-                    style={{ animationDelay: `${140 + i * 100}ms` }}>
-                    {/* stem from the T-bar down to this manager's box */}
-                    <div aria-hidden className="hidden sm:block absolute -top-10 left-1/2 -translate-x-1/2 w-px h-10 bg-sky-300" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-10 pt-10">
+                  {members.map((mgr, i) => {
+                    const branchOpen = !closedBranches.has(mgr.name);
+                    const reports = mgr.reports ?? [];
+                    const nested = hasNestedReports(reports);
+                    return (
+                      <div key={mgr.name} className="ih-pop-in relative flex flex-col items-center"
+                        style={{ animationDelay: `${140 + i * 100}ms` }}>
+                        {/* stem from the T-bar down to this manager's box */}
+                        <div aria-hidden className="hidden sm:block absolute -top-10 left-1/2 -translate-x-1/2 w-px h-10 bg-sky-300" />
 
-                    <div className="relative w-full max-w-[260px]">
-                      <ManagerCard member={mgr} />
-                      {reports.length > 0 && (
-                        <CollapseToggle collapsed={!branchOpen} onClick={() => toggleBranch(mgr.name)}
-                          title={branchOpen ? `Collapse ${mgr.name}'s team` : `Expand ${mgr.name}'s team`} />
-                      )}
-                    </div>
-
-                    {reports.length > 0 && (
-                      <Collapsible open={branchOpen}>
-                        <div className="pt-5 w-full flex justify-center">
-                          {nested
-                            ? <ReportBranchGrid members={reports} baseDelay={300 + i * 60} />
-                            : <ReportLeafList members={reports} baseDelay={300 + i * 60} />}
+                        <div className="relative w-full max-w-[260px]">
+                          <ManagerCard member={mgr} />
+                          {reports.length > 0 && (
+                            <CollapseToggle collapsed={!branchOpen} onClick={() => toggleBranch(mgr.name)}
+                              title={branchOpen ? `Collapse ${mgr.name}'s team` : `Expand ${mgr.name}'s team`} />
+                          )}
                         </div>
-                      </Collapsible>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+
+                        {reports.length > 0 && (
+                          <Collapsible open={branchOpen}>
+                            <div className="pt-5 w-full flex justify-center">
+                              {nested
+                                ? <ReportBranchGrid members={reports} baseDelay={300 + i * 60} />
+                                : <ReportLeafList members={reports} baseDelay={300 + i * 60} />}
+                            </div>
+                          </Collapsible>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </Collapsible>
       </div>
     </div>
@@ -598,7 +871,7 @@ export function ApisTreePage() {
           {/* ── Tree ─────────────────────────────────────────────────────── */}
           <div className="ih-reveal rounded-3xl border border-slate-200 bg-white shadow-sm p-6 md:p-10" style={{ animationDelay: '80ms' }}>
             {drillHod ? (
-              <DeptSubTree hod={drillHod} members={SUB_TREES[drillHod.id]}
+              <DeptSubTree hod={drillHod} root={SUB_TREE_ROOTS[drillHod.id]} members={SUB_TREES[drillHod.id]}
                 onBack={() => { setDrillHodId(null); setDepartment('All'); }} />
             ) : (
               <>

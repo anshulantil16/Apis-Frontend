@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
-  ArrowUpRight, Minus, CalendarDays, CalendarClock, ChevronLeft, ChevronRight, PartyPopper,
-  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp,
+  ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, PartyPopper,
+  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, Package, Rocket, UserPlus, Briefcase,
 } from 'lucide-react';
 import {
-  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, UPCOMING_EVENTS, WHATS_NEW,
+  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_NEW_JOINERS, SAMPLE_VACANCIES, WHATS_NEW,
   OUR_PRODUCTS, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
   SAMPLE_BIRTHDAYS, SAMPLE_ANNIVERSARIES, BSE_TICKER, HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
@@ -31,6 +31,11 @@ const LEADERSHIP_SLIDES: LeadershipSlide[] = [
 ];
 
 const HOLIDAY_COLOURS = ['text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-50'];
+
+// One badge icon per COMPANY_MILESTONES entry, in order: founding, revenue
+// milestone, product launch, facility/award, and "coming soon". Cycles via
+// `% MILESTONE_ICONS.length` if the data list ever grows past five.
+const MILESTONE_ICONS = [Building2, TrendingUp, Package, Trophy, Rocket];
 
 // Full class strings (not template-interpolated) so Tailwind's static scan
 // actually finds them — see the similar note on NavGroup.hoverAccent.
@@ -267,6 +272,83 @@ function PackagingPopup({ product, onClose }: { product: OurProduct; onClose: ()
   );
 }
 
+/* "View all" popup for the New Joiners card — same fixed-overlay/backdrop
+   pattern as PackagingPopup above, sized up (max-w-lg, bigger avatars) so
+   the same sample rows read clearly at a glance rather than in the card's
+   cramped two-column width. Still explicitly flagged as sample data, same
+   caveat as the card itself. */
+function NewJoinersPopup({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        className="ih-palette-in w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+          <div>
+            <p className="text-base font-black text-slate-900 flex items-center gap-2">
+              <UserPlus className="w-4.5 h-4.5 text-amber-500" />New Joiners
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Sample data — not yet connected to a real HR feed</p>
+          </div>
+          <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-2">
+          {SAMPLE_NEW_JOINERS.map(j => (
+            <div key={j.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+              <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 text-base font-black">
+                {j.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-800 truncate">{j.name}</p>
+                <p className="text-[12px] text-slate-400">Joined on {j.date}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* "View all" popup for the Vacancies card — same pattern as
+   NewJoinersPopup, with the opening-count badge scaled up to match. */
+function VacanciesPopup({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        className="ih-palette-in w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+          <div>
+            <p className="text-base font-black text-slate-900 flex items-center gap-2">
+              <Briefcase className="w-4.5 h-4.5 text-amber-500" />Vacancies
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Sample data — not yet connected to a real careers feed</p>
+          </div>
+          <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-2">
+          {SAMPLE_VACANCIES.map(v => (
+            <div key={v.title} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-800 truncate">{v.title}</p>
+                <p className="text-[12px] text-slate-400 truncate">{v.location}</p>
+              </div>
+              <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-black flex-shrink-0">
+                {v.openings}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── drifting particle field, same technique as the AdminPulse login ─────
    Lazy useState initialiser (not useRef(expr)) so the random positions are
    generated exactly once — useRef's argument is re-evaluated on every render
@@ -305,6 +387,7 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
   const [category, setCategory] = useState<ToolCategoryFilter>('All');
   const [dense, setDense] = useState(true);
   const [openProduct, setOpenProduct] = useState<OurProduct | null>(null);
+  const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | null>(null);
   const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
   const filteredTools = category === 'All' ? QUICK_ACCESS : QUICK_ACCESS.filter(t => t.category === category);
 
@@ -645,6 +728,8 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
             </section>
 
             {openProduct && <PackagingPopup product={openProduct} onClose={() => setOpenProduct(null)} />}
+            {openListPopup === 'joiners' && <NewJoinersPopup onClose={() => setOpenListPopup(null)} />}
+            {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} />}
 
             {/* Your Tools — filterable launcher grid, the intranet's app hub */}
             <section id="all-tools" className="scroll-mt-20">
@@ -698,9 +783,13 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
               )}
             </section>
 
-            {/* Our Journey / Milestones — same real COMPANY_MILESTONES data as
-                before, redesigned as a fan carousel (one entry enlarged and
-                highlighted at a time) instead of a plain vertical timeline. */}
+            {/* Our Journey / Milestones — same real COMPANY_MILESTONES data
+                and auto-advance/manual-nav behaviour as before (milestoneIndex
+                still ticks every 5s, see the effect above), redesigned around
+                a floating icon badge + framed photo per card and a dashed
+                "road" timeline underneath with a dot per milestone and a
+                pointer triangle under whichever one is active — reads as a
+                literal journey/roadmap rather than a plain filmstrip. */}
             <section>
               <div className="ih-reveal relative overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-sm p-5 md:p-6">
                 <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
@@ -711,7 +800,7 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
                     View Full History
                   </span>
                 </div>
-                <p className="text-[12px] text-slate-400 mb-5">A century-long journey of purity, quality and innovation.</p>
+                <p className="text-[12px] text-slate-400 mb-8">A century-long journey of purity, quality and innovation.</p>
 
                 <div className="flex items-center gap-2">
                   <button onClick={() => setMilestoneIndex(i => (i - 1 + COMPANY_MILESTONES.length) % COMPANY_MILESTONES.length)}
@@ -721,35 +810,73 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
                     <ChevronLeft className="w-4 h-4" />
                   </button>
 
-                  <div className="flex-1 flex items-center justify-center gap-3 overflow-x-auto py-2 px-1">
-                    {COMPANY_MILESTONES.map((m, i) => {
-                      const active = i === milestoneIndex;
-                      return (
-                        <button key={i} onClick={() => setMilestoneIndex(i)}
-                          className={`ih-tilt relative flex-shrink-0 rounded-2xl overflow-hidden text-left transition-all duration-300
-                                     ${active ? 'w-44 h-52 ring-2 ring-amber-400 shadow-xl' : 'w-28 h-40 opacity-60 hover:opacity-90 scale-95'}
-                                     ${m.image ? '' : 'bg-gradient-to-br from-amber-50 to-orange-50'}`}>
-                          {m.image ? (
-                            <>
-                              <img src={m.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-slate-950/10" />
-                            </>
-                          ) : (
-                            <Trophy className={`absolute ${active ? 'w-10 h-10 top-4' : 'w-6 h-6 top-3'} left-1/2 -translate-x-1/2 text-amber-300`} />
-                          )}
-                          {active && i === 0 && (
-                            <span className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-500
-                                             text-white text-[8px] font-black uppercase tracking-wider whitespace-nowrap">
-                              Our Beginning
+                  <div className="flex-1 overflow-x-auto">
+                    {/* Every column is the same fixed width/height whether
+                        active or not — the "pop" for the active card comes
+                        from scale/ring/shadow (transform, not box size), so
+                        columns never reflow and the connector row below
+                        always lines up under the right card. `overflow-x-auto`
+                        makes the browser compute `overflow-y` as `auto` too
+                        (per spec — setting overflow-y: visible explicitly
+                        gets silently overridden back to auto whenever
+                        overflow-x isn't visible, so that's not a usable
+                        fix): without real clearance above the row, the
+                        floating icon badge — which deliberately pokes above
+                        the card via negative positioning — gets clipped by
+                        that invisible vertical scrollbox before it's fully
+                        painted. pt-9 gives it enough room to clear. */}
+                    <div className="flex items-start justify-center gap-4 px-1 pt-9 pb-1 min-w-max mx-auto">
+                      {COMPANY_MILESTONES.map((m, i) => {
+                        const active = i === milestoneIndex;
+                        const Icon = MILESTONE_ICONS[i % MILESTONE_ICONS.length];
+                        return (
+                          <button key={i} onClick={() => setMilestoneIndex(i)}
+                            className={`ih-tilt relative flex-shrink-0 w-36 rounded-2xl bg-white text-left transition-all duration-300 p-3 pt-6
+                                       ${active
+                                         ? 'shadow-xl shadow-amber-500/25 ring-2 ring-amber-400 scale-105 z-10 -translate-y-1'
+                                         : 'border border-slate-200 opacity-75 hover:opacity-100 hover:-translate-y-0.5'}`}>
+                            {/* Floating icon badge, half in / half out of the card */}
+                            <span className={`absolute -top-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center rounded-full
+                                             text-white ring-4 ring-white transition-all duration-300
+                                             ${active
+                                               ? 'w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/40 ih-pulse-glow'
+                                               : 'w-8 h-8 bg-amber-300'}`}>
+                              <Icon className={active ? 'w-5 h-5' : 'w-4 h-4'} />
                             </span>
-                          )}
-                          <div className="absolute inset-x-0 bottom-0 p-3">
-                            <p className={`font-black ${active ? 'text-xl' : 'text-sm'} ${m.image ? 'text-white' : 'text-amber-800'}`}>{m.year}</p>
-                            {active && <p className={`text-[11px] leading-snug mt-1 ${m.image ? 'text-amber-100/90' : 'text-amber-700/80'}`}>{m.label}</p>}
+
+                            <div className={`relative h-20 rounded-xl overflow-hidden ${m.image ? 'ring-1 ring-amber-100' : 'bg-gradient-to-br from-amber-50 to-orange-50'}`}>
+                              {m.image && <img src={m.image} alt="" className="w-full h-full object-cover" />}
+                            </div>
+
+                            <div className="text-center mt-2.5">
+                              <p className={`font-black ${active ? 'text-lg text-slate-900' : 'text-sm text-slate-500'}`}>{m.year}</p>
+                              <p className={`text-[10.5px] font-semibold text-amber-600 leading-snug mt-0.5 min-h-[26px] transition-opacity duration-300
+                                            ${active ? 'opacity-100' : 'opacity-0'}`}>
+                                {m.label}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Dashed "road" with one dot per milestone, and a
+                        pointer triangle under whichever one is active — a
+                        separate, fixed-height row, so it always sits at the
+                        right spot regardless of how tall the cards above
+                        are. */}
+                    <div className="hidden sm:flex relative items-center justify-center gap-4 px-1 min-w-max mx-auto">
+                      <div aria-hidden className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-px border-t-2 border-dashed border-amber-300" />
+                      {COMPANY_MILESTONES.map((_, i) => {
+                        const active = i === milestoneIndex;
+                        return (
+                          <div key={i} className="relative z-10 flex-shrink-0 w-36 flex flex-col items-center gap-1">
+                            <div className={`w-0 h-0 border-x-[5px] border-x-transparent border-b-[6px] border-b-amber-400 transition-opacity duration-300 ${active ? 'opacity-100' : 'opacity-0'}`} />
+                            <span className={`rounded-full ring-4 ring-white transition-all duration-300 ${active ? 'w-3 h-3 bg-amber-500' : 'w-2 h-2 bg-amber-200'}`} />
                           </div>
-                        </button>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <button onClick={() => setMilestoneIndex(i => (i + 1) % COMPANY_MILESTONES.length)}
@@ -760,11 +887,11 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
                   </button>
                 </div>
 
-                <div key={milestoneIndex} className="ih-fade mt-4 text-center">
+                <div key={milestoneIndex} className="ih-fade mt-3 text-center">
                   <p className="text-[12px] text-slate-500 leading-relaxed max-w-md mx-auto">{COMPANY_MILESTONES[milestoneIndex].body}</p>
                 </div>
 
-                <div className="flex items-center justify-center gap-1 mt-3">
+                <div className="flex items-center justify-center gap-1 mt-3 sm:hidden">
                   {COMPANY_MILESTONES.map((_, i) => (
                     <span key={i} className={`h-1 rounded-full transition-all duration-300 ${i === milestoneIndex ? 'w-5 bg-amber-400' : 'w-1 bg-slate-200'}`} />
                   ))}
@@ -857,32 +984,63 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
               );
             })()}
 
-            {/* Upcoming Events — no real calendar source is wired up yet, so
-                this is explicitly labelled sample data rather than presented
-                as real scheduled meetings. */}
-            <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-5" style={{ animationDelay: '40ms' }}>
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <CalendarClock className="w-3.5 h-3.5 text-amber-500" />Upcoming Events
-                </h2>
-                <span className="text-[10px] font-bold text-amber-500 cursor-default">View all</span>
-              </div>
-              <p className="text-[9.5px] text-slate-300 mb-3">Sample data — not yet connected to a real calendar</p>
-              <div className="space-y-2">
-                {UPCOMING_EVENTS.map(ev => {
-                  const EIcon = ev.icon;
-                  return (
-                    <div key={ev.label} className="flex items-center gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
-                      <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                        <EIcon className="w-4 h-4 text-amber-500" />
+            {/* New Joiners / Vacancies — two side-by-side cards, replacing
+                the old single Upcoming Events widget. Neither has a real
+                HRMS/ATS feed wired up yet, so both are explicitly labelled
+                sample data rather than presented as real onboarding/open
+                roles (same honest pattern as Birthdays/Anniversaries
+                below). */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-4" style={{ animationDelay: '40ms' }}>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
+                    <UserPlus className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />New Joiners
+                  </h2>
+                  <button onClick={() => setOpenListPopup('joiners')}
+                    className="text-[9.5px] font-bold text-amber-500 hover:text-amber-600 whitespace-nowrap flex-shrink-0 transition-colors">
+                    View all
+                  </button>
+                </div>
+                <p className="text-[9px] text-slate-300 mb-2.5">Sample data — not yet connected to a real HR feed</p>
+                <div className="space-y-1.5">
+                  {SAMPLE_NEW_JOINERS.map(j => (
+                    <div key={j.name} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
+                      <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 text-[10.5px] font-black">
+                        {j.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[12.5px] font-bold text-slate-800 truncate">{ev.label}</p>
-                        <p className="text-[10.5px] text-slate-400">{ev.date} · {ev.time}</p>
+                        <p className="text-[11.5px] font-bold text-slate-800 truncate">{j.name}</p>
+                        <p className="text-[9.5px] text-slate-400">Joined on {j.date}</p>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              </div>
+
+              <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-4" style={{ animationDelay: '60ms' }}>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
+                    <Briefcase className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />Vacancies
+                  </h2>
+                  <button onClick={() => setOpenListPopup('vacancies')}
+                    className="text-[9.5px] font-bold text-amber-500 hover:text-amber-600 whitespace-nowrap flex-shrink-0 transition-colors">
+                    View all
+                  </button>
+                </div>
+                <p className="text-[9px] text-slate-300 mb-2.5">Sample data — not yet connected to a real careers feed</p>
+                <div className="space-y-1.5">
+                  {SAMPLE_VACANCIES.map(v => (
+                    <div key={v.title} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11.5px] font-bold text-slate-800 truncate">{v.title}</p>
+                        <p className="text-[9.5px] text-slate-400 truncate">{v.location}</p>
+                      </div>
+                      <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10.5px] font-black flex-shrink-0">
+                        {v.openings}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
