@@ -18,8 +18,9 @@ import { PoliciesPage } from './features/policies';
 import { IntranetHomePage } from './features/home';
 import { IntranetShell } from './features/home/IntranetShell';
 import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHomeShared';
+import { PortalGate, AdminConsole, type PortalUser } from './features/portal';
 
-type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies';
+type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'admin-console';
 
 /* Header caption per view. The shell renders the sidebar and header for every
    screen, so tools never draw their own top-level chrome. */
@@ -37,6 +38,7 @@ const VIEW_META: Record<AppView, { title: string; subtitle: string }> = {
   'roompulse':       { title: 'AdminPulse',          subtitle: 'Admin Requests & Facilities' },
   'apis-tree':       { title: 'APIS Tree',           subtitle: 'Organisation Structure' },
   'policies':        { title: 'Policies',            subtitle: 'Policies & Guidelines' },
+  'admin-console':   { title: 'Administrator',       subtitle: 'People, Access & Master Data' },
 };
 
 // 'appraisal' = appraisal only (legacy), 'hub' = appraisal + eom only, anything else = all
@@ -85,7 +87,15 @@ function HubRestrictedHome({ onNavigateToAppraisal, onNavigateToEOM }: { onNavig
   );
 }
 
+/* The whole product sits behind one sign-in. Every tool on this server used
+   to be reachable by anyone who knew its URL; PortalGate is the single door,
+   and it hands the signed-in person down so the shell can greet them by name
+   and the router can refuse tools they may not open. */
 export default function App() {
+  return <PortalGate>{session => <Workspace session={session} />}</PortalGate>;
+}
+
+function Workspace({ session }: { session: { user: PortalUser; signOut: () => void } }) {
   const [view, setView] = useState<AppView>(APP_MODE === 'appraisal' ? 'appraisal' : 'home');
 
   // Centralised so every navigation path — shell sidebar, ⌘K palette, or a
@@ -108,13 +118,46 @@ export default function App() {
 
   const meta = VIEW_META[view];
 
+  /* A tool the signed-in user may not open is not rendered at all, however
+     they got here — a hidden sidebar entry is a courtesy, not a control. The
+     server enforces the same rule on every request; this is what stops the
+     screen from drawing something the API will then refuse. */
+  const mayOpen = (v: AppView) =>
+    v === 'admin-console' ? session.user.is_superadmin
+                          : session.user.allowed_apps.includes(v);
+
+  if (view !== 'home' && !mayOpen(view)) {
+    return (
+      <IntranetShell active="home" onNavigate={v => navigate(v as AppView)}
+        title={meta.title} subtitle={meta.subtitle}
+        userName={session.user.name} onSignOut={session.signOut}
+        isSuperadmin={session.user.is_superadmin}>
+        <div className="max-w-md mx-auto text-center py-20">
+          <p className="text-lg font-black text-slate-800">You don't have access to this tool</p>
+          <p className="text-sm text-slate-500 mt-1.5">
+            Ask an administrator to grant it, then sign in again.
+          </p>
+          <button onClick={() => navigate('home')}
+            className="mt-5 bg-slate-900 text-white font-black px-5 py-2.5 rounded-xl text-sm">
+            Back to the dashboard
+          </button>
+        </div>
+      </IntranetShell>
+    );
+  }
+
   /* Every screen renders inside the one shell — same sidebar, same header —
      so switching tools only swaps the centre. Tools must not draw their own
      sidebar or top-level header. */
   return (
-    <IntranetShell active={view} onNavigate={v => navigate(v as AppView)}
-      title={meta.title} subtitle={meta.subtitle}>
-      {view === 'home' ? (
+    <IntranetShell active={view === 'admin-console' ? 'home' : view}
+      onNavigate={v => navigate(v as AppView)}
+      title={meta.title} subtitle={meta.subtitle}
+      userName={session.user.name} onSignOut={session.signOut}
+      isSuperadmin={session.user.is_superadmin}>
+      {view === 'admin-console' ? (
+        <AdminConsole me={session.user} />
+      ) : view === 'home' ? (
         <IntranetHomePage onNavigate={navigate} />
       ) : view === 'extractor' ? (
         <DataExtractorPage />

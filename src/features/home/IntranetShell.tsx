@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
-  LayoutDashboard, Briefcase, HelpCircle, User, Network, ShieldCheck, Quote, X,
+  LayoutDashboard, Briefcase, HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, dailyQuote, type QuickAccessId,
@@ -21,7 +21,7 @@ import {
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
    sub-views that live under a parent tool (approvals sits under letters). */
-export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies';
+export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies' | 'admin-console';
 
 interface Props {
   active: ShellView;
@@ -32,6 +32,12 @@ interface Props {
   /** Optional per-tool title shown in the header, e.g. "Data Extractor". */
   title?: string;
   subtitle?: string;
+  /** Who is signed in, for the dashboard greeting. Supplied by the portal. */
+  userName?: string;
+  /** Sign-out, rendered in the header when a session is present. */
+  onSignOut?: () => void;
+  /** Shows the administrator entry. Superadmin only. */
+  isSuperadmin?: boolean;
 }
 
 /* What the scroll-reveal observer watches. `.tp-reveal` is the legacy
@@ -44,7 +50,8 @@ const PARENT_OF: Partial<Record<ShellView, QuickAccessId>> = {
   'offer-approvals': 'offer-letters',
 };
 
-export function IntranetShell({ active, onNavigate, children, subNav, title, subtitle }: Props) {
+export function IntranetShell({ active, onNavigate, children, subNav, title, subtitle,
+                                userName, onSignOut, isSuperadmin }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [now, setNow] = useState(new Date());
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -397,13 +404,14 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
         <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-slate-200">
           <div className="px-7 py-3 flex items-center gap-5">
             {active === 'home' ? (
-              // Greeting header for the dashboard itself — no name attached:
-              // there's no app-wide identity system (session state is
-              // per-tool, e.g. AdminPulse/SalesIQ's OTP-remembered email),
-              // so every teammate would otherwise see the same hardcoded name.
+              // Greeting header for the dashboard itself. The name comes from
+              // the portal session — before that existed there was no app-wide
+              // identity, so this deliberately greeted nobody by name rather
+              // than showing every teammate the same hardcoded one.
               <div className="hidden lg:block pr-5 border-r border-slate-200 leading-tight">
                 <p className="text-[15px] font-black text-slate-900 tracking-tight flex items-center gap-1.5">
                   {now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'}
+                  {userName ? <span className="text-amber-600">{userName.trim().split(/\s+/)[0]}</span> : null}
                   <span aria-hidden></span>
                 </p>
                 <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
@@ -501,11 +509,28 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               <button title="Help & Support — not available yet" className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                 <HelpCircle className="w-4 h-4" />
               </button>
-              <button onClick={() => go('home')} title="Home"
-                className="w-8 h-8 rounded-full bg-slate-100 ring-1 ring-slate-200 flex items-center
-                           justify-center text-slate-500 hover:text-amber-600 hover:ring-amber-300 transition-all">
-                <User className="w-4 h-4" />
-              </button>
+              {isSuperadmin && (
+                <button onClick={() => go('admin-console' as ShellView)} title="Administrator console"
+                  className={`p-2 rounded-lg transition-all ${active === 'admin-console'
+                    ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}>
+                  <Crown className="w-4 h-4" />
+                </button>
+              )}
+              {/* Who is signed in — the initials double as the account marker,
+                  so there is never a doubt about whose session this is. */}
+              <div className="w-8 h-8 rounded-full bg-amber-100 ring-1 ring-amber-200 flex items-center
+                              justify-center text-[11px] font-black text-amber-700"
+                title={userName || 'Signed in'}>
+                {userName
+                  ? userName.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+                  : <User className="w-4 h-4" />}
+              </div>
+              {onSignOut && (
+                <button onClick={onSignOut} title="Sign out"
+                  className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all">
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </header>
