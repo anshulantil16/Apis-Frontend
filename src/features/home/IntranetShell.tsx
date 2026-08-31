@@ -13,10 +13,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
-  LayoutDashboard, Briefcase, HelpCircle, User, Network, ShieldCheck,
+  LayoutDashboard, Briefcase, HelpCircle, User, Network, ShieldCheck, Quote, X,
 } from 'lucide-react';
 import {
-  QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, type QuickAccessId,
+  QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, dailyQuote, type QuickAccessId,
 } from './IntranetHomeShared';
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
@@ -51,6 +51,21 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
   const [paletteQuery, setPaletteQuery] = useState('');
   const [paletteIndex, setPaletteIndex] = useState(0);
   const paletteInputRef = useRef<HTMLInputElement>(null);
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const todaysQuote = useMemo(() => dailyQuote(), []);
+
+  // Greets with the quote popup on its own the moment the dashboard loads
+  // (once — not on every re-render), auto-dismissing after 4s same as a
+  // toast. Still toggleable by hand afterwards via the icon.
+  useEffect(() => {
+    const openTimer = setTimeout(() => setQuoteOpen(true), 600);
+    return () => clearTimeout(openTimer);
+  }, []);
+  useEffect(() => {
+    if (!quoteOpen) return;
+    const closeTimer = setTimeout(() => setQuoteOpen(false), 4000);
+    return () => clearTimeout(closeTimer);
+  }, [quoteOpen]);
 
   const activeTool = PARENT_OF[active] ?? active;
 
@@ -441,6 +456,40 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                     </a>
                   );
                 })}
+
+                {/* Quote of the day — same neon-tilt treatment as the social
+                    icons it sits beside, opens a small popup with today's
+                    quote (dailyQuote() picks the same one for everyone all
+                    day, see IntranetHomeShared). */}
+                <div className="relative">
+                  <button onClick={() => setQuoteOpen(o => !o)} title="Quote of the Day"
+                    style={{ ['--ih-neon' as string]: 'rgba(245,158,11,.5)' }}
+                    className="ih-tilt ih-neon w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500
+                               flex items-center justify-center text-white ring-1 ring-amber-300/50 shadow-sm
+                               transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
+                    <Quote className="w-3.5 h-3.5" />
+                  </button>
+
+                  {quoteOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setQuoteOpen(false)} />
+                      <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-80 rounded-2xl bg-white shadow-2xl
+                                     ring-1 ring-black/5 p-4 ih-palette-in">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-1.5">
+                            <Quote className="w-3 h-3" />Quote of the Day
+                          </p>
+                          <button onClick={() => setQuoteOpen(false)} title="Close"
+                            className="text-slate-300 hover:text-slate-600 transition-colors">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-[13px] font-semibold text-slate-700 leading-snug">"{todaysQuote.text}"</p>
+                        <p className="text-[11px] font-bold text-slate-400 mt-2">— {todaysQuote.author}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 

@@ -51,6 +51,59 @@ export const SOCIAL_LINKS = [
   { label: 'X', href: 'https://x.com/apis_india', icon: XIcon, bg: 'bg-black' },
 ];
 
+/* "Quote of the day" popup content — a fixed pool of real, attributed
+   quotes (people and well-known characters), rotated one-per-day so
+   everyone sees the same quote all day and a different one tomorrow. Not
+   a live feed; add more lines to the pool any time. */
+export interface InspirationQuote { text: string; author: string; }
+export const INSPIRATION_QUOTES: InspirationQuote[] = [
+  { text: "You are who you are meant to be. Dance as if no one's watching. Love as if it's all you know. Dream as if you'll live forever. Live as if you'll die today.", author: 'James Dean' },
+  { text: 'You do not find the happy life. You make it.', author: 'Camilla Eyring Kimball' },
+  { text: "You've gotta dance like there's nobody watching, Love like you'll never be hurt, Sing like there's nobody listening, And live like it's heaven on earth.", author: 'William W. Purkey' },
+  { text: 'Happiness is not something readymade. It comes from your own actions.', author: 'Dalai Lama' },
+  { text: "You learn more from failure than from success. Don't let it stop you. Failure builds character.", author: 'Unknown' },
+  { text: 'Fairytales do not tell children that dragons exist. Children already know that dragons exist. Fairytales tell children that dragons can be killed.', author: 'G K Chesterton' },
+  { text: "The bad news is time flies. The good news is you're the pilot.", author: 'Michael Altshuler' },
+  { text: 'Learn as if you will live forever, live like you will die tomorrow.', author: 'Mahatma Gandhi' },
+  { text: 'It is only when we take chances, when our lives improve. The initial and the most difficult risk that we need to take is to become honest.', author: 'Walter Anderson' },
+  { text: 'All our dreams can come true if we have the courage to pursue them.', author: 'Walt Disney' },
+  { text: 'Never bend your head. Always hold it high. Look the world straight in the eye.', author: 'Helen Keller' },
+  { text: "We generate fears while we sit. We overcome them by action. Fear is nature's way of warning us to get busy.", author: 'Dr. Henry Link' },
+  { text: 'The man who has confidence in himself gains the confidence of others.', author: 'Hasidic Proverb' },
+  { text: 'What you lack in talent can be made up with desire, hustle and giving 110% all the time.', author: 'Don Zimmer' },
+  { text: 'Fake it until you make it! Act as if you had all the confidence you require until it becomes your reality.', author: 'Brian Tracy' },
+  { text: "Imperfection is beauty, madness is genius and it's better to be absolutely ridiculous than absolutely boring.", author: 'Marilyn Monroe' },
+  { text: 'May your choices reflect your hopes, not your fears.', author: 'Nelson Mandela' },
+  { text: 'Remember always that you have not only the right to be an individual; you have an obligation to be one. You cannot make any useful contribution in life unless you do this.', author: 'Eleanor Roosevelt' },
+  { text: 'It takes courage to grow up and become who you really are.', author: 'E.E. Cummings' },
+  { text: 'You were born to win, but to be a winner, you must plan to win, prepare to win, and expect to win.', author: 'Zig Ziglar' },
+  { text: "Let us make our future now, and let us make our dreams tomorrow's reality.", author: 'Malala Yousafzai' },
+  { text: 'The best way to get started is to quit talking and begin doing.', author: 'Walt Disney' },
+  { text: 'Leaders set high standards. Refuse to tolerate mediocrity or poor performance.', author: 'Brian Tracy' },
+  { text: "It's not whether you get knocked down, it's whether you get back up.", author: 'Vince Lombardi' },
+  { text: 'It is often the small steps, not the giant leaps, that bring about the most lasting change.', author: 'Queen Elizabeth II' },
+  { text: 'I can\'t change the direction of the wind, but I can adjust my sails to always reach my destination.', author: 'Jimmy Dean' },
+  { text: "Don't Let Yesterday Take Up Too Much Of Today.", author: 'Will Rogers' },
+  { text: 'We may encounter many defeats but we must not be defeated.', author: 'Maya Angelou' },
+  { text: 'Leaders never use the word failure. They look upon setbacks as learning experiences.', author: 'Brian Tracy' },
+  { text: 'We become what we think about', author: 'Earl Nightingale' },
+  { text: 'There are no limits to what you can accomplish, except the limits you place on your own thinking.', author: 'Brian Tracy' },
+  { text: "Inspiration comes from within yourself. One has to be positive. When you're positive, good things happen.", author: 'Deep Roy' },
+  { text: "You define your own life. Don't let other people write your script.", author: 'Oprah Winfrey' },
+  { text: 'Think like a queen. A queen is not afraid to fail. Failure is another stepping stone to greatness.', author: 'Oprah Winfrey' },
+  { text: 'Turn your wounds into wisdom.', author: 'Oprah Winfrey' },
+  { text: 'Doing the best at this moment puts you in the best place for the next moment.', author: 'Oprah Winfrey' },
+  { text: "Real integrity is doing the right thing, knowing that nobody's going to know whether you did it or not.", author: 'Oprah Winfrey' },
+];
+
+/* Deterministic "pick" from today's date — same quote for everyone all day,
+   a different one tomorrow, no backend or stored state needed. */
+export const dailyQuote = (): InspirationQuote => {
+  const d = new Date();
+  const dayNumber = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  return INSPIRATION_QUOTES[dayNumber % INSPIRATION_QUOTES.length];
+};
+
 export type QuickAccessId =
   | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms'
   | 'offer-letters' | 'roompulse' | 'salesiq' | 'tada';
@@ -141,24 +194,28 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export interface UpcomingEvent {
-  label: string;
-  date: string;
-  time: string;
-  icon: ComponentType<{ className?: string }>;
-  soft: string;
-  accent: string;
-}
+export interface NewJoiner { name: string; date: string; }
 
-/* No real events/calendar source is wired up yet — these are sample rows
-   showing the intended shape of the widget, not scheduled company events.
-   The UI surfaces this honestly (see the caveat rendered under the section
-   heading) rather than presenting invented dates as real. Replace with a
-   real calendar feed and drop the caveat once one exists. */
-export const UPCOMING_EVENTS: UpcomingEvent[] = [
-  { label: 'Team Meeting', date: 'Aug 20', time: '11:00 AM', icon: Users, soft: 'bg-cyan-50', accent: 'text-cyan-600' },
-  { label: 'Performance Review', date: 'Aug 25', time: '2:00 PM', icon: TrendingUp, soft: 'bg-rose-50', accent: 'text-rose-600' },
-  { label: 'Company Townhall', date: 'Aug 30', time: '4:00 PM', icon: Building2, soft: 'bg-emerald-50', accent: 'text-emerald-600' },
+/* No real HRMS onboarding feed is wired up yet — sample rows showing the
+   New Joiners widget's intended shape (IntranetHomePage.tsx), not real
+   employees. Same honest "sample data" pattern as SAMPLE_BIRTHDAYS below —
+   replace with a real HR feed and drop the caveat rendered under the
+   widget heading once one exists. */
+export const SAMPLE_NEW_JOINERS: NewJoiner[] = [
+  { name: 'Aman Sharma', date: '22 Aug' },
+  { name: 'Priya Rathi', date: '23 Aug' },
+  { name: 'Rohit Kumar', date: '24 Aug' },
+];
+
+export interface Vacancy { title: string; openings: number; location: string; }
+
+/* No real ATS/careers feed is wired up yet — sample rows showing the
+   Vacancies widget's intended shape, not real open roles. Same honest
+   "sample data" pattern as SAMPLE_NEW_JOINERS above. */
+export const SAMPLE_VACANCIES: Vacancy[] = [
+  { title: 'Data Analyst', openings: 2, location: 'Work from Office' },
+  { title: 'HR Executive', openings: 1, location: 'Work from Office' },
+  { title: 'Digital Marketing', openings: 1, location: 'Work from Office' },
 ];
 
 export interface CelebrationEntry { name: string; date: string; }
