@@ -315,6 +315,23 @@ export const savePlanAsAdmin = (employeeId: string, cycleId: number, kras: KRA[]
   call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/`,
              json({ role: 'admin', kras, actor_name }));
 
+/* The agreed goals as a workbook. Defaults to accepted sheets only, because
+   "the final goals" is what this is for; pass 'all' for the mid-cycle view. */
+export const downloadExport = async (cycleId?: number, status: 'accepted' | 'all' = 'accepted') => {
+  const q = new URLSearchParams({ status });
+  if (cycleId) q.set('cycle_id', String(cycleId));
+  const r = await fetch(`${GS_API}/export/?${q}`);
+  if (!r.ok) throw new ApiError('Could not build the export. Try again.');
+  const blob = await r.blob();
+  const name = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || '')?.[1]
+    || 'goal-setting-export.xlsx';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+};
+
 export type ResetScope = 'plans' | 'people' | 'all';
 
 export interface ResetInfo {
