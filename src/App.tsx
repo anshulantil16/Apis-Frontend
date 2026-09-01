@@ -25,12 +25,19 @@ const SalesIQPage = lazy(() => import('./features/salesiq').then(m => ({ default
 const RoomPulsePage = lazy(() => import('./features/roompulse').then(m => ({ default: m.RoomPulsePage })));
 const ApisTreePage = lazy(() => import('./features/tree').then(m => ({ default: m.ApisTreePage })));
 const PoliciesPage = lazy(() => import('./features/policies').then(m => ({ default: m.PoliciesPage })));
-const AdminConsoleLazy = lazy(() => import('./features/portal').then(m => ({ default: m.AdminConsole })));
+/* Straight at the file, not the barrel: PortalGate is imported eagerly from
+   './features/portal' below, so going through the barrel here would pull
+   AdminConsole into the entry chunk anyway and the lazy() would buy nothing. */
+const AdminConsoleLazy = lazy(() => import('./features/portal/AdminConsole').then(m => ({ default: m.AdminConsole })));
 
 import { IntranetHomePage } from './features/home';
 import { IntranetShell } from './features/home/IntranetShell';
 import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHomeShared';
-import { PortalGate, type PortalUser } from './features/portal';
+/* Both straight at their files rather than the barrel. The barrel re-exports
+   AdminConsole, so importing anything through it drags the console into the
+   entry chunk and defeats the lazy() above. */
+import { PortalGate } from './features/portal/PortalGate';
+import type { PortalUser } from './features/portal/session';
 
 type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'admin-console';
 
