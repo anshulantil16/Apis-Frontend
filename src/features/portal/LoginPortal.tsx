@@ -96,6 +96,14 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
       setStep('otp');
       setCooldown(RESEND_AFTER);
       if (resend) { setDigits(Array(OTP_LENGTH).fill('')); setNote('A new code is on its way.'); }
+      /* Local development only. The server sends dev_otp back instead of
+         emailing it when PORTAL_DEV_LOGIN=1, because a developer machine has
+         no SMTP credentials — so fill the boxes in rather than making them
+         read the code out of a terminal. Never present on a deployed server. */
+      if (typeof d.dev_otp === 'string') {
+        setDigits(d.dev_otp.padEnd(OTP_LENGTH, ' ').slice(0, OTP_LENGTH).split(''));
+        setNote('Development sign-in — code filled in for you.');
+      }
     } catch {
       setError('Could not reach the server. Check your connection.');
     }
