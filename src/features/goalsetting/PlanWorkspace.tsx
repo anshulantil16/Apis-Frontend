@@ -42,7 +42,8 @@ function actionsFor(role: Role, status: Plan['status']): Action[] {
         { key: 'accept', label: 'Accept these goals', icon: CheckCircle2,
           hint: 'Agrees the goals as they now stand. This locks the sheet.',
           tone: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
-        back('employee_return', 'Request changes', 'Sends it back to your manager with a note.'),
+        back('employee_return', 'Request changes',
+             'Sends the sheet back to your manager with your note, so they can discuss it.'),
       ];
     return [];
   }
@@ -86,16 +87,19 @@ export function PlanWorkspace({
   const [noteFor, setNoteFor] = useState<Action | null>(null);
   const [saved, setSaved] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [notStarted, setNotStarted] = useState(false);
 
   const load = async () => {
     setLoading(true); setError('');
     try {
-      const p = await getPlan(employeeId, cycleId);
+      const p = await getPlan(employeeId, cycleId, role);
       setPlan(p);
       setKras(p.kras);
       setDirty(false);
+      setNotStarted(false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not load this goal sheet.');
+      setNotStarted(e instanceof ApiError && e.status === 404);
     }
     setLoading(false);
   };
@@ -160,9 +164,14 @@ export function PlanWorkspace({
   if (!plan) {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
-        <AlertCircle className="w-10 h-10 text-rose-300 mx-auto mb-3" />
-        <p className="font-black text-slate-700 mb-1">This goal sheet could not be opened</p>
-        <p className="text-sm text-slate-500 mb-5">{error || 'It may have been removed.'}</p>
+        <AlertCircle className={`w-10 h-10 mx-auto mb-3 ${
+          notStarted ? 'text-slate-200' : 'text-rose-300'}`} />
+        <p className="font-black text-slate-700 mb-1">
+          {notStarted ? 'Not started yet' : 'This goal sheet could not be opened'}
+        </p>
+        <p className="text-sm text-slate-500 mb-5">
+          {error || 'It may have been removed.'}
+        </p>
         <button onClick={onBack}
           className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-sm">
           {backLabel}

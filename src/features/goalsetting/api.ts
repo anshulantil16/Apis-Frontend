@@ -96,6 +96,7 @@ export interface Plan {
 
 export interface PlanSummary {
   id: number;
+  cycle: number;          // the identity a plan is matched on — never cycle_name
   employee_name: string;
   employee_code: string;
   designation: string;
@@ -212,8 +213,11 @@ export const updateCycle = (id: number, body: Partial<Cycle>) =>
   call<Cycle>(`/cycles/${id}/`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 // ── the goal sheet ────────────────────────────────────────────────────────────
-export const getPlan = (employeeId: string, cycleId: number) =>
-  call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/`);
+/* `role` is not decoration: only an employee's own visit may CREATE a sheet.
+   A reviewer opening a colleague who has not started gets a clear 404 rather
+   than silently bringing a plan into existence just by looking at it. */
+export const getPlan = (employeeId: string, cycleId: number, role: Role) =>
+  call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/?role=${role}`);
 
 export const getPlanById = (planId: number) => call<Plan>(`/plans/${planId}/`);
 

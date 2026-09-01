@@ -189,7 +189,9 @@ function MySheets({ employeeId, cycles, onOpen }: {
       )}
 
       {open.map(c => {
-        const p = plans.find(pl => pl.cycle_name === c.name);
+        /* By id. Cycle names are unique only per fiscal year, so matching on
+           the name alone showed last year's status against this year's cycle. */
+        const p = plans.find(pl => pl.cycle === c.id);
         const tone = p ? STATUS_TONE[p.status] : null;
         return (
           <button key={c.id} onClick={() => onOpen(c.id)}
@@ -220,7 +222,7 @@ function MySheets({ employeeId, cycles, onOpen }: {
         );
       })}
 
-      {plans.filter(p => !open.some(c => c.name === p.cycle_name)).map(p => {
+      {plans.filter(p => !open.some(c => c.id === p.cycle)).map(p => {
         const tone = STATUS_TONE[p.status];
         return (
           <div key={p.id} className="bg-white border border-slate-200 rounded-2xl px-5 py-4 opacity-70">
