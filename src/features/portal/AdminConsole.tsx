@@ -13,7 +13,7 @@
 import { useEffect, useState } from 'react';
 import {
   Users, RefreshCw, Database, Monitor, Search, ShieldCheck, X, Check, AlertCircle,
-  Loader2, LogOut, Eye, Crown,
+  Loader2, LogOut, Eye, Crown, UserPlus, Trash2,
 } from 'lucide-react';
 import { portalFetch, type PortalUser } from './session';
 
@@ -132,6 +132,11 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     portalFetch(`/admin/users/${u.id}/`).then(r => r.json()).then(setDetail).catch(() => {});
   };
 
+  const [picked, setPicked] = useState<number[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+
   const patch = async (u: any, body: any) => {
     const r = await portalFetch(`/admin/users/${u.id}/`, { method: 'PATCH', body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
@@ -187,6 +192,54 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     });
 
   const facetCount = (f: Facet) => all.filter(u => matches(u, f)).length;
+
+  /* Bulk work. Opening thirty drawers to give thirty people the same tool is
+     how an administrator ends up not bothering, and everyone is left with
+     whatever the default was. */
+  const toggleOne = (id: number) =>
+    setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : [...p, id]));
+  const allShownPicked = rows.length > 0 && rows.every((u: any) => picked.includes(u.id));
+
+  /* portalFetch hands back the raw Response, like the rest of this file, so
+     every one of these reads the body itself and surfaces the server's own
+     sentence rather than a generic failure. */
+  const runBulk = async (action: string, app?: string) => {
+    if (!picked.length) return;
+    setBusy(true);
+    const r = await portalFetch('/admin/bulk-access/', {
+      method: 'POST', body: JSON.stringify({ user_ids: picked, action, app }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      setNote(`${d.message}${d.skipped?.length ? ` Skipped ${d.skipped.join(', ')}.` : ''}`);
+      setPicked([]);
+      await load(q);
+    } else {
+      onToast({ t: d.error || 'That did not work.', ok: false });
+    }
+    setBusy(false);
+  };
+
+  const addPerson = async (body: any) => {
+    const r = await portalFetch('/admin/users/', { method: 'POST', body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Could not add them.');
+    setNote(d.message);
+    setAdding(false);
+    await load(q);
+  };
+
+  const removePerson = async (u: any, confirmName: string) => {
+    const r = await portalFetch(`/admin/users/${u.id}/`, {
+      method: 'DELETE', body: JSON.stringify({ confirm_name: confirmName }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Could not remove them.');
+    setNote(`${d.message}${d.warning ? ` ${d.warning}` : ''}`);
+    setOpen(null);
+    await load(q);
+  };
+
 
   return (
     <div className="space-y-4">
@@ -316,19 +369,84 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
         <span className="ml-auto text-[11px] font-bold text-slate-400">
           Showing {rows.length} of {all.length}
         </span>
+        <button onClick={() => setAdding(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black shadow-sm">
+          <UserPlus className="w-3.5 h-3.5" /> Add person
+        </button>
       </div>
+
+      {note && (
+        <div className="ih-pop-in flex items-start gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3.5 py-2.5">
+          <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0 mt-px" />
+          <p className="text-[12px] font-bold text-indigo-900 flex-1">{note}</p>
+          <button onClick={() => setNote('')} className="text-indigo-300 hover:text-indigo-600">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Acts on everyone ticked, so a whole department can be granted a tool
+          in one go rather than one drawer at a time. */}
+      {picked.length > 0 && (
+        <div className="ih-pop-in sticky top-2 z-20 flex flex-wrap items-center gap-2 bg-slate-900 text-white rounded-xl px-4 py-2.5 shadow-lg">
+          <span className="text-[12px] font-black">
+            {picked.length} selected
+          </span>
+          <select disabled={busy} defaultValue=""
+            onChange={e => { const [a, k] = e.target.value.split(':'); if (a) runBulk(a, k); e.target.value = ''; }}
+            className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1.5 text-[11px] font-bold outline-none">
+            <option value="" className="text-slate-800">Grant a tool…</option>
+            {(data.apps || []).map((a: any) => (
+              <option key={a.key} value={`grant:${a.key}`} className="text-slate-800">{a.label}</option>
+            ))}
+          </select>
+          <select disabled={busy} defaultValue=""
+            onChange={e => { const [a, k] = e.target.value.split(':'); if (a) runBulk(a, k); e.target.value = ''; }}
+            className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1.5 text-[11px] font-bold outline-none">
+            <option value="" className="text-slate-800">Revoke a tool…</option>
+            {(data.apps || []).map((a: any) => (
+              <option key={a.key} value={`revoke:${a.key}`} className="text-slate-800">{a.label}</option>
+            ))}
+          </select>
+          <button disabled={busy} onClick={() => runBulk('enable')}
+            className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-[11px] font-black">
+            Enable sign-in
+          </button>
+          <button disabled={busy} onClick={() => runBulk('disable')}
+            className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-[11px] font-black">
+            Disable sign-in
+          </button>
+          <button onClick={() => setPicked([])}
+            className="ml-auto text-[11px] font-bold text-white/60 hover:text-white">
+            Clear
+          </button>
+        </div>
+      )}
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto max-w-full">
           <table className="w-full min-w-[900px] text-xs">
             <thead className="bg-slate-50 text-slate-400">
-              <tr>{['Person', 'Code', 'Department', 'Designation', 'Location', 'Source',
-                    'Tools', 'Last sign-in', 'Status', ''].map(h => (
-                <th key={h} className="px-3 py-2 text-left font-black whitespace-nowrap">{h}</th>))}</tr>
+              <tr>
+                <th className="px-3 py-2 w-8">
+                  <input type="checkbox" checked={allShownPicked} className="w-3.5 h-3.5 accent-indigo-600"
+                    title="Select everyone shown"
+                    onChange={e => setPicked(e.target.checked ? rows.map((u: any) => u.id) : [])} />
+                </th>
+                {['Person', 'Code', 'Department', 'Designation', 'Location', 'Source',
+                  'Tools', 'Last sign-in', 'Status', ''].map(h => (
+                  <th key={h} className="px-3 py-2 text-left font-black whitespace-nowrap">{h}</th>))}
+              </tr>
             </thead>
             <tbody>
               {rows.map((u: any) => (
-                <tr key={u.id} className="border-t border-slate-100 hover:bg-slate-50/60">
+                <tr key={u.id} className={`border-t border-slate-100 hover:bg-slate-50/60 ${
+                  picked.includes(u.id) ? 'bg-indigo-50/60' : ''}`}>
+                  <td className="px-3 py-2">
+                    <input type="checkbox" checked={picked.includes(u.id)}
+                      onChange={() => toggleOne(u.id)}
+                      className="w-3.5 h-3.5 accent-indigo-600" />
+                  </td>
                   <td className="px-3 py-2">
                     <p className="font-black text-slate-800 flex items-center gap-1.5">
                       {u.name}
@@ -387,19 +505,158 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
 
       {open && (
         <PersonDrawer u={open} detail={detail} apps={data.apps}
-          onClose={() => { setOpen(null); setDetail(null); }} onPatch={patch} />
+          onClose={() => { setOpen(null); setDetail(null); }}
+          onPatch={patch} onRemove={removePerson} />
+      )}
+      {adding && (
+        <AddPerson apps={data.apps || []} onClose={() => setAdding(false)} onAdd={addPerson} />
       )}
     </div>
   );
 }
 
+/* A field that saves on blur rather than on every keystroke.
+   Saving per keystroke would fire a request per letter; a Save button for one
+   field is heavier than the edit itself. Blur is the moment someone has
+   finished with a field. */
+function EditField({ label, value, onSave, disabled, hint, type = 'text' }: {
+  label: string; value: string; onSave: (v: string) => Promise<void> | void;
+  disabled?: boolean; hint?: string; type?: string;
+}) {
+  const [draft, setDraft] = useState(value ?? '');
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { setDraft(value ?? ''); }, [value]);
+
+  const commit = async () => {
+    if (draft === (value ?? '') || disabled) return;
+    setSaving(true);
+    try { await onSave(draft); } finally { setSaving(false); }
+  };
+
+  return (
+    <label className="block">
+      <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+        {label}
+        {saving && <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />}
+      </span>
+      <input type={type} value={draft} disabled={disabled}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        className="w-full px-3 py-2 text-[13px] rounded-lg border-2 border-slate-200 focus:border-indigo-400 outline-none disabled:bg-slate-50 disabled:text-slate-400" />
+      {hint && <span className="block text-[10px] text-slate-400 font-semibold mt-1">{hint}</span>}
+    </label>
+  );
+}
+
+/* Adding someone by hand — for the joiner HRMS has not sent yet, or a person
+   who needs access before their record exists upstream. */
+function AddPerson({ apps, onClose, onAdd }: {
+  apps: any[]; onClose: () => void; onAdd: (b: any) => Promise<void>;
+}) {
+  const [f, setF] = useState<any>({
+    email: '', name: '', employee_code: '', designation: '', department: '',
+    location: '', app_access: ['home'],
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
+
+  const submit = async () => {
+    if (!f.email.trim() || !f.name.trim() || !f.employee_code.trim()) {
+      setError('An address, a name and an employee code are all required.'); return;
+    }
+    setBusy(true); setError('');
+    try { await onAdd(f); } catch (e: any) { setError(e?.message || 'Could not add them.'); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40" onClick={onClose}>
+      <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl ih-fade"
+        onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center gap-3">
+          <div className="flex-1">
+            <p className="font-black text-slate-800">Add a person</p>
+            <p className="text-[11px] text-slate-400 font-semibold">
+              They can sign in as soon as this is saved.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-slate-300 hover:text-slate-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          {[['Work email', 'email', 'Where the sign-in code goes — this IS the sign-in identity'],
+            ['Full name', 'name', ''],
+            ['Employee code', 'employee_code', 'Must be unique'],
+            ['Designation', 'designation', ''],
+            ['Department', 'department', ''],
+            ['Location', 'location', '']].map(([label, key, hint]) => (
+            <label key={key} className="block">
+              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                {label}
+              </span>
+              <input value={f[key as string]} onChange={e => set(key as string, e.target.value)}
+                className="w-full px-3 py-2 text-[13px] rounded-lg border-2 border-slate-200 focus:border-indigo-400 outline-none" />
+              {hint && <span className="block text-[10px] text-slate-400 font-semibold mt-1">{hint}</span>}
+            </label>
+          ))}
+
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              Tools they may open
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {apps.map(a => {
+                const on = f.app_access.includes(a.key);
+                return (
+                  <button key={a.key} type="button"
+                    onClick={() => set('app_access', on
+                      ? f.app_access.filter((k: string) => k !== a.key)
+                      : [...f.app_access, a.key])}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-2 text-left transition-all ${
+                      on ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                         : 'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                    {on ? <Check className="w-3 h-3 shrink-0" /> : <X className="w-3 h-3 shrink-0" />}
+                    <span className="truncate">{a.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-px" />
+              <p className="text-[12px] font-bold text-rose-700">{error}</p>
+            </div>
+          )}
+
+          <button onClick={submit} disabled={busy}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-black text-[14px]">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+            Add them
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** One person in full: their access, and exactly what HRMS sent for them. */
-function PersonDrawer({ u, detail, apps, onClose, onPatch }: {
-  u: any; detail: any; apps: any[]; onClose: () => void; onPatch: (u: any, b: any) => void;
+function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
+  u: any; detail: any; apps: any[]; onClose: () => void;
+  onPatch: (u: any, b: any) => void; onRemove: (u: any, name: string) => Promise<void>;
 }) {
   const granted: string[] = detail?.user?.allowed_apps ?? u.allowed_apps ?? [];
   const raw = detail?.hrms_raw || {};
   const rawKeys = Object.keys(raw);
+  const person = detail?.user ?? u;
+  const [confirming, setConfirming] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [removeError, setRemoveError] = useState('');
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
@@ -423,6 +680,39 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch }: {
               </p>
             </div>
           )}
+
+          {/* Details, editable in place. The address matters most: it is the
+              sign-in identity, so a typo locks someone out with no clue why. */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              Details
+            </p>
+            <EditField label="Work email" value={person.email} disabled={u.is_bootstrap}
+              hint={u.is_bootstrap
+                ? 'The founding account is recognised by its address, so this one is fixed.'
+                : 'This is the sign-in identity — the code goes here.'}
+              onSave={v => onPatch(u, { email: v })} />
+            <EditField label="Full name" value={person.name}
+              onSave={v => onPatch(u, { name: v })} />
+            <div className="grid grid-cols-2 gap-3">
+              <EditField label="Employee code" value={person.employee_code}
+                onSave={v => onPatch(u, { employee_code: v })} />
+              <EditField label="Location" value={person.location}
+                onSave={v => onPatch(u, { location: v })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <EditField label="Designation" value={person.designation}
+                onSave={v => onPatch(u, { designation: v })} />
+              <EditField label="Department" value={person.department}
+                onSave={v => onPatch(u, { department: v })} />
+            </div>
+            {u.from_hrms && (
+              <p className="text-[10px] text-amber-700 font-semibold bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                Synced from Pocket HRMS. An edit here is overwritten on the next sync —
+                fix it upstream for it to stick.
+              </p>
+            )}
+          </div>
 
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Access</p>
@@ -502,6 +792,56 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch }: {
               <p className="text-[10px] text-slate-400 mt-1.5">Last synced {detail.user.last_synced_at}</p>
             )}
           </div>
+
+          {/* Removing, as opposed to disabling.
+              Disabling is right for a leaver: it keeps the record and can be
+              undone. This is for a row that should never have existed - a
+              duplicate, a test account, a mistyped import - so it asks for the
+              name rather than a yes/no, which is muscle memory. */}
+          {!u.is_bootstrap && (
+            <div className="border-2 border-dashed border-rose-200 rounded-xl p-3.5">
+              <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">
+                Remove from the portal
+              </p>
+              <p className="text-[11px] text-slate-500 font-semibold mb-2.5">
+                Deletes the account outright. To stop someone signing in while keeping
+                their record, disable them above instead.
+              </p>
+              {!confirming ? (
+                <button onClick={() => { setConfirming(true); setRemoveError(''); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-rose-200 text-rose-600 hover:bg-rose-50 text-[11px] font-black">
+                  <Trash2 className="w-3.5 h-3.5" /> Remove {u.name.split(' ')[0]}
+                </button>
+              ) : (
+                <>
+                  <p className="text-[11px] font-bold text-rose-700 mb-1.5">
+                    Type <span className="font-black">{u.name}</span> to confirm.
+                  </p>
+                  <div className="flex gap-2">
+                    <input value={typed} onChange={e => setTyped(e.target.value)} autoFocus
+                      placeholder={u.name}
+                      className="flex-1 min-w-0 px-3 py-1.5 text-[12px] rounded-lg border-2 border-rose-200 focus:border-rose-400 outline-none" />
+                    <button
+                      onClick={async () => {
+                        try { await onRemove(u, typed); }
+                        catch (e: any) { setRemoveError(e?.message || 'Could not remove them.'); }
+                      }}
+                      disabled={typed.trim().toLowerCase() !== u.name.trim().toLowerCase()}
+                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-[11px] font-black">
+                      Remove
+                    </button>
+                    <button onClick={() => { setConfirming(false); setTyped(''); }}
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-black">
+                      Cancel
+                    </button>
+                  </div>
+                  {removeError && (
+                    <p className="text-[11px] font-bold text-rose-700 mt-1.5">{removeError}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
