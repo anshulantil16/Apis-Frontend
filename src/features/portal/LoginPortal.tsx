@@ -168,9 +168,16 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
       <style>{IH_STYLES}</style>
       <style>{`@keyframes ihLoginFloat { from { transform: translateY(0); } to { transform: translateY(-75vh); } }`}</style>
 
-      {/* full-bleed honey-jar/bees photo, same asset SignInPage ships at
-          public/signin_page.png — this IS the illustration, not a stand-in. */}
-      <img src="/signin_page.png" alt="" aria-hidden
+      {/* Full-bleed honey-jar/bees photo — the illustration itself, not a
+          stand-in. Stored as JPEG, not the PNG it arrived as: PNG is lossless
+          and a photograph has no flat colour to compress, so it was shipping
+          2.0 MB — six times the whole JavaScript bundle, on the first screen
+          anyone sees. At quality 85 it is 225 kB and, scaled to cover behind a
+          card and a gradient wash, looks the same.
+          decoding=async keeps it off the critical path so the card and the
+          email field paint without waiting for the photo. */}
+      <img src="/signin_page.jpg" alt="" aria-hidden
+        decoding="async" fetchPriority="high"
         className="absolute inset-0 w-full h-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-amber-900/10 via-amber-900/5 to-amber-950/35" />
 
