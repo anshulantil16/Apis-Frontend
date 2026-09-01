@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
   ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, PartyPopper,
-  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, Package, Rocket, UserPlus, Briefcase,
+  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, Package, Rocket, UserPlus, Briefcase, Megaphone,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_NEW_JOINERS, SAMPLE_VACANCIES, WHATS_NEW,
   OUR_PRODUCTS, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
-  SAMPLE_BIRTHDAYS, SAMPLE_ANNIVERSARIES, BSE_TICKER, HOLIDAYS_2026,
+  SAMPLE_BIRTHDAYS, SAMPLE_ANNIVERSARIES, ANNOUNCEMENTS, BSE_TICKER, HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct, type UpliftValue,
 } from './IntranetHomeShared';
@@ -330,6 +330,98 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
   );
 }
 
+/* "View all" popup for the Announcements card — same pattern as
+   NewJoinersPopup/VacanciesPopup, with each row's icon tile carrying the
+   announcement's own icon instead of initials. */
+function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        className="ih-palette-in w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+          <div>
+            <p className="text-base font-black text-slate-900 flex items-center gap-2">
+              <Megaphone className="w-4.5 h-4.5 text-amber-500" />Announcements
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Sample data — not yet connected to a real announcements feed</p>
+          </div>
+          <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-2">
+          {ANNOUNCEMENTS.map(a => {
+            const Icon = a.icon;
+            return (
+              <div key={a.title} className="flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-slate-800 leading-snug">{a.title}</p>
+                  <p className="text-[12px] text-slate-400 leading-snug mt-0.5">{a.body}</p>
+                  <p className="text-[11px] font-bold text-slate-300 mt-1.5">{a.date}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* "View all" popup for the Birthdays/Anniversaries card — same pattern as
+   NewJoinersPopup, plus its own copy of the card's tab switcher (opens on
+   whichever tab was active on the card, but can be flipped independently
+   inside the popup). */
+function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 'anniversaries'; onClose: () => void }) {
+  const [tab, setTab] = useState(initialTab);
+  const rows = tab === 'birthdays' ? SAMPLE_BIRTHDAYS : SAMPLE_ANNIVERSARIES;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        className="ih-palette-in w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            <button onClick={() => setTab('birthdays')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-[12px] font-black transition-all ${
+                tab === 'birthdays' ? 'bg-white text-amber-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              <Heart className="w-3.5 h-3.5" />Birthdays
+            </button>
+            <button onClick={() => setTab('anniversaries')}
+              className={`px-3 py-1.5 rounded-md text-[12px] font-black transition-all ${
+                tab === 'anniversaries' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              Anniversaries
+            </button>
+          </div>
+          <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="px-6 pt-3 text-[11px] text-slate-400">Sample data — not yet connected to a real HR feed</p>
+        <div className="p-6 pt-3 space-y-2">
+          {rows.map(p => (
+            <div key={p.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-base font-black
+                               ${tab === 'birthdays' ? 'bg-amber-50 text-amber-500' : 'bg-orange-50 text-orange-600'}`}>
+                {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </div>
+              <p className="text-sm font-bold text-slate-800 flex-1 truncate">{p.name}</p>
+              <span className="text-[12px] font-bold text-slate-400 flex-shrink-0">{p.date}</span>
+            </div>
+          ))}
+          {rows.length === 0 && (
+            <p className="text-center text-sm text-slate-400 py-8">No {tab} to show.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── drifting particle field, same technique as the AdminPulse login ─────
    Lazy useState initialiser (not useRef(expr)) so the random positions are
    generated exactly once — useRef's argument is re-evaluated on every render
@@ -368,7 +460,7 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
   const [category, setCategory] = useState<ToolCategoryFilter>('All');
   const [dense, setDense] = useState(true);
   const [openProduct, setOpenProduct] = useState<OurProduct | null>(null);
-  const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | null>(null);
+  const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | 'announcements' | 'celebrations' | null>(null);
   const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
   const filteredTools = category === 'All' ? QUICK_ACCESS : QUICK_ACCESS.filter(t => t.category === category);
 
@@ -711,6 +803,8 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
             {openProduct && <PackagingPopup product={openProduct} onClose={() => setOpenProduct(null)} />}
             {openListPopup === 'joiners' && <NewJoinersPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} />}
+            {openListPopup === 'announcements' && <AnnouncementsPopup onClose={() => setOpenListPopup(null)} />}
+            {openListPopup === 'celebrations' && <CelebrationsPopup initialTab={celebrationTab} onClose={() => setOpenListPopup(null)} />}
 
             {/* Your Tools — filterable launcher grid, the intranet's app hub */}
             <section id="all-tools" className="scroll-mt-20">
@@ -1045,7 +1139,10 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
                     Anniversaries
                   </button>
                 </div>
-                <span className="text-[10px] font-bold text-amber-500 cursor-default">View all</span>
+                <button onClick={() => setOpenListPopup('celebrations')}
+                  className="text-[10px] font-bold text-amber-500 hover:text-amber-600 transition-colors">
+                  View all
+                </button>
               </div>
               <p className="text-[9.5px] text-slate-300 mb-3">Sample data — not yet connected to a real HR feed</p>
               <div className="space-y-1">
@@ -1060,9 +1157,40 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
                   </div>
                 ))}
               </div>
-              <button className="w-full mt-2 flex items-center justify-center gap-1 text-[10.5px] font-bold text-amber-500 hover:text-amber-600 transition-colors">
-                See all {celebrationTab === 'birthdays' ? 'Birthdays' : 'Anniversaries'}<ArrowRight className="w-3 h-3" />
-              </button>
+            </div>
+
+            {/* Announcements — no real announcements/CMS feed is wired up
+                yet, so this is explicitly sample data (see ANNOUNCEMENTS in
+                IntranetHomeShared.tsx), same honest pattern as the
+                Birthdays/Anniversaries card above. Sits directly under it. */}
+            <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-5" style={{ animationDelay: '90ms' }}>
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-[10.5px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <Megaphone className="w-3.5 h-3.5 text-amber-500" />Announcements
+                </h2>
+                <button onClick={() => setOpenListPopup('announcements')}
+                  className="text-[10px] font-bold text-amber-500 hover:text-amber-600 transition-colors">
+                  View all
+                </button>
+              </div>
+              <p className="text-[9.5px] text-slate-300 mb-3">Sample data — not yet connected to a real announcements feed</p>
+              <div className="space-y-3">
+                {ANNOUNCEMENTS.map(a => {
+                  const Icon = a.icon;
+                  return (
+                    <div key={a.title} className="flex items-start gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-4 h-4 text-amber-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-bold text-slate-800 leading-snug">{a.title}</p>
+                        <p className="text-[10.5px] text-slate-400 leading-snug mt-0.5">{a.body}</p>
+                        <p className="text-[9.5px] font-bold text-slate-300 mt-1">{a.date}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Recently Used — real, derived from this browser's own history,

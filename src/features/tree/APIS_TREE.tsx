@@ -94,6 +94,15 @@ const SUB_TREE_ROOTS: Record<string, SubTreeRoot> = {
   'heera-swami': { title: 'Plant Head- Roorkee', vacant: true, department: 'PPC' },
 };
 
+/* Departments whose members hang directly off the HOD as one flat,
+   wrapping bus (FlatBranch) rather than the nested manager-tier T-connector
+   — same rendering PPC's vacant-seat tree already uses, just kept separate
+   from SUB_TREE_ROOTS since these HODs are real people with their own card
+   at the top, not a vacant position title. General Trade Sales (Arun
+   Mishra) has twelve regional GTR heads reporting straight to him, too many
+   for the 3-column manager grid the nested variant assumes. */
+const FLAT_TREE_IDS = new Set<string>(['arun-mishra']);
+
 const SUB_TREES: Record<string, TeamMember[]> = {
   'pankaj-tripathi': [
     {
@@ -151,6 +160,71 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     { name: 'Sunil Kumar', role: 'M3- Manager- QA & QC- Roorkee', location: 'Roorkee' },
     { name: 'Nischal Bharadwaj', role: 'M4- Sr. Manager- Finance & Accounts- Roorkee- Functional Reporting', location: 'Roorkee', functional: true },
     { name: 'Praveen Sharma', role: 'M3- Manager- P&C- Roorkee- Functional Reporting', location: 'Roorkee', functional: true },
+  ],
+  // General Trade Sales (Arun Mishra). Flat — twelve regional GTR heads
+  // reporting straight to him, no further nesting — rendered via FlatBranch
+  // (FLAT_TREE_IDS) rather than the nested variant's manager tier, which
+  // assumes a 3-column grid and doesn't wrap cleanly at this count.
+  'arun-mishra': [
+    { name: 'Mohinder Sharma', role: 'GTR 1- Punjab, Himachal & Jammu & Kashmir- M3- Dy. RSM', location: 'Chandigarh' },
+    { name: 'Ramesh', role: 'GTR 2- Delhi, Haryana & Rajasthan- M4- RSM', location: 'Delhi' },
+    { name: 'Asif Ali', role: 'GTR3A- Central & Eastern UP- M4- RSM', location: 'Pravagraj' },
+    { name: 'Rajeev Kumar', role: 'GTR 3B- Uttarakhand & Western UP- M2- Sr. ASM', location: 'Ghaziabad' },
+    { name: 'Arnab Ghosh', role: 'GTR 4A- West Bengal, North East Region- M5- RSM', location: 'Kolkata' },
+    { name: 'Gulshan Kumar', role: 'GTR 4B- Bihar & Jharkhand- M3- Dy. RSM', location: 'Patna' },
+    { name: 'Shakil Ahmed', role: 'GTR 5- Odisha, Chhattisgarh, Madhya Pradesh- M4- RSM', location: 'Bhilai' },
+    { name: 'Sanjay Singh', role: 'GTR 6A- Rest Of Maharashtra- M4- RSM', location: 'Pune' },
+    { name: 'Vinod Shah', role: 'GTR 6B- Mumbai & Gujarat- M2- Sr. ASM', location: 'Mumbai' },
+    { name: 'B. Bhaskar', role: 'GTR 7- AP & Telangana- M4- RSM', location: 'Hyderabad' },
+    { name: 'Revana Siddappa Patil', role: 'GTR 8- Karnataka, Goa- M4- RSM0', location: 'Bangalore' },
+    { name: 'Vasanth D', role: 'GTR 9- Tamil Nadu & Kerala- M4- RSM', location: 'Chennai' },
+  ],
+  // Business To Business (B2B) Sales (Narendra Gangawar) — single direct
+  // report, no further nesting, so the default nested-variant rendering
+  // (HOD card → T-connector → one manager box) already matches the source
+  // chart with no extra layout needed.
+  'narendra-gangwar': [
+    { name: 'Sumit Kumar Verma', role: 'M1- Assistant Manager- HQ- Delhi' },
+  ],
+  // Sales - Alternate Channel (Vaibhav Mishra). The three level-2 "manager"
+  // slots below aren't people, they're the department groupings from the
+  // org chart supplied (Modern Trade / Ecommerce / Sales Coordination) —
+  // reusing the manager-card slot for a group label instead of a person is
+  // what lets this reuse the existing nested/leaf branch rendering as-is:
+  // Modern Trade's one report (Gouri Shankar) has his own reports so it
+  // draws as a nested box-grid branch; Ecommerce's one report (Hariom) and
+  // Sales Coordination's three both have no further reports so they draw
+  // as flat leaf-spine lists — exactly matching the source chart's shape
+  // with no new components.
+  'vaibhav-mishra': [
+    {
+      name: 'Modern Trade', role: 'Department',
+      reports: [
+        {
+          name: 'Gouri Shankar', role: 'M4- RSM- HQ- Delhi',
+          reports: [
+            { name: 'Rishi Raghav', role: 'M1- KAM- HQ- Delhi' },
+            { name: 'Navin Anchal', role: 'M1- KAM- HQ- Mumbai' },
+            { name: 'Purushotham Kambalapally', role: 'M1- KAM- HQ- Hyderabad' },
+            { name: 'Tumba Biswas', role: 'M1- KAM- HQ- Kolkata' },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'Ecommerce', role: 'Department',
+      reports: [
+        { name: 'Hariom', role: 'M3- Customer Development Manager- HQ- Delhi' },
+      ],
+    },
+    {
+      name: 'Sales Coordination', role: 'Department',
+      reports: [
+        { name: 'Gaurav Dapral', role: 'O5- Sr. Executive- HQ- Delhi' },
+        { name: 'Vishal Mahaur', role: 'O5- Sr. Executive- HQ- Delhi' },
+        { name: 'Pooja Arora', role: 'O5- Sr. Executive- HQ- Delhi' },
+      ],
+    },
   ],
 };
 
@@ -442,26 +516,36 @@ function SubTreeRootCard({ root }: { root: SubTreeRoot }) {
 
 /* One card in a flat department tree — generic icon (no photos supplied
    for this department), name, role, and a location line, all in the same
-   cream/amber card language as ManagerCard. */
+   cream/amber card language as ManagerCard.
+   Every part of the card reserves a fixed amount of space (name clamped to
+   one line, role clamped to two, location pinned to the bottom via
+   mt-auto) rather than sizing to its own text, so a row of cards with
+   different name/role lengths still lines up — same avatar position, same
+   role baseline, same location row — instead of each card being exactly as
+   tall as its own content. */
 function FlatMemberCard({ member }: { member: TeamMember }) {
   return (
     <div onMouseMove={onSpotlightMove}
-      className="ih-spotlight ih-neon relative w-full h-full rounded-2xl border border-amber-200
+      className="ih-spotlight ih-neon relative w-full h-full flex flex-col rounded-2xl border border-amber-200
                  bg-gradient-to-br from-amber-50 to-white shadow-sm p-4"
       style={{ ['--ih-neon' as string]: '#f59e0b' }}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <GenericAvatar />
         <div className="min-w-0 flex-1">
-          <p className="font-black text-slate-900 text-[13px] leading-tight">{member.name}</p>
-          <p className="text-[11px] font-semibold text-slate-600 mt-1 leading-snug">{member.role}</p>
+          <p className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1" title={member.name}>{member.name}</p>
+          <p className="text-[11px] font-semibold text-slate-600 mt-1 leading-snug line-clamp-2 min-h-[2.4em]" title={member.role}>
+            {member.role}
+          </p>
         </div>
       </div>
-      {member.location && (
-        <div className="flex items-center gap-1 mt-2.5 text-[10.5px] text-slate-400">
-          <MapPin className="w-3 h-3" />
-          <span>{member.location}</span>
-        </div>
-      )}
+      <div className="flex items-center gap-1 mt-auto pt-2.5 text-[10.5px] text-slate-400 min-h-[1.25em]">
+        {member.location && (
+          <>
+            <MapPin className="w-3 h-3 shrink-0" />
+            <span className="truncate">{member.location}</span>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -530,9 +614,14 @@ function FlatBranch({ members }: { members: TeamMember[] }) {
         {multi && (
           <div aria-hidden className="hidden sm:block absolute top-0 left-[6%] right-[6%] h-px bg-amber-300" />
         )}
-        <div className={`flex flex-wrap items-start justify-center gap-4 ${multi ? 'pt-8' : ''}`}>
+        {/* Grid, not flex-wrap — a CSS grid row stretches every card in it to
+            the tallest card's height and gives every column the same width,
+            so cards line up row by row even though FlatMemberCard's actual
+            content length varies member to member. flex-wrap left each card
+            exactly as tall as its own text. */}
+        <div className={`grid grid-cols-[repeat(auto-fit,minmax(205px,1fr))] gap-4 ${multi ? 'pt-8' : ''}`}>
           {members.map((m, i) => (
-            <div key={m.name} className="ih-pop-in relative w-[205px] shrink-0" style={{ animationDelay: `${140 + i * 90}ms` }}>
+            <div key={m.name} className="ih-pop-in relative" style={{ animationDelay: `${140 + i * 90}ms` }}>
               <FlatMemberCard member={m} />
             </div>
           ))}
@@ -678,7 +767,7 @@ function DeptSubTree({ hod, root, members, onBack }: {
         </div>
 
         <Collapsible open={!collapsed}>
-          {root ? (
+          {root || FLAT_TREE_IDS.has(hod.id) ? (
             <>
               {/* flat tree: one amber stem straight into the T-connector, no manager tier */}
               <div aria-hidden className="w-px h-8 bg-amber-300 mx-auto" />
@@ -689,6 +778,44 @@ function DeptSubTree({ hod, root, members, onBack }: {
               {/* stem from the HOD down to the T-bar */}
               <div aria-hidden className="w-px h-10 bg-sky-300 mx-auto" />
 
+              {/* A single manager needs no T-bar at all — the 3-column grid
+                  below puts a lone card in the leftmost column while the
+                  T-bar and its stem stay centred on the full row, so the
+                  card ends up visually stranded off to one side, detached
+                  from the connecting lines. One straight stem into a
+                  centred card (same shape as the HOD's own stem above)
+                  reads correctly for the one-report case; the T-bar layout
+                  only makes sense once there's an actual row to span. */}
+              {members.length === 1 ? (
+                <div className="flex flex-col items-center pt-10">
+                  {(() => {
+                    const mgr = members[0];
+                    const branchOpen = !closedBranches.has(mgr.name);
+                    const reports = mgr.reports ?? [];
+                    const nested = hasNestedReports(reports);
+                    return (
+                      <div className="ih-pop-in relative flex flex-col items-center" style={{ animationDelay: '140ms' }}>
+                        <div className="relative w-full max-w-[260px]">
+                          <ManagerCard member={mgr} />
+                          {reports.length > 0 && (
+                            <CollapseToggle collapsed={!branchOpen} onClick={() => toggleBranch(mgr.name)}
+                              title={branchOpen ? `Collapse ${mgr.name}'s team` : `Expand ${mgr.name}'s team`} />
+                          )}
+                        </div>
+                        {reports.length > 0 && (
+                          <Collapsible open={branchOpen}>
+                            <div className="pt-5 w-full flex justify-center">
+                              {nested
+                                ? <ReportBranchGrid members={reports} baseDelay={300} />
+                                : <ReportLeafList members={reports} baseDelay={300} />}
+                            </div>
+                          </Collapsible>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
               <div className="relative w-full">
                 {/* T-bar spanning the outer two managers' centres */}
                 <div aria-hidden className="hidden sm:block absolute top-0 left-[16.6%] right-[16.6%] h-px bg-sky-300" />
@@ -726,6 +853,7 @@ function DeptSubTree({ hod, root, members, onBack }: {
                   })}
                 </div>
               </div>
+              )}
             </>
           )}
         </Collapsible>

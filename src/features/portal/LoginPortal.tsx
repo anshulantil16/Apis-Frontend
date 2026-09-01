@@ -4,16 +4,16 @@
  * No passwords anywhere — the company already trusts its mailboxes, and a
  * password is one more thing to leak, reset and re-use badly.
  *
- * Deliberately built from the dashboard's own vocabulary rather than a
- * bespoke look: the same #f5f7fa ground as IntranetShell, the same three
- * aurora blobs as the home page (cyan / violet / amber), the same ih-glass
- * panel, ih-particle field and ih-orbit ring used elsewhere. Signing in
- * should read as the front of this product, not a gate bolted onto it.
+ * Visual language borrowed from SignInPage (features/auth) rather than the
+ * dashboard's glass/aurora look: the full-bleed honey-jar photo, the
+ * icon tile peeking above the card, the rounded-[36px] white card and pill
+ * button. The credential flow underneath is unchanged — email then OTP,
+ * not SignInPage's email/password — only the frontend moved.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowRight, Loader2, Mail, ShieldCheck, KeyRound, AlertCircle, ChevronLeft,
-  CheckCircle2, Sparkles, Lock, Zap,
+  ArrowRight, Mail, ShieldCheck, AlertCircle, ChevronLeft,
+  CheckCircle2, Sparkles, Lock, Zap, Droplet, HelpCircle,
 } from 'lucide-react';
 import { IH_STYLES } from '../home/IntranetHomeShared';
 import { PORTAL_API, setToken, type PortalUser } from './session';
@@ -21,21 +21,22 @@ import { PORTAL_API, setToken, type PortalUser } from './session';
 const OTP_LENGTH = 6;
 const RESEND_AFTER = 45;   // seconds before "resend" is offered
 
-/* Rising motes, same technique as the dashboard hero. Amber rather than white
-   because this sits on a light ground, where white is invisible. */
+/* Rising motes over the honey-jar photo — same technique and palette as
+   SignInPage's own Particles, kept local to this file rather than shared
+   across features. */
 function ParticleField() {
   const pts = useMemo(() =>
-    Array.from({ length: 22 }, () => ({
+    Array.from({ length: 26 }, () => ({
       l: Math.random() * 100, s: 2 + Math.random() * 4,
-      d: Math.random() * 16, dur: 16 + Math.random() * 18, o: 0.12 + Math.random() * 0.25,
+      d: Math.random() * 16, dur: 14 + Math.random() * 18, o: 0.2 + Math.random() * 0.35,
     })), []);
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
       {pts.map((p, i) => (
-        <span key={i} className="ih-particle absolute rounded-full bg-amber-400"
+        <span key={i} className="absolute rounded-full bg-amber-200"
           style={{ left: `${p.l}%`, bottom: '-6%', width: p.s, height: p.s, opacity: p.o,
-                   boxShadow: '0 0 10px rgba(245,158,11,.55)',
-                   animationDuration: `${p.dur}s`, animationDelay: `${p.d}s` }} />
+                   boxShadow: '0 0 10px rgba(245,158,11,.6)',
+                   animation: `ihLoginFloat ${p.dur}s ease-in-out ${p.d}s infinite alternate` }} />
       ))}
     </div>
   );
@@ -163,80 +164,57 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
   const Tip = ASSURANCES[tip].icon;
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#f5f7fa] flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-14 sm:py-16">
       <style>{IH_STYLES}</style>
+      <style>{`@keyframes ihLoginFloat { from { transform: translateY(0); } to { transform: translateY(-75vh); } }`}</style>
 
-      {/* Ambient wash — the same three blobs, blur and drift as the dashboard,
-          so the two screens read as one product. Decorative only. */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="ih-aurora absolute -top-40 -left-40 w-[38rem] h-[38rem] rounded-full bg-cyan-300/25 blur-[130px]" />
-        <div className="ih-aurora absolute top-1/3 -right-40 w-[34rem] h-[34rem] rounded-full bg-violet-300/25 blur-[130px]" style={{ animationDelay: '6s' }} />
-        <div className="ih-aurora absolute -bottom-40 left-1/3 w-[32rem] h-[32rem] rounded-full bg-amber-300/30 blur-[130px]" style={{ animationDelay: '12s' }} />
-        <div className="ih-drift absolute top-1/4 left-1/4 w-[24rem] h-[24rem] rounded-full bg-orange-200/25 blur-[120px]" style={{ animationDelay: '3s' }} />
-        {/* faint grid, for the glass to sit on rather than float in nothing */}
-        <div className="absolute inset-0 opacity-[0.5]" style={{
-          backgroundImage:
-            'linear-gradient(rgba(148,163,184,.16) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.16) 1px, transparent 1px)',
-          backgroundSize: '58px 58px',
-          maskImage: 'radial-gradient(ellipse at center, #000 30%, transparent 78%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, #000 30%, transparent 78%)',
-        }} />
-        <ParticleField />
+      {/* full-bleed honey-jar/bees photo, same asset SignInPage ships at
+          public/signin_page.png — this IS the illustration, not a stand-in. */}
+      <img src="/signin_page.png" alt="" aria-hidden
+        className="absolute inset-0 w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-b from-amber-900/10 via-amber-900/5 to-amber-950/35" />
+
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="ih-aurora absolute -bottom-40 -right-24 w-[36rem] h-[36rem] rounded-full bg-amber-200/20 blur-[130px]" style={{ animationDelay: '6s' }} />
       </div>
+      <ParticleField />
 
-      <div className="relative w-full max-w-[430px]">
-        {/* Brand */}
-        <div className="ih-reveal text-center mb-7">
-          <div className="relative inline-flex items-center justify-center mb-4">
-            <span aria-hidden className="ih-orbit absolute w-[88px] h-[88px] rounded-full"
-              style={{ ['--ih-orbit' as any]: '#f59e0b' }} />
-            <span className="ih-halo ih-float relative w-[68px] h-[68px] rounded-2xl bg-white flex items-center
-                             justify-center shadow-xl shadow-amber-500/15 ring-1 ring-amber-100"
-              style={{ ['--ih-halo' as any]: 'rgba(245,158,11,.35)' }}>
-              <img src="/logo.png" alt="" className="w-11 h-11 object-contain" />
-            </span>
+      {/* centred card, decorative icon tile "peeking" above its top edge */}
+      <div className="relative z-10 w-full max-w-lg">
+        <div className="flex justify-center relative z-20" style={{ marginBottom: '-2.75rem' }}>
+          <div className="ih-pop-in ih-float ih-border-flow w-20 h-20 sm:w-24 sm:h-24 rounded-3xl
+                          bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500
+                          shadow-[0_18px_40px_-10px_rgba(217,119,6,.6)] flex items-center justify-center p-3.5 sm:p-4">
+            <span className="ih-pulse-glow absolute -inset-2 rounded-3xl border-2 border-amber-300/40" />
+            <img src="/logo.png" alt="APIS" className="w-full h-full object-contain drop-shadow" />
           </div>
-          <h1 className="text-[26px] font-black tracking-tight text-slate-900 leading-none">
-            APIS{' '}
-            <span className="ih-grad-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600">
-              Intranet
-            </span>
-          </h1>
-          <p className="text-slate-400 text-xs font-bold mt-2 tracking-wide">
-            One sign-in for every internal tool
-          </p>
         </div>
 
-        {/* Card */}
-        <div className="ih-glass ih-scan relative rounded-3xl border border-white/70 p-6 shadow-2xl shadow-slate-900/[0.07]">
+        <div className="ih-reveal rounded-[36px] bg-white/95 backdrop-blur-xl border border-amber-100
+                        shadow-[0_40px_100px_-20px_rgba(120,53,15,.45)] pt-14 sm:pt-16 px-7 sm:px-11 pb-9 sm:pb-11">
           {done ? (
-            <div className="py-10 text-center ih-pop-in">
-              <div className="ih-halo relative inline-flex mb-4"
-                style={{ ['--ih-halo' as any]: 'rgba(16,185,129,.4)' }}>
-                <CheckCircle2 className="w-14 h-14 text-emerald-500" />
+            <div className="py-6 text-center ih-pop-in">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <img src="/logo.png" alt="APIS" className="w-6 h-6 object-contain" />
+                <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">APIS Intranet</span>
               </div>
+              <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-2" />
               <p className="font-black text-lg text-slate-900">Welcome back</p>
-              <p className="text-slate-400 text-sm mt-1 font-semibold">Opening your dashboard…</p>
+              <p className="text-slate-400 text-[15px] mt-1.5">Opening your dashboard…</p>
             </div>
           ) : step === 'email' ? (
             <div className="ih-stagger">
-              <div className="mb-5">
-                <h2 className="font-black text-lg text-slate-900 flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
-                    <ShieldCheck className="w-4 h-4 text-amber-600" />
-                  </span>
-                  Sign in
-                </h2>
-                <p className="text-slate-400 text-xs mt-1.5 font-semibold">
-                  We'll email you a six-digit code. Nothing to remember.
-                </p>
+              <div className="text-center mb-8">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <img src="/logo.png" alt="APIS" className="w-6 h-6 object-contain" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">APIS Intranet</span>
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Sign In</h1>
+                <p className="text-slate-400 text-[15px] mt-1.5">We'll email you a six-digit code</p>
               </div>
 
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                Work email
-              </label>
-              <div className="relative mb-4 group">
-                <Mail className="w-4 h-4 text-slate-300 group-focus-within:text-amber-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" />
+              <div className="relative">
+                <Mail className="w-5 h-5 text-amber-400/70 absolute left-4 top-1/2 -translate-y-1/2" />
                 <input
                   ref={emailRef}
                   type="email" autoComplete="email" inputMode="email"
@@ -244,20 +222,19 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
                   onChange={e => { setEmail(e.target.value); setError(''); }}
                   onKeyDown={e => e.key === 'Enter' && !busy && requestCode()}
                   placeholder="you@apisindia.com"
-                  className="w-full bg-white/80 border-2 border-slate-200 focus:border-amber-400 rounded-xl
-                             pl-10 pr-3 py-3 text-sm font-semibold text-slate-800 placeholder:text-slate-300
-                             outline-none transition-all focus:shadow-lg focus:shadow-amber-500/10"
-                />
+                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-amber-50/60 border border-amber-100
+                             text-slate-800 placeholder:text-slate-400 text-[15px] font-semibold transition-all
+                             focus:outline-none focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15" />
               </div>
 
               <button
                 onClick={() => requestCode()} disabled={busy}
-                className="ih-sweep group w-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500
-                           text-white font-black py-3 rounded-xl flex items-center justify-center gap-2
-                           disabled:opacity-50 transition-all shadow-lg shadow-amber-500/30
-                           hover:shadow-xl hover:shadow-amber-500/40 hover:-translate-y-0.5 active:translate-y-0">
-                {busy ? <><Loader2 className="w-4 h-4 animate-spin" />Sending…</>
-                      : <>Send me a code<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></>}
+                className="ih-sheen relative overflow-hidden w-full mt-6 flex items-center justify-center gap-2
+                           px-6 py-4 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-white
+                           text-[16px] font-black shadow-[0_16px_34px_-10px_rgba(217,119,6,.6)] transition-all
+                           hover:-translate-y-0.5 hover:shadow-[0_20px_42px_-10px_rgba(217,119,6,.7)]
+                           disabled:opacity-60 disabled:translate-y-0">
+                {busy ? 'Sending…' : <>Send me a code<ArrowRight className="w-5 h-5" /></>}
               </button>
             </div>
           ) : (
@@ -267,19 +244,18 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
                 <ChevronLeft className="w-3.5 h-3.5" />Use a different email
               </button>
 
-              <div className="mb-5">
-                <h2 className="font-black text-lg text-slate-900 flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center ih-breathe">
-                    <KeyRound className="w-4 h-4 text-amber-600" />
-                  </span>
-                  Enter your code
-                </h2>
-                <p className="text-slate-400 text-xs mt-1.5 font-semibold">
-                  Sent to <span className="text-slate-700 font-black">{masked}</span> — valid for 5 minutes.
+              <div className="text-center mb-8">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <img src="/logo.png" alt="APIS" className="w-6 h-6 object-contain" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">APIS Intranet</span>
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Enter Your Code</h1>
+                <p className="text-slate-400 text-[15px] mt-1.5">
+                  Sent to <span className="text-slate-700 font-black">{masked}</span> — valid for 5 minutes
                 </p>
               </div>
 
-              <div className="flex gap-2 justify-between mb-4" onPaste={e => {
+              <div className="flex gap-2 justify-between" onPaste={e => {
                 const text = e.clipboardData.getData('text').replace(/\D/g, '');
                 if (text) { e.preventDefault(); setDigit(0, text.slice(0, OTP_LENGTH)); }
               }}>
@@ -293,23 +269,23 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
                     inputMode="numeric" autoComplete="one-time-code" maxLength={1}
                     aria-label={`Digit ${i + 1}`}
                     style={{ animationDelay: `${i * 45}ms` }}
-                    className={`ih-pop-in w-full aspect-square text-center text-xl font-black rounded-xl
-                      bg-white/80 border-2 outline-none transition-all
-                      ${d ? 'border-amber-400 text-amber-600 shadow-lg shadow-amber-500/15 scale-[1.03]'
-                          : 'border-slate-200 text-slate-800'}
-                      focus:border-amber-500 focus:shadow-lg focus:shadow-amber-500/20`}
+                    className={`ih-pop-in w-full aspect-square text-center text-xl font-black rounded-2xl
+                      border outline-none transition-all
+                      ${d ? 'bg-white border-amber-400 text-amber-600 ring-4 ring-amber-400/15'
+                          : 'bg-amber-50/60 border-amber-100 text-slate-800'}
+                      focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15`}
                   />
                 ))}
               </div>
 
               <button
                 onClick={() => verify(otp)} disabled={busy || otp.length !== OTP_LENGTH}
-                className="ih-sweep w-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500
-                           text-white font-black py-3 rounded-xl flex items-center justify-center gap-2
-                           disabled:opacity-40 disabled:shadow-none transition-all shadow-lg shadow-amber-500/30
-                           hover:shadow-xl hover:shadow-amber-500/40">
-                {busy ? <><Loader2 className="w-4 h-4 animate-spin" />Checking…</>
-                      : <>Sign in<Sparkles className="w-4 h-4" /></>}
+                className="ih-sheen relative overflow-hidden w-full mt-6 flex items-center justify-center gap-2
+                           px-6 py-4 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-white
+                           text-[16px] font-black shadow-[0_16px_34px_-10px_rgba(217,119,6,.6)] transition-all
+                           hover:-translate-y-0.5 hover:shadow-[0_20px_42px_-10px_rgba(217,119,6,.7)]
+                           disabled:opacity-60 disabled:translate-y-0">
+                {busy ? 'Checking…' : <>Sign in<Sparkles className="w-5 h-5" /></>}
               </button>
 
               <div className="text-center mt-4">
@@ -328,33 +304,44 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
           )}
 
           {error && (
-            <div className="ih-pop-in mt-4 flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
-              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-px" />
-              <p className="text-rose-700 text-xs font-bold">{error}</p>
+            <div className="ih-fade flex items-start gap-2 mt-3.5 rounded-xl bg-rose-50 border border-rose-200 p-3">
+              <AlertCircle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+              <p className="text-[12.5px] text-rose-700 leading-relaxed">{error}</p>
             </div>
           )}
           {note && !error && (
-            <div className="ih-pop-in mt-4 flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-px" />
-              <p className="text-emerald-700 text-xs font-bold">{note}</p>
+            <div className="ih-fade flex items-start gap-2 mt-3.5 rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+              <p className="text-[12.5px] text-emerald-700 leading-relaxed">{note}</p>
             </div>
+          )}
+
+          {!done && (
+            <>
+              <div className="flex items-center gap-3 mt-7">
+                <span className="flex-1 border-t border-dashed border-amber-200" />
+                <Droplet className="w-3 h-3 text-amber-300" />
+                <span className="flex-1 border-t border-dashed border-amber-200" />
+              </div>
+
+              {/* Rotating assurance — the screen would otherwise sit dead
+                  still while someone waits on an email. */}
+              <div key={tip} className="ih-pop-in flex items-center justify-center gap-1.5 text-[12.5px] text-slate-400 mt-4">
+                <Tip className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                {ASSURANCES[tip].text}
+              </div>
+
+              <p className="flex items-center justify-center gap-1.5 text-[12.5px] text-slate-400 mt-2">
+                <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                Trouble signing in? <span className="text-amber-600 font-bold">Contact the IT Helpdesk</span>
+              </p>
+            </>
           )}
         </div>
 
-        {/* Rotating assurance — the screen would otherwise sit dead still while
-            someone waits on an email. */}
-        {!done && (
-          <div className="mt-5 h-9 flex items-center justify-center overflow-hidden">
-            <div key={tip} className="ih-pop-in flex items-center gap-2 bg-white/60 backdrop-blur
-                                      border border-white/80 rounded-full px-3.5 py-2 shadow-sm">
-              <Tip className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <p className="text-[11px] font-bold text-slate-500">{ASSURANCES[tip].text}</p>
-            </div>
-          </div>
-        )}
-
-        <p className="text-center text-slate-300 text-[11px] font-bold mt-5">
-          APIS India Limited · Internal use only
+        <p className="ih-fade flex items-center justify-center gap-1.5 text-[11px] font-semibold text-amber-50/90 mt-5"
+          style={{ animationDelay: '220ms' }}>
+          <ShieldCheck className="w-3.5 h-3.5" />Your data is protected with enterprise-grade security
         </p>
       </div>
     </div>

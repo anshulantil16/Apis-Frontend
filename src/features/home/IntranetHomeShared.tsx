@@ -8,7 +8,7 @@ import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
   LifeBuoy, Globe2, CalendarClock, Landmark,
-  Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp, Headset,
+  Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp,
 } from 'lucide-react';
 
 /* lucide-react dropped brand icons, so these are small hand-rolled SVG marks
@@ -237,11 +237,22 @@ export const SAMPLE_ANNIVERSARIES: CelebrationEntry[] = [
   { name: 'Sneha Kapoor', date: '19 Jan' },
 ];
 
+export interface HomeAnnouncement {
+  title: string; body: string; date: string; icon: ComponentType<{ className?: string }>;
+}
+/* No real announcements/CMS feed is wired up yet — sample rows shown on the
+   home dashboard's Announcements card (IntranetHomePage.tsx), shaped the way
+   a real feed would look. Same honest "sample data" pattern as
+   SAMPLE_BIRTHDAYS above; also reused as-is on the Helpdesk page. */
+export const ANNOUNCEMENTS: HomeAnnouncement[] = [
+  { title: 'Helpdesk Portal Maintenance', body: 'The Helpdesk portal will be under maintenance on 2 Sep 2026 (11:00 PM – 12:00 AM).', date: '31 Aug 2026', icon: Sparkles },
+  { title: 'New Ticketing System Update', body: "We've upgraded our ticketing system for faster and better support.", date: '28 Aug 2026', icon: Megaphone },
+];
+
 export const COMING_SOON = [
   { label: 'Budget', icon: Wallet, soft: 'bg-emerald-50', accent: 'text-emerald-500' },
   { label: 'Compliance', icon: Scale, soft: 'bg-violet-50', accent: 'text-violet-500' },
   { label: 'Sanction Approvals', icon: Stamp, soft: 'bg-indigo-50', accent: 'text-indigo-500' },
-  { label: 'Helpdesk', icon: Headset, soft: 'bg-rose-50', accent: 'text-rose-500' },
   { label: 'Announcements', icon: Megaphone, soft: 'bg-amber-50', accent: 'text-amber-500' },
   { label: 'Help & Support', icon: LifeBuoy, soft: 'bg-sky-50', accent: 'text-sky-500' },
 ];
