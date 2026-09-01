@@ -7,11 +7,11 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Loader2, Upload, Plus, AlertCircle, CheckCircle2, Users, CalendarDays,
   Search, RotateCcw, Lock, Unlock, Pencil, X, Activity as ActivityIcon,
-  ChevronRight, UserPlus,
+  ChevronRight, UserPlus, Download,
 } from 'lucide-react';
 import {
-  ApiError, allPlans, createCycle, createEmployee, getActivity, getOverview,
-  importEmployees, listEmployees, reopenPlan, updateCycle, updateEmployee,
+  ApiError, allPlans, createCycle, createEmployee, downloadTemplate, getActivity,
+  getOverview, importEmployees, listEmployees, reopenPlan, updateCycle, updateEmployee,
 } from './api';
 import type { Activity, Cycle, Employee, PlanSummary } from './api';
 import { ROLE_LABEL, STATUS_TONE, d, dt } from './api';
@@ -214,6 +214,13 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
     if (tab !== 'activity') return;
     getActivity(cycleId ?? undefined).then(setFeed).catch(() => setFeed([]));
   }, [tab, cycleId]);
+
+  const getTemplate = async () => {
+    setBusy('template'); setError('');
+    try { await downloadTemplate(); }
+    catch (e) { setError(e instanceof ApiError ? e.message : 'Could not build the template.'); }
+    setBusy('');
+  };
 
   const upload = async (file: File) => {
     setBusy('import'); setError(''); setMsg('');
@@ -421,16 +428,21 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
               <div className="flex-1 min-w-[240px]">
                 <p className="font-black text-slate-700 text-sm mb-0.5">Employee master</p>
                 <p className="text-[11px] text-slate-400 font-semibold">
-                  Excel or CSV. Needs at least an Employee ID and a Name; it also reads
-                  Email, Designation, Department, Reporting Manager ID, HOD ID and User Type.
+                  Download the template, fill it in, upload it back. Every heading carries
+                  a note explaining what it holds, and the second sheet has a worked example.
                   Uploading again updates the people already here rather than duplicating them.
                 </p>
               </div>
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); }} />
               <div className="flex gap-2">
+                <button onClick={getTemplate} disabled={busy === 'template'}
+                  className="ih-sheen flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-[13px] border border-slate-200 shadow-sm">
+                  {busy === 'template' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  Template
+                </button>
                 <button onClick={() => setEditing('new')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-[13px] border border-slate-200">
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-[13px] border border-slate-200 shadow-sm">
                   <UserPlus className="w-4 h-4" /> Add one
                 </button>
                 <button onClick={() => fileRef.current?.click()} disabled={busy === 'import'}

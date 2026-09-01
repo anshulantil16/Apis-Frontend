@@ -251,6 +251,23 @@ export const updateEmployee = (employeeId: string, body: Partial<Employee>) =>
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
 
+/* The blank template, straight from the server so its columns can never drift
+   from the importer's. A plain link would do, but going through fetch means a
+   failure surfaces as a message rather than a browser error page. */
+export const downloadTemplate = async () => {
+  const r = await fetch(`${GS_API}/employees/template/`);
+  if (!r.ok) throw new ApiError('Could not build the template. Try again.');
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'goal-setting-employees-template.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
 export const importEmployees = async (file: File) => {
   const fd = new FormData();
   fd.append('file', file);
@@ -354,6 +371,63 @@ export const FIELD_LABEL: Record<string, string> = {
   weightage: 'Weightage', target_value: 'Plan / Target', frequency: 'Frequency',
   unit_of_measurement: 'Unit', parameter_type: 'Direction', data_source: 'Data source',
 };
+
+/* Changes, grouped the way a person reads them.
+ *
+ * The server sends a flat list: one entry per field, per KPI, per KRA. Shown
+ * raw that is unreadable - editing one KPI's weight and target produces two
+ * separate lines that look like two separate events, and nothing tells you
+ * which KRA they belong to.
+ *
+ * So they are folded back into the shape of the sheet: by KRA, then by KPI,
+ * with every field moved on one KPI collapsed onto a single line. */
+export interface KraChanges {
+  kra: string;
+  category?: string;
+  added: boolean;
+  removed: boolean;
+  kpisAdded: string[];
+  kpisRemoved: string[];
+  kpisChanged: { kpi: string; fields: { field: string; from: unknown; to: unknown }[] }[];
+}
+
+export function groupChanges(changes: Change[]): KraChanges[] {
+  const byKra = new Map<string, KraChanges>();
+  const get = (name: string, category?: string) => {
+    let g = byKra.get(name);
+    if (!g) {
+      g = { kra: name, category, added: false, removed: false,
+            kpisAdded: [], kpisRemoved: [], kpisChanged: [] };
+      byKra.set(name, g);
+    }
+    return g;
+  };
+
+  for (const c of changes) {
+    const g = get(c.kra, c.category);
+    if (c.type === 'kra_added') g.added = true;
+    else if (c.type === 'kra_removed') g.removed = true;
+    else if (c.type === 'kpi_added') g.kpisAdded.push(c.kpi || '(unnamed)');
+    else if (c.type === 'kpi_removed') g.kpisRemoved.push(c.kpi || '(unnamed)');
+    else if (c.type === 'kpi_changed') {
+      const kpi = c.kpi || '(unnamed)';
+      let row = g.kpisChanged.find(k => k.kpi === kpi);
+      if (!row) { row = { kpi, fields: [] }; g.kpisChanged.push(row); }
+      row.fields.push({ field: c.field || '', from: c.from, to: c.to });
+    }
+  }
+  // Removals first, then additions, then edits - biggest news at the top.
+  return [...byKra.values()].sort((a, b) =>
+    (b.removed ? 2 : b.added ? 1 : 0) - (a.removed ? 2 : a.added ? 1 : 0));
+}
+
+/** "40% → 55%" for a weight, plain values otherwise. */
+export function formatMove(field: string, from: unknown, to: unknown): string {
+  const show = (v: unknown) =>
+    v === '' || v === null || v === undefined ? 'blank'
+      : field === 'weightage' ? `${v}%` : String(v);
+  return `${show(from)} → ${show(to)}`;
+}
 
 export function describeChange(c: Change): string {
   switch (c.type) {
