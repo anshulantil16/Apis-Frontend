@@ -7,13 +7,14 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Loader2, Upload, Plus, AlertCircle, CheckCircle2, Users, CalendarDays,
   Search, RotateCcw, Lock, Unlock, Pencil, X, Activity as ActivityIcon,
-  ChevronRight, UserPlus, Download,
+  ChevronRight, UserPlus, Download, Trash2, ShieldAlert,
 } from 'lucide-react';
 import {
   ApiError, allPlans, createCycle, createEmployee, downloadTemplate, getActivity,
-  getOverview, importEmployees, listEmployees, reopenPlan, updateCycle, updateEmployee,
+  getOverview, getResetInfo, importEmployees, listEmployees, reopenPlan, resetData,
+  updateCycle, updateEmployee,
 } from './api';
-import type { Activity, Cycle, Employee, PlanSummary } from './api';
+import type { Activity, Cycle, Employee, PlanSummary, ResetInfo, ResetScope } from './api';
 import { ROLE_LABEL, STATUS_TONE, d, dt } from './api';
 import { Tile } from './chrome';
 
@@ -155,6 +156,123 @@ function PersonDrawer({ person, onClose, onSaved }: {
   );
 }
 
+/* Clearing the data.
+ *
+ * Behind a typed phrase rather than a confirm() dialog: clicking OK on a dialog
+ * is muscle memory, and this deletes the version history — the one thing the
+ * product promises is permanent. The counts are fetched first so the number
+ * being destroyed is on screen before the button is live.
+ *
+ * Scoped, unlike Appraisal Hub's all-or-nothing wipe. The common case after a
+ * trial run is "throw away the sheets but keep the people I just uploaded",
+ * and an all-or-nothing reset makes someone re-upload the master to carry on.
+ */
+function DangerZone({ onDone }: { onDone: (msg: string) => void }) {
+  const [info, setInfo] = useState<ResetInfo | null>(null);
+  const [scope, setScope] = useState<ResetScope | ''>('');
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const PHRASE = 'RESET_CONFIRMED';
+
+  useEffect(() => { getResetInfo().then(setInfo).catch(() => setInfo(null)); }, []);
+
+  const run = async () => {
+    if (!scope || typed !== PHRASE) return;
+    setBusy(true); setError('');
+    try {
+      const r = await resetData(scope, PHRASE);
+      const gone = Object.entries(r.removed)
+        .filter(([, n]) => n > 0)
+        .map(([k, n]) => `${n} ${k}`)
+        .join(', ');
+      onDone(`${r.message}${gone ? ` Removed ${gone}.` : ''}`);
+      setScope(''); setTyped('');
+      getResetInfo().then(setInfo).catch(() => {});
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not clear the data.');
+    }
+    setBusy(false);
+  };
+
+  if (!info) return null;
+
+  const WHAT: Record<ResetScope, { title: string; detail: string; count: number }> = {
+    plans: {
+      title: 'Clear the goal sheets',
+      detail: 'Every sheet, every version and the whole history. People and cycles stay.',
+      count: info.counts.plans,
+    },
+    people: {
+      title: 'Clear the employee list',
+      detail: 'Everyone except the administrator. Sheets and cycles stay.',
+      count: info.counts.people,
+    },
+    all: {
+      title: 'Clear everything',
+      detail: 'Sheets, history, people and cycles. The product goes back to empty.',
+      count: info.counts.plans + info.counts.people + info.counts.cycles,
+    },
+  };
+
+  return (
+    <div className="ih-inview bg-white border-2 border-dashed border-rose-200 rounded-2xl p-5">
+      <div className="flex items-center gap-2.5 mb-1">
+        <span className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center">
+          <ShieldAlert className="w-4.5 h-4.5 text-rose-500" />
+        </span>
+        <div>
+          <p className="font-black text-slate-800 text-sm">Clear the data</p>
+          <p className="text-[11px] text-slate-400 font-semibold">
+            There is no undo. This deletes the version history too — the record of who
+            changed whose goals.
+          </p>
+        </div>
+      </div>
+
+      <p className="text-[11px] font-semibold text-slate-400 mt-3 mb-2">
+        Right now: {info.counts.plans} goal sheet{info.counts.plans === 1 ? '' : 's'},{' '}
+        {info.counts.versions} version{info.counts.versions === 1 ? '' : 's'},{' '}
+        {info.counts.people} {info.counts.people === 1 ? 'person' : 'people'},{' '}
+        {info.counts.cycles} cycle{info.counts.cycles === 1 ? '' : 's'}.
+      </p>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        {(Object.keys(WHAT) as ResetScope[]).map(k => (
+          <button key={k} onClick={() => { setScope(scope === k ? '' : k); setTyped(''); }}
+            className={`text-left rounded-xl border px-3.5 py-3 transition-all ${
+              scope === k ? 'border-rose-400 bg-rose-50 shadow-md shadow-rose-500/10'
+                          : 'border-slate-200 bg-white hover:border-rose-200'}`}>
+            <p className="font-black text-[12px] text-slate-800">{WHAT[k].title}</p>
+            <p className="text-[10px] font-semibold text-slate-400 mt-0.5 leading-snug">
+              {WHAT[k].detail}
+            </p>
+          </button>
+        ))}
+      </div>
+
+      {scope && (
+        <div className="ih-fade mt-3 bg-rose-50 border border-rose-200 rounded-xl p-3.5">
+          <p className="text-[12px] font-bold text-rose-800 mb-2">
+            To confirm, type <code className="font-black bg-white px-1.5 py-0.5 rounded">{PHRASE}</code>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <input value={typed} onChange={e => setTyped(e.target.value)} autoFocus
+              placeholder={PHRASE}
+              className="flex-1 min-w-[180px] px-3 py-2 text-[13px] font-mono rounded-xl border border-rose-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400/40" />
+            <button onClick={run} disabled={busy || typed !== PHRASE}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white font-bold text-[13px]">
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {WHAT[scope].title}
+            </button>
+          </div>
+          {error && <p className="text-[12px] font-bold text-rose-700 mt-2">{error}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const ACTION_WORDS: Record<string, string> = {
   submit: 'submitted their goals',
   to_hod: 'sent a sheet to the HOD',
@@ -226,8 +344,9 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
     setBusy('import'); setError(''); setMsg('');
     try {
       const r = await importEmployees(file);
-      setMsg(`${r.created} added, ${r.updated} updated.` +
-        (r.error_count ? ` ${r.error_count} row${r.error_count === 1 ? '' : 's'} skipped.` : ''));
+      setMsg(`${r.created} added, ${r.updated} updated.`
+        + (r.skipped_samples ? ` ${r.skipped_samples} SAMPLE row${r.skipped_samples === 1 ? '' : 's'} ignored.` : '')
+        + (r.error_count ? ` ${r.error_count} row${r.error_count === 1 ? '' : 's'} skipped.` : ''));
       if (r.errors.length) setError(r.errors.slice(0, 5).join(' '));
       await refresh();
       if (tab === 'people') listEmployees(q).then(setPeople);
@@ -573,7 +692,7 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
             ))}
             {overview.cycles.length === 0 && (
               <div className="bg-white border border-slate-200 rounded-2xl py-12 text-center">
-                <CalendarDays className="w-9 h-9 text-slate-200 mx-auto mb-3" />
+                <CalendarDays className="ih-float w-9 h-9 text-slate-200 mx-auto mb-3" />
                 <p className="font-black text-slate-600 text-sm">No cycles yet</p>
                 <p className="text-[12px] text-slate-400 font-semibold mt-1">
                   Create one above, then open it so people can start.
@@ -581,6 +700,8 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
               </div>
             )}
           </div>
+
+          <DangerZone onDone={m => { setMsg(m); refresh(); }} />
         </>
       )}
 

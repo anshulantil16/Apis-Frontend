@@ -271,7 +271,8 @@ export const downloadTemplate = async () => {
 export const importEmployees = async (file: File) => {
   const fd = new FormData();
   fd.append('file', file);
-  return call<{ created: number; updated: number; errors: string[]; error_count: number }>(
+  return call<{ created: number; updated: number; skipped_samples: number;
+                errors: string[]; error_count: number }>(
     '/employees/import/', { method: 'POST', body: fd });
 };
 
@@ -313,6 +314,20 @@ export const getActivity = (cycleId?: number, limit = 150) => {
 export const savePlanAsAdmin = (employeeId: string, cycleId: number, kras: KRA[], actor_name: string) =>
   call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/`,
              json({ role: 'admin', kras, actor_name }));
+
+export type ResetScope = 'plans' | 'people' | 'all';
+
+export interface ResetInfo {
+  scopes: { key: ResetScope; label: string }[];
+  counts: { plans: number; versions: number; events: number; people: number; cycles: number };
+}
+
+export const getResetInfo = () => call<ResetInfo>('/reset/');
+
+/* The phrase is sent by the caller rather than baked in here, so the screen has
+   to make someone type it. A confirm() dialog is muscle memory; typing is not. */
+export const resetData = (scope: ResetScope, confirm: string) =>
+  call<{ message: string; removed: Record<string, number> }>('/reset/', json({ scope, confirm }));
 
 export const getOverview = (cycleId?: number) =>
   call<{
