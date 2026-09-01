@@ -202,8 +202,7 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
           {done ? (
             <div className="py-6 text-center ih-pop-in">
               <div className="flex items-center justify-center gap-2 mb-3">
-                <img src="/logo.png" alt="APIS" className="w-6 h-6 object-contain" />
-                <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">APIS Intranet</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">Apis India Limited</span>
               </div>
               <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-2" />
               <p className="font-black text-lg text-slate-900">Welcome back</p>
@@ -213,8 +212,7 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
             <div className="ih-stagger">
               <div className="text-center mb-8">
                 <div className="flex items-center justify-center gap-2 mb-3">
-                  <img src="/logo.png" alt="APIS" className="w-6 h-6 object-contain" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">APIS Intranet</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">Apis India Limited</span>
                 </div>
                 <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Sign In</h1>
                 <p className="text-slate-400 text-[15px] mt-1.5">We'll email you a six-digit code</p>
@@ -253,8 +251,7 @@ export function LoginPortal({ onSignedIn }: { onSignedIn: (u: PortalUser) => voi
 
               <div className="text-center mb-8">
                 <div className="flex items-center justify-center gap-2 mb-3">
-                  <img src="/logo.png" alt="APIS" className="w-6 h-6 object-contain" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">APIS Intranet</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.32em] text-amber-600">Apis India Limited</span>
                 </div>
                 <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Enter Your Code</h1>
                 <p className="text-slate-400 text-[15px] mt-1.5">
