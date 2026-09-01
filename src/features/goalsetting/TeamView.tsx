@@ -10,6 +10,7 @@ import { Loader2, Search, Users, AlertCircle, ChevronRight, Inbox } from 'lucide
 import { ApiError, hodTeam, managerTeam } from './api';
 import type { Role, TeamRow } from './api';
 import { STATUS_TONE, d } from './api';
+import { Tile } from './chrome';
 
 export function TeamView({ actorId, role, cycleId, cycleName, onOpen }: {
   actorId: string;
@@ -66,20 +67,14 @@ export function TeamView({ actorId, role, cycleId, cycleName, onOpen }: {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
-        {[
-          { l: 'In your team', v: rows.length, sub: cycleName, tone: 'text-slate-800' },
-          { l: 'Waiting on you', v: waiting, sub: 'ready to review',
-            tone: waiting ? 'text-amber-600' : 'text-slate-800' },
-          { l: 'Not started', v: notStarted, sub: 'no sheet yet',
-            tone: notStarted ? 'text-rose-600' : 'text-slate-800' },
-        ].map(k => (
-          <div key={k.l} className="bg-white border border-slate-200 rounded-xl px-3.5 py-3 shadow-sm">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{k.l}</p>
-            <p className={`text-xl font-black leading-none mt-0.5 ${k.tone}`}>{k.v}</p>
-            <p className="text-[10px] font-semibold text-slate-400 mt-1 truncate">{k.sub}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Tile label="In your team" value={rows.length} sub={cycleName} icon={Users} delay={0} />
+        <Tile label="Waiting on you" value={waiting} sub="ready to review" icon={Inbox}
+          tone={waiting ? 'amber' : 'slate'} delay={70}
+          onClick={() => setOnly(only === 'mine' ? 'all' : 'mine')} />
+        <Tile label="Not started" value={notStarted} sub="no sheet yet" icon={AlertCircle}
+          tone={notStarted ? 'rose' : 'slate'} delay={140}
+          onClick={() => setOnly(only === 'none' ? 'all' : 'none')} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -93,8 +88,8 @@ export function TeamView({ actorId, role, cycleId, cycleName, onOpen }: {
         </div>
         {([['all', 'Everyone'], ['mine', 'Waiting on me'], ['none', 'Not started']] as const).map(([k, label]) => (
           <button key={k} onClick={() => setOnly(k)}
-            className={`px-3 py-2 rounded-xl text-[12px] font-bold border transition-colors ${
-              only === k ? 'bg-amber-500 text-white border-amber-500'
+            className={`ih-underline px-3.5 py-2 rounded-xl text-[12px] font-bold border transition-all ${
+              only === k ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/25'
                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
             {label}
           </button>
@@ -102,8 +97,8 @@ export function TeamView({ actorId, role, cycleId, cycleName, onOpen }: {
       </div>
 
       {shown.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl py-14 text-center">
-          <Inbox className="w-9 h-9 text-slate-200 mx-auto mb-3" />
+        <div className="ih-inview bg-white border border-slate-200 rounded-2xl py-16 text-center">
+          <Inbox className="ih-float w-10 h-10 text-slate-200 mx-auto mb-3" />
           <p className="font-black text-slate-600 text-sm">Nothing here</p>
           <p className="text-[12px] text-slate-400 font-semibold mt-1">
             {only === 'mine' ? 'No sheets are waiting on you right now.'
@@ -112,7 +107,7 @@ export function TeamView({ actorId, role, cycleId, cycleName, onOpen }: {
           </p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="ih-inview bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px]">
               <thead className="bg-slate-50 border-b border-slate-200">
@@ -129,7 +124,8 @@ export function TeamView({ actorId, role, cycleId, cycleName, onOpen }: {
                   const p = r.plan;
                   const tone = p ? STATUS_TONE[p.status] : null;
                   return (
-                    <tr key={r.employee_id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr key={r.employee_id}
+                      className="hover:bg-amber-50/40 transition-colors group">
                       <td className="px-4 py-3">
                         <p className="font-bold text-[13px] text-slate-800">{r.name}</p>
                         <p className="text-[11px] text-slate-400 font-semibold">
@@ -164,7 +160,7 @@ export function TeamView({ actorId, role, cycleId, cycleName, onOpen }: {
                         <button onClick={() => onOpen(r.employee_id)}
                           className="inline-flex items-center gap-1 text-[12px] font-black text-amber-700 hover:text-amber-800">
                           {p?.status === mineStatus ? 'Review' : 'Open'}
-                          <ChevronRight className="w-3.5 h-3.5" />
+                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </button>
                       </td>
                     </tr>

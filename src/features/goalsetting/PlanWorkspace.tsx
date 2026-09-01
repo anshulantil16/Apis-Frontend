@@ -29,7 +29,9 @@ const STATUS_LABEL: Record<PlanStatus, string> = {
   accepted: 'Accepted — goals agreed',
   returned: 'Sent back for changes',
 };
-import { GoalSheet, WeightMeter } from './GoalSheet';
+import { GoalSheet } from './GoalSheet';
+import { Panel, WeightRing } from './chrome';
+import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 import { ChangesSinceMine, PlanHistory } from './History';
 
 interface Action {
@@ -228,17 +230,20 @@ export function PlanWorkspace({
       </button>
 
       {/* Who it is, where it sits. */}
-      <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+        className="ih-inview ih-tilt3d ih-spotlight relative overflow-hidden bg-white
+          border border-slate-200 rounded-2xl px-5 py-4 shadow-sm">
+        <span className="ih-drift pointer-events-none absolute -top-16 -right-10 w-52 h-52 rounded-full bg-amber-300/20 blur-3xl" aria-hidden />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="font-black text-lg text-slate-800 truncate">{plan.employee_name}</h2>
-              <span className={`text-[10px] font-black px-2 py-1 rounded-full border flex items-center gap-1.5 ${tone.chip}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${tone.dot}`} />
+              <h2 className="font-black text-xl text-slate-800 truncate">{plan.employee_name}</h2>
+              <span className={`ih-pop-in text-[10px] font-black px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${tone.chip}`}>
+                <span className={`ih-pulse-glow w-1.5 h-1.5 rounded-full ${tone.dot}`} />
                 {plan.status_label}
               </span>
             </div>
-            <p className="text-[12px] text-slate-500 font-semibold mt-0.5">
+            <p className="text-[12px] text-slate-500 font-semibold mt-1">
               {plan.employee_code}
               {plan.designation && ` · ${plan.designation}`}
               {plan.department && ` · ${plan.department}`}
@@ -248,12 +253,7 @@ export function PlanWorkspace({
               Waiting on {WAITING_ON[plan.status]}.
             </p>
           </div>
-          <div className="shrink-0">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-              Total weightage
-            </p>
-            <WeightMeter kras={kras} />
-          </div>
+          <WeightRing total={weight} />
         </div>
       </div>
 
@@ -265,7 +265,7 @@ export function PlanWorkspace({
       {/* Notes left by whoever handled it. */}
       {[['Employee', plan.employee_note], ['Manager', plan.manager_note],
         ['HOD', plan.hod_note]].filter(([, v]) => v).length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 space-y-2">
+        <Panel className="px-5 py-4 space-y-2">
           {([['Employee', plan.employee_note], ['Manager', plan.manager_note],
              ['HOD', plan.hod_note]] as [string, string][])
             .filter(([, v]) => v)
@@ -277,7 +277,7 @@ export function PlanWorkspace({
                 {text}
               </p>
             ))}
-        </div>
+        </Panel>
       )}
 
       {!canEdit && plan.cycle_status === 'open' && (
@@ -358,7 +358,7 @@ export function PlanWorkspace({
 
       {(canEdit || actions.length > 0) && !noteFor && (
         <div className="sticky bottom-4 z-10">
-          <div className="bg-white/95 border border-slate-200 rounded-2xl px-4 py-3 shadow-lg flex flex-wrap items-center gap-3">
+          <div className="ih-glass border border-slate-200 rounded-2xl px-4 py-3 shadow-xl shadow-slate-900/10 flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[180px]">
               {dirty ? (
                 <p className="text-[12px] font-bold text-amber-600">Unsaved changes</p>
@@ -383,7 +383,7 @@ export function PlanWorkspace({
               const Icon = a.icon;
               return (
                 <button key={a.key} onClick={() => run(a)} disabled={!!busy} title={a.hint}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-[13px] disabled:opacity-40 transition-colors ${a.tone}`}>
+                  className={`ih-sheen flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-[13px] disabled:opacity-40 transition-all shadow-md ${a.tone}`}>
                   {busy === a.key ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
                   {a.label}
                 </button>
@@ -394,11 +394,17 @@ export function PlanWorkspace({
       )}
 
       {plan.status === 'accepted' && (
-        <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <p className="text-[13px] font-bold text-emerald-800">
-            Goals agreed on {dt(plan.accepted_at)}.
-          </p>
+        <div className="ih-pop-in ih-halo relative flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl px-5 py-4"
+          style={{ ['--ih-halo' as string]: 'rgba(16,185,129,.3)' }}>
+          <span className="ih-float w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+          </span>
+          <div>
+            <p className="text-[14px] font-black text-emerald-900">Goals agreed</p>
+            <p className="text-[12px] font-semibold text-emerald-700">
+              Locked on {dt(plan.accepted_at)}. Only an administrator can change them now.
+            </p>
+          </div>
         </div>
       )}
 

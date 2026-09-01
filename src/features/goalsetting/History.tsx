@@ -43,7 +43,7 @@ function VersionCard({ v, isFirst, isLatest }: { v: Version; isFirst: boolean; i
       {/* the rail */}
       <span className="absolute left-[11px] top-6 bottom-0 w-px bg-slate-200" aria-hidden />
       <span className={`absolute left-[5px] top-2.5 w-3.5 h-3.5 rounded-full border-2 border-white ring-2 ${
-        isLatest ? 'bg-amber-500 ring-amber-200' : 'bg-slate-300 ring-slate-100'}`} aria-hidden />
+        isLatest ? 'ih-pulse-glow bg-amber-500 ring-amber-200' : 'bg-slate-300 ring-slate-100'}`} aria-hidden />
 
       <div className="pb-5">
         <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -121,10 +121,10 @@ export function PlanHistory({ plan }: { plan: Plan }) {
   const versions = [...(plan.versions || [])].sort((a, b) => b.version_no - a.version_no);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+    <div className="ih-inview bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
       <div className="flex items-center gap-2.5 mb-4">
-        <span className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center">
-          <HistoryIcon className="w-4 h-4 text-slate-400" />
+        <span className="ih-float w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
+          <HistoryIcon className="w-4 h-4 text-amber-500" />
         </span>
         <div>
           <h3 className="font-black text-slate-700 text-sm">History</h3>
@@ -168,8 +168,9 @@ export function ChangesSinceMine({ plan }: { plan: Plan }) {
   if (!mine) return null;
 
   return (
-    <div className={`rounded-2xl border p-4 ${after.length
-      ? 'bg-amber-50/60 border-amber-200' : 'bg-emerald-50/60 border-emerald-200'}`}>
+    <div className={`ih-pop-in ih-halo relative rounded-2xl border p-4 ${after.length
+      ? 'bg-amber-50/70 border-amber-200' : 'bg-emerald-50/70 border-emerald-200'}`}
+      style={{ ['--ih-halo' as string]: after.length ? 'rgba(245,158,11,.25)' : 'rgba(16,185,129,.25)' }}>
       <p className={`font-black text-sm mb-1 ${after.length ? 'text-amber-800' : 'text-emerald-800'}`}>
         {after.length
           ? `${after.length} change${after.length === 1 ? '' : 's'} since you submitted`

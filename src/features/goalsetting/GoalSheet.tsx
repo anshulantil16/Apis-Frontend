@@ -131,7 +131,10 @@ export function GoalSheet({ kras, categories, frequencies, canEdit, onChange }: 
           .filter(({ k }) => k.category === cat);
 
         return (
-          <div key={cat} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div key={cat}
+            style={{ transitionDelay: `${catIdx * 60}ms` }}
+            className="ih-inview bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm
+              hover:shadow-md transition-shadow">
             <div className={`flex items-center justify-between gap-3 px-4 py-3 border-b ${tone.head}`}>
               <div className="flex items-center gap-2.5 min-w-0">
                 <h3 className={`font-black text-sm ${tone.title} truncate`}>{cat}</h3>
@@ -142,9 +145,10 @@ export function GoalSheet({ kras, categories, frequencies, canEdit, onChange }: 
               {canEdit && (
                 <button
                   onClick={() => addKra(cat)}
-                  className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border bg-white/70 transition-colors ${tone.btn}`}
+                  className={`ih-sheen group flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5
+                    rounded-lg border bg-white/80 shadow-sm transition-all hover:shadow ${tone.btn}`}
                 >
-                  <Plus className="w-3.5 h-3.5" /> Add KRA
+                  <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform" /> Add KRA
                 </button>
               )}
             </div>
@@ -157,7 +161,8 @@ export function GoalSheet({ kras, categories, frequencies, canEdit, onChange }: 
             ) : (
               <div className="divide-y divide-slate-100">
                 {rows.map(({ k, i }, n) => (
-                  <div key={k.id ?? k._k ?? n} className={`border-l-4 ${tone.edge} px-4 py-3.5`}>
+                  <div key={k.id ?? k._k ?? n}
+                    className={`ih-fade border-l-4 ${tone.edge} px-4 py-3.5 hover:bg-slate-50/50 transition-colors`}>
                     <div className="flex items-start gap-3 mb-2.5">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2 shrink-0">
                         KRA {n + 1}
@@ -254,8 +259,8 @@ export function GoalSheet({ kras, categories, frequencies, canEdit, onChange }: 
 
                     {canEdit && (
                       <button onClick={() => addKpi(i)}
-                        className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-amber-600 px-2 py-1 rounded-lg hover:bg-amber-50">
-                        <Plus className="w-3.5 h-3.5" /> Add KPI
+                        className="group mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-amber-600 px-2.5 py-1.5 rounded-lg hover:bg-amber-50 transition-colors">
+                        <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform" /> Add KPI
                       </button>
                     )}
                   </div>

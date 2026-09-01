@@ -15,6 +15,7 @@ import {
 } from './api';
 import type { Activity, Cycle, Employee, PlanSummary } from './api';
 import { ROLE_LABEL, STATUS_TONE, d, dt } from './api';
+import { Tile } from './chrome';
 
 type Tab = 'overview' | 'people' | 'cycles' | 'activity';
 
@@ -275,8 +276,8 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
       <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 w-fit">
         {(['overview', 'people', 'cycles', 'activity'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-3.5 py-1.5 rounded-lg text-[12px] font-black capitalize transition-colors ${
-              tab === t ? 'bg-amber-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+            className={`ih-underline px-3.5 py-1.5 rounded-lg text-[12px] font-black capitalize transition-all ${
+              tab === t ? 'bg-amber-500 text-white shadow-md shadow-amber-500/25' : 'text-slate-500 hover:bg-slate-50'}`}>
             {t}
           </button>
         ))}
@@ -297,25 +298,22 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
 
       {tab === 'overview' && overview && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {[
-              { l: 'People', v: overview.employees, sub: `${overview.managers} managers · ${overview.hods} HODs` },
-              { l: 'Sheets started', v: overview.plans, sub: `${overview.not_started} not started` },
-              { l: 'Agreed', v: overview.accepted, sub: 'goals locked in' },
-              { l: 'Waiting on reviewers', v: (overview.by_status.submitted || 0) + (overview.by_status.with_hod || 0),
-                sub: 'with manager or HOD' },
-            ].map(k => (
-              <div key={k.l} className="bg-white border border-slate-200 rounded-xl px-3.5 py-3 shadow-sm">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{k.l}</p>
-                <p className="text-xl font-black text-slate-800 leading-none mt-0.5">{k.v}</p>
-                <p className="text-[10px] font-semibold text-slate-400 mt-1 truncate">{k.sub}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <Tile label="People" value={overview.employees} icon={Users} delay={0}
+              sub={`${overview.managers} managers · ${overview.hods} HODs`} />
+            <Tile label="Sheets started" value={overview.plans} icon={CalendarDays} delay={70}
+              sub={`${overview.not_started} not started`}
+              tone={overview.not_started ? 'amber' : 'slate'} />
+            <Tile label="Agreed" value={overview.accepted} icon={CheckCircle2} delay={140}
+              sub="goals locked in" tone={overview.accepted ? 'emerald' : 'slate'} />
+            <Tile label="Waiting on reviewers" icon={ActivityIcon} delay={210}
+              value={(overview.by_status.submitted || 0) + (overview.by_status.with_hod || 0)}
+              sub="with manager or HOD" tone="violet" />
           </div>
 
           {/* Where everyone is. One measure across stages, so one hue
               light-to-dark rather than a colour per stage. */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="ih-inview bg-white border border-slate-200 rounded-2xl p-4">
             <p className="font-black text-slate-700 text-sm mb-0.5">Where the sheets are</p>
             <p className="text-[11px] text-slate-400 font-semibold mb-3">
               Every goal sheet in this cycle, by the stage it is sitting at.
@@ -334,7 +332,8 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
                     <span className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <span className="block h-full rounded-full"
                         style={{ width: `${Math.max(pct, count > 0 ? 2 : 0)}%`,
-                                 backgroundColor: pct >= 66 ? '#b45309' : pct >= 33 ? '#f59e0b' : '#fcd34d' }} />
+                                 backgroundColor: pct >= 66 ? '#b45309' : pct >= 33 ? '#f59e0b' : '#fcd34d',
+                                 transition: 'width .9s cubic-bezier(.2,.8,.2,1)' }} />
                     </span>
                     <span className="w-16 shrink-0 text-right text-[11px] font-black text-slate-700 tabular-nums">
                       {count}<span className="text-slate-300"> · {pct}%</span>
