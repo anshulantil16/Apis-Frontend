@@ -13,43 +13,96 @@ import { useEffect, useRef, useState } from 'react';
 import type { ComponentType, MouseEvent, ReactNode } from 'react';
 
 /* ── pointer helpers ────────────────────────────────────────────────────────
-   These write CSS custom properties instead of React state, so a card can
-   track the cursor at 60fps without re-rendering anything. */
+ * These write CSS custom properties instead of React state, so a card can
+ * track the cursor without re-rendering anything.
+ *
+ * They must never measure inside a mousemove. Calling getBoundingClientRect()
+ * on every move and then writing a style is layout thrashing: the write
+ * invalidates layout, the next event's read forces the browser to recompute it
+ * synchronously, and mousemove fires far more often than once a frame. With
+ * these handlers spread across dozens of cards, that alone made hovering and
+ * clicking feel like slow motion — the main thread was doing forced layout
+ * instead of handling input.
+ *
+ * So: measure ONCE when the cursor enters an element, cache it, and coalesce
+ * the writes into one rAF per frame. A card cannot move or resize while the
+ * cursor is inside it without a scroll or resize, and both of those clear the
+ * cache below. */
+
+let rects = new WeakMap<HTMLElement, DOMRect>();
+
+function rectOf(el: HTMLElement): DOMRect {
+  let r = rects.get(el);
+  if (!r) { r = el.getBoundingClientRect(); rects.set(el, r); }
+  return r;
+}
+
+/* Anything that can move an element out from under its cached rect drops the
+   cache. A WeakMap has no clear(), and replacing it is the cheapest way to
+   drop every entry at once — the next hover re-measures one element. */
+if (typeof window !== 'undefined') {
+  const clear = () => { rects = new WeakMap(); };
+  window.addEventListener('scroll', clear, { passive: true, capture: true });
+  window.addEventListener('resize', clear, { passive: true });
+}
+
+/* One write per element per frame, applied in a rAF so a burst of mousemove
+   events costs one style flush rather than one per event. */
+const pending = new Map<HTMLElement, Record<string, string>>();
+let frame = 0;
+
+function write(el: HTMLElement, vars: Record<string, string>) {
+  pending.set(el, { ...pending.get(el), ...vars });
+  if (frame) return;
+  frame = requestAnimationFrame(() => {
+    frame = 0;
+    for (const [node, v] of pending) {
+      for (const k in v) node.style.setProperty(k, v[k]);
+    }
+    pending.clear();
+  });
+}
+
+/** Drops a cached measurement — call when the cursor leaves. */
+function forget(el: HTMLElement) { rects.delete(el); }
 
 /** Cursor-follow glow. Pair with `ih-spotlight`. */
 export function onSpotlightMove(e: MouseEvent<HTMLElement>) {
-  const r = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+  const el = e.currentTarget;
+  const r = rectOf(el);
+  write(el, { '--mx': `${e.clientX - r.left}px`, '--my': `${e.clientY - r.top}px` });
 }
 
 /** 3D tilt toward the cursor. Pair with `ih-tilt3d` (and usually `ih-spotlight`). */
 export function onTilt3dMove(e: MouseEvent<HTMLElement>) {
   const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
+  const r = rectOf(el);
   const px = (e.clientX - r.left) / r.width - 0.5;
   const py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--ry', `${px * 12}deg`);
-  el.style.setProperty('--rx', `${-py * 12}deg`);
-  onSpotlightMove(e);
+  write(el, {
+    '--ry': `${px * 12}deg`, '--rx': `${-py * 12}deg`,
+    '--mx': `${e.clientX - r.left}px`, '--my': `${e.clientY - r.top}px`,
+  });
 }
 
 export function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
+  const el = e.currentTarget;
+  forget(el);
+  write(el, { '--rx': '0deg', '--ry': '0deg' });
 }
 
 /** Slight pull toward the cursor. Pair with `ih-magnetic` — good on buttons. */
 export function onMagneticMove(e: MouseEvent<HTMLElement>) {
   const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  el.style.setProperty('--mx', `${e.clientX - r.left - r.width / 2}px`);
-  el.style.setProperty('--my', `${e.clientY - r.top - r.height / 2}px`);
+  const r = rectOf(el);
+  write(el, { '--mx': `${e.clientX - r.left - r.width / 2}px`,
+              '--my': `${e.clientY - r.top - r.height / 2}px` });
 }
 
 export function onMagneticLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--mx', '0px');
-  e.currentTarget.style.setProperty('--my', '0px');
+  const el = e.currentTarget;
+  forget(el);
+  write(el, { '--mx': '0px', '--my': '0px' });
 }
 
 /** All four tilt/spotlight handlers as props — spread onto a card. */

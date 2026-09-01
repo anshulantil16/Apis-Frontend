@@ -11,16 +11,10 @@ import { ApproverBoard } from './ApproverBoard';
 import { AdminDashboard } from './AdminDashboard';
 import { BookingDesk } from './BookingDesk';
 
-/* Cursor tilt, written to CSS vars so tracking costs no re-renders. */
-const onTilt = (e: React.MouseEvent<HTMLElement>) => {
-  const el = e.currentTarget, r = el.getBoundingClientRect();
-  el.style.setProperty('--ry', `${((e.clientX - r.left) / r.width - 0.5) * 10}deg`);
-  el.style.setProperty('--rx', `${-((e.clientY - r.top) / r.height - 0.5) * 10}deg`);
-};
-const offTilt = (e: React.MouseEvent<HTMLElement>) => {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
-};
+/* Cursor tilt from the shared kit, which measures once per hover and batches
+   its writes. The private copy that used to live here measured inside every
+   mousemove, forcing a synchronous layout on each one. */
+import { onTilt3dMove as onTilt, onTilt3dLeave as offTilt } from '../../ui';
 
 export function Portal({ user, onLogout }: { user: User; onLogout: () => void }) {
   const isApprover = ['manager', 'hr', 'finance'].includes(user.role);

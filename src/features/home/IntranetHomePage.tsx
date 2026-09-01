@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
   ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, PartyPopper,
@@ -92,29 +92,10 @@ interface IntranetHomePageProps {
   onNavigate: (id: QuickAccessId) => void;
 }
 
-/* Cursor-follow spotlight: write pointer position into CSS vars the
-   .ih-spotlight rule reads, so the glow tracks the mouse with no re-render. */
-function onSpotlightMove(e: MouseEvent<HTMLElement>) {
-  const r = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-}
-
-/* Real 3D tilt — same trick, but feeding a perspective transform. Writing to
-   CSS vars (rather than React state) keeps this at zero re-renders. */
-function onTilt3dMove(e: MouseEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width - 0.5;
-  const py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--ry', `${px * 12}deg`);
-  el.style.setProperty('--rx', `${-py * 12}deg`);
-  onSpotlightMove(e);
-}
-function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
-}
+/* Pointer handlers come from the shared kit: it measures once per
+   hover and batches its writes, where this file's old private copy
+   measured inside every mousemove and forced a synchronous layout. */
+import { onSpotlightMove, onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 /* Counts up to `target` once the element is on screen. Static numbers read as
    dead; a number that ticks up reads as live data. */

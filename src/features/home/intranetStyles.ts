@@ -152,16 +152,14 @@ html.ih-reveal-ready .ih-inview[data-in] { opacity:1; transform:none; }
 /* Frosted panel. Use over a mesh/aurora background — on flat white it just
    looks like a slightly grey card and costs a paint layer for nothing. */
 .ih-glass {
-  /* 10px, not 20px. backdrop-filter re-reads and re-blurs everything painted
-     behind the element, and what is behind it here is a set of permanently
-     animating aurora blobs — so the cost is paid every frame, not once. At
-     72% opacity the difference between a 10px and a 20px backdrop blur is
-     not visible; the difference in compositing cost is roughly fourfold.
-     No contain:paint here — it would clip anything a panel overflows (a
-     dropdown, a tooltip) for a saving that does not matter on a static card. */
-  background: rgba(255,255,255,.72);
-  backdrop-filter: blur(10px) saturate(1.5);
-  -webkit-backdrop-filter: blur(10px) saturate(1.5);
+  /* No backdrop-filter. Reducing it from 20px to 10px was treating a symptom:
+     the cost of backdrop-filter is in doing it at all, not in the radius. It
+     re-reads and re-blurs everything painted behind the element on every
+     frame in which that content moves — and what is behind it here is a set
+     of permanently animating aurora blobs, so it never stops paying.
+     A slightly more opaque white over an already-soft background is visually
+     within a hair of the frosted version and costs nothing. */
+  background: rgba(255,255,255,.82);
   border: 1px solid rgba(255,255,255,.85);
   box-shadow: 0 8px 32px -12px rgba(15,23,42,.18), inset 0 1px 0 rgba(255,255,255,.9);
 }
@@ -266,4 +264,48 @@ html.ih-reveal-ready .ih-inview[data-in] { opacity:1; transform:none; }
   /* the skeleton still needs to read as a placeholder without its shimmer */
   .ih-skeleton { background:#eef2f7; }
 }
+
+/* ── the frosted-glass tax ──────────────────────────────────────────────────
+ *
+ * There were 76 backdrop-blur utilities across the app, 40 of them at -xl
+ * (24px). backdrop-filter is the most expensive thing a page can ask a
+ * browser for: the element cannot be drawn until everything painted behind it
+ * has been captured and blurred, and that work is redone whenever the content
+ * behind moves. Behind these panels sit permanently animating aurora blobs,
+ * so "whenever the content behind moves" means every single frame, forever —
+ * on every screen at once, because these utilities are spread across the
+ * whole app rather than concentrated on the home page.
+ *
+ * That is what made clicks and animations feel like slow motion: the
+ * compositor never got a chance to go idle, so input handling and animation
+ * frames queued behind blur work.
+ *
+ * Killing the filter and leaning on the translucent background that these
+ * elements already carry is visually almost indistinguishable here — the
+ * backdrop is a soft pastel wash, so blurring it changes very little — and it
+ * removes the cost entirely. The panels stay translucent; they simply stop
+ * re-blurring the page behind them sixty times a second.
+ *
+ * If a specific panel ever genuinely needs frosting (over a photo, say), add
+ * .ih-frost to it — that one opts back in, deliberately and in one place. */
+[class*="backdrop-blur"]:not(.ih-frost) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Without the blur, a very transparent panel reads as washed-out rather than
+   frosted, so the thinnest tiers get enough white to keep text legible. */
+[class*="backdrop-blur"]:not(.ih-frost):is(
+  [class*="bg-white/5"],[class*="bg-white/6"],[class*="bg-white/7"]
+) { background-color: rgba(255,255,255,.86); }
+
+.ih-frost {
+  backdrop-filter: blur(10px) saturate(1.4);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+}
+
+/* The halo is a 28px-blurred pseudo-element animating scale and opacity, used
+   on eleven cards. Promote it so the blur is rasterised once and the loop runs
+   on the compositor instead of repainting. */
+.ih-halo::before { will-change: transform, opacity; }
 `;

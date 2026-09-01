@@ -7,7 +7,7 @@
  * POLICY_ROWS / SUMMARY_STATS for a real fetch once that API exists — the
  * page itself doesn't need to change shape.
  */
-import { useEffect, useMemo, useState, type ComponentType, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
   ChevronRight, ChevronDown, Plus, Search, FileText, ClipboardList,
   LayoutTemplate, ListChecks, FolderOpen, CalendarClock,
@@ -41,27 +41,10 @@ function AnimatedCount({ value, durationMs }: { value: number | string; duration
   return <>{live}</>;
 }
 
-/* Local copies of the same cursor-follow spotlight / 3D tilt helpers used on
- * the home page and APIS Tree — each screen owns its own tiny copy rather
- * than importing across features. */
-function onSpotlightMove(e: MouseEvent<HTMLElement>) {
-  const r = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-}
-function onTilt3dMove(e: MouseEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width - 0.5;
-  const py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--ry', `${px * 10}deg`);
-  el.style.setProperty('--rx', `${-py * 10}deg`);
-  onSpotlightMove(e);
-}
-function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
-}
+/* Pointer handlers come from the shared kit: it measures once per
+   hover and batches its writes, where this file's old private copy
+   measured inside every mousemove and forced a synchronous layout. */
+import { onSpotlightMove, onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 interface CategoryCard {
   label: string; count: number; icon: ComponentType<{ className?: string }>;

@@ -1,4 +1,4 @@
-import { useState, useRef, type MouseEvent } from 'react';
+import { useState, useRef } from 'react';
 import {
   Download, AlertCircle, Building2, FileSpreadsheet, HeartPulse, Users,
   LayoutDashboard, Sparkles,
@@ -13,27 +13,10 @@ import { TOOL_STYLES } from '../../Components/toolStyles';
 
 type ToolId = 'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi' | 'territory';
 
-/* ── Shared intranet motion helpers (mirrors IntranetHomePage) ───────────────
-   Cursor position is written into CSS vars the .ih-spotlight / .ih-tilt3d
-   rules read, so the glow + tilt track the pointer with zero re-renders. */
-function onSpotlightMove(e: MouseEvent<HTMLElement>) {
-  const r = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-}
-function onTilt3dMove(e: MouseEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width - 0.5;
-  const py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--ry', `${px * 12}deg`);
-  el.style.setProperty('--rx', `${-py * 12}deg`);
-  onSpotlightMove(e);
-}
-function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
-}
+/* Pointer handlers come from the shared kit: it measures once per
+   hover and batches its writes, where this file's old private copy
+   measured inside every mousemove and forced a synchronous layout. */
+import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 /* The sidebar and page header come from IntranetShell — this page renders only
    its own centre content, starting with the tool switcher below. */

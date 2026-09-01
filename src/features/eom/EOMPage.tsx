@@ -1,4 +1,4 @@
-import { useState, useEffect, type MouseEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, BarChart3, LineChart, Mail, Zap } from 'lucide-react';
 import { EOMEmployeeView }  from '../../Components/EOM/employee/EOMEmployeeView';
 import { EOMHodView }       from '../../Components/EOM/hod/EOMHodView';
@@ -12,27 +12,10 @@ export const EOM_API = `${API_BASE}/api/eom`;
 type Role = 'employee' | 'hod' | 'panel' | 'hr';
 type LoginStep = 'id' | 'otp' | 'admin_otp';
 
-/* ── Shared intranet motion helpers (mirrors IntranetHomePage) ───────────────
-   Cursor position is written into CSS vars the .ih-spotlight / .ih-tilt3d
-   rules read, so the glow + tilt track the pointer with zero re-renders. */
-function onSpotlightMove(e: MouseEvent<HTMLElement>) {
-  const r = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-}
-function onTilt3dMove(e: MouseEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width - 0.5;
-  const py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--ry', `${px * 12}deg`);
-  el.style.setProperty('--rx', `${-py * 12}deg`);
-  onSpotlightMove(e);
-}
-function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
-}
+/* Pointer handlers come from the shared kit: it measures once per
+   hover and batches its writes, where this file's old private copy
+   measured inside every mousemove and forced a synchronous layout. */
+import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 interface EOMPageProps { onNavigateBack?: () => void; }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, type MouseEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
 import { AppraisalEmployeeView } from '../../Components/Appraisal/employee/AppraisalEmployeeView';
 import { AppraisalManagerView } from '../../Components/Appraisal/manager/AppraisalManagerView';
@@ -15,27 +15,10 @@ type Role = 'employee' | 'manager' | 'hod' | 'hr';
 const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const APPRAISAL_API = `${_API_BASE}/api/appraisal`;
 
-/* ── Shared intranet motion helpers (mirrors IntranetHomePage) ───────────────
-   Cursor position is written into CSS vars the .ih-spotlight / .ih-tilt3d
-   rules read, so the glow + tilt track the pointer with zero re-renders. */
-function onSpotlightMove(e: MouseEvent<HTMLElement>) {
-  const r = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-}
-function onTilt3dMove(e: MouseEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width - 0.5;
-  const py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--ry', `${px * 12}deg`);
-  el.style.setProperty('--rx', `${-py * 12}deg`);
-  onSpotlightMove(e);
-}
-function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
-}
+/* Pointer handlers come from the shared kit: it measures once per
+   hover and batches its writes, where this file's old private copy
+   measured inside every mousemove and forced a synchronous layout. */
+import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 // ─── Inner hub wrapper ────────────────────────────────────────────────────────
 

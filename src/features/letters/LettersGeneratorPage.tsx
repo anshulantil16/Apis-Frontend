@@ -1,4 +1,4 @@
-import { useState, useEffect, type MouseEvent } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText, FileWarning, ArrowLeft, ArrowRight, BarChart3,
   Mail, CheckCircle2, Sparkles, Layers,
@@ -7,29 +7,10 @@ import { OfferLetterSimplePage } from './OfferLetterSimplePage';
 import { WarningLetterPage } from './WarningLetterPage';
 import { TOOL_STYLES } from '../../Components/toolStyles';
 
-/* ── ih-* motion helpers ──────────────────────────────────────────────────
-   Mirrors of the helpers in features/home/IntranetHomePage.tsx. They are not
-   exported there, so each page keeps its own copy; the `ih-*` CSS they drive
-   is injected globally by IntranetShell. Writing to CSS vars instead of React
-   state keeps the cursor tracking at zero re-renders. */
-function onSpotlightMove(e: MouseEvent<HTMLElement>) {
-  const r = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-}
-function onTilt3dMove(e: MouseEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width - 0.5;
-  const py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--ry', `${px * 12}deg`);
-  el.style.setProperty('--rx', `${-py * 12}deg`);
-  onSpotlightMove(e);
-}
-function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
-}
+/* Pointer handlers come from the shared kit: it measures once per
+   hover and batches its writes, where this file's old private copy
+   measured inside every mousemove and forced a synchronous layout. */
+import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PMS_API = `${_API_BASE}/api/pms`;

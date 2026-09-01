@@ -131,13 +131,26 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
         el.setAttribute('data-in', '');
       }
     };
+    /* Sweeps only the elements handed to it, batched into one frame.
+     *
+     * This used to re-query the whole document each time. Every list that
+     * re-renders, every keystroke in a filter, every row that repaints is a
+     * childList mutation — so a document-wide selector match plus a
+     * getBoundingClientRect per hit was running through ordinary interaction,
+     * which is precisely when the main thread needs to be free. What actually
+     * needs measuring is what just mounted, and the caller already knows
+     * exactly which elements those are. */
+    let queued: Element[] = [];
     let sweepQueued = false;
-    const sweepSoon = () => {
+    const sweep = (els: Element[]) => {
+      for (const el of els) queued.push(el);
       if (sweepQueued) return;
       sweepQueued = true;
       requestAnimationFrame(() => {
         sweepQueued = false;
-        document.querySelectorAll(REVEAL_SEL + ':not([data-in])').forEach(showIfVisible);
+        const batch = queued;
+        queued = [];
+        for (const el of batch) if (!el.hasAttribute('data-in')) showIfVisible(el);
       });
     };
 
@@ -147,8 +160,9 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
     // swallow clicks, which is a far worse failure than "no animation".
     document.documentElement.classList.add('ih-reveal-ready');
 
-    document.querySelectorAll(REVEAL_SEL).forEach(el => io.observe(el));
-    sweepSoon();
+    const initial = Array.from(document.querySelectorAll(REVEAL_SEL));
+    initial.forEach(el => io.observe(el));
+    sweep(initial);
 
     /* Tool pages mount their content long after the shell and swap it on every
      * navigation, so we track adds AND removes.
@@ -167,14 +181,14 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
       n.querySelectorAll(REVEAL_SEL).forEach(fn);
     };
     const mo = new MutationObserver(records => {
-      let added = false;
+      const added: Element[] = [];
       for (const rec of records) {
         rec.removedNodes.forEach(n => eachTarget(n, el => io.unobserve(el)));
-        rec.addedNodes.forEach(n => eachTarget(n, el => { io.observe(el); added = true; }));
+        rec.addedNodes.forEach(n => eachTarget(n, el => { io.observe(el); added.push(el); }));
       }
-      // Only newly mounted content needs measuring; everything already
+      // Only the newly mounted elements are measured; everything already
       // observed is the IntersectionObserver's job.
-      if (added) sweepSoon();
+      if (added.length) sweep(added);
     });
     /* childList ONLY, deliberately.
      *
@@ -192,13 +206,18 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
      * exactly childList. */
     mo.observe(document.body, { childList: true, subtree: true });
 
-    // Layout can change without a scroll — a panel expanding, a font landing.
-    window.addEventListener('resize', sweepSoon);
+    /* A resize can bring a still-hidden element into view without any node
+       being added, so this one case does re-scan the document. It is safe to
+       be thorough here: resizing is rare and already re-lays-out the page,
+       unlike the mutation path, which fires during ordinary interaction. */
+    const sweepAll = () => sweep(Array.from(
+      document.querySelectorAll(REVEAL_SEL + ':not([data-in])')));
+    window.addEventListener('resize', sweepAll);
 
     return () => {
       io.disconnect();
       mo.disconnect();
-      window.removeEventListener('resize', sweepSoon);
+      window.removeEventListener('resize', sweepAll);
       document.documentElement.classList.remove('ih-reveal-ready');
     };
   }, []);

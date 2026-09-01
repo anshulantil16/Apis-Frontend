@@ -16,7 +16,7 @@
  * are shown exactly as filed rather than normalised, so nothing here states
  * something the source file didn't.
  */
-import { useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeft, Building2, ChevronDown, ChevronUp, Crown, Info, MapPin, Network, Search, User, Users, X,
 } from 'lucide-react';
@@ -167,26 +167,10 @@ const LEVEL_META: Record<Level, { badge: string; badgeText: string; border: stri
   hod: { badge: 'bg-violet-100 text-violet-700', badgeText: 'HOD', border: 'border-l-violet-400', neon: '#8b5cf6' },
 };
 
-/* Cursor-follow spotlight + 3D tilt — mirrors the mousemove helpers used on
- * other tool pages (e.g. EOMPage) so cards feel the same across the app. */
-function onSpotlightMove(e: MouseEvent<HTMLElement>) {
-  const r = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-}
-function onTilt3dMove(e: MouseEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width - 0.5;
-  const py = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty('--ry', `${px * 10}deg`);
-  el.style.setProperty('--rx', `${-py * 10}deg`);
-  onSpotlightMove(e);
-}
-function onTilt3dLeave(e: MouseEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty('--rx', '0deg');
-  e.currentTarget.style.setProperty('--ry', '0deg');
-}
+/* Pointer handlers come from the shared kit: it measures once per
+   hover and batches its writes, where this file's old private copy
+   measured inside every mousemove and forced a synchronous layout. */
+import { onSpotlightMove, onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 function initials(name: string) {
   return name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
