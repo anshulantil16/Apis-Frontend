@@ -16,6 +16,7 @@ import { Sparkles, TrendingUp, Loader2 } from 'lucide-react';
 const DataExtractorPage = lazy(() => import('./features/extractor').then(m => ({ default: m.DataExtractorPage })));
 const PerformancePage = lazy(() => import('./features/performance').then(m => ({ default: m.PerformancePage })));
 const AppraisalPage = lazy(() => import('./features/appraisal').then(m => ({ default: m.AppraisalPage })));
+const GoalSettingPage = lazy(() => import('./features/goalsetting').then(m => ({ default: m.GoalSettingPage })));
 const EOMPage = lazy(() => import('./features/eom').then(m => ({ default: m.EOMPage })));
 const PMSPage = lazy(() => import('./features/pms').then(m => ({ default: m.PMSPage })));
 const LettersGeneratorPage = lazy(() => import('./features/letters').then(m => ({ default: m.LettersGeneratorPage })));
@@ -39,7 +40,7 @@ import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHome
 import { PortalGate } from './features/portal/PortalGate';
 import type { PortalUser } from './features/portal/session';
 
-type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'admin-console';
+type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'admin-console';
 
 /* Header caption per view. The shell renders the sidebar and header for every
    screen, so tools never draw their own top-level chrome. */
@@ -48,6 +49,7 @@ const VIEW_META: Record<AppView, { title: string; subtitle: string }> = {
   'extractor':       { title: 'Data Extractor',      subtitle: 'HR & Payroll Data Tools' },
   'performance':     { title: 'Performance Hub',     subtitle: 'Goals & Reviews' },
   'appraisal':       { title: 'Appraisal Hub',       subtitle: 'Annual Appraisal' },
+  'goal-setting':    { title: 'Goal Setting',        subtitle: 'KRA & KPI agreement' },
   'eom':             { title: 'Employee of the Month', subtitle: 'Recognition' },
   'pms':             { title: 'PMS Simulator',       subtitle: 'Performance & Salary' },
   'offer-letters':   { title: 'Letters Generator',   subtitle: 'Appraisal & Warning' },
@@ -210,6 +212,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
         <ApisTreePage />
       ) : view === 'policies' ? (
         <PoliciesPage />
+      ) : view === 'goal-setting' ? (
+        <GoalSettingPage onNavigateBack={() => navigate('home')} />
       ) : (
         <AppraisalPage />
       )}

@@ -105,7 +105,7 @@ export const dailyQuote = (): InspirationQuote => {
 };
 
 export type QuickAccessId =
-  | 'extractor' | 'performance' | 'appraisal' | 'eom' | 'pms'
+  | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms'
   | 'offer-letters' | 'roompulse' | 'salesiq' | 'tada';
 
 /* Business-function grouping shown as filter tabs on the "Your Tools" grid.
@@ -130,6 +130,7 @@ export const QUICK_ACCESS: QuickAccessItem[] = [
   { id: 'extractor', label: 'Data Extractor', desc: 'Joining forms, medical & payroll data tools', category: 'Operations', icon: FileSpreadsheet, gradient: 'from-amber-400 to-orange-500', glow: 'rgba(245,158,11,.35)', accent: 'text-amber-600', soft: 'bg-amber-50' },
   { id: 'performance', label: 'Performance Hub', desc: 'Goals, reviews & performance tracking', category: 'HR', icon: TrendingUp, gradient: 'from-violet-400 to-purple-600', glow: 'rgba(139,92,246,.35)', accent: 'text-violet-600', soft: 'bg-violet-50' },
   { id: 'appraisal', label: 'Appraisal Hub', desc: 'Annual appraisal cycle management', category: 'HR', icon: TrendingUp, gradient: 'from-blue-400 to-indigo-600', glow: 'rgba(59,130,246,.35)', accent: 'text-blue-600', soft: 'bg-blue-50' },
+  { id: 'goal-setting', label: 'Goal Setting', desc: 'Agree KRAs & KPIs with manager and HOD', category: 'HR', icon: Target, gradient: 'from-amber-400 to-orange-600', glow: 'rgba(245,158,11,.35)', accent: 'text-amber-600', soft: 'bg-amber-50' },
   { id: 'eom', label: 'EOM Hub', desc: 'Employee of the Month nominations', category: 'Finance', icon: Sparkles, gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.35)', accent: 'text-emerald-600', soft: 'bg-emerald-50' },
   { id: 'pms', label: 'PMS Simulator', desc: 'Performance & salary revision simulator', category: 'HR', icon: BarChart3, gradient: 'from-violet-500 to-fuchsia-600', glow: 'rgba(168,85,247,.35)', accent: 'text-fuchsia-600', soft: 'bg-fuchsia-50' },
   { id: 'offer-letters', label: 'Letters Generator', desc: 'Appraisal & warning letter pipeline', category: 'HR', icon: FileSpreadsheet, gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.35)', accent: 'text-rose-600', soft: 'bg-rose-50' },
@@ -171,6 +172,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Performance', icon: TrendingUp, accent: 'text-violet-300', hoverAccent: 'hover:text-violet-300', dot: 'bg-violet-400', items: [
       { id: 'performance', label: 'Performance Hub' },
       { id: 'appraisal', label: 'Appraisal Hub' },
+      { id: 'goal-setting', label: 'Goal Setting' },
       { id: 'pms', label: 'PMS Simulator' },
       { id: 'eom', label: 'Employee of the Month' },
     ],
