@@ -13,11 +13,11 @@
 import { useEffect, useState } from 'react';
 import {
   Users, RefreshCw, Database, Monitor, Search, ShieldCheck, X, Check, AlertCircle,
-  Loader2, LogOut, Eye, Crown, UserPlus, Trash2,
+  Loader2, LogOut, Eye, Crown, UserPlus, Trash2, Grid3x3,
 } from 'lucide-react';
 import { portalFetch, type PortalUser } from './session';
 
-type Tab = 'people' | 'hrms' | 'sessions';
+type Tab = 'people' | 'access' | 'hrms' | 'sessions';
 
 export function AdminConsole({ me }: { me: PortalUser }) {
   const [tab, setTab] = useState<Tab>('people');
@@ -30,7 +30,8 @@ export function AdminConsole({ me }: { me: PortalUser }) {
   }, [toast]);
 
   const TABS: { k: Tab; label: string; icon: any }[] = [
-    { k: 'people', label: 'People & Access', icon: Users },
+    { k: 'people', label: 'People', icon: Users },
+    { k: 'access', label: 'Who can open what', icon: Grid3x3 },
     { k: 'hrms', label: 'HRMS Master Data', icon: Database },
     { k: 'sessions', label: 'Live Sessions', icon: Monitor },
   ];
@@ -87,6 +88,7 @@ export function AdminConsole({ me }: { me: PortalUser }) {
       </div>
 
       {tab === 'people' && <PeopleTab onToast={setToast} />}
+      {tab === 'access' && <AccessTab onToast={setToast} />}
       {tab === 'hrms' && <HrmsTab onToast={setToast} />}
       {tab === 'sessions' && <SessionsTab onToast={setToast} />}
       </div>
@@ -1022,6 +1024,227 @@ function SessionsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => 
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+
+// ── the access grid ──────────────────────────────────────────────────────────
+/* Everyone against every tool, in one table.
+ *
+ * Deliberately a grid rather than a longer list. The People tab answers "what
+ * can this person open" one drawer at a time; the question an administrator
+ * actually has is comparative - who is missing Goal Setting, does anyone in
+ * Sales still have TA/DA, did the new joiners get what their team has. That is
+ * a question you answer by scanning DOWN a column, which a list cannot do.
+ *
+ * Every cell is a button. Clicking it grants or revokes on the spot, because
+ * the alternative - tick things, then press Save - loses work whenever someone
+ * navigates away, and an access screen is one people leave half-finished.
+ */
+function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void }) {
+  const [data, setData] = useState<any>(null);
+  const [q, setQ] = useState('');
+  const [dept, setDept] = useState('');
+  const [only, setOnly] = useState<'all' | 'gaps' | 'admins'>('all');
+  const [saving, setSaving] = useState<string>('');
+
+  const load = async () => {
+    const r = await portalFetch('/admin/users/');
+    setData(await r.json().catch(() => null));
+  };
+  useEffect(() => { load(); }, []);
+
+  if (!data) {
+    return <div className="py-20 text-center"><Loader2 className="w-6 h-6 text-indigo-500 animate-spin mx-auto" /></div>;
+  }
+
+  const apps: any[] = data.apps || [];
+  const people: any[] = data.users || [];
+  const depts: string[] = [...new Set(people.map(u => u.department).filter(Boolean))].sort();
+
+  const rows = people.filter(u => {
+    if (dept && u.department !== dept) return false;
+    if (only === 'admins' && !u.is_superadmin) return false;
+    if (only === 'gaps' && (u.is_superadmin || (u.allowed_apps?.length ?? 0) > 0)) return false;
+    if (!q.trim()) return true;
+    const hay = `${u.name} ${u.email} ${u.employee_code} ${u.department}`.toLowerCase();
+    return hay.includes(q.trim().toLowerCase());
+  });
+
+  const has = (u: any, key: string) => u.is_superadmin || (u.allowed_apps || []).includes(key);
+
+  /* One cell. The request goes out immediately and the row is marked busy, so
+     a slow network cannot be mistaken for a click that did not register. */
+  const toggle = async (u: any, key: string) => {
+    if (u.is_superadmin) return;
+    const id = `${u.id}:${key}`;
+    setSaving(id);
+    const next = has(u, key)
+      ? (u.allowed_apps || []).filter((k: string) => k !== key)
+      : [...(u.allowed_apps || []), key];
+    const r = await portalFetch(`/admin/users/${u.id}/`, {
+      method: 'PATCH', body: JSON.stringify({ app_access: next }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      setData((p: any) => ({
+        ...p,
+        users: p.users.map((x: any) => (x.id === u.id ? { ...x, allowed_apps: next } : x)),
+      }));
+    } else {
+      onToast({ t: d.error || 'Could not change that.', ok: false });
+    }
+    setSaving('');
+  };
+
+  /* A whole column at once, over exactly the rows on screen - so "everyone in
+     Sales gets Goal Setting" is a filter and one click. */
+  const column = async (key: string, action: 'grant' | 'revoke') => {
+    const ids = rows.filter(u => !u.is_superadmin).map(u => u.id);
+    if (!ids.length) return;
+    setSaving(`col:${key}`);
+    const r = await portalFetch('/admin/bulk-access/', {
+      method: 'POST', body: JSON.stringify({ user_ids: ids, action, app: key }),
+    });
+    const d = await r.json().catch(() => ({}));
+    onToast({ t: r.ok ? d.message : (d.error || 'That did not work.'), ok: r.ok });
+    if (r.ok) await load();
+    setSaving('');
+  };
+
+  const countFor = (key: string) => people.filter(u => has(u, key)).length;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input value={q} onChange={e => setQ(e.target.value)}
+            placeholder="Search a person…"
+            className="w-full pl-9 pr-3 py-1.5 text-xs font-semibold border-2 border-slate-200 focus:border-indigo-400 rounded-lg outline-none" />
+        </div>
+        <select value={dept} onChange={e => setDept(e.target.value)}
+          className="border-2 border-slate-200 focus:border-indigo-400 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-600 outline-none">
+          <option value="">All departments</option>
+          {depts.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        {([['all', 'Everyone'], ['gaps', 'No tools yet'], ['admins', 'Administrators']] as const)
+          .map(([k, label]) => (
+            <button key={k} onClick={() => setOnly(k)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-black border-2 transition-colors ${
+                only === k ? 'bg-slate-900 text-white border-slate-900'
+                           : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+              {label}
+            </button>
+          ))}
+        <span className="ml-auto text-[11px] font-bold text-slate-400">
+          {rows.length} of {people.length}
+        </span>
+      </div>
+
+      <p className="text-[11px] text-slate-400 font-semibold">
+        Click any cell to grant or revoke it there and then. Use the arrows in a column
+        heading to do the whole column for the {rows.length} {rows.length === 1 ? 'person' : 'people'} shown.
+      </p>
+
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="overflow-auto max-h-[70vh]">
+          <table className="text-xs border-separate border-spacing-0">
+            <thead>
+              <tr>
+                {/* The name column stays put while you scroll sideways, or the
+                    row you are reading stops being identifiable. */}
+                <th className="sticky left-0 top-0 z-30 bg-slate-50 border-b border-r border-slate-200
+                               px-3 py-2 text-left font-black text-slate-400 min-w-[220px]">
+                  Person
+                </th>
+                {apps.map(a => (
+                  <th key={a.key}
+                    className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 px-2 py-2 align-bottom min-w-[92px]">
+                    <p className="font-black text-slate-600 text-[11px] leading-tight mb-1">{a.label}</p>
+                    <p className="text-[10px] font-bold text-slate-400 mb-1.5">
+                      {countFor(a.key)} of {people.length}
+                    </p>
+                    <div className="flex gap-1 justify-center">
+                      <button onClick={() => column(a.key, 'grant')} disabled={!!saving}
+                        title={`Give this to all ${rows.length} shown`}
+                        className="px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-600 hover:bg-emerald-50 text-[10px] font-black disabled:opacity-40">
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => column(a.key, 'revoke')} disabled={!!saving}
+                        title={`Take this from all ${rows.length} shown`}
+                        className="px-1.5 py-0.5 rounded border border-rose-200 text-rose-500 hover:bg-rose-50 text-[10px] font-black disabled:opacity-40">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(u => (
+                <tr key={u.id} className="group">
+                  <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-b border-r border-slate-100 px-3 py-1.5">
+                    <p className="font-black text-slate-800 flex items-center gap-1.5 truncate">
+                      {u.name}
+                      {u.is_superadmin && <Crown className="w-3 h-3 text-amber-500 shrink-0" />}
+                      {!u.is_active && (
+                        <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-1 py-0.5 rounded">OFF</span>
+                      )}
+                    </p>
+                    <p className="text-slate-400 truncate">{u.department || u.email}</p>
+                  </td>
+                  {apps.map(a => {
+                    const on = has(u, a.key);
+                    const busy = saving === `${u.id}:${a.key}`;
+                    return (
+                      <td key={a.key} className="border-b border-slate-100 p-0 text-center">
+                        <button
+                          onClick={() => toggle(u, a.key)}
+                          disabled={u.is_superadmin || !!saving}
+                          title={u.is_superadmin
+                            ? 'An administrator can open everything'
+                            : `${on ? 'Take away' : 'Give'} ${a.label} ${on ? 'from' : 'to'} ${u.name}`}
+                          className={`w-full h-9 flex items-center justify-center transition-colors ${
+                            u.is_superadmin ? 'cursor-default'
+                              : on ? 'bg-emerald-50 hover:bg-emerald-100'
+                                   : 'hover:bg-slate-100'}`}>
+                          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                            : u.is_superadmin ? <Crown className="w-3.5 h-3.5 text-amber-400" />
+                              : on ? <Check className="w-4 h-4 text-emerald-600" />
+                                : <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />}
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr><td colSpan={apps.length + 1} className="px-3 py-12 text-center text-slate-300 font-semibold">
+                  Nobody matches that.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-slate-400">
+        <span className="flex items-center gap-1.5">
+          <Check className="w-3.5 h-3.5 text-emerald-600" /> can open it
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-300" /> cannot
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Crown className="w-3.5 h-3.5 text-amber-400" /> administrator — opens everything
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-1 py-0.5 rounded">OFF</span>
+          sign-in disabled, so nothing is reachable
+        </span>
       </div>
     </div>
   );
