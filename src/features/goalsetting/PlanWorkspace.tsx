@@ -8,11 +8,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, Save, Send, CornerUpLeft, CheckCircle2, AlertCircle, Loader2,
-  Info, Lock,
+  Info, Lock, ShieldAlert, MoveRight,
 } from 'lucide-react';
-import { ApiError, actOnPlan, getPlan, savePlan, totalWeight } from './api';
-import type { KRA, Plan, Role } from './api';
+import {
+  ApiError, actOnPlan, getPlan, savePlan, savePlanAsAdmin, setPlanStatus, totalWeight,
+} from './api';
+import type { KRA, Plan, PlanStatus, Role } from './api';
 import { STATUS_TONE, dt } from './api';
+
+/* The stages in workflow order, for the admin's move control. Order matters:
+   a dropdown that lists them alphabetically hides the shape of the process. */
+const STATUS_ORDER: PlanStatus[] = [
+  'draft', 'submitted', 'with_hod', 'awaiting_employee', 'accepted', 'returned',
+];
+const STATUS_LABEL: Record<PlanStatus, string> = {
+  draft: 'Draft with employee',
+  submitted: 'Submitted — with manager',
+  with_hod: 'With HOD',
+  awaiting_employee: 'Awaiting employee acceptance',
+  accepted: 'Accepted — goals agreed',
+  returned: 'Sent back for changes',
+};
 import { GoalSheet, WeightMeter } from './GoalSheet';
 import { ChangesSinceMine, PlanHistory } from './History';
 
@@ -88,6 +104,8 @@ export function PlanWorkspace({
   const [saved, setSaved] = useState('');
   const [dirty, setDirty] = useState(false);
   const [notStarted, setNotStarted] = useState(false);
+  const [moveTo, setMoveTo] = useState<PlanStatus | ''>('');
+  const [moveNote, setMoveNote] = useState('');
 
   const load = async () => {
     setLoading(true); setError('');
@@ -108,6 +126,10 @@ export function PlanWorkspace({
 
   const canEdit = useMemo(() => {
     if (!plan) return false;
+    // The admin seat edits at any stage and regardless of the cycle being
+    // locked. Every such save is versioned server-side, so the power is
+    // visible in the history rather than silent.
+    if (role === 'admin') return true;
     if (plan.cycle_status !== 'open') return false;
     const editors: Record<Plan['status'], Role[]> = {
       draft: ['employee'], returned: ['employee'], submitted: ['manager'],
@@ -124,7 +146,9 @@ export function PlanWorkspace({
     if (!plan) return;
     setBusy('save'); setError(''); setProblems([]);
     try {
-      const p = await savePlan(employeeId, cycleId, role, kras);
+      const p = role === 'admin'
+        ? await savePlanAsAdmin(employeeId, cycleId, kras, actorName)
+        : await savePlan(employeeId, cycleId, role, kras);
       setPlan(p); setKras(p.kras); setDirty(false);
       setProblems(p.problems || []);
       setSaved(`Saved at ${new Date().toLocaleTimeString()}`);
@@ -149,6 +173,18 @@ export function PlanWorkspace({
     } catch (e) {
       if (e instanceof ApiError) { setError(e.message); setProblems(e.problems); }
       else setError('Could not complete that.');
+    }
+    setBusy('');
+  };
+
+  const move = async () => {
+    if (!plan || !moveTo) return;
+    setBusy('move'); setError('');
+    try {
+      const p = await setPlanStatus(plan.id, moveTo, actorName, moveNote.trim());
+      setPlan(p); setKras(p.kras); setMoveTo(''); setMoveNote(''); setDirty(false);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not move this sheet.');
     }
     setBusy('');
   };
@@ -363,6 +399,37 @@ export function PlanWorkspace({
           <p className="text-[13px] font-bold text-emerald-800">
             Goals agreed on {dt(plan.accepted_at)}.
           </p>
+        </div>
+      )}
+
+      {role === 'admin' && (
+        <div className="bg-white border-2 border-dashed border-rose-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldAlert className="w-4 h-4 text-rose-500" />
+            <p className="font-black text-slate-700 text-sm">Administrator controls</p>
+          </div>
+          <p className="text-[11px] text-slate-500 font-semibold mb-3">
+            You can edit this sheet at any stage, and move it to any stage — including
+            after it has been agreed. Every change you make is written into the history
+            below with your name on it, so an overridden sheet always says so.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={moveTo} onChange={e => setMoveTo(e.target.value as PlanStatus)}
+              className="px-3 py-2 text-[12px] font-bold rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400/40">
+              <option value="">Move this sheet to…</option>
+              {STATUS_ORDER.filter(v => v !== plan.status).map(v => (
+                <option key={v} value={v}>{STATUS_LABEL[v]}</option>
+              ))}
+            </select>
+            <input value={moveNote} onChange={e => setMoveNote(e.target.value)}
+              placeholder="Why? (recorded in the history)"
+              className="flex-1 min-w-[200px] px-3 py-2 text-[12px] rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-400/40" />
+            <button onClick={move} disabled={!moveTo || !!busy}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white font-bold text-[13px]">
+              {busy === 'move' ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoveRight className="w-4 h-4" />}
+              Move
+            </button>
+          </div>
         </div>
       )}
 

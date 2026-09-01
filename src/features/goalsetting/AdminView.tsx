@@ -6,16 +6,17 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Loader2, Upload, Plus, AlertCircle, CheckCircle2, Users, CalendarDays,
-  Search, RotateCcw, Lock, Unlock,
+  Search, RotateCcw, Lock, Unlock, Pencil, X, Activity as ActivityIcon,
+  ChevronRight, UserPlus,
 } from 'lucide-react';
 import {
-  ApiError, allPlans, createCycle, getOverview, importEmployees, listEmployees,
-  reopenPlan, updateCycle,
+  ApiError, allPlans, createCycle, createEmployee, getActivity, getOverview,
+  importEmployees, listEmployees, reopenPlan, updateCycle, updateEmployee,
 } from './api';
-import type { Cycle, Employee, PlanSummary } from './api';
-import { STATUS_TONE, d } from './api';
+import type { Activity, Cycle, Employee, PlanSummary } from './api';
+import { ROLE_LABEL, STATUS_TONE, d, dt } from './api';
 
-type Tab = 'overview' | 'people' | 'cycles';
+type Tab = 'overview' | 'people' | 'cycles' | 'activity';
 
 const CYCLE_TONE: Record<Cycle['status'], string> = {
   draft: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -24,7 +25,151 @@ const CYCLE_TONE: Record<Cycle['status'], string> = {
   closed: 'bg-slate-100 text-slate-500 border-slate-200',
 };
 
-export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: number | null }) {
+/* Everything about one person, editable. A drawer rather than inline fields:
+   these are eleven related values, and changing a reporting line in isolation
+   with no sight of the rest is how someone ends up reporting to themselves. */
+function PersonDrawer({ person, onClose, onSaved }: {
+  person: Employee | 'new'; onClose: () => void; onSaved: (msg: string) => void;
+}) {
+  const isNew = person === 'new';
+  const [form, setForm] = useState<Partial<Employee>>(
+    isNew ? { employee_id: '', name: '', email: '', designation: '', department: '',
+              zone: '', reporting_manager_id: '', hod_id: '', user_type: 'employee',
+              is_active: true }
+          : { ...(person as Employee) });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const set = (k: keyof Employee, v: unknown) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async () => {
+    if (!form.employee_id?.trim() || !form.name?.trim()) {
+      setError('An Employee ID and a name are both required.'); return;
+    }
+    setBusy(true); setError('');
+    try {
+      if (isNew) {
+        await createEmployee(form);
+        onSaved(`${form.name} added.`);
+      } else {
+        await updateEmployee((person as Employee).employee_id, form);
+        onSaved(`${form.name} updated.`);
+      }
+      onClose();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not save.');
+    }
+    setBusy(false);
+  };
+
+  const field = (label: string, key: keyof Employee, placeholder = '', locked = false) => (
+    <label className="block">
+      <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+        {label}
+      </span>
+      <input value={(form[key] as string) ?? ''} disabled={locked} placeholder={placeholder}
+        onChange={e => set(key, e.target.value)}
+        className="w-full px-3 py-2 text-[13px] rounded-xl border border-slate-200 bg-white disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40" />
+    </label>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30" onClick={onClose}>
+      <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-slate-800 text-sm truncate">
+              {isNew ? 'Add a person' : (person as Employee).name}
+            </p>
+            <p className="text-[11px] text-slate-400 font-semibold">
+              {isNew ? 'For the joiner who missed the upload'
+                     : (person as Employee).employee_id}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          {field('Employee ID', 'employee_id', 'APIS1234', !isNew)}
+          {!isNew && (
+            <p className="text-[10px] text-slate-400 font-semibold -mt-2">
+              The ID is how sheets, managers and HODs point at this person, so it is
+              not editable here.
+            </p>
+          )}
+          {field('Name', 'name')}
+          {field('Email', 'email', 'where the sign-in code goes')}
+          {field('Designation', 'designation')}
+          {field('Department', 'department')}
+          {field('Zone', 'zone')}
+          {field('Reporting manager ID', 'reporting_manager_id', 'Employee ID of their manager')}
+          {field('HOD ID', 'hod_id', 'Employee ID of their HOD')}
+
+          <label className="block">
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+              Role
+            </span>
+            <select value={form.user_type ?? 'employee'}
+              onChange={e => set('user_type', e.target.value)}
+              className="w-full px-3 py-2 text-[13px] rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/40">
+              {(['employee', 'manager', 'hod', 'admin'] as const).map(r => (
+                <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+              ))}
+            </select>
+            <span className="block text-[10px] text-slate-400 font-semibold mt-1">
+              Admin hands this person the whole console, including the power to edit
+              anyone else&apos;s goals.
+            </span>
+          </label>
+
+          {!isNew && (
+            <label className="flex items-center gap-2.5 pt-1">
+              <input type="checkbox" checked={!!form.is_active}
+                onChange={e => set('is_active', e.target.checked)}
+                className="w-4 h-4 accent-amber-500" />
+              <span className="text-[12px] font-bold text-slate-600">
+                Active &mdash; can sign in and be given goals
+              </span>
+            </label>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-500 mt-px shrink-0" />
+              <p className="text-[12px] font-bold text-rose-700">{error}</p>
+            </div>
+          )}
+
+          <button onClick={submit} disabled={busy}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-bold text-[14px]">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {isNew ? 'Add this person' : 'Save changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ACTION_WORDS: Record<string, string> = {
+  submit: 'submitted their goals',
+  to_hod: 'sent a sheet to the HOD',
+  manager_return: 'sent a sheet back',
+  to_employee: 'sent a sheet back to the employee',
+  hod_return: 'sent a sheet back',
+  accept: 'accepted their goals',
+  employee_return: 'asked for changes',
+  reopened: 'reopened a sheet',
+  admin_moved: 'moved a sheet',
+  admin_edit: 'edited a sheet',
+};
+
+export function AdminView({ actorName, cycleId, onOpenPlan }: {
+  actorName: string; cycleId: number | null; onOpenPlan: (employeeId: string) => void;
+}) {
   const [tab, setTab] = useState<Tab>('overview');
   const [overview, setOverview] = useState<Awaited<ReturnType<typeof getOverview>> | null>(null);
   const [plans, setPlans] = useState<PlanSummary[]>([]);
@@ -37,6 +182,8 @@ export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: 
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [newCycle, setNewCycle] = useState({ name: '', fiscal_year: '', submission_deadline: '' });
+  const [editing, setEditing] = useState<Employee | 'new' | null>(null);
+  const [feed, setFeed] = useState<Activity[]>([]);
 
   const refresh = async () => {
     setLoading(true); setError('');
@@ -54,10 +201,18 @@ export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: 
 
   useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cycleId]);
 
+  const loadPeople = () => listEmployees(q).then(setPeople).catch(() => setPeople([]));
+
   useEffect(() => {
     if (tab !== 'people') return;
-    listEmployees(q).then(setPeople).catch(() => setPeople([]));
+    loadPeople();
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [tab, q]);
+
+  useEffect(() => {
+    if (tab !== 'activity') return;
+    getActivity(cycleId ?? undefined).then(setFeed).catch(() => setFeed([]));
+  }, [tab, cycleId]);
 
   const upload = async (file: File) => {
     setBusy('import'); setError(''); setMsg('');
@@ -118,7 +273,7 @@ export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 w-fit">
-        {(['overview', 'people', 'cycles'] as Tab[]).map(t => (
+        {(['overview', 'people', 'cycles', 'activity'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-3.5 py-1.5 rounded-lg text-[12px] font-black capitalize transition-colors ${
               tab === t ? 'bg-amber-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
@@ -231,14 +386,19 @@ export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: 
                         <td className="px-4 py-2.5 text-[11px] font-semibold text-slate-500 tabular-nums">
                           {d(p.submitted_at)}
                         </td>
-                        <td className="px-4 py-2.5 text-right">
+                        <td className="px-4 py-2.5 text-right whitespace-nowrap">
                           {p.status === 'accepted' && (
                             <button onClick={() => reopen(p)} disabled={busy === `reopen-${p.id}`}
                               title="Send this agreed sheet back to the employee"
-                              className="inline-flex items-center gap-1 text-[11px] font-black text-slate-500 hover:text-rose-600">
+                              className="inline-flex items-center gap-1 text-[11px] font-black text-slate-400 hover:text-rose-600 mr-3">
                               <RotateCcw className="w-3.5 h-3.5" /> Reopen
                             </button>
                           )}
+                          <button onClick={() => onOpenPlan(p.employee_code)}
+                            title="Open this sheet — you can edit it at any stage"
+                            className="inline-flex items-center gap-1 text-[11px] font-black text-amber-700 hover:text-amber-800">
+                            Open <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -269,11 +429,17 @@ export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: 
               </div>
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); }} />
-              <button onClick={() => fileRef.current?.click()} disabled={busy === 'import'}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-bold text-[13px]">
-                {busy === 'import' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Upload sheet
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setEditing('new')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-[13px] border border-slate-200">
+                  <UserPlus className="w-4 h-4" /> Add one
+                </button>
+                <button onClick={() => fileRef.current?.click()} disabled={busy === 'import'}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-bold text-[13px]">
+                  {busy === 'import' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  Upload sheet
+                </button>
+              </div>
             </div>
           </div>
 
@@ -289,7 +455,7 @@ export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: 
               <table className="w-full min-w-[820px]">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                   <tr>
-                    {['Employee', 'Role', 'Department', 'Reports to', 'HOD', 'Active'].map(h => (
+                    {['Employee', 'Role', 'Department', 'Reports to', 'HOD', 'Active', ''].map(h => (
                       <th key={h} className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 py-2.5">{h}</th>
                     ))}
                   </tr>
@@ -319,12 +485,18 @@ export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: 
                           {p.is_active ? 'Active' : 'Off'}
                         </span>
                       </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <button onClick={() => setEditing(p)} title="Edit this person"
+                          className="inline-flex items-center gap-1 text-[11px] font-black text-slate-400 hover:text-amber-700">
+                          <Pencil className="w-3.5 h-3.5" /> Edit
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {people.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-10 text-center text-[12px] text-slate-400 font-semibold">
+                    <tr><td colSpan={7} className="px-4 py-10 text-center text-[12px] text-slate-400 font-semibold">
                       <Users className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                      Nobody here yet — upload the employee sheet to get started.
+                      Nobody here yet — upload the employee sheet, or add someone by hand.
                     </td></tr>
                   )}
                 </tbody>
@@ -399,6 +571,66 @@ export function AdminView({ actorName, cycleId }: { actorName: string; cycleId: 
             )}
           </div>
         </>
+      )}
+
+      {/* Every step anyone has taken, newest first. Per-sheet history answers
+          one case; this answers "what has actually been happening?" — the
+          manager returning sheets nobody asked them to, the HOD who has not
+          touched theirs in a fortnight. */}
+      {tab === 'activity' && (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center gap-2.5">
+            <ActivityIcon className="w-4 h-4 text-slate-400" />
+            <div className="flex-1">
+              <p className="font-black text-slate-700 text-sm">Everything that has happened</p>
+              <p className="text-[11px] text-slate-400 font-semibold">
+                Across every sheet in this cycle, newest first.
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-slate-400">{feed.length}</span>
+          </div>
+          <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100">
+            {feed.map(e => (
+              <button key={e.id} onClick={() => onOpenPlan(e.employee_code)}
+                className="w-full text-left px-4 py-3 hover:bg-slate-50/70 transition-colors flex items-start gap-3">
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border shrink-0 mt-px ${
+                  e.actor_role === 'admin' ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : e.actor_role === 'hod' ? 'bg-violet-50 text-violet-700 border-violet-200'
+                  : e.actor_role === 'manager' ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-sky-50 text-sky-700 border-sky-200'}`}>
+                  {ROLE_LABEL[e.actor_role] || e.actor_role}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[12px] text-slate-700 font-semibold">
+                    <strong className="font-black">{e.actor_name || ROLE_LABEL[e.actor_role]}</strong>
+                    {' '}{ACTION_WORDS[e.action] || e.action}
+                    {' — '}
+                    <span className="text-slate-500">{e.employee_name}</span>
+                  </span>
+                  {e.note && (
+                    <span className="block text-[11px] text-slate-400 font-semibold italic truncate">
+                      &ldquo;{e.note}&rdquo;
+                    </span>
+                  )}
+                </span>
+                <span className="text-[11px] text-slate-400 font-semibold tabular-nums shrink-0">
+                  {dt(e.created_at)}
+                </span>
+              </button>
+            ))}
+            {feed.length === 0 && (
+              <p className="px-4 py-12 text-center text-[12px] text-slate-400 font-semibold">
+                <ActivityIcon className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                Nothing has happened yet in this cycle.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <PersonDrawer person={editing} onClose={() => setEditing(null)}
+          onSaved={m => { setMsg(m); loadPeople(); refresh(); }} />
       )}
     </div>
   );

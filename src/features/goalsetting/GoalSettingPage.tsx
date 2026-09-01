@@ -335,7 +335,14 @@ export function GoalSettingPage({ onNavigateBack }: { onNavigateBack?: () => voi
             <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
           </div>
         ) : role === 'admin' ? (
-          <AdminView actorName={me.name} cycleId={cycleId} />
+          openFor ? (
+            <PlanWorkspace
+              employeeId={openFor} cycleId={cycleId!} role="admin" actorName={me.name}
+              categories={meta.categories} frequencies={meta.frequencies}
+              onBack={() => setOpenFor(null)} backLabel="Back to the console" />
+          ) : (
+            <AdminView actorName={me.name} cycleId={cycleId} onOpenPlan={setOpenFor} />
+          )
         ) : !cycleId ? (
           <div className="bg-white border border-slate-200 rounded-2xl py-14 text-center">
             <ShieldCheck className="w-9 h-9 text-slate-200 mx-auto mb-3" />

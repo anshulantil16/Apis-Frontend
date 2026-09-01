@@ -265,6 +265,38 @@ export const allPlans = (cycleId?: number, status?: string) => {
   return call<PlanSummary[]>(`/all-plans/${q.toString() ? `?${q}` : ''}`);
 };
 
+export interface Activity {
+  id: number;
+  plan_id: number;
+  employee_name: string;
+  employee_code: string;
+  cycle_name: string;
+  actor_role: string;
+  actor_name: string;
+  action: string;
+  note: string;
+  created_at: string;
+}
+
+/* Admin overrides. Each one is recorded server-side as a version, so using
+   this power is itself visible in the sheet's history. */
+export const setPlanStatus = (planId: number, status: PlanStatus, actor_name: string, note: string) =>
+  call<Plan>(`/plans/${planId}/status/`, json({ status, actor_name, note }));
+
+export const createEmployee = (body: Partial<Employee>) =>
+  call<Employee>('/employees/create/', json(body));
+
+export const getActivity = (cycleId?: number, limit = 150) => {
+  const q = new URLSearchParams({ limit: String(limit) });
+  if (cycleId) q.set('cycle_id', String(cycleId));
+  return call<Activity[]>(`/activity/?${q}`);
+};
+
+/* An admin save carries a name, because the version it writes needs one. */
+export const savePlanAsAdmin = (employeeId: string, cycleId: number, kras: KRA[], actor_name: string) =>
+  call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/`,
+             json({ role: 'admin', kras, actor_name }));
+
 export const getOverview = (cycleId?: number) =>
   call<{
     employees: number; managers: number; hods: number; plans: number;
