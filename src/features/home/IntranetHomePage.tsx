@@ -3,13 +3,14 @@ import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
   ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, PartyPopper,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, Package, Rocket, UserPlus, Briefcase, Megaphone,
+  Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag,
 } from 'lucide-react';
 import {
-  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_NEW_JOINERS, SAMPLE_VACANCIES, WHATS_NEW,
-  OUR_PRODUCTS, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
+  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_NEW_JOINERS, SAMPLE_VACANCIES,
+  OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
   SAMPLE_BIRTHDAYS, SAMPLE_ANNIVERSARIES, ANNOUNCEMENTS, BSE_TICKER, HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
-  type QuickAccessId, type ToolCategoryFilter, type OurProduct, type UpliftValue,
+  type QuickAccessId, type ToolCategoryFilter, type OurProduct,
 } from './IntranetHomeShared';
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
 
@@ -36,16 +37,6 @@ const HOLIDAY_COLOURS = ['text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-
 // milestone, product launch, facility/award, and "coming soon". Cycles via
 // `% MILESTONE_ICONS.length` if the data list ever grows past five.
 const MILESTONE_ICONS = [Building2, TrendingUp, Package, Trophy, Rocket];
-
-// Full class strings (not template-interpolated) so Tailwind's static scan
-// actually finds them — see the similar note on NavGroup.hoverAccent.
-const UPLIFT_COLOURS: Record<UpliftValue['color'], { soft: string; text: string; solid: string }> = {
-  blue: { soft: 'bg-blue-50', text: 'text-blue-600', solid: 'bg-blue-500' },
-  orange: { soft: 'bg-orange-50', text: 'text-orange-600', solid: 'bg-orange-500' },
-  emerald: { soft: 'bg-emerald-50', text: 'text-emerald-600', solid: 'bg-emerald-500' },
-  amber: { soft: 'bg-amber-50', text: 'text-amber-600', solid: 'bg-amber-500' },
-  pink: { soft: 'bg-pink-50', text: 'text-pink-600', solid: 'bg-pink-500' },
-};
 
 /* Deterministic PRNG (mulberry32) seeded from today's date — same "random"
    order for everyone all day, a different order tomorrow. Not real
@@ -155,36 +146,45 @@ function PineTree({ x, scale = 1, fill }: { x: number; scale?: number; fill: str
    flexible band at the bottom of the card (not layered over the text
    above), so it never risks obscuring the copy regardless of how long
    that copy runs. */
-function MountainScape({ variant }: { variant: 'vision' | 'mission' }) {
-  const ridges = ['#fde68a', '#f59e0b', '#b45309'];
+function MountainScape() {
+  const ridges = ['#f7c876', '#e2933f', '#9a4e13'];
   return (
-    <div className="relative w-full flex-1 min-h-[150px] overflow-hidden">
-      <svg aria-hidden viewBox="0 0 400 160" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 w-full h-full">
-        <circle cx="300" cy="42" r="30" fill="#fff" opacity="0.18" />
-        <circle cx="300" cy="42" r="16" fill="#fff" opacity="0.28" />
+    <div className="relative w-full flex-1 min-h-[190px] overflow-hidden">
+      <svg aria-hidden viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 w-full h-full">
+        {/* sun glow, top-right */}
+        <circle cx="305" cy="46" r="34" fill="#fff" opacity="0.16" />
+        <circle cx="305" cy="46" r="18" fill="#fff" opacity="0.3" />
 
-        {variant === 'vision' ? (
-          <g stroke="#fff" opacity="0.28" fill="none" strokeWidth="1.5">
-            <circle cx="120" cy="70" r="26" />
-            <circle cx="120" cy="70" r="14" />
-            <circle cx="120" cy="70" r="3" fill="#fff" stroke="none" />
-          </g>
-        ) : (
-          <path d="M40,160 C70,120 40,100 70,70 C95,46 80,30 100,10" stroke="#fff" opacity="0.38" strokeWidth="4" strokeDasharray="1 10" strokeLinecap="round" fill="none" />
-        )}
+        {/* soft clouds drifting in the upper sky */}
+        <g fill="#fff" opacity="0.3">
+          <ellipse cx="70" cy="38" rx="26" ry="8" />
+          <ellipse cx="92" cy="34" rx="16" ry="7" />
+          <ellipse cx="185" cy="58" rx="20" ry="6" />
+        </g>
 
-        <polygon points="0,160 0,100 70,50 150,95 215,32 285,88 340,58 400,105 400,160" fill={ridges[0]} opacity="0.55" />
-        <polygon points="0,160 0,122 60,78 145,115 200,68 270,110 330,72 400,118 400,160" fill={ridges[1]} opacity="0.75" />
-        <polygon points="0,160 0,140 75,102 165,132 235,96 305,132 365,104 400,128 400,160" fill={ridges[2]} opacity="0.9" />
+        {/* three layered ridges, lightest (farthest) to darkest (nearest) */}
+        <polygon points="0,200 0,128 65,72 145,122 215,52 290,116 345,80 400,132 400,200" fill={ridges[0]} opacity="0.65" />
+        <polygon points="0,200 0,152 60,102 150,142 205,88 275,138 335,96 400,146 400,200" fill={ridges[1]} opacity="0.82" />
+        <polygon points="0,200 0,174 78,128 168,164 238,120 308,164 368,126 400,158 400,200" fill={ridges[2]} opacity="0.95" />
 
         <PineTree x={34} scale={0.85} fill={ridges[2]} />
         <PineTree x={64} scale={1.15} fill={ridges[2]} />
         <PineTree x={340} scale={0.9} fill={ridges[2]} />
         <PineTree x={368} scale={1.05} fill={ridges[2]} />
+
+        {/* winding path climbing from the foreground to a small flag
+            planted on the nearest peak — the "journey toward the goal" */}
+        <path d="M175,200 C160,168 200,150 185,120 C173,96 205,84 200,58 C197,44 210,34 218,22"
+          stroke="#fde68a" opacity="0.85" strokeWidth="5" strokeLinecap="round" fill="none" />
+        <path d="M175,200 C160,168 200,150 185,120 C173,96 205,84 200,58 C197,44 210,34 218,22"
+          stroke="#b45309" opacity="0.35" strokeWidth="5" strokeDasharray="1 11" strokeLinecap="round" fill="none" />
+        <line x1="218" y1="22" x2="218" y2="4" stroke="#78350f" strokeWidth="2" strokeLinecap="round" />
+        <path d="M218,4 L234,9 L218,14 Z" fill="#dc2626" />
       </svg>
     </div>
   );
 }
+
 
 /* Not every OUR_PRODUCTS entry has a real photo checked into
    public/products/ yet (see the comment on OUR_PRODUCTS). Rather than a
@@ -223,29 +223,151 @@ function LeaderPhoto({ src, name, className }: { src: string; name: string; clas
    public/packaging/ (see the comment on OurProduct); this renders those
    photos in a grid, falling back to an honest empty state for any product
    that doesn't have one yet. */
+/* Slide 2 of the product popup — a spec-sheet card built from what
+   OUR_PRODUCTS already carries (label, desc, weight) plus generic
+   packaged-food fields no one has supplied real values for yet. Flagged as
+   sample data, same convention as every other placeholder feed in this app
+   (Announcements, Celebrations, …), so nothing here reads as a real claim
+   about shelf life or storage until it's replaced with the real thing. */
+function ProductDetailsSlide({ product }: { product: OurProduct }) {
+  // Net Weight is read from the same PACK_SIZES data the Packaging Types
+  // slide shows — the real sizes on the actual charts — rather than
+  // product.weight, a separate field that only ever held one guessed
+  // number and drifted out of sync the moment a chart added more sizes
+  // (Organic Honey's charted seven, its old weight field still said just
+  // "500g"). Falls back to product.weight for products with no chart yet
+  // (Corn Flakes), or to '—' when neither is known (Vermicelli's chart
+  // names packs by price and case count, no gram weight at all).
+  const packWeights = Array.from(new Set(
+    (PACK_SIZES[product.label] ?? []).map(p => p.weight).filter((w): w is string => !!w),
+  ));
+  const netWeight = packWeights.length > 0 ? packWeights.join(', ') : (product.weight ?? '—');
+
+  const rows: { icon: typeof Tag; label: string; value: string }[] = [
+    { icon: Tag, label: 'Category', value: product.category ?? 'Packaged Food' },
+    { icon: Scale, label: 'Net Weight', value: netWeight },
+    { icon: ShelfLifeIcon, label: 'Shelf Life', value: product.shelfLife ?? '12 months from packaging' },
+    { icon: Warehouse, label: 'Storage', value: product.storage ?? 'Cool, dry place, away from direct sunlight' },
+    ...(product.hideMadeIn ? [] : [{ icon: MapPin, label: 'Made In', value: 'India' }]),
+  ];
+  return (
+    <div>
+      <p className="text-sm text-slate-600 leading-relaxed mb-4">{product.desc}</p>
+
+      {product.highlight && (
+        <div className="flex items-start gap-2.5 rounded-xl bg-emerald-50 border border-emerald-100 px-3.5 py-2.5 mb-5">
+          <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <p className="text-[12.5px] text-emerald-800 leading-relaxed">{product.highlight}</p>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+        {rows.map(r => (
+          <div key={r.label} className="flex items-center gap-3 px-4 py-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <r.icon className="w-4 h-4" />
+            </div>
+            <span className="text-[12.5px] font-bold text-slate-500 w-28 shrink-0">{r.label}</span>
+            <span className="text-[12.5px] font-black text-slate-800">{r.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PackagingPopup({ product, onClose }: { product: OurProduct; onClose: () => void }) {
   const images = product.packagingImages ?? [];
+  const packSizes = PACK_SIZES[product.label] ?? [];
+  const hasVariant = packSizes.some(p => p.variant);
+  const hasWeight = packSizes.some(p => p.weight);
+  const hasPrice = packSizes.some(p => p.price);
+  const hasUnits = packSizes.some(p => p.unitsPerCase);
+  // Every column shows up only when at least one row of THIS product
+  // actually carries it — Royal Zahidi Dates names pack designs but has no
+  // price; the green tea chart has a price but no case count; the
+  // Vermicelli chart names packs by price and case count with no gram
+  // weight at all. Literal class strings, not interpolated — Tailwind's
+  // static scan can't see a computed `grid-cols-${n}` and would drop the
+  // rule entirely.
+  const packColCount = [hasVariant, hasWeight, hasPrice, hasUnits].filter(Boolean).length;
+  const packGridCols = packColCount === 4 ? 'grid-cols-4' : packColCount === 3 ? 'grid-cols-3' : 'grid-cols-2';
+  const [slide, setSlide] = useState<'packaging' | 'details'>('packaging');
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
         className="ih-palette-in w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
-          <p className="text-base font-black text-slate-900">{product.label} – Packaging Types</p>
+          <p className="text-base font-black text-slate-900">{product.label}</p>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Two slides, tab-switched — Packaging Types (real photography) and
+            Product Details (sample spec sheet, see ProductDetailsSlide).
+            Same active/inactive tab language as CelebrationsPopup's
+            Birthdays/Anniversaries switcher elsewhere on this page. */}
+        <div className="px-6 pt-4">
+          <div className="inline-flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            <button onClick={() => setSlide('packaging')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-black transition-all ${
+                slide === 'packaging' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              <Package className="w-3.5 h-3.5" />Packaging Types
+            </button>
+            <button onClick={() => setSlide('details')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-black transition-all ${
+                slide === 'details' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              <Info className="w-3.5 h-3.5" />Product Details
+            </button>
+          </div>
+        </div>
+
         <div className="p-6">
-          {images.length === 0 ? (
-            <p className="text-center text-[13px] text-slate-400 py-6">Packaging details coming soon.</p>
+          {slide === 'packaging' ? (
+            images.length === 0 ? (
+              <p className="text-center text-[13px] text-slate-400 py-6">Packaging details coming soon.</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {images.map((src, i) => (
+                    <ProductPhoto key={i} src={src} alt={`${product.label} packaging ${i + 1}`}
+                      className={`w-full h-80 object-contain rounded-xl bg-amber-50 ring-1 ring-black/5 p-3 ${images.length === 1 ? 'sm:col-span-2' : ''}`} />
+                  ))}
+                </div>
+
+                {/* Variant / weight / price / units-per-case for every SKU,
+                    when supplied (see PACK_SIZES) — the photo shows what
+                    each pack looks like, this says what to actually order.
+                    Columns adapt to what this product's rows actually
+                    carry: Royal Zahidi Dates names six pack designs but no
+                    price; Organic Honey has one design across seven priced
+                    sizes. */}
+                {packSizes.length > 0 && (
+                  <div className="mt-5 rounded-xl border border-slate-200 overflow-hidden">
+                    <div className={`grid ${packGridCols} bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400`}>
+                      {hasVariant && <span>Pack Design</span>}
+                      {hasWeight && <span>Weight</span>}
+                      {hasPrice && <span>MRP</span>}
+                      {hasUnits && <span>Units / Case</span>}
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {packSizes.map((p, i) => (
+                        <div key={i} className={`grid ${packGridCols} items-center px-4 py-2.5 text-[12.5px]`}>
+                          {hasVariant && <span className="font-bold text-slate-600 pr-2">{p.variant ?? '—'}</span>}
+                          {hasWeight && <span className="font-black text-slate-800">{p.weight ?? '—'}</span>}
+                          {hasPrice && <span className="font-bold text-amber-600">{p.price ?? '—'}</span>}
+                          {hasUnits && <span className="text-slate-500">{p.unitsPerCase ?? '—'}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {images.map((src, i) => (
-                <ProductPhoto key={i} src={src} alt={`${product.label} packaging ${i + 1}`}
-                  className={`w-full h-80 object-contain rounded-xl bg-amber-50 ring-1 ring-black/5 p-3 ${images.length === 1 ? 'sm:col-span-2' : ''}`} />
-              ))}
-            </div>
+            <ProductDetailsSlide product={product} />
           )}
         </div>
       </div>
@@ -679,108 +801,141 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
               </div>
             </section>
 
-            {/* Uplift Values — APIS's UPLIFT core values, shown as a static grid. */}
-            <section>
-              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />Uplift Values
-              </h2>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                {UPLIFT_VALUES.map(v => {
-                  const Icon = v.icon;
-                  const c = UPLIFT_COLOURS[v.color];
-                  return (
-                    <div key={v.letter}
-                      className="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm
-                                 flex flex-col items-center text-center">
-                      <div className={`w-14 h-14 rounded-2xl ${c.soft} flex items-center justify-center mb-3`}>
-                        <Icon className={`w-6 h-6 ${c.text}`} />
-                      </div>
-                      <p className={`text-[11px] font-black uppercase leading-snug mb-3 ${c.text}`}>
-                        {v.label}
-                      </p>
-                      <div className={`w-9 h-9 rounded-full ${c.solid} flex items-center justify-center text-white text-sm font-black`}>
-                        {v.letter}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-            {/* What's Happening (scannable list) + Our Vision / Our Mission —
-                real recent platform activity alongside APIS's own published
-                vision and mission statements (see APIS_VISION/APIS_MISSION
-                in IntranetHomeShared.tsx for sourcing). */}
+            {/* Uplift Values / Our Vision / Our Mission — APIS's UPLIFT core
+                values as a scannable list (replacing the old 6-tile grid and
+                the What's Happening feed in this slot) alongside APIS's own
+                published vision and mission statements (see
+                APIS_VISION/APIS_MISSION in IntranetHomeShared.tsx for
+                sourcing). All three sit in one row so they read as a set. */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="rounded-xl bg-white border border-slate-200 shadow-sm p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500" />What's Happening
-                  </h2>
-                  <span className="text-[11px] font-bold text-amber-500 cursor-default">View all activity →</span>
+              <div onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+                className="ih-reveal ih-tilt3d ih-spotlight relative overflow-hidden rounded-2xl bg-gradient-to-b from-white to-amber-50/40 border border-amber-100 shadow-lg p-5 flex flex-col">
+                {/* honeycomb watermark + bee, bottom-left — same gold mark
+                    the reference card carries there, bleeding past the
+                    corner rather than a faint background texture. */}
+                <svg aria-hidden viewBox="0 0 160 160" className="pointer-events-none absolute -bottom-8 -left-8 w-40 h-40 opacity-[0.16]">
+                  <defs>
+                    <pattern id="ih-hex" width="18" height="31.2" patternUnits="userSpaceOnUse">
+                      <path d="M9 0 L18 5.2 L18 15.6 L9 20.8 L0 15.6 L0 5.2 Z" fill="none" stroke="#b45309" strokeWidth="1.5" />
+                      <path d="M9 20.8 L18 26 L18 36.4 L9 41.6 L0 36.4 L0 26 Z" fill="none" stroke="#b45309" strokeWidth="1.5" />
+                    </pattern>
+                  </defs>
+                  <rect width="160" height="160" fill="url(#ih-hex)" />
+                </svg>
+                <svg aria-hidden viewBox="0 0 40 40" className="pointer-events-none absolute bottom-3 left-9 w-7 h-7 opacity-70">
+                  <ellipse cx="20" cy="22" rx="9" ry="7" fill="#78350f" />
+                  <path d="M12 22a8 8 0 0 1 16 0" fill="none" stroke="#fde68a" strokeWidth="3" strokeLinecap="round" />
+                  <circle cx="20" cy="11" r="5" fill="#78350f" />
+                  <ellipse cx="13" cy="15" rx="6" ry="4" fill="#fde68a" opacity="0.85" transform="rotate(-25 13 15)" />
+                  <ellipse cx="27" cy="15" rx="6" ry="4" fill="#fde68a" opacity="0.85" transform="rotate(25 27 15)" />
+                </svg>
+
+                <div className="relative z-10 flex items-center gap-2.5 mb-4">
+                  <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-[13px] font-black text-amber-900 uppercase tracking-wide">Uplift Values</h2>
                 </div>
-                <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
-                  {WHATS_NEW.map((n, i) => (
-                    <div key={i} className="ih-reveal ih-tilt flex items-start gap-3 rounded-xl bg-white border border-slate-100 p-3 hover:bg-white hover:shadow-sm transition-all"
-                      style={{ animationDelay: `${i * 80}ms` }}>
-                      <span className={`ih-pulse-glow w-1.5 h-1.5 rounded-full ${n.dot} flex-shrink-0 mt-1.5`} />
-                      <div className="min-w-0">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 mb-1 ${n.tagColour}`}>
-                          {n.tag}
-                        </span>
-                        <p className="text-[12.5px] font-bold text-slate-800 leading-snug">{n.title}</p>
+
+                <div className="relative z-10 divide-y divide-amber-100/80 overflow-y-auto pr-1">
+                  {UPLIFT_VALUES.map(v => {
+                    const Icon = v.icon;
+                    return (
+                      <div key={v.letter} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-sm">
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[11.5px] font-black text-amber-900 uppercase tracking-wide">{v.label}</p>
+                          <p className="text-[11.5px] text-slate-500 leading-snug mt-0.5">{v.desc}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Our Vision — fully-coloured, but a light pastel mustard
-                  wash rather than the saturated amber→orange used on the
-                  sidebar/hero — dark text for contrast against the lighter
-                  fill. Cursor-follow spotlight + 3D tilt for the same
-                  "alive" interaction every other card in this app has. */}
+              {/* Our Vision — a full sunset wash (pale gold at the top,
+                  deep amber-brown at the base) rather than a flat pastel
+                  tint, so the card reads as one continuous scene behind the
+                  mountains, the way the reference sits. Cursor-follow
+                  spotlight + 3D tilt for the same "alive" interaction every
+                  other card in this app has. */}
               <div onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-                className="ih-reveal ih-tilt3d ih-spotlight relative overflow-hidden rounded-2xl
-                           bg-gradient-to-br from-amber-100 via-amber-200 to-orange-200 shadow-lg flex flex-col">
-                <div className="ih-drift pointer-events-none absolute -top-14 -right-14 w-48 h-48 rounded-full bg-white/40 blur-3xl" />
-                <div className="relative z-10 p-5 pb-4">
+                className="ih-reveal ih-tilt3d ih-spotlight relative overflow-hidden rounded-2xl shadow-lg flex flex-col"
+                style={{ background: 'linear-gradient(180deg, #fef6da 0%, #fbdd8b 32%, #f3a94d 62%, #c9701c 100%)' }}>
+                <div className="ih-drift pointer-events-none absolute -top-14 -right-14 w-48 h-48 rounded-full bg-white/30 blur-3xl" />
+                <div className="relative z-10 p-5 pb-3">
                   <div className="flex items-center gap-2.5 mb-3">
-                    <div className="ih-float w-9 h-9 rounded-full bg-white/70 backdrop-blur-md ring-2 ring-white/70 text-amber-600 flex items-center justify-center shrink-0">
+                    <div className="ih-float w-9 h-9 rounded-full bg-white/80 backdrop-blur-md ring-2 ring-white/70 text-amber-600 flex items-center justify-center shrink-0">
                       <Eye className="w-4 h-4" />
                     </div>
-                    <h2 className="text-[13px] font-black text-amber-900 uppercase tracking-wide">Our Vision</h2>
+                    <h2 className="text-[13px] font-black text-amber-950 uppercase tracking-wide">Our Vision</h2>
                   </div>
                   <p className="text-amber-950/90 text-[16px] leading-relaxed font-medium">{APIS_VISION}</p>
                 </div>
-                <MountainScape variant="vision" />
+                <MountainScape />
               </div>
 
-              {/* Our Mission — same light mustard treatment as Vision (one
-                  unified colour, not a warm/cool split), with the mission
-                  broken into scannable bullet points rather than one dense
-                  paragraph. */}
+              {/* Our Mission — deliberately breaks from Vision's warm honey
+                  scene: a light cyan/violet-tinted surface with a neon edge,
+                  an animated circuit-node backdrop, and a scanline sweep, so
+                  it reads as "the forward-looking one" of the two without
+                  going all the way to a dark panel. Reuses the app's own
+                  ih-* ambient-motion kit (ih-mesh, ih-scan, ih-orbit,
+                  ih-halo, ih-neon) rather than inventing new CSS. */}
               <div onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-                className="ih-reveal ih-tilt3d ih-spotlight relative overflow-hidden rounded-2xl
-                           bg-gradient-to-br from-amber-100 via-amber-200 to-orange-200 shadow-lg flex flex-col" style={{ animationDelay: '80ms' }}>
-                <div className="ih-drift pointer-events-none absolute -top-14 -left-14 w-48 h-48 rounded-full bg-white/40 blur-3xl" />
-                <div className="relative z-10 p-5 pb-4">
+                style={{ animationDelay: '80ms', ['--ih-neon' as string]: '#22d3ee' }}
+                className="ih-reveal ih-tilt3d ih-spotlight ih-neon ih-scan relative overflow-hidden rounded-2xl
+                           bg-gradient-to-br from-white via-cyan-50/70 to-violet-50/70
+                           border border-cyan-200 shadow-[0_20px_60px_-18px_rgba(34,211,238,.25)] flex flex-col">
+                {/* ambient cyan/violet colour wash, same technique as the
+                    dashboard's own ih-mesh background */}
+                <div className="ih-mesh pointer-events-none absolute inset-0 opacity-40" />
+
+                {/* faint circuit grid — thin lines + a few "nodes", one
+                    pulsing, standing in for the honey/mountain motif the
+                    other two cards carry */}
+                <svg aria-hidden viewBox="0 0 300 260" className="pointer-events-none absolute inset-0 w-full h-full opacity-[0.18]">
+                  <g stroke="#0891b2" strokeWidth="1" fill="none">
+                    <path d="M20 40 H120 V90 H220 V50 H280" />
+                    <path d="M10 140 H90 V190 H180 V230 H270" />
+                    <path d="M150 20 V80 H240 V160" />
+                  </g>
+                  <g fill="#0891b2">
+                    <circle cx="120" cy="40" r="3" />
+                    <circle cx="220" cy="90" r="3" />
+                    <circle cx="90" cy="140" r="3" />
+                    <circle cx="180" cy="190" r="3" />
+                    <circle cx="240" cy="160" r="3" />
+                  </g>
+                  <circle className="ih-pulse-glow" cx="280" cy="50" r="4" fill="#8b5cf6" />
+                </svg>
+
+                <div className="relative z-10 p-5 pb-4 flex-1">
                   <div className="flex items-center gap-2.5 mb-3">
-                    <div className="ih-float w-9 h-9 rounded-full bg-white/70 backdrop-blur-md ring-2 ring-white/70 text-amber-600 flex items-center justify-center shrink-0">
+                    <div className="ih-orbit ih-halo w-9 h-9 rounded-full bg-white/90 backdrop-blur-md
+                                    ring-1 ring-cyan-300 text-cyan-600 flex items-center justify-center shrink-0"
+                      style={{ ['--ih-orbit' as string]: '#22d3ee', ['--ih-halo' as string]: 'rgba(139,92,246,.35)' }}>
                       <Flag className="w-4 h-4" />
                     </div>
-                    <h2 className="text-[13px] font-black text-amber-900 uppercase tracking-wide">Our Mission</h2>
+                    <h2 className="ih-grad-text text-[15px] font-black uppercase tracking-wide
+                                   bg-gradient-to-r from-cyan-600 via-sky-600 to-violet-600">
+                      Our Mission
+                    </h2>
                   </div>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {APIS_MISSION_POINTS.map((pt, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                        <span className="text-amber-950/70 text-[12px] leading-relaxed">{pt}</span>
+                      <li key={i} className="flex items-start gap-2.5">
+                        <span className="w-4.5 h-4.5 rounded-full bg-gradient-to-br from-cyan-400 to-violet-500
+                                         flex items-center justify-center shrink-0 mt-0.5 shadow-[0_0_10px_-1px_rgba(34,211,238,.5)]">
+                          <CheckCircle2 className="w-3 h-3 text-white" />
+                        </span>
+                        <span className="text-slate-700 text-[13.5px] leading-relaxed font-medium">{pt}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-                <MountainScape variant="mission" />
               </div>
             </section>
 

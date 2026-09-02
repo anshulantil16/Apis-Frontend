@@ -146,16 +146,17 @@ export const QUICK_ACCESS: QuickAccessItem[] = [
 export interface UpliftValue {
   letter: string;
   label: string;
+  desc: string;
   icon: ComponentType<{ className?: string }>;
   color: 'blue' | 'orange' | 'emerald' | 'amber' | 'pink';
 }
 export const UPLIFT_VALUES: UpliftValue[] = [
-  { letter: 'U', label: 'Unwavering Integrity', icon: Shield, color: 'blue' },
-  { letter: 'P', label: 'People First', icon: Users, color: 'orange' },
-  { letter: 'L', label: 'Lifelong Learning', icon: BookOpen, color: 'emerald' },
-  { letter: 'I', label: 'Innovative Thinking', icon: Lightbulb, color: 'amber' },
-  { letter: 'F', label: 'Futuristic Focus', icon: Target, color: 'blue' },
-  { letter: 'T', label: 'Trusted Excellence', icon: Heart, color: 'pink' },
+  { letter: 'U', label: 'Unwavering Integrity', desc: 'We uphold the highest standards of honesty and integrity in everything we do.', icon: Shield, color: 'blue' },
+  { letter: 'P', label: 'People First', desc: 'Our people are at the heart of our success. We care, respect and grow together.', icon: Users, color: 'orange' },
+  { letter: 'L', label: 'Lifelong Learning', desc: 'We foster a culture of curiosity and continuous learning.', icon: BookOpen, color: 'emerald' },
+  { letter: 'I', label: 'Innovative Thinking', desc: 'We embrace new ideas and challenge the status quo to create better solutions.', icon: Lightbulb, color: 'amber' },
+  { letter: 'F', label: 'Futuristic Focus', desc: 'We think ahead and act today for a sustainable tomorrow.', icon: Target, color: 'blue' },
+  { letter: 'T', label: 'Trusted Excellence', desc: 'We deliver excellence consistently and earn the trust of all our stakeholders.', icon: Heart, color: 'pink' },
 ];
 
 export interface NavGroup {
@@ -271,19 +272,112 @@ export const COMING_SOON = [
    into public/packaging/, mapped to the product it was named after. No
    weight/type metadata is included since none was supplied with the
    photos; the popup just shows the pack photo(s) as-is. */
+/** One SKU within a product's pack-size lineup — e.g. Organic Honey ships
+ *  in seven sizes from 1kg jars down to 15g miniatures, each at its own
+ *  case count. `variant` names a distinct pack design sharing the
+ *  product's shelf slot (Royal Zahidi Dates covers six: Royal Zahidi,
+ *  Arabian Pearls, Shahenshah Black Dates, Classic Dates, Select Dates,
+ *  Desert Bliss Dates) — omitted where a product has only one design, like
+ *  Organic Honey. Every other field is optional too and omitted where the
+ *  source chart didn't give it (the dates chart had no MRP; the green tea
+ *  chart had no case count; the Vermicelli chart names packs by price and
+ *  case count with no gram weight at all) — the popup's table only shows
+ *  the columns that at least one row of this product actually carries.
+ *  Supplied per-product (see PACK_SIZES below); products without an entry
+ *  there just show their packagingImages plain, same as before. */
+export interface PackSize { variant?: string; weight?: string; price?: string; unitsPerCase?: string; }
+
+/* Pack-size lineups, keyed by product label — kept alongside OUR_PRODUCTS
+   rather than inline on it since only a couple of products have one
+   supplied so far. Real figures from the packaging charts provided
+   (Sep 2026). */
+export const PACK_SIZES: Record<string, PackSize[]> = {
+  'Organic Honey': [
+    { weight: '1 kg', unitsPerCase: '12 pcs' },
+    { weight: '500 g', unitsPerCase: '24 pcs' },
+    { weight: '225 g', unitsPerCase: '48 pcs' },
+    { weight: '100 g', unitsPerCase: '72 pcs' },
+    { weight: '50 g', unitsPerCase: '144 pcs' },
+    { weight: '20 g', unitsPerCase: '288 pcs (12 tray)' },
+    { weight: '15 g', unitsPerCase: '576 pcs (24 tray)' },
+  ],
+  'Royal Zahidi Dates': [
+    { variant: 'Royal Zahidi', weight: '500 g', unitsPerCase: '12 pcs' },
+    { variant: 'Royal Zahidi', weight: '250 g', unitsPerCase: '20 pcs' },
+    { variant: 'Arabian Pearls (Fard)', weight: '500 g', unitsPerCase: '24 pcs' },
+    { variant: 'Arabian Pearls (Fard)', weight: '250 g', unitsPerCase: '40 pcs' },
+    { variant: 'Shahenshah Black Dates', weight: '500 g', unitsPerCase: '24 pcs' },
+    { variant: 'Shahenshah Black Dates', weight: '250 g', unitsPerCase: '40 pcs' },
+    { variant: 'Classic Dates', weight: '500 g', unitsPerCase: '24 pcs' },
+    { variant: 'Classic Dates', weight: '250 g', unitsPerCase: '40 pcs' },
+    { variant: 'Select Dates', weight: '500 g', unitsPerCase: '24 pcs' },
+    { variant: 'Desert Bliss Dates', weight: '400 g', unitsPerCase: '24 pcs' },
+  ],
+  'Lemon Honey Green Tea': [
+    { variant: 'Detox Kahwa', weight: '10 sachets (Mono Pack)', unitsPerCase: '10 pcs' },
+    { variant: 'Lemon Honey', weight: '10 sachets (Mono Pack)', unitsPerCase: '24 pcs' },
+  ],
+  'Saffron': [
+    { variant: 'Saffron', weight: '0.5 g', unitsPerCase: '10 pcs' },
+    { variant: 'Saffron', weight: '1 g', unitsPerCase: '10 pcs' },
+    { variant: 'Saffron Gold', weight: '1 g', unitsPerCase: '10 pcs' },
+  ],
+  'Vermicelli': [
+    { variant: 'Roasted', unitsPerCase: '140 pcs' },
+    { variant: 'Plain (Untouched by Hands)', unitsPerCase: '200 pcs' },
+  ],
+  'Mixed Fruit Jam': [
+    { weight: '500 g', unitsPerCase: '24 pcs' },
+    { weight: '90 g', unitsPerCase: '96 pcs' },
+  ],
+  'Ginger Garlic Paste': [
+    { weight: '200 g', unitsPerCase: '60 pcs' },
+    { weight: '20 g', unitsPerCase: '480 pcs' },
+  ],
+  'Corn Flakes': [
+    { weight: '500 g' },
+    { weight: '1 kg' },
+  ],
+};
+
 export interface OurProduct {
   label: string; image: string; desc: string; weight?: string;
   packagingImages?: string[];
+  /** A real, notable characteristic worth calling out on the Product
+   *  Details slide — distinct from the generic sample spec rows there.
+   *  So far only Organic Honey has one on file. */
+  highlight?: string;
+  /** Per-product overrides for the Product Details spec rows — Category,
+   *  Shelf Life, Storage. Each falls back to the shared placeholder
+   *  ('Packaged Food' / '12 months from packaging' / 'Cool, dry place, away
+   *  from direct sunlight') on the Product Details slide when not given
+   *  here, same "real data replaces the sample" pattern as `highlight`. */
+  category?: string; shelfLife?: string; storage?: string;
+  /** Drops the "Made In" row from the Product Details slide entirely for
+   *  this product, rather than overriding its value — so far only Royal
+   *  Zahidi Dates. */
+  hideMadeIn?: boolean;
 }
+
 export const OUR_PRODUCTS: OurProduct[] = [
-  { label: 'Organic Honey', image: '/products/organic-honey.png', desc: 'Sourced from the Kashmir Valley, organic-certified', weight: '500g', packagingImages: ['/packaging/Honey_Packaging.png'] },
-  { label: 'Royal Zahidi Dates', image: '/products/royal-zahidi-dates.png', desc: 'Premium dates, hand-picked and packed for freshness', weight: '1kg', packagingImages: ['/packaging/Dates_packaging.png', '/packaging/Dates_packaging1.png'] },
-  { label: 'Mixed Fruit Jam', image: '/products/mixed-fruit-jam.png', desc: 'A blend of real fruit, no artificial colours', weight: '500g', packagingImages: ['/packaging/Jam_packaging.png'] },
-  { label: 'Corn Flakes', image: '/products/cornflakes.png', desc: 'A wholesome start to the day', weight: '500g', packagingImages: ['/packaging/cornflakes_packaging.png'] },
-  { label: 'Vermicelli', image: '/products/vermicelli.png', desc: 'Roasted and ready in minutes', weight: '200g', packagingImages: ['/packaging/vermicilli_packaging.png'] },
-  { label: 'Ginger Garlic Paste', image: '/products/ginger-garlic-paste.png', desc: 'Freshly ground, everyday kitchen essential', weight: '200g', packagingImages: ['/packaging/GInger_garlic_packaging.png'] },
-  { label: 'Lemon Honey Green Tea', image: '/products/lemon-honey-green-tea.png', desc: 'Green tea with real honey and lemon', weight: '25 bags', packagingImages: ['/packaging/GreenTea_packaging.png'] },
-  { label: 'Saffron', image: '/products/saffron.png', desc: 'Pure, aromatic Kashmiri saffron', weight: '1g', packagingImages: ['/packaging/saffron_packaging.png'] },
+  { label: 'Organic Honey', image: '/products/organic-honey.png', desc: 'Comes from the nectar of flowers in the Himalayan mountain range', weight: '500g', packagingImages: ['/packaging/Honey_Packaging.png'],
+    highlight: 'Contains grayanotoxin, a natural compound from Himalayan Rhododendron nectar — traditionally valued in the region for several beneficial uses.',
+    shelfLife: '18 months from packaging', storage: 'Dry & hygienic place, away from direct sunlight' },
+  { label: 'Royal Zahidi Dates', image: '/products/royal-zahidi-dates.png', desc: 'Premium dates, hand-picked and packed for freshness', weight: '1kg', packagingImages: ['/packaging/Dates_packaging.png', '/packaging/Dates_packaging1.png'],
+    category: 'Dry Fruits', storage: 'Keep in a cool and dry place; refrigerate once opened.', hideMadeIn: true },
+  { label: 'Mixed Fruit Jam', image: '/products/mixed-fruit-jam.png', desc: 'Apis Gold — a blend of real fruit, no artificial colours', weight: '500g', packagingImages: ['/packaging/Jam_packaging.png'],
+    category: 'Sweet Spread', storage: 'Keep in a cool and dry place; refrigerate once opened.',
+    highlight: 'Enriched with Iron, Vitamin B6, Vitamin B12 and Zinc.' },
+  { label: 'Corn Flakes', image: '/products/cornflakes.png', desc: 'A wholesome start to the day', weight: '500g', packagingImages: ['/packaging/cornflakes_packaging.png'],
+    shelfLife: '9 months from packaging' },
+  { label: 'Vermicelli', image: '/products/vermicelli.png', desc: 'Roasted and ready in minutes', weight: '200g', packagingImages: ['/packaging/vermicilli_packaging.png'],
+    category: 'Roasted, Plain (Untouched by Hands)' },
+  { label: 'Ginger Garlic Paste', image: '/products/ginger-garlic-paste.png', desc: 'Freshly ground, everyday kitchen essential — part of the Kitchen Mix range', weight: '200g', packagingImages: ['/packaging/GInger_garlic_packaging.png'],
+    highlight: 'No preservatives, no added colour, no salt or sugar.' },
+  { label: 'Lemon Honey Green Tea', image: '/products/lemon-honey-green-tea.png', desc: 'Two flavours: Lemon Honey, green tea with real honey and lemon, and Detox Kahwa, green tea with natural herbs', weight: '10 sachets', packagingImages: ['/packaging/GreenTea_packaging.png'],
+    highlight: 'Boosts immunity, aids digestion and supports metabolism.' },
+  { label: 'Saffron', image: '/products/saffron.png', desc: 'Pure, aromatic Kashmiri saffron', weight: '1g', packagingImages: ['/packaging/saffron_packaging.png'],
+    highlight: 'Handpicked, natural and pure — part of the Kitchen Mix range, in Classic and Gold saffron packs.' },
 ];
 
 export interface NewsItem { title: string; body: string; tag: string; tagColour: string; bar: string; dot: string; }

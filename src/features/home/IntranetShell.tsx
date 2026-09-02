@@ -14,10 +14,27 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEven
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
   LayoutDashboard, Briefcase, HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown,
+  CheckCircle2, Clock, AlertTriangle,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, dailyQuote, type QuickAccessId,
 } from './IntranetHomeShared';
+
+/* Sample rows for the header's notification bell — no real notifications
+   backend exists yet, same "shaped like the real thing, explicitly flagged"
+   pattern as SAMPLE_BIRTHDAYS/ANNOUNCEMENTS etc. in IntranetHomeShared. */
+interface HeaderNotification {
+  title: string; body: string; time: string;
+  icon: typeof Bell; tone: 'emerald' | 'amber' | 'sky';
+}
+const SAMPLE_NOTIFICATIONS: HeaderNotification[] = [
+  { title: 'Leave request approved', body: 'Your leave for 5–6 Sep was approved by your manager.', time: '2h ago', icon: CheckCircle2, tone: 'emerald' },
+  { title: 'Appraisal window closes soon', body: 'Submit your self-appraisal before the window shuts on 10 Sep.', time: '5h ago', icon: Clock, tone: 'amber' },
+  { title: 'New policy document uploaded', body: 'The updated Travel & Reimbursement policy is now live.', time: '1d ago', icon: AlertTriangle, tone: 'sky' },
+];
+const NOTIF_TONE: Record<HeaderNotification['tone'], string> = {
+  emerald: 'bg-emerald-50 text-emerald-600', amber: 'bg-amber-50 text-amber-600', sky: 'bg-sky-50 text-sky-600',
+};
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
    sub-views that live under a parent tool (approvals sits under letters). */
@@ -60,6 +77,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
   const paletteInputRef = useRef<HTMLInputElement>(null);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const todaysQuote = useMemo(() => dailyQuote(), []);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   // Greets with the quote popup on its own the moment the dashboard loads
   // (once — not on every re-render), auto-dismissing after 4s same as a
@@ -530,10 +548,51 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
             )}
 
             <div className="ml-auto flex items-center gap-2">
-              <button title="Notifications" className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500" />
-              </button>
+              {/* Notifications — same fixed-overlay/dropdown pattern as the
+                  Quote of the Day popup above, just with a list instead of
+                  one line. No real notifications backend exists yet, so the
+                  rows are flagged sample data, same convention as the
+                  Announcements/Celebrations cards on the dashboard. */}
+              <div className="relative">
+                <button onClick={() => setNotifOpen(o => !o)} title="Notifications"
+                  className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
+                  <Bell className="w-4 h-4" />
+                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500" />
+                </button>
+
+                {notifOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                    <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-80 rounded-2xl bg-white shadow-2xl
+                                   ring-1 ring-black/5 p-4 ih-palette-in">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-1.5">
+                          <Bell className="w-3 h-3" />Notifications
+                        </p>
+                        <button onClick={() => setNotifOpen(false)} title="Close"
+                          className="text-slate-300 hover:text-slate-600 transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-[10.5px] text-slate-400 mb-3">Sample data — not yet connected to a real notifications feed</p>
+                      <div className="space-y-2">
+                        {SAMPLE_NOTIFICATIONS.map((n, i) => (
+                          <div key={i} className="flex items-start gap-2.5 rounded-xl hover:bg-slate-50 p-2 transition-colors">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${NOTIF_TONE[n.tone]}`}>
+                              <n.icon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[12.5px] font-bold text-slate-800 leading-snug">{n.title}</p>
+                              <p className="text-[11.5px] text-slate-400 leading-snug mt-0.5">{n.body}</p>
+                              <p className="text-[10px] font-bold text-slate-300 mt-1">{n.time}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
               <button title="Help & Support — not available yet" className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                 <HelpCircle className="w-4 h-4" />
               </button>
