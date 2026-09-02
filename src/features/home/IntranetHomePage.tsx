@@ -291,7 +291,8 @@ function PackagingPopup({ product, onClose }: { product: OurProduct; onClose: ()
   // static scan can't see a computed `grid-cols-${n}` and would drop the
   // rule entirely.
   const packColCount = [hasVariant, hasWeight, hasPrice, hasUnits].filter(Boolean).length;
-  const packGridCols = packColCount === 4 ? 'grid-cols-4' : packColCount === 3 ? 'grid-cols-3' : 'grid-cols-2';
+  const packGridCols = packColCount === 4 ? 'grid-cols-4' : packColCount === 3 ? 'grid-cols-3'
+    : packColCount === 2 ? 'grid-cols-2' : 'grid-cols-1';
   const [slide, setSlide] = useState<'packaging' | 'details'>('packaging');
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"

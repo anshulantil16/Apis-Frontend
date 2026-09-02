@@ -338,6 +338,14 @@ export const PACK_SIZES: Record<string, PackSize[]> = {
     { weight: '500 g' },
     { weight: '1 kg' },
   ],
+  'Misk Masala Dates': [
+    { variant: 'Tamarind (Imli)' },
+    { variant: 'Achari' },
+    { variant: 'Chilli Lime' },
+  ],
+  'Misk Shahi Khazoor': [
+    { unitsPerCase: '576 pcs (24 x 24)' },
+  ],
 };
 
 export interface OurProduct {
@@ -378,6 +386,10 @@ export const OUR_PRODUCTS: OurProduct[] = [
     highlight: 'Boosts immunity, aids digestion and supports metabolism.' },
   { label: 'Saffron', image: '/products/saffron.png', desc: 'Pure, aromatic Kashmiri saffron', weight: '1g', packagingImages: ['/packaging/saffron_packaging.png'],
     highlight: 'Handpicked, natural and pure — part of the Kitchen Mix range, in Classic and Gold saffron packs.' },
+  { label: 'Misk Masala Dates', image: '/products/Masala_dates.png', desc: 'Snackable superfood-on-the-go dates, seedless & sliced', packagingImages: ['/packaging/Masala_packaging_types.png'],
+    category: 'Dry Fruits', highlight: 'Available in three flavours — Tamarind (Imli), Achari and Chilli Lime.' },
+  { label: 'Misk Shahi Khazoor', image: '/products/Misk.png', desc: 'Silver-coated dates, a traditional mouth freshener', packagingImages: ['/packaging/Misk_packaging.png'],
+    category: 'Mouth Freshener' },
 ];
 
 export interface NewsItem { title: string; body: string; tag: string; tagColour: string; bar: string; dot: string; }
