@@ -15,6 +15,14 @@ const WARNING_TYPES = [
   { value: 'show_cause', label: 'Show Cause Notice' },
 ];
 
+// toISOString() reads the UTC calendar day, not the browser's local one — between
+// midnight and 5:30 AM IST that is still yesterday in UTC, so "today" would
+// silently default a day early. Local getters give the day the viewer is actually in.
+const todayLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const badgeFor = (status: string) =>
   status === 'sent' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : status === 'failed' ? 'bg-rose-50 text-rose-700 border-rose-200'
@@ -33,7 +41,7 @@ const EMPTY_FORM = {
   warning_type: 'first', warning_type_label: '',
   subject: '', incident_date: '', incident_description: '',
   previous_warning_ref: '', corrective_action: '', response_due_days: '',
-  letter_date: new Date().toISOString().slice(0, 10),
+  letter_date: todayLocal(),
   issued_by: '', issued_by_designation: '', remarks: '',
 };
 

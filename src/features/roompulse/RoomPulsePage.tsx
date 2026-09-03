@@ -7,7 +7,7 @@ import {
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
   ROLE_LABEL, Reveal, Panel, Skel, Empty, StatusPill, PURPOSE_LABEL, PURPOSE_COLOUR,
-  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate,
+  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal,
 } from './RoomPulseShared';
 import { RoomPulseLogin } from './RoomPulseLogin';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './RoomPulseAdminPanels';
@@ -108,7 +108,7 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
   room: any; rooms: any[]; session: Session; onClose: () => void; onDone: () => void;
 }) {
   const [roomId, setRoomId] = useState(room?.id || rooms[0]?.id);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(isoLocal(new Date()));
   const [start, setStart] = useState('10:00');
   const [end, setEnd] = useState('11:00');
   const [purpose, setPurpose] = useState('internal_meeting');
@@ -187,7 +187,7 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Date</label>
-                <input type="date" value={date} min={new Date().toISOString().slice(0, 10)}
+                <input type="date" value={date} min={isoLocal(new Date())}
                   onChange={e => setDate(e.target.value)} className={`${inputCls} px-2.5 text-xs`} />
               </div>
               <div>

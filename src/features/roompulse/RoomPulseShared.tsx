@@ -177,6 +177,12 @@ export const fmtTime = (t: string) => t; // already HH:MM from the API
 export const fmtDate = (d: string) =>
   new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
 
+// yyyy-mm-dd for a Date, read from its LOCAL fields. toISOString() reads UTC,
+// which between midnight and 5:30 AM IST is still yesterday - so "today", and
+// day-shifting arithmetic built on it, would silently land a day off.
+export const isoLocal = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 /* Shared page-scoped keyframes — one <style> block, imported by every screen
    in this feature so the whole app doesn't carry unused animation CSS. */
 export const RP_STYLES = `

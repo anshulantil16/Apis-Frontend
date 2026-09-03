@@ -10,7 +10,7 @@ import {
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
-  fmtDate,
+  fmtDate, isoLocal,
 } from './RoomPulseShared';
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
@@ -204,7 +204,7 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
 /* ── Calendar (per-room day timeline) ─────────────────────────────────────── */
 export function CalendarPanel({ rooms }: { rooms: any[] }) {
   const [roomId, setRoomId] = useState<number | null>(rooms[0]?.id || null);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(isoLocal(new Date()));
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -222,7 +222,7 @@ export function CalendarPanel({ rooms }: { rooms: any[] }) {
 
   const shiftDay = (n: number) => {
     const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + n);
-    setDate(d.toISOString().slice(0, 10));
+    setDate(isoLocal(d));
   };
 
   const HOURS = Array.from({ length: 13 }, (_, i) => 8 + i); // 8am–8pm
