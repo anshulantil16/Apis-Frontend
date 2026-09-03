@@ -55,6 +55,11 @@ interface Props {
   onSignOut?: () => void;
   /** Shows the administrator entry. Superadmin only. */
   isSuperadmin?: boolean;
+  /** Which tools this person may open. Gates the sidebar and the command
+   *  palette so nobody is shown — let alone can click into — a tool nobody
+   *  granted them. A superadmin bypasses this (mayOpen already does, in
+   *  App.tsx; this list is what decides what to SHOW, not what to allow). */
+  allowedApps?: string[];
 }
 
 /* What the scroll-reveal observer watches. `.tp-reveal` is the legacy
@@ -68,7 +73,15 @@ const PARENT_OF: Partial<Record<ShellView, QuickAccessId>> = {
 };
 
 export function IntranetShell({ active, onNavigate, children, subNav, title, subtitle,
-                                userName, onSignOut, isSuperadmin }: Props) {
+                                userName, onSignOut, isSuperadmin, allowedApps }: Props) {
+  const canOpen = (id: string) => isSuperadmin || !allowedApps || allowedApps.includes(id);
+  const VISIBLE_GROUPS = useMemo(
+    () => NAV_GROUPS
+      .map(g => ({ ...g, items: g.items.filter(i => canOpen(i.id)) }))
+      .filter(g => g.items.length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allowedApps, isSuperadmin],
+  );
   const [collapsed, setCollapsed] = useState(false);
   const [now, setNow] = useState(new Date());
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -278,11 +291,13 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
   };
 
   const pq = paletteQuery.trim().toLowerCase();
-  const paletteResults = useMemo(() => (
-    pq
-      ? QUICK_ACCESS.filter(t => t.label.toLowerCase().includes(pq) || t.desc.toLowerCase().includes(pq))
-      : QUICK_ACCESS
-  ), [pq]);
+  const paletteResults = useMemo(() => {
+    const openable = QUICK_ACCESS.filter(t => canOpen(t.id));
+    return pq
+      ? openable.filter(t => t.label.toLowerCase().includes(pq) || t.desc.toLowerCase().includes(pq))
+      : openable;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pq, allowedApps, isSuperadmin]);
 
   const onPaletteKey = (e: ReactKeyboardEvent) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setPaletteIndex(i => Math.min(i + 1, paletteResults.length - 1)); }
@@ -350,7 +365,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
           </div>
 
           {!collapsed && <p className="px-2.5 pt-4 pb-1.5 text-[9px] font-bold text-amber-100/40 uppercase tracking-widest">Tools</p>}
-          {NAV_GROUPS.map(group => {
+          {VISIBLE_GROUPS.map(group => {
             const GIcon = group.icon;
             const open = !!openGroups[group.label];
             const hasActive = group.items.some(i => i.id === activeTool);

@@ -157,7 +157,7 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       <IntranetShell active="home" onNavigate={v => navigate(v as AppView)}
         title={meta.title} subtitle={meta.subtitle}
         userName={session.user.name} onSignOut={session.signOut}
-        isSuperadmin={session.user.is_superadmin}>
+        isSuperadmin={session.user.is_superadmin} allowedApps={session.user.allowed_apps}>
         <div className="max-w-md mx-auto text-center py-20">
           <p className="text-lg font-black text-slate-800">You don't have access to this tool</p>
           <p className="text-sm text-slate-500 mt-1.5">
@@ -180,7 +180,7 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       onNavigate={v => navigate(v as AppView)}
       title={meta.title} subtitle={meta.subtitle}
       userName={session.user.name} onSignOut={session.signOut}
-      isSuperadmin={session.user.is_superadmin}>
+      isSuperadmin={session.user.is_superadmin} allowedApps={session.user.allowed_apps}>
       <Suspense fallback={
         <div className="min-h-[60vh] flex items-center justify-center">
           <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
@@ -189,7 +189,7 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       {view === 'admin-console' ? (
         <AdminConsoleLazy me={session.user} />
       ) : view === 'home' ? (
-        <IntranetHomePage onNavigate={navigate} />
+        <IntranetHomePage onNavigate={navigate} allowedApps={session.user.allowed_apps} isSuperadmin={session.user.is_superadmin} />
       ) : view === 'extractor' ? (
         <DataExtractorPage />
       ) : view === 'roompulse' ? (

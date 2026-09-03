@@ -81,6 +81,11 @@ const DID_YOU_KNOW = seededShuffle(DID_YOU_KNOW_POOL, todaySeed()).slice(0, 10);
 
 interface IntranetHomePageProps {
   onNavigate: (id: QuickAccessId) => void;
+  /** Which tools this person may actually open. Gates every card on this
+   *  page: the whole point of granting access from the admin console is
+   *  that it becomes visible here, not just enforced silently after a click. */
+  allowedApps?: string[];
+  isSuperadmin?: boolean;
 }
 
 /* Pointer handlers come from the shared kit: it measures once per
@@ -568,7 +573,23 @@ function Particles() {
   );
 }
 
-export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
+export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: IntranetHomePageProps) {
+  /* Every card on this page used to render for every signed-in person,
+   * whatever the admin console said they could open — clicking a card was
+   * the only place permission was ever checked, and even then only App.tsx's
+   * route guard caught it. That made a grant invisible: the dashboard looked
+   * identical before and after, so "I gave her access" and "nothing changed
+   * on her screen" were both true at once.
+   *
+   * VISIBLE_TOOLS is what every list on this page reads from instead of the
+   * raw QUICK_ACCESS export. */
+  const VISIBLE_TOOLS = useMemo(
+    () => (isSuperadmin || !allowedApps
+      ? QUICK_ACCESS
+      : QUICK_ACCESS.filter(t => allowedApps.includes(t.id))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allowedApps, isSuperadmin],
+  );
   // Top-level hero carousel: slide 0 is the "Our Products" showcase, with
   // its own continuously-sliding product strip; slides 1+ are the
   // leadership profiles.
@@ -577,7 +598,8 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
 
   const recentEntries = useMemo(() => getRecentToolsWithTime(), []);
   const recentTools = recentEntries
-    .map(r => ({ tool: QUICK_ACCESS.find(t => t.id === r.id), ts: r.ts }))
+    // A tool opened before access was revoked must not linger in "Recent".
+    .map(r => ({ tool: VISIBLE_TOOLS.find(t => t.id === r.id), ts: r.ts }))
     .filter((x): x is { tool: typeof QUICK_ACCESS[number]; ts: number } => !!x.tool);
 
   const [category, setCategory] = useState<ToolCategoryFilter>('All');
@@ -585,7 +607,7 @@ export function IntranetHomePage({ onNavigate }: IntranetHomePageProps) {
   const [openProduct, setOpenProduct] = useState<OurProduct | null>(null);
   const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | 'announcements' | 'celebrations' | null>(null);
   const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
-  const filteredTools = category === 'All' ? QUICK_ACCESS : QUICK_ACCESS.filter(t => t.category === category);
+  const filteredTools = category === 'All' ? VISIBLE_TOOLS : VISIBLE_TOOLS.filter(t => t.category === category);
 
   const upcomingHolidays = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
