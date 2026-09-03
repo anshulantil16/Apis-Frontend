@@ -908,6 +908,17 @@ function HrmsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void
         </div>
       )}
 
+      {/* The button below is the manual path. There is also a scheduled one:
+          `manage.py sync_hrms`, meant to be run from cron twice a day, so
+          leavers and new joiners land here without anyone remembering to
+          click anything. Both write to the same Sync history table below,
+          distinguished by "By" — a person's name, or "cron". */}
+      <p className="text-[11px] text-slate-400 font-semibold -mt-1">
+        Runs automatically if <code className="bg-slate-100 px-1 rounded font-mono">sync_hrms</code> is
+        scheduled on the server (twice a day is the usual setting) — the button below is only for a
+        manual pull in between.
+      </p>
+
       <div className="flex gap-2 flex-wrap">
         <button onClick={runSync} disabled={!info.configured || !!busy}
           className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-sky-600 text-white font-black px-4 py-2.5 rounded-xl text-xs disabled:opacity-40 hover:shadow-lg transition-all">
