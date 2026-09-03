@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import {
   ArrowLeft, Loader2, Target, ShieldCheck, AlertCircle, LogOut, ChevronDown,
-  Mail, KeyRound, Lock, Zap, ArrowRight,
+  Mail, KeyRound, Lock, Zap, ArrowRight, Users, Lightbulb,
 } from 'lucide-react';
 import {
   ApiError, getCycles, getMeta, myPlans, sendAdminOtp, sendOtp, verifyAdminOtp, verifyOtp,
@@ -35,6 +35,26 @@ const ROLE_CHIP: Record<Role, string> = {
   hod: 'bg-violet-50 text-violet-700 border-violet-200',
   admin: 'bg-rose-50 text-rose-700 border-rose-200',
 };
+
+/* One of the three values flanking the sign-in card on wide screens — the
+   honey-brand equivalent of the "why should I trust this screen" copy every
+   login page needs, without resorting to a stock-photo hero. */
+function ValueBlock({ icon: Icon, title, text, align = 'left' }: {
+  icon: typeof Target; title: string; text: string; align?: 'left' | 'right';
+}) {
+  return (
+    <div className={`flex items-start gap-3 max-w-[210px] ${align === 'right' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+      <span className="w-10 h-10 rounded-full border-2 border-amber-400/60 bg-white/50 backdrop-blur-sm
+        flex items-center justify-center shrink-0 shadow-sm">
+        <Icon className="w-4.5 h-4.5 text-amber-600" />
+      </span>
+      <div>
+        <p className="font-black text-slate-800 text-[13px] leading-tight">{title}</p>
+        <p className="text-[11.5px] text-slate-500 font-semibold mt-0.5 leading-snug">{text}</p>
+      </div>
+    </div>
+  );
+}
 
 // ── sign in ───────────────────────────────────────────────────────────────────
 
@@ -83,29 +103,33 @@ function SignIn({ onSignedIn }: { onSignedIn: (e: Employee) => void }) {
   const Tip = ASSURANCES[tip].icon;
 
   return (
-    <div className="relative max-w-md mx-auto pt-8 pb-10">
+    <div className="relative w-full max-w-xl mx-auto pt-8 pb-10">
       <Motes count={18} />
 
-      <div className="relative text-center mb-6">
-        <span className="ih-float ih-halo inline-flex w-16 h-16 rounded-3xl
+      <div className="relative text-center mb-8">
+        <span className="ih-float ih-halo inline-flex w-14 h-14 rounded-2xl
           bg-gradient-to-br from-amber-400 to-orange-500 items-center justify-center
-          shadow-xl shadow-amber-500/30 mb-4"
+          shadow-xl shadow-amber-500/30"
           style={{ ['--ih-halo' as string]: 'rgba(245,158,11,.5)' }}>
-          <Target className="w-8 h-8 text-white" />
+          <Target className="w-6 h-6 text-white" />
         </span>
-        <h1 className="ih-grad-text text-3xl font-black leading-tight">Goal Setting</h1>
-        <p className="text-[13px] text-slate-500 font-semibold mt-1.5">
-          Agree this year&apos;s KRAs and KPIs with your manager and HOD.
-        </p>
+
+        {/* Decorative goal indicator */}
+  <div className="flex items-center justify-center gap-3 mt-5">
+    <span className="h-px w-12 bg-gradient-to-r from-transparent to-amber-400" />
+    <span className="w-3 h-3 rotate-45 rounded-sm bg-amber-500 shadow-md shadow-amber-400/50" />
+    <span className="h-px w-12 bg-gradient-to-l from-transparent to-amber-400" />
+  </div>
       </div>
 
       <div onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-        className="ih-tilt3d ih-spotlight relative bg-white border border-slate-200 rounded-3xl p-6 shadow-xl shadow-slate-900/5">
-        <div className="flex items-center gap-1.5 bg-slate-50 rounded-xl p-1 mb-5">
+        className="ih-tilt3d ih-spotlight relative bg-white border border-amber-100 rounded-[32px] p-8 sm:p-10
+          shadow-[0_45px_90px_-25px_rgba(217,119,6,.45)]">
+        <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-1.5 mb-7">
           {(['employee', 'admin'] as const).map(m => (
             <button key={m}
               onClick={() => { setMode(m); setStep('id'); setError(''); setOtp(''); }}
-              className={`flex-1 px-3 py-1.5 rounded-lg text-[12px] font-black capitalize transition-colors ${
+              className={`flex-1 px-4 py-2.5 rounded-xl text-[14px] font-black capitalize transition-colors ${
                 mode === m ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>
               {m === 'admin' ? 'Admin' : 'Employee'}
             </button>
@@ -116,7 +140,7 @@ function SignIn({ onSignedIn }: { onSignedIn: (e: Employee) => void }) {
           <>
             {mode === 'employee' ? (
               <>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                <label className="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2.5">
                   Employee ID
                 </label>
                 <input
@@ -124,31 +148,31 @@ function SignIn({ onSignedIn }: { onSignedIn: (e: Employee) => void }) {
                   onChange={e => setEmpId(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && empId.trim() && request()}
                   placeholder="e.g. APIS1234"
-                  className="w-full px-3.5 py-2.5 text-[14px] rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                  className="w-full px-4.5 py-3.5 text-[16px] rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
                 />
-                <p className="text-[11px] text-slate-400 font-semibold mt-2">
+                <p className="text-[12.5px] text-slate-400 font-semibold mt-2.5">
                   We will email a 6-digit code to the address on your record.
                 </p>
               </>
             ) : (
-              <p className="text-[13px] text-slate-600 font-semibold">
+              <p className="text-[14.5px] text-slate-600 font-semibold">
                 A sign-in code will be sent to the administrator's address on file.
               </p>
             )}
             <button
               onClick={request}
               disabled={busy || (mode === 'employee' && !empId.trim())}
-              className="ih-sheen group w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl
+              className="ih-sheen group w-full mt-5 flex items-center justify-center gap-2 px-4 py-4 rounded-2xl
                 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600
-                disabled:opacity-40 text-white font-bold text-[14px] shadow-lg shadow-amber-500/25 transition-all">
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                disabled:opacity-40 text-white font-bold text-[16px] shadow-lg shadow-amber-500/25 transition-all">
+              {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
               Send me a code
-              {!busy && <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />}
+              {!busy && <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />}
             </button>
           </>
         ) : (
           <>
-            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+            <label className="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2.5">
               6-digit code
             </label>
             <input
@@ -156,38 +180,38 @@ function SignIn({ onSignedIn }: { onSignedIn: (e: Employee) => void }) {
               onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
               onKeyDown={e => e.key === 'Enter' && otp.length === 6 && verify()}
               placeholder="••••••"
-              className="w-full px-3.5 py-2.5 text-[20px] tracking-[0.4em] text-center font-black rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+              className="w-full px-4.5 py-3.5 text-[24px] tracking-[0.4em] text-center font-black rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
             />
-            <p className="text-[11px] text-slate-400 font-semibold mt-2">
+            <p className="text-[12.5px] text-slate-400 font-semibold mt-2.5">
               Sent to {masked}. It expires in five minutes.
             </p>
-            {note && <p className="text-[11px] text-emerald-600 font-bold mt-1">{note}</p>}
+            {note && <p className="text-[12.5px] text-emerald-600 font-bold mt-1.5">{note}</p>}
             <button onClick={verify} disabled={busy || otp.length !== 6}
-              className="ih-sheen w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl
+              className="ih-sheen w-full mt-5 flex items-center justify-center gap-2 px-4 py-4 rounded-2xl
                 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600
-                disabled:opacity-40 text-white font-bold text-[14px] shadow-lg shadow-amber-500/25 transition-all">
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                disabled:opacity-40 text-white font-bold text-[16px] shadow-lg shadow-amber-500/25 transition-all">
+              {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />}
               Sign in
             </button>
             <button onClick={() => { setStep('id'); setOtp(''); setError(''); }}
-              className="w-full mt-2 text-[12px] font-bold text-slate-500 hover:text-slate-700">
+              className="w-full mt-2.5 text-[13px] font-bold text-slate-500 hover:text-slate-700">
               Use a different ID
             </button>
           </>
         )}
 
         {error && (
-          <div className="ih-pop-in mt-4 flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
-            <AlertCircle className="w-4 h-4 text-rose-500 mt-px shrink-0" />
-            <p className="text-[12px] font-bold text-rose-700">{error}</p>
+          <div className="ih-pop-in mt-4 flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3.5 py-3">
+            <AlertCircle className="w-4.5 h-4.5 text-rose-500 mt-px shrink-0" />
+            <p className="text-[13px] font-bold text-rose-700">{error}</p>
           </div>
         )}
       </div>
 
       {/* One line at a time, so the card is never silent while someone waits. */}
-      <div className="relative mt-5 h-6 overflow-hidden">
-        <p key={tip} className="ih-fade flex items-center justify-center gap-2 text-[12px] font-semibold text-slate-400">
-          <Tip className="w-3.5 h-3.5 text-amber-500" />
+      <div className="relative mt-6 h-6 overflow-hidden">
+        <p key={tip} className="ih-fade flex items-center justify-center gap-2 text-[13px] font-semibold text-slate-500">
+          <Tip className="w-4 h-4 text-amber-500" />
           {ASSURANCES[tip].text}
         </p>
       </div>
@@ -308,16 +332,47 @@ export function GoalSettingPage({ onNavigateBack }: { onNavigateBack?: () => voi
 
   if (!me) {
     return (
-      <div className="min-h-full bg-[#f8fafc] relative overflow-hidden">
-        <Ambient />
-        <div className="relative max-w-[1400px] mx-auto px-6 py-5">
-          {onNavigateBack && (
-            <button onClick={onNavigateBack}
-              className="ih-underline flex items-center gap-2 text-[13px] font-bold text-slate-500 hover:text-slate-800 mb-2">
-              <ArrowLeft className="w-4 h-4" /> Back to dashboard
-            </button>
-          )}
+      <div className="min-h-full relative overflow-hidden bg-[#fdf6e3]">
+        {/* The whole point of this screen: the honey-brand illustration is the
+            page, not a decorative strip above a form. */}
+        <img src="/goal_setting_bg.png" alt="" aria-hidden decoding="async"
+          className="absolute inset-0 w-full h-full object-cover" />
+
+        {/* Brand mark, top-left — the same "which company is this" anchor
+            every APIS sign-in screen carries. */}
+        <div className="absolute top-6 left-6 sm:top-8 sm:left-10 z-20 flex items-center gap-2.5">
+          <img src="/logo.png" alt="APIS" className="w-11 h-11 sm:w-12 sm:h-12 object-contain drop-shadow" />
+          <p className="text-[17px] font-bold text-amber-700/80 leading-tight">Apis India Limited</p>
+        </div>
+
+        {onNavigateBack && (
+          <button onClick={onNavigateBack}
+            className="absolute top-6 right-6 sm:top-8 sm:right-10 z-20 flex items-center gap-2 text-[12.5px]
+              font-bold text-slate-600 hover:text-slate-900 bg-white/60 hover:bg-white/85 backdrop-blur-sm
+              border border-white/70 rounded-full px-3.5 py-2 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to dashboard
+          </button>
+        )}
+
+        {/* Values flanking the card — visible once there is room for them
+            beside it, not stacked awkwardly above or below on a wide screen. */}
+        <div className="hidden xl:block absolute left-14 top-1/2 -translate-y-1/2 z-10">
+          <ValueBlock icon={Target} title="Goal-Driven Performance" text="Every goal brings us closer to greatness." />
+        </div>
+        <div className="hidden xl:flex flex-col gap-9 absolute right-14 top-1/2 -translate-y-1/2 z-10">
+          <ValueBlock icon={Users} title="Collaborate" text="Together, we achieve more." align="right" />
+          <ValueBlock icon={Lightbulb} title="Innovate" text="New ideas. Better tomorrow." align="right" />
+          <ValueBlock icon={ShieldCheck} title="Deliver" text="Committed to quality in everything we do." align="right" />
+        </div>
+
+        <div className="relative z-10 min-h-full flex flex-col items-center justify-center px-4 py-10">
           <SignIn onSignedIn={setMe} />
+
+          <div className="flex items-center gap-3 mt-2">
+            <span className="h-px w-12 bg-amber-500/30" />
+            <img src="/logo.png" alt="APIS" className="h-6 object-contain opacity-80" />
+            <span className="h-px w-12 bg-amber-500/30" />
+          </div>
         </div>
       </div>
     );
@@ -434,3 +489,4 @@ export function GoalSettingPage({ onNavigateBack }: { onNavigateBack?: () => voi
     </div>
   );
 }
+ 
