@@ -15,7 +15,7 @@ import {
   reopenPlan, resetData, updateCycle, updateEmployee,
 } from './api';
 import type { Activity, Cycle, Employee, PlanSummary, ResetInfo, ResetScope } from './api';
-import { ROLE_LABEL, STATUS_TONE, d, dt } from './api';
+import { ROLE_LABEL, STATUS_HEX, STATUS_LABEL, STATUS_ORDER, STATUS_TONE, d, dt } from './api';
 import { Tile } from './chrome';
 
 type Tab = 'overview' | 'people' | 'cycles' | 'activity';
@@ -444,28 +444,49 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
               sub="with manager or HOD" tone="violet" />
           </div>
 
-          {/* Where everyone is. One measure across stages, so one hue
-              light-to-dark rather than a colour per stage. */}
+          {/* Where everyone is.
+           *
+           * This used to colour each bar by ITS OWN percentage — a >66% bar
+           * dark, a <33% bar pale, whatever the status. That is the right
+           * rule for a magnitude (one hue, light to dark), but a workflow
+           * stage is not a magnitude, it is an identity: "with the HOD" is
+           * not a bigger or smaller version of "submitted", it is a
+           * different place in the pipeline. Colouring by rank meant the
+           * same status could shift shade as the numbers moved, and two
+           * different statuses at similar percentages looked identical.
+           * Every status now keeps the one fixed colour it has everywhere
+           * else in the product (the same dot on a chip, the same step icon
+           * in the history) — STATUS_HEX, not a computed shade. It also used
+           * to print the raw enum key ("with_hod") instead of a real label,
+           * and iterate whatever order the object happened to have instead
+           * of the order the pipeline actually runs in. */}
           <div className="ih-inview bg-white border border-slate-200 rounded-2xl p-4">
-            <p className="font-black text-slate-700 text-sm mb-0.5">Where the sheets are</p>
-            <p className="text-[11px] text-slate-400 font-semibold mb-3">
-              Every goal sheet in this cycle, by the stage it is sitting at.
-            </p>
+            <div className="flex items-baseline justify-between mb-3">
+              <div>
+                <p className="font-black text-slate-700 text-sm">Where the sheets are</p>
+                <p className="text-[11px] text-slate-400 font-semibold">
+                  By stage, in the order the workflow runs.
+                </p>
+              </div>
+              <p className="text-[11px] font-bold text-slate-400">{overview.plans} total</p>
+            </div>
             <div className="space-y-1.5">
-              {Object.entries(overview.by_status).map(([status, count]) => {
+              {STATUS_ORDER.map(status => {
+                const count = overview.by_status[status] ?? 0;
                 const total = overview.plans || 1;
                 const pct = Math.round((count / total) * 100);
-                const tone = STATUS_TONE[status as keyof typeof STATUS_TONE];
+                const empty = count === 0;
                 return (
-                  <div key={status} className="flex items-center gap-3">
-                    <span className="w-44 shrink-0 text-[11px] font-bold text-slate-600 truncate flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${tone?.dot || 'bg-slate-300'}`} />
-                      {status.replace(/_/g, ' ')}
+                  <div key={status} className={`flex items-center gap-3 ${empty ? 'opacity-40' : ''}`}>
+                    <span className="w-48 shrink-0 text-[11px] font-bold text-slate-600 truncate flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: STATUS_HEX[status] }} />
+                      {STATUS_LABEL[status]}
                     </span>
                     <span className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <span className="block h-full rounded-full"
                         style={{ width: `${Math.max(pct, count > 0 ? 2 : 0)}%`,
-                                 backgroundColor: pct >= 66 ? '#b45309' : pct >= 33 ? '#f59e0b' : '#fcd34d',
+                                 backgroundColor: STATUS_HEX[status],
                                  transition: 'width .9s cubic-bezier(.2,.8,.2,1)' }} />
                     </span>
                     <span className="w-16 shrink-0 text-right text-[11px] font-black text-slate-700 tabular-nums">

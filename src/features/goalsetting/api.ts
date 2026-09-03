@@ -355,18 +355,54 @@ export const getOverview = (cycleId?: number) =>
 
 // ── presentation helpers ──────────────────────────────────────────────────────
 
-/** dd-mm-yyyy, the format used across the intranet. */
+/* dd-mm-yyyy, the format used across the intranet.
+ *
+ * Two shapes come through here, and they need different handling. A bare
+ * calendar date ("2026-09-01" — a cycle deadline, a start date) has no
+ * timezone in it at all, so swapping the pieces around is exact.
+ *
+ * A full instant ("2026-09-01T11:10:26.454Z" — created_at, accepted_at, every
+ * version's timestamp) is a different matter: Django stores and sends every
+ * timestamp in UTC. Pulling the digits straight out of that string with a
+ * regex — which this used to do — is the UTC clock, mislabelled as local.
+ * IST is five and a half hours ahead, so 11:10 in the raw string reads as
+ * 16:40 in India: every timestamp in the product was off by 5:30. Worse,
+ * anything from 18:30 UTC onward (past midnight IST) showed the wrong
+ * CALENDAR DAY, not just the wrong time — a version created at 20:00 IST
+ * (14:30 UTC the same day) is fine, but one created at 00:30 IST is
+ * 19:00 UTC the PREVIOUS day, so the raw string's date digits are yesterday.
+ *
+ * new Date() parses the UTC instant correctly, and its local getters
+ * (getDate/getHours/…) read it back out in whatever timezone the browser is
+ * actually in — which for this product is IST. That is the fix: for a bare
+ * date, keep the exact string; for an instant, go through Date.
+ */
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
 export const d = (v: string | null | undefined): string => {
   if (!v) return '—';
-  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : String(v);
+  const s = String(v);
+  const bare = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (bare) return `${bare[3]}-${bare[2]}-${bare[1]}`;
+  // A full instant, not a bare date — go through the local-timezone path so
+  // the calendar day shown is the viewer's, not UTC's (see dt() below).
+  const parsed = new Date(s);
+  return isNaN(parsed.getTime())
+    ? s
+    : `${pad2(parsed.getDate())}-${pad2(parsed.getMonth() + 1)}-${parsed.getFullYear()}`;
 };
 
+/** dd-mm-yyyy HH:MM, converted to the viewer's local time — see the note on
+ *  d() above for why a raw substring of the UTC string was wrong. */
 export const dt = (v: string | null | undefined): string => {
   if (!v) return '—';
-  const date = d(v);
-  const t = String(v).match(/T(\d{2}:\d{2})/);
-  return t ? `${date} ${t[1]}` : date;
+  const s = String(v);
+  if (!/[T ]\d{2}:\d{2}/.test(s)) return d(s);   // no time component at all
+  const parsed = new Date(s);
+  if (isNaN(parsed.getTime())) return s;
+  const day = `${pad2(parsed.getDate())}-${pad2(parsed.getMonth() + 1)}-${parsed.getFullYear()}`;
+  const time = `${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}`;
+  return `${day} ${time}`;
 };
 
 /* Status colours. Amber is "waiting on someone", emerald is "agreed", rose is
@@ -379,6 +415,32 @@ export const STATUS_TONE: Record<PlanStatus, { chip: string; dot: string }> = {
   awaiting_employee: { chip: 'bg-sky-50 text-sky-700 border-sky-200',              dot: 'bg-sky-500' },
   accepted:          { chip: 'bg-emerald-50 text-emerald-700 border-emerald-200',  dot: 'bg-emerald-500' },
   returned:          { chip: 'bg-rose-50 text-rose-700 border-rose-200',           dot: 'bg-rose-500' },
+};
+
+/* The same six colours as hex, for anywhere a fill needs an inline style
+ * rather than a class (a chart bar, an SVG). Keeping this next to STATUS_TONE
+ * rather than computing it is what stops the two from drifting apart — a
+ * distribution chart that picked its own colours independently is exactly
+ * how a status ends up meaning a different colour in two different corners
+ * of the same product. */
+export const STATUS_HEX: Record<PlanStatus, string> = {
+  draft: '#94a3b8', submitted: '#f59e0b', with_hod: '#8b5cf6',
+  awaiting_employee: '#0ea5e9', accepted: '#10b981', returned: '#f43f5e',
+};
+
+/* Human labels in workflow order — the order itself is information (this is
+ * a pipeline, not an alphabetical list), so anything that iterates statuses
+ * should iterate this rather than Object.keys() on server data. */
+export const STATUS_ORDER: PlanStatus[] = [
+  'draft', 'submitted', 'with_hod', 'awaiting_employee', 'accepted', 'returned',
+];
+export const STATUS_LABEL: Record<PlanStatus, string> = {
+  draft: 'Draft with employee',
+  submitted: 'Submitted — with manager',
+  with_hod: 'With HOD',
+  awaiting_employee: 'Awaiting employee acceptance',
+  accepted: 'Accepted — goals agreed',
+  returned: 'Sent back for changes',
 };
 
 export const ROLE_LABEL: Record<string, string> = {
@@ -397,6 +459,61 @@ export const blankKra = (category: string): KRA => ({
 export const totalWeight = (kras: KRA[]): number =>
   Math.round(kras.reduce((s, k) =>
     s + k.kpis.reduce((ks, kpi) => ks + (Number(kpi.weightage) || 0), 0), 0) * 100) / 100;
+
+const REQUIRED_KPI: { field: keyof KPI; label: string }[] = [
+  { field: 'metric', label: 'KPI / Metric' },
+  { field: 'frequency', label: 'Frequency' },
+  { field: 'unit_of_measurement', label: 'Unit of Measurement' },
+  { field: 'parameter_type', label: 'Parameter Direction' },
+  { field: 'data_source', label: 'Data Source' },
+  { field: 'target_value', label: 'Plan / Target' },
+];
+
+/* Everything wrong with a sheet, mirroring services.readiness() on the
+ * server field for field.
+ *
+ * The server was already the final word on this — it refuses to submit an
+ * incomplete sheet and says exactly why. What it could not do was stop
+ * someone from clicking Submit in the first place: the button was only ever
+ * disabled while a request was in flight, so filling in nine of ten fields
+ * and clicking Submit meant a trip to the server and back just to be told
+ * "not yet." This mirror runs on every keystroke instead, so the same list
+ * of what's missing is visible immediately and the button is disabled until
+ * it is empty — "mandatory" is now enforced by the form, not just reported
+ * by it after the fact.
+ */
+export function sheetProblems(kras: KRA[]): string[] {
+  if (kras.length === 0) return ['Add at least one KRA before sending this on.'];
+
+  const problems: string[] = [];
+  for (const kra of kras) {
+    const kraTitle = kra.title.trim();
+    if (!kraTitle) problems.push(`A KRA under ${kra.category || 'an unnamed category'} has no title.`);
+    if (kra.kpis.length === 0) {
+      problems.push(`"${kraTitle || 'Untitled KRA'}" has no KPI under it.`);
+      continue;
+    }
+    for (const kpi of kra.kpis) {
+      const missing = REQUIRED_KPI.filter(f => !String(kpi[f.field] ?? '').trim()).map(f => f.label);
+      if (missing.length) {
+        problems.push(`"${kpi.metric || 'An unnamed KPI'}" under "${kraTitle || 'Untitled KRA'}" `
+          + `is missing: ${missing.join(', ')}.`);
+      }
+      if (!(Number(kpi.weightage) > 0)) {
+        problems.push(`"${kpi.metric || 'An unnamed KPI'}" has no weightage.`);
+      }
+    }
+  }
+
+  const total = totalWeight(kras);
+  if (Math.round(total * 100) / 100 !== 100) {
+    const over = total > 100;
+    const by = Math.round(Math.abs(100 - total) * 100) / 100;
+    problems.push(`Total weightage is ${total}% — it must be exactly 100%. `
+      + `${over ? 'Reduce' : 'Add'} ${by}%.`);
+  }
+  return problems;
+}
 
 /** Plain-English rendering of one change, for the history panel. */
 export const FIELD_LABEL: Record<string, string> = {

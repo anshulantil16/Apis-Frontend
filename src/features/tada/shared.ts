@@ -3,24 +3,47 @@
    arithmetic only — no components — so any screen can import it freely. */
 
 export const API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/tada`;
-/* Dates come off the API as ISO (yyyy-mm-dd), which is right for storage and
-   for <input type="date">, but nobody here reads a date that way. Rendered as
-   dd-mm-yyyy everywhere it is shown to a person. Anything unparseable is
-   passed through untouched rather than turned into "Invalid Date". */
+/* Dates come off the API two ways, and they need different handling.
+ *
+ * A bare calendar date ("2026-09-01" — travel dates, leg dates) has no
+ * timezone in it, so swapping the pieces around with a regex is exact.
+ *
+ * A full instant (check-in/check-out, booked_at) is stored and sent in UTC
+ * (Django's USE_TZ=True). Pulling digits straight out of that string — which
+ * this used to do — is the UTC clock, mislabelled as local: IST is five and a
+ * half hours ahead, so every such timestamp was off by 5:30, and anything
+ * from 18:30 UTC onward (past midnight IST) showed the wrong CALENDAR DAY,
+ * not just the wrong time. new Date() parses the instant correctly and its
+ * local getters read it back out in the browser's own timezone (IST here),
+ * which is the fix.
+ *
+ * Rendered as dd-mm-yyyy everywhere it is shown to a person. Anything
+ * unparseable is passed through untouched rather than turned into
+ * "Invalid Date". */
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
 export const d = (v: string | null | undefined): string => {
   if (!v) return '';
-  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : String(v);
+  const s = String(v);
+  const bare = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (bare) return `${bare[3]}-${bare[2]}-${bare[1]}`;
+  const parsed = new Date(s);
+  return isNaN(parsed.getTime())
+    ? s
+    : `${pad2(parsed.getDate())}-${pad2(parsed.getMonth() + 1)}-${parsed.getFullYear()}`;
 };
 
 /* Same, for a value that carries a time too (check-in / check-out, booked-at):
-   dd-mm-yyyy hh:mm, dropping seconds. */
+   dd-mm-yyyy hh:mm, dropping seconds, converted to the viewer's local time. */
 export const dt = (v: string | null | undefined): string => {
   if (!v) return '';
-  const str = String(v);
-  const day = d(str);
-  const t = str.match(/[T ](\d{2}:\d{2})/);
-  return t ? `${day} ${t[1]}` : day;
+  const s = String(v);
+  if (!/[T ]\d{2}:\d{2}/.test(s)) return d(s);
+  const parsed = new Date(s);
+  if (isNaN(parsed.getTime())) return s;
+  const day = `${pad2(parsed.getDate())}-${pad2(parsed.getMonth() + 1)}-${parsed.getFullYear()}`;
+  const time = `${pad2(parsed.getHours())}:${pad2(parsed.getMinutes())}`;
+  return `${day} ${time}`;
 };
 
 export const fmt = (n: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n || 0);

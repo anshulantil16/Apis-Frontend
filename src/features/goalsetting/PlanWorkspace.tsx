@@ -11,24 +11,11 @@ import {
   Info, Lock, ShieldAlert, MoveRight,
 } from 'lucide-react';
 import {
-  ApiError, actOnPlan, getPlan, savePlan, savePlanAsAdmin, setPlanStatus, totalWeight,
+  ApiError, actOnPlan, getPlan, savePlan, savePlanAsAdmin, setPlanStatus, sheetProblems,
+  totalWeight,
 } from './api';
 import type { KRA, Plan, PlanStatus, Role } from './api';
-import { STATUS_TONE, dt } from './api';
-
-/* The stages in workflow order, for the admin's move control. Order matters:
-   a dropdown that lists them alphabetically hides the shape of the process. */
-const STATUS_ORDER: PlanStatus[] = [
-  'draft', 'submitted', 'with_hod', 'awaiting_employee', 'accepted', 'returned',
-];
-const STATUS_LABEL: Record<PlanStatus, string> = {
-  draft: 'Draft with employee',
-  submitted: 'Submitted — with manager',
-  with_hod: 'With HOD',
-  awaiting_employee: 'Awaiting employee acceptance',
-  accepted: 'Accepted — goals agreed',
-  returned: 'Sent back for changes',
-};
+import { STATUS_LABEL, STATUS_ORDER, STATUS_TONE, dt } from './api';
 import { GoalSheet } from './GoalSheet';
 import { Panel, WeightRing } from './chrome';
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
@@ -41,13 +28,19 @@ interface Action {
   tone: string;
   icon: typeof Send;
   needsNote?: boolean;
+  /** Blocked until sheetProblems() is empty. Only the three "send this on"
+   *  actions need it — a return is usually sent BECAUSE the sheet is
+   *  incomplete, and accept can only be reached via a step that already
+   *  required completeness, so gating it again would just be redundant. */
+  needsComplete?: boolean;
 }
 
 /* Which buttons a seat gets at each stage. Reads as the workflow itself, which
    is why it is a table rather than a pile of conditionals in the JSX. */
 function actionsFor(role: Role, status: Plan['status']): Action[] {
   const send = (key: string, label: string, hint: string): Action =>
-    ({ key, label, hint, tone: 'bg-amber-500 hover:bg-amber-600 text-white', icon: Send });
+    ({ key, label, hint, tone: 'bg-amber-500 hover:bg-amber-600 text-white', icon: Send,
+       needsComplete: true });
   const back = (key: string, label: string, hint: string): Action =>
     ({ key, label, hint, tone: 'bg-white hover:bg-rose-50 text-rose-600 border border-rose-200',
        icon: CornerUpLeft, needsNote: true });
@@ -142,17 +135,25 @@ export function PlanWorkspace({
 
   const actions = plan ? actionsFor(role, plan.status) : [];
 
+  /* Recomputed on every edit, not just on save — this is what makes
+     completeness feel mandatory rather than merely checked. See sheetProblems
+     in api.ts for why it mirrors the server's readiness() rather than being
+     invented separately. */
+  const liveProblems = useMemo(() => (canEdit ? sheetProblems(kras) : []), [kras, canEdit]);
+
   const edit = (next: KRA[]) => { setKras(next); setDirty(true); setSaved(''); };
 
   const save = async () => {
     if (!plan) return;
-    setBusy('save'); setError(''); setProblems([]);
+    // liveProblems already shows what's missing as it's typed; the server's
+    // own problems list on this response would only ever say the same thing
+    // a beat later, so this call is about persisting, not re-checking.
+    setBusy('save'); setError('');
     try {
       const p = role === 'admin'
         ? await savePlanAsAdmin(employeeId, cycleId, kras, actorName)
         : await savePlan(employeeId, cycleId, role, kras);
       setPlan(p); setKras(p.kras); setDirty(false);
-      setProblems(p.problems || []);
       setSaved(`Saved at ${new Date().toLocaleTimeString()}`);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save.');
@@ -319,14 +320,16 @@ export function PlanWorkspace({
         </div>
       )}
 
-      {/* Problems found on save, before anyone has tried to send it on. */}
-      {!error && problems.length > 0 && (
+      {/* Live, not just checked on save — updates as the sheet is edited, so
+          "mandatory" is enforced by what's on screen rather than discovered
+          after clicking Submit. */}
+      {!error && canEdit && liveProblems.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <p className="text-[13px] font-bold text-amber-800 mb-1.5">
-            Still to do before this can be sent on
+            {liveProblems.length} thing{liveProblems.length === 1 ? '' : 's'} still needed before this can be sent on
           </p>
           <ul className="space-y-1">
-            {problems.map((p, i) => (
+            {liveProblems.map((p, i) => (
               <li key={i} className="text-[12px] text-amber-700 font-semibold">• {p}</li>
             ))}
           </ul>
@@ -381,8 +384,12 @@ export function PlanWorkspace({
 
             {actions.map(a => {
               const Icon = a.icon;
+              const blocked = a.needsComplete && liveProblems.length > 0;
               return (
-                <button key={a.key} onClick={() => run(a)} disabled={!!busy} title={a.hint}
+                <button key={a.key} onClick={() => run(a)} disabled={!!busy || blocked}
+                  title={blocked
+                    ? `Complete the sheet first — ${liveProblems.length} thing${liveProblems.length === 1 ? '' : 's'} left`
+                    : a.hint}
                   className={`ih-sheen flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-[13px] disabled:opacity-40 transition-all shadow-md ${a.tone}`}>
                   {busy === a.key ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
                   {a.label}
