@@ -876,6 +876,20 @@ function HrmsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void
     setBusy('');
   };
 
+  /* Pocket HRMS support's own recommended way to find this tenant's real
+     configured column names: call the API with no EmployeeFields header at
+     all, and read back whatever it sends. "EmailId" and "Email" in the
+     default request are guesses until this has been run once and someone has
+     read the result. */
+  const discover = async () => {
+    setBusy('discover');
+    const r = await portalFetch('/admin/hrms-preview/?limit=3&discover=1');
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) onToast({ t: d.error || 'Could not reach Pocket HRMS', ok: false });
+    setPreview(r.ok ? d : null);
+    setBusy('');
+  };
+
   if (!info) return <div className="p-10 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
 
   return (
@@ -905,14 +919,24 @@ function HrmsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void
           {busy === 'peek' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
           Preview raw feed
         </button>
+        <button onClick={discover} disabled={!info.configured || !!busy}
+          title="Calls the API with no EmployeeFields header, so Pocket HRMS returns this tenant's actual configured column names instead of us guessing"
+          className="flex items-center gap-1.5 bg-white border-2 border-amber-200 text-amber-700 font-black px-4 py-2.5 rounded-xl text-xs disabled:opacity-40 hover:border-amber-400 transition-all">
+          {busy === 'discover' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+          Discover real field names
+        </button>
       </div>
 
       {preview && (
         <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
           <div>
-            <p className="font-black text-slate-700 text-sm">Raw feed — {preview.count} sample record(s)</p>
+            <p className="font-black text-slate-700 text-sm">
+              {preview.discovered ? 'Discovered fields' : 'Raw feed'} — {preview.count} sample record(s)
+            </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Exactly what Pocket HRMS returned, before the portal maps anything.
+              {preview.discovered
+                ? 'Called with no EmployeeFields header — these are the column names configured for this tenant. Set POCKET_HRMS_EMPLOYEE_FIELDS on the server to the ones the portal needs (email, name, department, etc.).'
+                : 'Exactly what Pocket HRMS returned, before the portal maps anything.'}
             </p>
           </div>
           <div>
