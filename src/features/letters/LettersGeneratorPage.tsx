@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   FileText, FileWarning, ArrowLeft, ArrowRight, BarChart3,
-  Mail, CheckCircle2, Sparkles, Layers,
+  Mail, CheckCircle2, Layers,
 } from 'lucide-react';
 import { OfferLetterSimplePage } from './OfferLetterSimplePage';
 import { WarningLetterPage } from './WarningLetterPage';
@@ -42,11 +42,11 @@ const LETTERS: {
     blurb: 'Annual compensation review letters with the Annexure-A salary break-up.',
     bullets: ['Salary revision', 'Promotion', 'Redesignation'],
     icon: FileText,
-    bar: 'from-blue-500 to-indigo-600',
-    hover: 'hover:border-blue-300 hover:shadow-blue-500/10',
-    iconWrap: 'bg-blue-50 text-blue-600 ring-blue-100',
-    tagCls: 'bg-blue-50 text-blue-600 ring-blue-100',
-    glow: 'rgba(59,130,246,.35)',
+    bar: 'from-amber-500 to-orange-600',
+    hover: 'hover:border-amber-300 hover:shadow-amber-500/10',
+    iconWrap: 'bg-amber-50 text-amber-600 ring-amber-100',
+    tagCls: 'bg-amber-50 text-amber-600 ring-amber-100',
+    glow: 'rgba(245,158,11,.35)',
     statsPath: 'offer-letter',
   },
   {
@@ -56,11 +56,11 @@ const LETTERS: {
     blurb: 'Formal disciplinary communication, issued to one employee or in bulk.',
     bullets: ['Verbal & written', 'Final warning', 'Show cause'],
     icon: FileWarning,
-    bar: 'from-rose-500 to-red-600',
-    hover: 'hover:border-rose-300 hover:shadow-rose-500/10',
-    iconWrap: 'bg-rose-50 text-rose-600 ring-rose-100',
-    tagCls: 'bg-rose-50 text-rose-600 ring-rose-100',
-    glow: 'rgba(244,63,94,.35)',
+    bar: 'from-yellow-500 to-amber-600',
+    hover: 'hover:border-yellow-300 hover:shadow-yellow-500/10',
+    iconWrap: 'bg-yellow-50 text-yellow-700 ring-yellow-100',
+    tagCls: 'bg-yellow-50 text-yellow-700 ring-yellow-100',
+    glow: 'rgba(234,179,8,.35)',
     statsPath: 'warning-letter',
   },
 ];
@@ -136,42 +136,27 @@ export function LettersGeneratorPage({ onNavigateToApprovals }: Props) {
   const grandSent = Object.values(stats).reduce((a, s) => a + s.sent, 0);
 
   return (
-    <div className="min-h-full bg-[#f5f7fa] relative flex flex-col">
+    <div className="min-h-full relative flex flex-col overflow-hidden">
       <style>{TOOL_STYLES}</style>
-      {/* Soft colour wash — decorative only */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="tp-drift absolute -top-32 -left-24 w-[30rem] h-[30rem] rounded-full
-                        bg-blue-400/15 blur-[110px]" />
-        <div className="tp-drift absolute -bottom-40 -right-20 w-[30rem] h-[30rem] rounded-full
-                        bg-rose-400/15 blur-[110px]" style={{ animationDelay: '5s' }} />
-        <div className="absolute inset-0 opacity-[0.5]"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(15,23,42,.035) 1px,transparent 1px),' +
-              'linear-gradient(90deg,rgba(15,23,42,.035) 1px,transparent 1px)',
-            backgroundSize: '44px 44px',
-            maskImage: 'radial-gradient(ellipse 65% 55% at 50% 42%,#000 30%,transparent 100%)',
-            WebkitMaskImage: 'radial-gradient(ellipse 65% 55% at 50% 42%,#000 30%,transparent 100%)',
-          }} />
-      </div>
+      {/* The desk-and-envelope illustration is the page, the way every other
+          hub/sign-in screen in the intranet works now — not a colour wash. */}
+      <img src="/letter_generator_bg.png" alt="" aria-hidden decoding="async"
+        className="absolute inset-0 w-full h-full object-cover" />
 
       {/* Vertically centred within whatever height the shell provides */}
       <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center px-6 py-6">
         <div className="w-full max-w-4xl">
           {/* Hero */}
           <div className="tp-reveal text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4
-                            bg-white ring-1 ring-slate-200 shadow-sm">
-              <Sparkles className="w-3 h-3 text-amber-500 tp-spin-slow" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-                APIS People &amp; Culture
-              </span>
-            </div>
-            <h1 className="ih-grad-text text-4xl sm:text-5xl font-black tracking-tight mb-3
-                           bg-gradient-to-r from-slate-900 via-blue-600 to-rose-600">
+            <span className="ih-float ih-halo inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500
+              items-center justify-center shadow-lg shadow-amber-500/30 mb-4"
+              style={{ ['--ih-halo' as string]: 'rgba(245,158,11,.45)' }}>
+              <Mail className="w-7 h-7 text-white" />
+            </span>
+            <h1 className="text-4xl sm:text-5xl font-black tracking-tight mb-3 text-slate-900">
               Letters Generator
             </h1>
-            <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">
+            <p className="text-slate-600 text-sm max-w-md mx-auto leading-relaxed font-medium">
               Generate, send and archive official employee letters — each type with its own
               template, delivery and searchable history.
             </p>
@@ -181,7 +166,7 @@ export function LettersGeneratorPage({ onNavigateToApprovals }: Props) {
                 {[
                   { icon: Layers, val: grandTotal, label: 'Generated', cls: 'text-slate-700' },
                   { icon: Mail, val: grandSent, label: 'Delivered', cls: 'text-emerald-600' },
-                  { icon: CheckCircle2, val: LETTERS.length, label: 'Letter types', cls: 'text-blue-600' },
+                  { icon: CheckCircle2, val: LETTERS.length, label: 'Letter types', cls: 'text-amber-600' },
                 ].map(s => {
                   const I = s.icon;
                   return (
@@ -209,8 +194,8 @@ export function LettersGeneratorPage({ onNavigateToApprovals }: Props) {
                 <button key={l.id} onClick={() => setKind(l.id)}
                   onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
                   className={`ih-inview ih-tilt3d ih-spotlight ih-neon group relative text-left rounded-2xl
-                              bg-white/80 backdrop-blur-xl border border-slate-200
-                              p-6 shadow-sm overflow-hidden
+                              bg-white/95 backdrop-blur-xl border border-slate-200
+                              p-6 shadow-[0_25px_60px_-20px_rgba(217,119,6,.25)] overflow-hidden
                               hover:shadow-xl ${l.hover}`}
                   style={{ transitionDelay: `${i * 80}ms`, '--ih-neon': l.glow } as any}>
                   <div className={`absolute top-0 left-0 h-1 w-full bg-gradient-to-r ${l.bar}

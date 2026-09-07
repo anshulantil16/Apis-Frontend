@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail } from 'lucide-react';
+import {
+  ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail,
+  Target, MessageSquare, Trophy,
+} from 'lucide-react';
 import { AppraisalEmployeeView } from '../../Components/Appraisal/employee/AppraisalEmployeeView';
 import { AppraisalManagerView } from '../../Components/Appraisal/manager/AppraisalManagerView';
 import { AppraisalHODView } from '../../Components/Appraisal/hod/AppraisalHODView';
@@ -288,26 +291,36 @@ export function AppraisalPage({}: AppraisalPageProps) {
   }
 
   return (
-    <div className="min-h-full py-10 bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-full py-10 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <style>{TOOL_STYLES}</style>
-      {/* Background decoration */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" />
-      <div className="ih-aurora absolute top-1/4 -left-32 w-96 h-96 bg-blue-200/40 rounded-full blur-[100px] pointer-events-none" />
-      <div className="ih-drift absolute bottom-1/4 -right-32 w-80 h-80 bg-indigo-200/40 rounded-full blur-[100px] pointer-events-none" style={{ animationDelay: '4s' }} />
-      <div className="ih-aurora absolute top-1/2 left-1/3 w-72 h-72 bg-indigo-300/25 rounded-full blur-[110px] pointer-events-none" style={{ animationDelay: '7s' }} />
+      {/* The growth-desk illustration is the page, the way every other OTP
+          sign-in screen in the intranet works now — not a colour wash. */}
+      <img src="/Appraisal_bg.png" alt="" aria-hidden decoding="async"
+        className="absolute inset-0 w-full h-full object-cover" />
 
-      {/* Instructions panel — bottom-left */}
-      <div className="absolute bottom-5 left-5 max-w-[260px] z-10">
-        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Instructions</p>
-        <div className="space-y-2">
+      {/* Growth headline + quick-feature row — left of the card on wide
+          screens, matching the reference layout. */}
+      <div className="hidden xl:block absolute left-10 top-1/2 -translate-y-1/2 z-10 w-64">
+        <h2 className="text-[28px] font-black leading-tight text-slate-900">
+          Your Growth<br />
+          <span className="text-amber-500" style={{ fontFamily: 'cursive' }}>Our Priority</span>
+        </h2>
+        <p className="text-slate-600 font-semibold mt-3 text-[13px]">
+          Track your progress, achieve your potential.
+        </p>
+        <div className="grid grid-cols-2 gap-4 mt-8 w-56">
           {[
-            { n: 1, text: 'The performance review booklet consists of 2 Sections — Section I: Performance Assessment, Section II: Development Action Plan.' },
-            { n: 2, text: 'Section I is based on achievement against KRA formulated at the beginning of the financial year, forming the basis of performance review.' },
-            { n: 3, text: 'Section II focuses on the development action plan — a summary of strengths, areas of improvement, commitment to learning and ability to take on additional responsibilities.' },
-          ].map(({ n, text }) => (
-            <div key={n} className="flex gap-2">
-              <span className="w-4 h-4 rounded-full bg-blue-100 border border-blue-200 text-blue-600 text-[9px] font-black flex items-center justify-center shrink-0 mt-px">{n}</span>
-              <p className="text-[10px] text-slate-500 leading-relaxed">{text}</p>
+            { icon: Target, label: 'Set Goals' },
+            { icon: BarChart3, label: 'Track Performance' },
+            { icon: MessageSquare, label: 'Get Feedback' },
+            { icon: Trophy, label: 'Achieve More' },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="flex flex-col items-center text-center">
+              <span className="ih-float w-10 h-10 rounded-xl bg-white/80 backdrop-blur-sm border border-amber-200
+                flex items-center justify-center shadow-sm mb-1.5">
+                <Icon className="w-4.5 h-4.5 text-amber-600" />
+              </span>
+              <p className="text-[10px] font-bold text-slate-700 leading-tight">{label}</p>
             </div>
           ))}
         </div>
@@ -316,11 +329,11 @@ export function AppraisalPage({}: AppraisalPageProps) {
       <div className="w-full max-w-md relative z-10">
         {/* Brand */}
         <div className="tp-reveal text-center mb-4">
-          <div className="tp-border-flow ih-float w-14 h-14 flex items-center justify-center mx-auto mb-2 rounded-2xl p-1.5 bg-white shadow-lg"
-            style={{ '--tp-c1': '#3b82f6', '--tp-c2': '#6366f1' } as any}>
+          <span className="ih-float ih-halo inline-flex w-14 h-14 items-center justify-center mx-auto mb-2 rounded-2xl p-1.5 bg-white shadow-lg"
+            style={{ ['--ih-halo' as string]: 'rgba(245,158,11,.45)' }}>
             <img src="/logo.png" alt="APIS India" className="w-full h-full object-contain" />
-          </div>
-          <h1 className="ih-grad-text text-2xl font-black tracking-tight bg-gradient-to-r from-slate-900 via-blue-600 to-indigo-600">Appraisal Hub</h1>
+          </span>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">Appraisal Hub</h1>
           <p className="text-slate-500 mt-1 text-xs font-medium">Annual Appraisal · KRA/KPI Setting · Final Assessment</p>
         </div>
 
@@ -328,7 +341,8 @@ export function AppraisalPage({}: AppraisalPageProps) {
         <div className="tp-reveal ih-inview relative" style={{ animationDelay: '80ms' }}>
           <div
             onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-            className="ih-tilt3d ih-spotlight bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/60">
+            className="ih-tilt3d ih-spotlight ih-float bg-white border border-amber-100 rounded-3xl p-5
+              shadow-[0_45px_90px_-25px_rgba(217,119,6,.4)]">
 
             {step === 'admin_otp' ? (
               <>
@@ -389,7 +403,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
             ) : step === 'id' ? (
               <>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">1</span>
+                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">1</span>
                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Select your role</p>
                 </div>
 
@@ -410,7 +424,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
                 </div>
 
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">2</span>
+                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">2</span>
                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Enter your Employee Code</p>
                 </div>
                 <div className="relative mb-4">
@@ -420,7 +434,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
                     value={inputId}
                     onChange={e => setInputId(e.target.value.toUpperCase())}
                     onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 placeholder-slate-300 font-mono font-bold text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 placeholder-slate-300 font-mono font-bold text-sm focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all"
                   />
                 </div>
 
@@ -431,7 +445,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
                 )}
 
                 <button onClick={handleSendOtp} disabled={!role || !inputId.trim() || loading}
-                  className="ih-sheen w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-blue-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
+                  className="ih-sheen w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-amber-500/30 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
                   {loading
                     ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending OTP...</>
                     : <><Mail className="w-4 h-4" /> Send OTP to Email</>}
@@ -456,12 +470,12 @@ export function AppraisalPage({}: AppraisalPageProps) {
                 </button>
 
                 <div className="text-center mb-7">
-                  <div className="ih-float w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mx-auto mb-4">
-                    <Mail className="w-7 h-7 text-blue-600" />
+                  <div className="ih-float w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-4">
+                    <Mail className="w-7 h-7 text-amber-600" />
                   </div>
                   <h3 className="text-slate-900 font-bold text-base mb-1">Check your inbox</h3>
                   <p className="text-slate-500 text-sm">
-                    OTP sent to <span className="text-blue-600 font-semibold">{maskedEmail}</span>
+                    OTP sent to <span className="text-amber-700 font-semibold">{maskedEmail}</span>
                   </p>
                   <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full">
                     <Zap className="w-3 h-3 text-amber-500" />
@@ -477,11 +491,11 @@ export function AppraisalPage({}: AppraisalPageProps) {
                     onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
                     onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
                     autoFocus
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-300 font-mono font-black text-3xl text-center tracking-[0.6em] focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-300 font-mono font-black text-3xl text-center tracking-[0.6em] focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all"
                   />
                   <div className="flex justify-center gap-1.5 mt-3">
                     {[0,1,2,3,4,5].map(i => (
-                      <div key={i} className={`h-1 rounded-full transition-all duration-200 ${i < otpInput.length ? 'w-5 bg-blue-500' : 'w-3 bg-slate-200'}`} />
+                      <div key={i} className={`h-1 rounded-full transition-all duration-200 ${i < otpInput.length ? 'w-5 bg-amber-500' : 'w-3 bg-slate-200'}`} />
                     ))}
                   </div>
                 </div>
@@ -493,7 +507,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
                 )}
 
                 <button onClick={handleVerifyOtp} disabled={otpInput.length !== 6 || loading}
-                  className="ih-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-blue-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
+                  className="ih-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-amber-500/30 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
                   {loading
                     ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Verifying...</>
                     : '✓ Verify & Enter Hub'}
