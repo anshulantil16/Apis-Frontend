@@ -292,14 +292,19 @@ export interface PackSize { variant?: string; weight?: string; price?: string; u
    supplied so far. Real figures from the packaging charts provided
    (Sep 2026). */
 export const PACK_SIZES: Record<string, PackSize[]> = {
-  'Organic Honey': [
-    { weight: '1 kg', unitsPerCase: '12 pcs' },
-    { weight: '500 g', unitsPerCase: '24 pcs' },
-    { weight: '225 g', unitsPerCase: '48 pcs' },
-    { weight: '100 g', unitsPerCase: '72 pcs' },
-    { weight: '50 g', unitsPerCase: '144 pcs' },
-    { weight: '20 g', unitsPerCase: '288 pcs (12 tray)' },
-    { weight: '15 g', unitsPerCase: '576 pcs (24 tray)' },
+  'Honey': [
+    { variant: 'Himalaya Honey', weight: '1 kg', unitsPerCase: '12 pcs' },
+    { variant: 'Himalaya Honey', weight: '500 g', unitsPerCase: '24 pcs' },
+    { variant: 'Himalaya Honey', weight: '225 g', unitsPerCase: '48 pcs' },
+    { variant: 'Himalaya Honey', weight: '100 g', unitsPerCase: '72 pcs' },
+    { variant: 'Himalaya Honey', weight: '50 g', unitsPerCase: '144 pcs' },
+    { variant: 'Himalaya Honey', weight: '20 g', unitsPerCase: '288 pcs (12 tray)' },
+    { variant: 'Himalaya Honey', weight: '15 g', unitsPerCase: '576 pcs (24 tray)' },
+    // Infused Honey squeezies — the per-flavour weight printed on that
+    // packaging photo, kept here rather than captioned under the photo.
+    { variant: 'Infused Honey — Lemon', weight: '250 g Squeezy' },
+    { variant: 'Infused Honey — Ginger', weight: '250 g Squeezy' },
+    { variant: 'Infused Honey — Hot Chilli', weight: '250 g Squeezy' },
   ],
   'Royal Zahidi Dates': [
     { variant: 'Royal Zahidi', weight: '500 g', unitsPerCase: '12 pcs' },
@@ -348,12 +353,22 @@ export const PACK_SIZES: Record<string, PackSize[]> = {
   ],
 };
 
+/** One photo in a product's Packaging Types grid. A bare string keeps the
+ *  old plain-photo behaviour (no caption); giving it a `label` names which
+ *  pack design the photo shows — e.g. Honey ships two: the jars/bottles
+ *  photographed as "Himalaya Honey" and the flavoured squeezies as "Infused
+ *  Honey". The per-flavour weight text baked into that second photo (250g
+ *  Squeezy, one per flavour) isn't repeated here — it lives in PACK_SIZES
+ *  instead, so it shows up once, in the Net Weight types table, rather than
+ *  captioned under the photo itself. */
+export type PackagingPhoto = string | { src: string; label: string };
+
 export interface OurProduct {
   label: string; image: string; desc: string; weight?: string;
-  packagingImages?: string[];
+  packagingImages?: PackagingPhoto[];
   /** A real, notable characteristic worth calling out on the Product
    *  Details slide — distinct from the generic sample spec rows there.
-   *  So far only Organic Honey has one on file. */
+   *  So far only Honey has one on file. */
   highlight?: string;
   /** Per-product overrides for the Product Details spec rows — Category,
    *  Shelf Life, Storage. Each falls back to the shared placeholder
@@ -368,7 +383,11 @@ export interface OurProduct {
 }
 
 export const OUR_PRODUCTS: OurProduct[] = [
-  { label: 'Organic Honey', image: '/products/organic-honey.png', desc: 'Comes from the nectar of flowers in the Himalayan mountain range', weight: '500g', packagingImages: ['/packaging/Honey_Packaging.png'],
+  { label: 'Honey', image: '/products/organic-honey.png', desc: 'Comes from the nectar of flowers in the Himalayan mountain range', weight: '500g',
+    packagingImages: [
+      { src: '/packaging/Honey_Packaging.png', label: 'Himalaya Honey' },
+      { src: '/packaging/Honey_more_types.png', label: 'Infused Honey' },
+    ],
     highlight: 'Contains grayanotoxin, a natural compound from Himalayan Rhododendron nectar — traditionally valued in the region for several beneficial uses.',
     shelfLife: '18 months from packaging', storage: 'Dry & hygienic place, away from direct sunlight' },
   { label: 'Royal Zahidi Dates', image: '/products/royal-zahidi-dates.png', desc: 'Premium dates, hand-picked and packed for freshness', weight: '1kg', packagingImages: ['/packaging/Dates_packaging.png', '/packaging/Dates_packaging1.png'],

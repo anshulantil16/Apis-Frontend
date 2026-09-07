@@ -282,7 +282,8 @@ function ProductDetailsSlide({ product }: { product: OurProduct }) {
 }
 
 function PackagingPopup({ product, onClose }: { product: OurProduct; onClose: () => void }) {
-  const images = product.packagingImages ?? [];
+  const images = (product.packagingImages ?? []).map(p =>
+    typeof p === 'string' ? { src: p, label: undefined as string | undefined } : p);
   const packSizes = PACK_SIZES[product.label] ?? [];
   const hasVariant = packSizes.some(p => p.variant);
   const hasWeight = packSizes.some(p => p.weight);
@@ -337,9 +338,14 @@ function PackagingPopup({ product, onClose }: { product: OurProduct; onClose: ()
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {images.map((src, i) => (
-                    <ProductPhoto key={i} src={src} alt={`${product.label} packaging ${i + 1}`}
-                      className={`w-full h-80 object-contain rounded-xl bg-amber-50 ring-1 ring-black/5 p-3 ${images.length === 1 ? 'sm:col-span-2' : ''}`} />
+                  {images.map((img, i) => (
+                    <div key={i} className={images.length === 1 ? 'sm:col-span-2' : ''}>
+                      <ProductPhoto src={img.src} alt={img.label ?? `${product.label} packaging ${i + 1}`}
+                        className="w-full h-80 object-contain rounded-xl bg-amber-50 ring-1 ring-black/5 p-3" />
+                      {img.label && (
+                        <p className="text-center text-[12px] font-black text-slate-600 mt-2">{img.label}</p>
+                      )}
+                    </div>
                   ))}
                 </div>
 

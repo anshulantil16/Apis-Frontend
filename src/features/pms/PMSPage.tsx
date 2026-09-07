@@ -4,7 +4,9 @@ import {
   ChevronUp, Search, X, BarChart3, PieChart, Zap, Star,
   FileSpreadsheet, AlertCircle, CheckCircle, Crown, Sparkles, Flame,
   Target, RefreshCw, Trash2, LogOut, Clock, Calendar,
+  Mail, ShieldCheck, ArrowRight, Gauge,
 } from 'lucide-react';
+import { Motes } from '../goalsetting/chrome';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PMS = `${API_BASE}/api/pms`;
@@ -358,148 +360,148 @@ export default function PMSPage() {
 
   if (!loggedIn) {
     return (
-      <div className="min-h-full py-10 bg-gradient-to-br from-slate-50 via-violet-50/40 to-fuchsia-50/30 flex items-center justify-center px-4 overflow-hidden">
-        {/* Animated background shapes */}
-        <div className="ih-aurora absolute top-20 left-10 w-72 h-72 bg-violet-300/25 rounded-full blur-3xl" />
-        <div className="ih-drift absolute bottom-20 right-10 w-96 h-96 bg-fuchsia-300/20 rounded-full blur-3xl" style={{ animationDelay: '4s' }} />
-        <div className="ih-aurora absolute top-1/2 left-1/4 w-64 h-64 bg-violet-300/15 rounded-full blur-3xl" style={{ animationDelay: '7s' }} />
-
-        <style>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px) translateX(0px); }
-            50% { transform: translateY(-30px) translateX(20px); }
-          }
-          @keyframes slideInLeft {
-            from { opacity: 0; transform: translateX(-40px); }
-            to { opacity: 1; transform: translateX(0); }
-          }
-          @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(40px); }
-            to { opacity: 1; transform: translateX(0); }
-          }
-          @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-          }
-          .animate-slideInLeft { animation: slideInLeft 0.6s ease-out; }
-          .animate-slideInRight { animation: slideInRight 0.6s ease-out; }
-          .animate-scaleIn { animation: scaleIn 0.6s ease-out; }
-        `}</style>
+      <div className="min-h-full relative overflow-hidden flex items-center justify-center lg:justify-end px-4 lg:pr-16 py-10 bg-[#fdf6e3]">
+        {/* The honey-desk illustration is the page, the way every other OTP
+            sign-in screen in the intranet works now — not a colour wash. */}
+        <img src="/PMS_simulator_bg.png" alt="" aria-hidden decoding="async"
+          className="absolute inset-0 w-full h-full object-cover" />
+        <Motes count={16} />
 
         <div className="relative z-10 w-full max-w-lg">
-          {/* Centered Logo */}
-          <div className="flex justify-center mb-4 animate-slideInLeft">
-            <div className="relative">
-              <div className="ih-aurora absolute inset-0 bg-gradient-to-r from-violet-400 to-fuchsia-400 rounded-full blur-2xl opacity-25" />
-              <img src="/logo.png" alt="APIS" className="ih-float w-20 h-20 object-contain drop-shadow-lg relative z-10" />
+          <div onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+            className="ih-tilt3d ih-spotlight ih-float bg-white rounded-[32px] border border-amber-100 p-9
+              shadow-[0_55px_110px_-25px_rgba(217,119,6,.45)]">
+
+            {/* Brand + title */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <span className="ih-halo relative mb-4" style={{ ['--ih-halo' as string]: 'rgba(245,158,11,.45)' }}>
+                <img src="/logo.png" alt="APIS" className="ih-float w-20 h-20 object-contain drop-shadow-lg" />
+              </span>
+              <h1 className="text-[32px] leading-tight font-black text-slate-900">
+                Performance<br />Simulator
+              </h1>
+              <p className="text-[14px] text-slate-500 font-bold mt-2">
+                Advanced Salary &amp; Grading Engine
+              </p>
+              <div className="flex items-center justify-center gap-3 mt-5 w-full">
+                <span className="h-px flex-1 bg-gradient-to-r from-transparent to-amber-300" />
+                <span className="w-2.5 h-2.5 rotate-45 rounded-sm bg-amber-500 shadow-md shadow-amber-400/50" />
+                <span className="h-px flex-1 bg-gradient-to-l from-transparent to-amber-300" />
+              </div>
             </div>
-          </div>
 
-          {/* Title */}
-          <div className="text-center mb-6 animate-slideInLeft space-y-1">
-            <h1 className="ih-grad-text text-4xl font-black bg-gradient-to-r from-slate-900 via-violet-600 to-fuchsia-600">
-              Performance<br />Simulator
-            </h1>
-            <p className="text-base text-slate-500 font-bold">
-              Advanced Salary & Grading Engine
-            </p>
-          </div>
-
-          {/* Login Card */}
-          <div className="animate-slideInRight ih-inview">
-            <div
-              onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-              className="ih-tilt3d ih-spotlight bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
-              {/* Header */}
-              <div className="relative bg-gradient-to-br from-violet-600 via-violet-600 to-fuchsia-700 px-6 py-8 text-white">
-                <div className="ih-aurora absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
-                <div className="relative space-y-1">
-                  <h2 className="text-2xl font-black">Welcome Back</h2>
-                  <p className="text-violet-100 text-sm font-semibold">Access Your Dashboard</p>
+            {/* Welcome banner */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-4.5 mb-6 shadow-lg shadow-amber-500/20">
+              <div className="ih-aurora absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
+              <div className="relative flex items-center gap-3.5">
+                <span className="w-11 h-11 rounded-xl bg-white/25 backdrop-blur flex items-center justify-center shrink-0">
+                  <Gauge className="w-5.5 h-5.5 text-white" />
+                </span>
+                <div>
+                  <p className="text-white font-black text-[17px] leading-tight">
+                    {loginStep === 'email' ? 'Welcome Back' : 'Check your inbox'}
+                  </p>
+                  <p className="text-amber-50/90 text-[12px] font-semibold">
+                    {loginStep === 'email' ? 'Access your dashboard' : 'Enter the code we sent you'}
+                  </p>
                 </div>
               </div>
+            </div>
 
-              {/* Content */}
-              <div className="px-6 py-8">
-                {loginStep === 'email' ? (
-                  <div className="space-y-4 animate-scaleIn">
-                    <div className="space-y-1.5">
-                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest">Email</label>
-                      <input
-                        type="email"
-                        placeholder="your@email.com"
-                        value={adminEmail}
-                        onChange={e => setAdminEmail(e.target.value)}
-                        onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
-                        disabled={otpLoading}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition-all disabled:opacity-60"
-                      />
-                    </div>
-                    <button
-                      onClick={handleEmailSubmit}
-                      disabled={otpLoading}
-                      className="ih-sheen w-full px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-black text-sm rounded-xl shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
-                    >
-                      {otpLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-                      {otpLoading ? 'Sending...' : 'Continue'}
-                    </button>
-
-                    {msg && (
-                      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
-                        {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-                        {msg.text}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4 animate-scaleIn">
-                    <div className="text-center space-y-1">
-                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Enter OTP</p>
-                      <p className="text-slate-500 text-xs">Check your email</p>
-                    </div>
+            {loginStep === 'email' ? (
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-[11px] font-black text-amber-700/70 uppercase tracking-widest mb-2.5">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
-                      type="text"
-                      placeholder="0000"
-                      value={otp}
-                      onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                      onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
+                      type="email"
+                      placeholder="your@email.com"
+                      value={adminEmail}
+                      onChange={e => setAdminEmail(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && !otpLoading && handleEmailSubmit()}
                       disabled={otpLoading}
-                      maxLength={4}
-                      className="w-full px-3 py-2 h-10 text-center text-2xl font-black border border-violet-300 rounded-xl text-violet-600 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition-all tracking-widest disabled:opacity-60 placeholder-slate-300"
+                      className="w-full pl-11 pr-4 py-3.5 border border-slate-200 rounded-xl text-[15px] text-slate-900
+                        placeholder-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15
+                        transition-all disabled:opacity-60"
                     />
-                    <button
-                      onClick={handleOtpSubmit}
-                      disabled={otpLoading || otp.length !== 4}
-                      className="ih-sheen w-full px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-black text-sm rounded-xl shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
-                    >
-                      {otpLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
-                      {otpLoading ? 'Verifying...' : 'Verify'}
-                    </button>
-                    <button
-                      onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
-                      disabled={otpLoading}
-                      className="w-full px-4 py-1 text-violet-600 hover:text-violet-700 font-bold text-xs transition-colors disabled:opacity-60"
-                    >
-                      ← Back
-                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={handleEmailSubmit}
+                  disabled={otpLoading}
+                  className="ih-sheen w-full px-4 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600
+                    text-white font-black text-[15px] rounded-xl shadow-lg shadow-amber-500/30 transition-all hover:-translate-y-0.5
+                    flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {otpLoading ? <RefreshCw className="w-4.5 h-4.5 animate-spin" /> : <ArrowRight className="w-4.5 h-4.5" />}
+                  {otpLoading ? 'Sending…' : 'Continue'}
+                </button>
 
-                    {msg && (
-                      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border-2 animate-slideDown ${msg.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
-                        {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-                        {msg.text}
-                      </div>
-                    )}
+                {msg && (
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${msg.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                    {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                    {msg.text}
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-[10.5px] font-black text-amber-700/70 uppercase tracking-widest">Enter OTP</p>
+                </div>
+                <input
+                  type="text"
+                  placeholder="0000"
+                  value={otp}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  onKeyPress={e => e.key === 'Enter' && !otpLoading && handleOtpSubmit()}
+                  disabled={otpLoading}
+                  maxLength={4}
+                  className="w-full px-3 py-2 h-14 text-center text-2xl font-black border border-amber-200 rounded-xl text-amber-600
+                    focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all tracking-widest
+                    disabled:opacity-60 placeholder-slate-300"
+                />
+                <button
+                  onClick={handleOtpSubmit}
+                  disabled={otpLoading || otp.length !== 4}
+                  className="ih-sheen w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600
+                    text-white font-black text-sm rounded-xl shadow-lg shadow-amber-500/30 transition-all hover:-translate-y-0.5
+                    flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  {otpLoading ? 'Verifying…' : 'Verify'}
+                </button>
+                <button
+                  onClick={() => { setLoginStep('email'); setOtp(''); setMsg(null); setAdminEmail(''); }}
+                  disabled={otpLoading}
+                  className="w-full text-amber-700 hover:text-amber-800 font-bold text-xs transition-colors disabled:opacity-60"
+                >
+                  ← Back
+                </button>
 
-              {/* Footer */}
-              <div className="px-6 py-3 bg-gradient-to-r from-slate-50 to-violet-50 border-t border-slate-200 text-center">
-                <p className="text-slate-500 text-xs font-semibold">
-                  🔒 Secure • 🚀 Fast
-                </p>
+                {msg && (
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${msg.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                    {msg.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                    {msg.text}
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-center gap-5 mt-5 mx-auto w-fit bg-white/85 backdrop-blur-sm rounded-full px-5 py-2 shadow-sm">
+            <span className="flex items-center gap-1.5 text-[11.5px] font-bold text-slate-600">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />Secure
+            </span>
+            <span className="flex items-center gap-1.5 text-[11.5px] font-bold text-slate-600">
+              <Zap className="w-3.5 h-3.5 text-amber-500" />Fast
+            </span>
+            <span className="flex items-center gap-1.5 text-[11.5px] font-bold text-slate-600">
+              <CheckCircle className="w-3.5 h-3.5 text-amber-500" />Reliable
+            </span>
           </div>
         </div>
       </div>

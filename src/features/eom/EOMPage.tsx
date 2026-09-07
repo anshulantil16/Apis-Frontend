@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Users, BarChart3, LineChart, Mail, Zap } from 'lucide-react';
+import { ArrowLeft, Users, BarChart3, LineChart, Mail, Zap, Star } from 'lucide-react';
 import { EOMEmployeeView }  from '../../Components/EOM/employee/EOMEmployeeView';
 import { EOMHodView }       from '../../Components/EOM/hod/EOMHodView';
 import { EOMPanelView }     from '../../Components/EOM/panel/EOMPanelView';
@@ -283,27 +283,29 @@ export function EOMPage({}: EOMPageProps) {
   }
 
   return (
-    <div className="min-h-full py-10 bg-gradient-to-br from-slate-100 via-emerald-50 to-teal-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-full py-10 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <style>{TOOL_STYLES}</style>
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400" />
-      <div className="ih-aurora absolute top-1/4 -left-32 w-96 h-96 bg-emerald-200/40 rounded-full blur-[100px] pointer-events-none" />
-      <div className="ih-drift absolute bottom-1/4 -right-32 w-80 h-80 bg-teal-200/40 rounded-full blur-[100px] pointer-events-none" style={{ animationDelay: '4s' }} />
-      <div className="ih-aurora absolute top-1/2 left-1/3 w-72 h-72 bg-teal-300/25 rounded-full blur-[110px] pointer-events-none" style={{ animationDelay: '7s' }} />
+      {/* The trophy-desk illustration is the page, the way every other OTP
+          sign-in screen in the intranet works now — not a colour wash. */}
+      <img src="/EmployeeOFMonth_bg.png" alt="" aria-hidden decoding="async"
+        className="absolute inset-0 w-full h-full object-cover" />
 
       <div className="w-full max-w-md relative z-10">
         {/* Brand */}
         <div className="tp-reveal text-center mb-4">
-          <div className="tp-border-flow ih-float w-14 h-14 flex items-center justify-center mx-auto mb-2 rounded-2xl p-1.5 bg-white shadow-lg"
-            style={{ '--tp-c1': '#10b981', '--tp-c2': '#14b8a6' } as any}>
-            <img src="/logo.png" alt="APIS" className="w-full h-full object-contain" />
-          </div>
-          <h1 className="ih-grad-text text-2xl font-black tracking-tight bg-gradient-to-r from-slate-900 via-emerald-600 to-teal-600">Employee of the Month</h1>
+          <span className="ih-float ih-halo inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500
+            items-center justify-center shadow-lg shadow-amber-500/30 mb-3"
+            style={{ ['--ih-halo' as string]: 'rgba(245,158,11,.45)' }}>
+            <Star className="w-8 h-8 text-white" fill="white" />
+          </span>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">Employee of the Month</h1>
           <p className="text-slate-500 mt-1 text-xs font-medium">APIS Recognition Hub · Self-Nomination · Panel Evaluation</p>
         </div>
 
         <div
           onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-          className="tp-reveal ih-inview ih-tilt3d ih-spotlight bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/60" style={{ animationDelay: '80ms' }}>
+          className="tp-reveal ih-inview ih-tilt3d ih-spotlight ih-float bg-white border border-amber-100 rounded-3xl p-5
+            shadow-[0_45px_90px_-25px_rgba(217,119,6,.4)]" style={{ animationDelay: '80ms' }}>
 
           {/* ── Admin OTP step ── */}
           {step === 'admin_otp' && (
@@ -366,12 +368,12 @@ export function EOMPage({}: EOMPageProps) {
                 <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" /> Back
               </button>
               <div className="text-center mb-7">
-                <div className="tp-pop-in ih-float w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
-                  <Mail className="w-7 h-7 text-emerald-600" />
+                <div className="tp-pop-in ih-float w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-4">
+                  <Mail className="w-7 h-7 text-amber-600" />
                 </div>
                 <h3 className="text-slate-900 font-bold text-base mb-1">Check your inbox</h3>
                 <p className="text-slate-500 text-sm">
-                  OTP sent to <span className="text-emerald-600 font-semibold">{maskedEmail}</span>
+                  OTP sent to <span className="text-amber-700 font-semibold">{maskedEmail}</span>
                 </p>
                 <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full">
                   <Zap className="w-3 h-3 text-amber-500" />
@@ -385,11 +387,11 @@ export function EOMPage({}: EOMPageProps) {
                   onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
                   onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
                   autoFocus
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-300 font-mono font-black text-3xl text-center tracking-[0.6em] focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-300 font-mono font-black text-3xl text-center tracking-[0.6em] focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all"
                 />
                 <div className="flex justify-center gap-1.5 mt-3">
                   {[0,1,2,3,4,5].map(i => (
-                    <div key={i} className={`h-1 rounded-full transition-all duration-200 ${i < otpInput.length ? 'w-5 bg-emerald-500' : 'w-3 bg-slate-200'}`} />
+                    <div key={i} className={`h-1 rounded-full transition-all duration-200 ${i < otpInput.length ? 'w-5 bg-amber-500' : 'w-3 bg-slate-200'}`} />
                   ))}
                 </div>
               </div>
@@ -399,7 +401,7 @@ export function EOMPage({}: EOMPageProps) {
                 </div>
               )}
               <button onClick={handleVerifyOtp} disabled={otpInput.length !== 6 || loading}
-                className="ih-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-emerald-200 hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2">
+                className="ih-sheen w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-amber-500/30 hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2">
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Verifying...</>
                   : '✓ Verify & Enter Hub'}
@@ -415,7 +417,7 @@ export function EOMPage({}: EOMPageProps) {
           {step === 'id' && (
             <>
               <div className="flex items-center gap-2 mb-3">
-                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center">1</span>
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">1</span>
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Select your role</p>
               </div>
 
@@ -436,7 +438,7 @@ export function EOMPage({}: EOMPageProps) {
               </div>
 
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center">2</span>
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">2</span>
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Enter your Employee Code</p>
               </div>
               <div className="relative mb-4">
@@ -445,7 +447,7 @@ export function EOMPage({}: EOMPageProps) {
                   value={inputId}
                   onChange={e => setInputId(e.target.value.toUpperCase())}
                   onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 placeholder-slate-300 font-mono font-bold text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 placeholder-slate-300 font-mono font-bold text-sm focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all"
                 />
               </div>
 
@@ -456,7 +458,7 @@ export function EOMPage({}: EOMPageProps) {
               )}
 
               <button onClick={handleSendOtp} disabled={!role || !inputId.trim() || loading}
-                className="ih-sheen w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-emerald-200 hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2">
+                className="ih-sheen w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-amber-500/30 hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2">
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Sending OTP...</>
                   : <><Mail className="w-4 h-4" /> Send OTP to Email</>}
