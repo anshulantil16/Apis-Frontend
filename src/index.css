@@ -84,7 +84,7 @@
    page animates as you travel down it rather than firing everything once on
    mount. Guarded on .ih-reveal-ready: the shell sets that only after its
    observer is confirmed running, so without it these stay visible. */
-html.ih-reveal-ready .animate-rise {
+html.ih-reveal-ready .animate-rise[data-rev] {
   animation: none;
   opacity: 0; transform: translateY(18px);
   transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);

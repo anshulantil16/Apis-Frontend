@@ -114,7 +114,7 @@ export const IH_STYLES = `
    still swallows clicks, so failing visible is much safer than failing
    hidden. */
 .ih-inview { transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1); }
-html.ih-reveal-ready .ih-inview { opacity:0; transform: translateY(24px); }
+html.ih-reveal-ready .ih-inview[data-rev] { opacity:0; transform: translateY(24px); }
 html.ih-reveal-ready .ih-inview[data-in] { opacity:1; transform:none; }
 
 /* ── interaction ───────────────────────────────────────────────────────── */

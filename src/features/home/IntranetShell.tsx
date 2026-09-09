@@ -191,8 +191,24 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
     // swallow clicks, which is a far worse failure than "no animation".
     document.documentElement.classList.add('ih-reveal-ready');
 
+    /* data-rev marks "the observer has this one". The hiding CSS is gated on
+     * it, so an element the observer never saw stays VISIBLE rather than stuck
+     * at opacity:0.
+     *
+     * That gap is reachable: React reuses a DOM node when the element type is
+     * unchanged, so a component that swaps className between two branches can
+     * turn a plain div into a .tp-reveal without adding or removing a node.
+     * childList sees nothing, the element is never observed, and it would
+     * otherwise be invisible for good — which is how picking a file in the
+     * Data Extractor left an empty card behind.
+     *
+     * data-* survives React re-renders (it rewrites className wholesale but
+     * never touches attributes it did not render), so this stays put. */
+    const claim = (el: Element) => { io.observe(el); el.setAttribute('data-rev', ''); };
+    const release = (el: Element) => { io.unobserve(el); el.removeAttribute('data-rev'); };
+
     const initial = Array.from(document.querySelectorAll(REVEAL_SEL));
-    initial.forEach(el => io.observe(el));
+    initial.forEach(claim);
     sweep(initial);
 
     /* Tool pages mount their content long after the shell and swap it on every
@@ -214,8 +230,8 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
     const mo = new MutationObserver(records => {
       const added: Element[] = [];
       for (const rec of records) {
-        rec.removedNodes.forEach(n => eachTarget(n, el => io.unobserve(el)));
-        rec.addedNodes.forEach(n => eachTarget(n, el => { io.observe(el); added.push(el); }));
+        rec.removedNodes.forEach(n => eachTarget(n, release));
+        rec.addedNodes.forEach(n => eachTarget(n, el => { claim(el); added.push(el); }));
       }
       // Only the newly mounted elements are measured; everything already
       // observed is the IntersectionObserver's job.

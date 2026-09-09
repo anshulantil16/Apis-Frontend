@@ -27,7 +27,7 @@ export const TOOL_STYLES = `
    Guarded by html.ih-reveal-ready — the shell only sets that once the observer
    is confirmed running, so if it never attaches these stay visible rather than
    stuck at opacity:0 (an invisible card still swallows clicks). */
-html.ih-reveal-ready .tp-reveal {
+html.ih-reveal-ready .tp-reveal[data-rev] {
   animation: none;
   opacity: 0; transform: translateY(18px);
   transition: opacity .6s cubic-bezier(.2,.8,.2,1), transform .6s cubic-bezier(.2,.8,.2,1),
