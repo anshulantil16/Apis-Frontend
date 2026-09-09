@@ -249,7 +249,11 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
           answers "is anything wrong?" rather than only "how many?". */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {[
-          { l: 'People', v: data.total, sub: `${all.length} loaded`, icon: Users, tone: 'text-slate-800' },
+          // "loaded" only earns a mention when it is genuinely less than the
+          // whole directory - otherwise it reads as a limit where there is none.
+          { l: 'People', v: data.total,
+            sub: data.truncated ? `${all.length} shown — list truncated` : 'all shown',
+            icon: Users, tone: 'text-slate-800' },
           { l: 'Can sign in', v: data.active,
             sub: `${(data.total ?? 0) - (data.active ?? 0)} disabled`, icon: ShieldCheck,
             tone: 'text-emerald-600' },
@@ -285,12 +289,15 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
               People who can open each tool. Administrators count toward every one.
             </p>
           </div>
-          <p className="text-[11px] font-bold text-slate-400">of {all.length} people</p>
+          <p className="text-[11px] font-bold text-slate-400">of {data.total ?? all.length} people</p>
         </div>
         <div className="space-y-1.5">
           {(data.apps || []).map((a: any) => {
-            const n = all.filter(u => u.is_superadmin || (u.allowed_apps || []).includes(a.key)).length;
-            const pct = all.length ? Math.round((n / all.length) * 100) : 0;
+            // Counted by the server across everyone. Counting the rows in hand
+            // instead made this quietly describe whatever subset had loaded.
+            const total = data.total ?? all.length;
+            const n = a.can_open ?? all.filter(u => u.is_superadmin || (u.allowed_apps || []).includes(a.key)).length;
+            const pct = total ? Math.round((n / total) * 100) : 0;
             const on = appFilter === a.key;
             return (
               <button key={a.key} onClick={() => setAppFilter(on ? '' : a.key)}
