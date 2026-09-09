@@ -606,7 +606,18 @@ function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 
                                ${tab === 'birthdays' ? 'bg-amber-50 text-amber-500' : 'bg-orange-50 text-orange-600'}`}>
                 {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
               </div>
-              <p className="text-sm font-bold text-slate-800 flex-1 truncate">{p.name}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-800 truncate">{p.name}</p>
+                <p className="text-[11px] text-slate-400 truncate">
+                  {p.years != null && (
+                    <span className="font-bold text-orange-600">
+                      {p.years} {p.years === 1 ? 'year' : 'years'}
+                      {p.department ? ' · ' : ''}
+                    </span>
+                  )}
+                  {p.department}
+                </p>
+              </div>
               <span className="text-[12px] font-bold text-slate-400 flex-shrink-0">{p.date}</span>
             </div>
           ))}
@@ -1343,7 +1354,10 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 roles (same honest pattern as Birthdays/Anniversaries
                 below). */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-4" style={{ animationDelay: '40ms' }}>
+              {/* flex column with the list on flex-1: grid cells stretch to the
+                  tallest card in the row, and without this the spare height
+                  pooled into one dead block under the last name. */}
+              <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-4 flex flex-col" style={{ animationDelay: '40ms' }}>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
                     <UserPlus className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />New Joiners
@@ -1353,11 +1367,11 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                     View all
                   </button>
                 </div>
-                <div className="space-y-1.5">
+                <div className="flex-1 flex flex-col justify-evenly gap-1">
                   {!cel.loading && cel.new_joiners.length === 0 && (
                     <p className="text-[10px] text-slate-400 py-3">Nobody in the last 45 days.</p>
                   )}
-                  {cel.new_joiners.slice(0, 3).map(j => (
+                  {cel.new_joiners.slice(0, 4).map(j => (
                     <div key={j.name} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 text-[10.5px] font-black">
                         {j.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -1371,7 +1385,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 </div>
               </div>
 
-              <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-4" style={{ animationDelay: '60ms' }}>
+              <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-4 flex flex-col" style={{ animationDelay: '60ms' }}>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
                     <Briefcase className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />Vacancies
@@ -1382,7 +1396,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                   </button>
                 </div>
                 <p className="text-[9px] text-slate-300 mb-2.5">Sample data — not yet connected to a real careers feed</p>
-                <div className="space-y-1.5">
+                <div className="flex-1 flex flex-col justify-evenly gap-1">
                   {SAMPLE_VACANCIES.map(v => (
                     <div key={v.title} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
                       <div className="min-w-0 flex-1">
@@ -1436,7 +1450,15 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                                      ${celebrationTab === 'birthdays' ? 'bg-amber-50 text-amber-500' : 'bg-orange-50 text-orange-600'}`}>
                       {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                     </div>
-                    <p className="text-[12.5px] font-bold text-slate-800 flex-1 truncate">{p.name}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12.5px] font-bold text-slate-800 truncate">{p.name}</p>
+                      {/* An anniversary without the number is just a date. */}
+                      {p.years != null && (
+                        <p className="text-[9.5px] font-bold text-orange-600">
+                          {p.years} {p.years === 1 ? 'year' : 'years'}
+                        </p>
+                      )}
+                    </div>
                     <span className="text-[10.5px] font-bold text-slate-400 flex-shrink-0">{p.date}</span>
                   </div>
                 ))}
