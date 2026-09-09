@@ -62,11 +62,11 @@ const hods: Person[] = [
   { id: 'ankit-nagar', name: 'Ankit Nagar', role: 'CFO', department: 'F&A/Internal Audit', level: 'hod', photo: ankitNagarPhoto },
   { id: 'pankaj-tripathi', name: 'Pankaj Tripathi', role: 'GM', department: 'P&C Admin & IT', level: 'hod', photo: '/hierarchy/Pankaj_Tripathi1.png' },
   { id: 'pradeep-krishali', name: 'Pradeep Krishali', role: 'AGM', department: 'Procurement', level: 'hod', photo: pradeepKrishaliPhoto },
-  { id: 'vikash-aggarwal', name: 'Vikash Aggarwal', role: 'AGM', department: 'CS & Legal', level: 'hod', photo: vikashAggarwalPhoto },
-  { id: 'manigandan', name: 'Manigandan', role: 'GM', department: 'BEX & SCM', level: 'hod', photo: manigandanPhoto },
+  { id: 'vikas-aggarwal', name: 'Vikas Aggarwal', role: 'AGM', department: 'CS & Legal', level: 'hod', photo: vikashAggarwalPhoto },
+  { id: 'r-manigandan', name: 'R. Manigandan', role: 'GM', department: 'BEX & SCM', level: 'hod', photo: manigandanPhoto },
   { id: 'heera-swami', name: 'Heera Swami', role: 'GM', department: 'PPC', level: 'hod', photo: heeraSwamiPhoto },
-  { id: 'dinesh', name: 'Dinesh', role: 'Manager', department: 'NPD', level: 'hod', photo: dineshPhoto },
-  { id: 'ershad-alam', name: 'Ershad Alam', role: 'Manager', department: 'Export',level: 'hod', photo: ershadAlamPhoto },
+  { id: 'dinesh-kumar', name: 'Dinesh Kumar', role: 'Manager', department: 'NPD', level: 'hod', photo: dineshPhoto },
+  { id: 'ershad-alam', name: 'Ershad Alam', role: 'Hod export', department: 'Export',level: 'hod', photo: ershadAlamPhoto },
 ];
 
 /* Full reporting structure below a HOD — real names/roles as provided,
@@ -155,7 +155,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
   // so they render left-group/right-group as in that chart.
   'heera-swami': [
     { name: 'Rahul Dutt Sharma', role: 'M5- AGM- Production- Roorkee', location: 'Roorkee' },
-    { name: 'Sarovan Kumar', role: 'M3- Manager- Engineering- Roorkee', location: 'Roorkee' },
+    { name: 'Sarvan Kumar', role: 'M3- Manager- Engineering- Roorkee', location: 'Roorkee' },
     { name: 'Amir Khan', role: 'M1- AM- Store & Dispatch- Roorkee', location: 'Roorkee' },
     { name: 'Sunil Kumar', role: 'M3- Manager- QA & QC- Roorkee', location: 'Roorkee' },
     { name: 'Nischal Bharadwaj', role: 'M4- Sr. Manager- Finance & Accounts- Roorkee- Functional Reporting', location: 'Roorkee', functional: true },

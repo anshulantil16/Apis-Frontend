@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
   ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, PartyPopper,
-  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, Package, Rocket, UserPlus, Briefcase, Megaphone,
+  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag,
 } from 'lucide-react';
 import {
@@ -13,6 +13,7 @@ import {
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
 } from './IntranetHomeShared';
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
+import { ReferralForm } from './ReferralFormPopup';
 
 /* Leadership hero slides — real APIS India leadership. Amit Anand's photo
    reuses the same asset imported on the APIS Tree page; Vimal Anand's is
@@ -428,37 +429,83 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
 }
 
 /* "View all" popup for the Vacancies card — same pattern as
-   NewJoinersPopup, with the opening-count badge scaled up to match. */
+   NewJoinersPopup, with the opening-count badge scaled up to match, plus a
+   second tab holding the full referral form (ReferralFormPopup.tsx) that
+   the "Employee Referral Form" button switches into. */
 function VacanciesPopup({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<'vacancies' | 'referral'>('vacancies');
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
-        className="ih-palette-in w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        className={`ih-palette-in w-full max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5
+          transition-[max-width] ${tab === 'referral' ? 'max-w-4xl' : 'max-w-lg'}`}>
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
           <div>
             <p className="text-base font-black text-slate-900 flex items-center gap-2">
               <Briefcase className="w-4.5 h-4.5 text-amber-500" />Vacancies
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Sample data — not yet connected to a real careers feed</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {tab === 'referral' ? 'Refer a candidate and help us build a stronger team.'
+                : 'Sample data — not yet connected to a real careers feed'}
+            </p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 space-y-2">
-          {SAMPLE_VACANCIES.map(v => (
-            <div key={v.title} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-800 truncate">{v.title}</p>
-                <p className="text-[12px] text-slate-400 truncate">{v.location}</p>
-              </div>
-              <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-black flex-shrink-0">
-                {v.openings}
-              </span>
-            </div>
+
+        <div className="flex items-center gap-5 px-6 border-b border-slate-100">
+          {([
+            { id: 'referral' as const, label: 'Referral Form' },
+            { id: 'vacancies' as const, label: 'Available Vacancies' },
+          ]).map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`py-3 text-[12.5px] font-black border-b-2 transition-colors ${
+                tab === t.id ? 'text-amber-600 border-amber-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+              {t.label}
+            </button>
           ))}
         </div>
+
+        {tab === 'vacancies' ? (
+          <div className="p-6 space-y-2">
+            {SAMPLE_VACANCIES.map(v => (
+              <div key={v.title} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-slate-800 truncate">{v.title}</p>
+                  <p className="text-[12px] text-slate-400 truncate">{v.location}</p>
+                </div>
+                <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-black flex-shrink-0">
+                  {v.openings}
+                </span>
+              </div>
+            ))}
+
+            {/* Referral CTA — every open role is a reminder that referrals are
+                how most of these seats get filled. */}
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <Heart className="w-4 h-4 text-amber-600" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-black text-slate-800 leading-tight">Help us grow our team!</p>
+                  <p className="text-[11.5px] text-slate-500 leading-tight mt-0.5">
+                    Refer a talented friend or colleague and be a part of our success story.
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setTab('referral')}
+                className="ih-sheen flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600
+                text-white text-[12.5px] font-black shrink-0 shadow-sm transition-colors">
+                <Send className="w-3.5 h-3.5" />Employee Referral Form
+              </button>
+            </div>
+          </div>
+        ) : (
+          <ReferralForm onCancel={() => setTab('vacancies')} />
+        )}
       </div>
     </div>
   );
@@ -970,15 +1017,41 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
 
             {/* Our Products — real APIS India Limited product photography */}
             <section id="our-products" className="scroll-mt-20">
-              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Building2 className="w-3.5 h-3.5 text-amber-600" />Our Products
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[13px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                    <Building2 className="w-3.5 h-3.5 text-amber-600" />
+                  </span>
+                  Our Products
+                </h2>
+                <a href="#our-products"
+                  className="flex items-center gap-1 text-[12px] font-black text-amber-600 hover:text-amber-700 transition-colors">
+                  View all products <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {OUR_PRODUCTS.map((p, i) => (
                   <button key={p.label} onClick={() => setOpenProduct(p)}
-                    className="ih-inview ih-tilt3d ih-sweep relative rounded-2xl overflow-hidden bg-[#3d2b18] p-5 flex items-center justify-center shadow-sm aspect-square text-left"
-                    style={{ animationDelay: `${i * 80}ms` }}>
-                    <ProductPhoto src={p.image} alt={p.label} className="relative w-4/5 h-4/5 object-contain" />
+                    onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+                    className="ih-inview ih-tilt3d ih-spotlight group relative rounded-2xl overflow-hidden
+                      bg-white border border-slate-200 shadow-sm hover:shadow-lg hover:border-amber-200
+                      transition-all text-left"
+                    style={{ transitionDelay: `${i * 60}ms` }}>
+                    <div className="relative aspect-square p-6 flex items-center justify-center overflow-hidden bg-white">
+                      {/* A small warm glow behind the product itself — not a full
+                          amber wash across the whole tile, just enough to lift the
+                          photo off the white card the way the reference does. */}
+                      <div aria-hidden className="absolute inset-x-8 inset-y-6 rounded-full bg-amber-300/60 blur-xl" />
+                      <ProductPhoto src={p.image} alt={p.label}
+                        className="relative w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 px-4 py-3.5 border-t border-slate-100">
+                      <p className="font-bold text-slate-800 text-[13.5px] truncate">{p.label}</p>
+                      <span className="w-7 h-7 rounded-full bg-amber-50 border border-amber-200 flex items-center
+                        justify-center shrink-0 group-hover:bg-amber-500 transition-colors">
+                        <ArrowUpRight className="w-3.5 h-3.5 text-amber-600 group-hover:text-white transition-colors" />
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>

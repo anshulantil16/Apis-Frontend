@@ -26,7 +26,7 @@ const todayLocal = () => {
 const badgeFor = (status: string) =>
   status === 'sent' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : status === 'failed' ? 'bg-rose-50 text-rose-700 border-rose-200'
-      : 'bg-blue-50 text-blue-700 border-blue-200';
+      : 'bg-amber-50 text-amber-700 border-amber-200';
 
 const labelFor = (status: string) =>
   status === 'sent' ? '✓ Sent' : status === 'failed' ? '✕ Failed' : '✓ Generated';
@@ -49,9 +49,9 @@ const EMPTY_FORM = {
 function SectionHead({ n, title, hint }: { n: number; title: string; hint?: string }) {
   return (
     <div className="flex items-center gap-3 mb-4">
-      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-500 to-red-600
+      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500
                       text-white text-xs font-black flex items-center justify-center
-                      shadow-md shadow-rose-500/25 flex-shrink-0">
+                      shadow-md shadow-amber-500/25 flex-shrink-0">
         {n}
       </div>
       <div className="min-w-0">
@@ -69,8 +69,8 @@ function SectionHead({ n, title, hint }: { n: number; title: string; hint?: stri
 const INPUT_CLS =
   'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-sm ' +
   'text-slate-800 placeholder:text-slate-400 transition-all ' +
-  'hover:border-slate-300 focus:outline-none focus:bg-white focus:border-rose-400 ' +
-  'focus:ring-4 focus:ring-rose-500/10';
+  'hover:border-slate-300 focus:outline-none focus:bg-white focus:border-amber-400 ' +
+  'focus:ring-4 focus:ring-amber-500/10';
 
 const LABEL_CLS =
   'block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5';
@@ -161,10 +161,10 @@ function SingleLetterPanel() {
       <div className="text-center py-8">
         <div className={`w-20 h-20 rounded-3xl mx-auto mb-5 flex items-center justify-center
           ${result.emailed ? 'bg-emerald-50 ring-8 ring-emerald-500/10'
-            : result.generated ? 'bg-blue-50 ring-8 ring-blue-500/10'
+            : result.generated ? 'bg-amber-50 ring-8 ring-amber-500/10'
               : 'bg-rose-50 ring-8 ring-rose-500/10'}`}>
           {result.generated
-            ? <CheckCircle className={`w-10 h-10 ${result.emailed ? 'text-emerald-500' : 'text-blue-500'}`} />
+            ? <CheckCircle className={`w-10 h-10 ${result.emailed ? 'text-emerald-500' : 'text-amber-500'}`} />
             : <XCircle className="w-10 h-10 text-rose-500" />}
         </div>
         <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-1.5">{result.message}</h3>
@@ -184,9 +184,9 @@ function SingleLetterPanel() {
           )}
           <button
             onClick={() => { setResult(null); setForm({ ...EMPTY_FORM }); setSendEmail(false); }}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white
-                       text-sm font-bold shadow-lg shadow-rose-500/25 transition-all
-                       hover:-translate-y-0.5 hover:shadow-xl hover:shadow-rose-500/30">
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white
+                       text-sm font-bold shadow-lg shadow-amber-500/25 transition-all
+                       hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/30">
             Issue Another Letter
           </button>
         </div>
@@ -212,7 +212,7 @@ function SingleLetterPanel() {
             <label className="block text-xs font-bold text-slate-600 mb-1">Title</label>
             <select value={form.salutation} onChange={e => set('salutation', e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white
-                         focus:outline-none focus:ring-2 focus:ring-red-400">
+                         focus:outline-none focus:ring-2 focus:ring-amber-400">
               <option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Mr./Ms.</option>
             </select>
           </div>
@@ -230,7 +230,7 @@ function SingleLetterPanel() {
             <label className="block text-xs font-bold text-slate-600 mb-1">Warning Type</label>
             <select value={form.warning_type} onChange={e => set('warning_type', e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white
-                         focus:outline-none focus:ring-2 focus:ring-red-400">
+                         focus:outline-none focus:ring-2 focus:ring-amber-400">
               {WARNING_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
@@ -273,7 +273,7 @@ function SingleLetterPanel() {
         </div>
         <label className="flex items-center gap-2 mt-4 cursor-pointer">
           <input type="checkbox" checked={sendEmail} onChange={e => setSendEmail(e.target.checked)}
-            className="w-4 h-4 accent-red-600" />
+            className="w-4 h-4 accent-amber-500" />
           <span className="text-sm text-slate-700">
             Email the letter to the employee now
             <span className="text-slate-400"> (otherwise it is only generated &amp; stored)</span>
@@ -283,9 +283,9 @@ function SingleLetterPanel() {
 
       <button type="submit" disabled={busy}
         className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl
-                   bg-gradient-to-br from-rose-500 to-red-600 text-white font-bold
-                   shadow-lg shadow-rose-500/25 transition-all
-                   hover:-translate-y-0.5 hover:shadow-xl hover:shadow-rose-500/30
+                   bg-gradient-to-br from-amber-500 to-orange-500 text-white font-bold
+                   shadow-lg shadow-amber-500/25 transition-all
+                   hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/30
                    disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none">
         {busy ? <><Loader className="w-5 h-5 animate-spin" />Generating…</>
           : <><Send className="w-5 h-5" />{sendEmail ? 'Generate & Send Letter' : 'Generate Letter'}</>}
@@ -380,19 +380,19 @@ function BulkUploadPanel() {
     return (
       <div className="py-6">
         <div className="text-center mb-6">
-          <Loader className="w-12 h-12 text-red-500 mx-auto mb-3 animate-spin" />
+          <Loader className="w-12 h-12 text-amber-500 mx-auto mb-3 animate-spin" />
           <h2 className="text-2xl font-bold text-slate-900">Generating warning letters…</h2>
           <p className="text-slate-500 text-sm mt-1">
             {progress.processed} of {progress.total} processed — please keep this page open.
           </p>
         </div>
         <div className="h-4 bg-slate-100 rounded-full overflow-hidden mb-4">
-          <div className="h-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-500"
+          <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500"
             style={{ width: `${pct}%` }} />
         </div>
         <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
-            <p className="text-2xl font-black text-blue-600">{progress.generated}</p>
+          <div className="rounded-xl bg-amber-50 border border-amber-100 p-3">
+            <p className="text-2xl font-black text-amber-600">{progress.generated}</p>
             <p className="text-xs text-slate-500">Generated</p>
           </div>
           <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
@@ -440,14 +440,14 @@ function BulkUploadPanel() {
                 </span>
                 {r.pdf_url && (
                   <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer"
-                    className="text-xs font-bold text-blue-600 hover:underline">PDF</a>
+                    className="text-xs font-bold text-amber-600 hover:underline">PDF</a>
                 )}
               </div>
             </div>
           ))}
         </div>
         <button onClick={() => { setSuccess(false); setResults([]); setProgress(null); setWarnings([]); }}
-          className="w-full mt-4 px-6 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700">
+          className="w-full mt-4 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold transition-all">
           Upload Another File
         </button>
       </div>
@@ -533,11 +533,11 @@ function BulkUploadPanel() {
 
         <label className={`block rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer
           transition-all mb-4 ${file
-            ? 'border-rose-300 bg-rose-50/50'
-            : 'border-slate-300 bg-slate-50/40 hover:border-rose-300 hover:bg-rose-50/30'}`}>
+            ? 'border-amber-300 bg-amber-50/50'
+            : 'border-slate-300 bg-slate-50/40 hover:border-amber-300 hover:bg-amber-50/30'}`}>
           <input type="file" accept=".xlsx,.xls" className="hidden"
             onChange={e => { setFile(e.target.files?.[0] || null); setError(''); setColumnError(null); }} />
-          <Upload className={`w-8 h-8 mx-auto mb-2 ${file ? 'text-rose-500' : 'text-slate-400'}`} />
+          <Upload className={`w-8 h-8 mx-auto mb-2 ${file ? 'text-amber-500' : 'text-slate-400'}`} />
           {file ? (
             <>
               <p className="text-sm font-bold text-slate-800 truncate">{file.name}</p>
@@ -556,7 +556,7 @@ function BulkUploadPanel() {
         <label className="flex items-start gap-2.5 cursor-pointer rounded-xl border border-slate-200
                           bg-white p-3.5 mb-4 hover:border-slate-300 transition-all">
           <input type="checkbox" checked={sendEmails} onChange={e => setSendEmails(e.target.checked)}
-            className="w-4 h-4 accent-rose-600 mt-0.5 flex-shrink-0" />
+            className="w-4 h-4 accent-amber-500 mt-0.5 flex-shrink-0" />
           <span className="text-sm text-slate-700 leading-snug">
             Email each letter to the employee
             <span className="block text-[11px] text-slate-400 mt-0.5">
@@ -567,9 +567,9 @@ function BulkUploadPanel() {
 
         <button type="submit" disabled={loading || !file}
           className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl
-                     bg-gradient-to-br from-rose-500 to-red-600 text-white font-bold
-                     shadow-lg shadow-rose-500/25 transition-all
-                     hover:-translate-y-0.5 hover:shadow-xl hover:shadow-rose-500/30
+                     bg-gradient-to-br from-amber-500 to-orange-500 text-white font-bold
+                     shadow-lg shadow-amber-500/25 transition-all
+                     hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/30
                      disabled:opacity-40 disabled:translate-y-0 disabled:shadow-none">
           {loading ? <><Loader className="w-5 h-5 animate-spin" />Uploading…</>
             : <><Send className="w-5 h-5" />Generate Letters</>}
@@ -659,7 +659,7 @@ function WarningHistoryPanel() {
           { l: 'Total', v: summary.total, txt: 'text-slate-800', bar: 'from-slate-400 to-slate-600' },
           { l: 'Sent', v: summary.sent, txt: 'text-emerald-600', bar: 'from-emerald-400 to-emerald-600' },
           { l: 'Failed', v: summary.failed, txt: 'text-rose-600', bar: 'from-rose-400 to-red-600' },
-          { l: 'Pending', v: summary.pending, txt: 'text-blue-600', bar: 'from-blue-400 to-indigo-600' },
+          { l: 'Pending', v: summary.pending, txt: 'text-amber-600', bar: 'from-amber-400 to-orange-600' },
         ].map(s => (
           <div key={s.l}
             className="relative overflow-hidden rounded-2xl bg-white border border-slate-200
@@ -679,7 +679,7 @@ function WarningHistoryPanel() {
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search name, code, email, subject…"
             className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-red-400" />
+                       focus:outline-none focus:ring-2 focus:ring-amber-400" />
         </div>
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
           className="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
@@ -754,7 +754,7 @@ function WarningHistoryPanel() {
                   <td className="px-3 py-2">
                     {r.pdf_url && (
                       <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer"
-                        className="text-xs font-bold text-blue-600 hover:underline whitespace-nowrap">
+                        className="text-xs font-bold text-amber-600 hover:underline whitespace-nowrap">
                         View PDF
                       </a>
                     )}
@@ -784,20 +784,20 @@ export function WarningLetterPage() {
       {/* Hero band — light, with a soft rose wash tying it to the letter type */}
       <div className="relative overflow-hidden bg-white border-b border-slate-200">
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 -left-16 w-96 h-96 rounded-full bg-rose-400/15 blur-[100px]" />
+          <div className="absolute -top-24 -left-16 w-96 h-96 rounded-full bg-amber-400/15 blur-[100px]" />
           <div className="absolute -top-20 right-0 w-96 h-96 rounded-full bg-orange-300/15 blur-[100px]" />
         </div>
         <div className="relative max-w-6xl mx-auto px-8 pt-8 pb-20">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 ring-1 ring-rose-100
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 ring-1 ring-amber-100
                             flex items-center justify-center flex-shrink-0">
-              <FileWarning className="w-6 h-6 text-rose-600" />
+              <FileWarning className="w-6 h-6 text-amber-600" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1.5">
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">Warning Letters</h1>
                 <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase
-                                 tracking-widest bg-rose-50 text-rose-600 ring-1 ring-rose-100">
+                                 tracking-widest bg-amber-50 text-amber-600 ring-1 ring-amber-100">
                   Confidential
                 </span>
               </div>
@@ -820,7 +820,7 @@ export function WarningLetterPage() {
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all
-                  ${on ? 'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-lg shadow-rose-500/25'
+                  ${on ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25'
                        : 'text-slate-500 hover:bg-slate-100'}`}>
                 <Icon className="w-4 h-4 flex-shrink-0" />
                 <div className="text-left leading-none">
