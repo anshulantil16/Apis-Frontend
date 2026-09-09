@@ -224,7 +224,7 @@ export interface CelebrationEntry {
  *
  * Fetched once here and shared by all four render sites (two cards and their
  * two "View all" popups), rather than each firing its own request. */
-export function useCelebrations() {
+export function useCelebrations(scope: 'card' | 'all' = 'card') {
   const [data, setData] = useState<{
     birthdays: CelebrationEntry[];
     anniversaries: CelebrationEntry[];
@@ -235,13 +235,15 @@ export function useCelebrations() {
 
   useEffect(() => {
     let alive = true;
-    portalFetch('/celebrations/')
+    // The cards show the next few weeks; "View all" asks for everybody, which
+    // for a birthday list means a full year round — everyone, exactly once.
+    portalFetch(`/celebrations/${scope === 'all' ? '?scope=all' : ''}`)
       .then(r => (r.ok ? r.json() : null))
       .then(d => { if (alive && d) setData(d); })
       .catch(() => {})
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, []);
+  }, [scope]);
 
   return { ...data, loading };
 }

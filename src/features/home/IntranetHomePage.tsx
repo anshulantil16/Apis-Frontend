@@ -394,7 +394,7 @@ function PackagingPopup({ product, onClose }: { product: OurProduct; onClose: ()
    cramped two-column width. Still explicitly flagged as sample data, same
    caveat as the card itself. */
 function NewJoinersPopup({ onClose }: { onClose: () => void }) {
-  const { new_joiners: joiners, loading } = useCelebrations();
+  const { new_joiners: joiners, loading } = useCelebrations('all');
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
@@ -405,7 +405,9 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
             <p className="text-base font-black text-slate-900 flex items-center gap-2">
               <UserPlus className="w-4.5 h-4.5 text-amber-500" />New Joiners
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Everyone who joined in the last 45 days</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {loading ? 'Loading…' : `Everyone, newest first · ${joiners.length}`}
+            </p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
             <X className="w-5 h-5" />
@@ -413,7 +415,7 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-6 space-y-2">
           {!loading && joiners.length === 0 && (
-            <p className="text-sm text-slate-400 py-6 text-center">Nobody has joined in the last 45 days.</p>
+            <p className="text-sm text-slate-400 py-6 text-center">No joining dates on record yet.</p>
           )}
           {joiners.map(j => (
             <div key={j.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
@@ -563,7 +565,7 @@ function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
    inside the popup). */
 function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 'anniversaries'; onClose: () => void }) {
   const [tab, setTab] = useState(initialTab);
-  const { birthdays, anniversaries, loading } = useCelebrations();
+  const { birthdays, anniversaries, loading } = useCelebrations('all');
   const rows = tab === 'birthdays' ? birthdays : anniversaries;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
@@ -588,12 +590,13 @@ function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 
           </button>
         </div>
         <p className="px-6 pt-3 text-[11px] text-slate-400">
-          {tab === 'birthdays' ? 'Birthdays' : 'Work anniversaries'} in the next 30 days
+          {loading ? 'Loading…'
+            : `Everyone, by date · ${rows.length} ${tab === 'birthdays' ? 'birthdays' : 'anniversaries'}`}
         </p>
         <div className="p-6 pt-3 space-y-2">
           {!loading && rows.length === 0 && (
             <p className="text-sm text-slate-400 py-6 text-center">
-              No {tab === 'birthdays' ? 'birthdays' : 'anniversaries'} in the next 30 days.
+              No {tab === 'birthdays' ? 'birthdays' : 'anniversaries'} on record yet.
             </p>
           )}
           {rows.map(p => (
