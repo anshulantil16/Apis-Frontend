@@ -386,7 +386,7 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
         </select>
 
         {(facet !== 'all' || dept || appFilter || q) && (
-          <button onClick={() => { setFacet('all'); setDept(''); setAppFilter(''); setQ(''); load(''); }}
+          <button onClick={() => { setFacet('all'); setDept(''); setAppFilter(''); setQ(''); }}
             className="text-[11px] font-black text-slate-400 hover:text-slate-700 px-2 py-1.5">
             Clear filters
           </button>
