@@ -121,9 +121,11 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
   const [open, setOpen] = useState<any>(null);       // the person being inspected
   const [detail, setDetail] = useState<any>(null);
 
-  const load = (query = '') => {
+  // Fetches the whole directory. Searching and filtering both happen on what
+  // this returns, so this only runs on arrival and after something is changed.
+  const load = () => {
     setLoading(true);
-    portalFetch(`/admin/users/${query ? `?q=${encodeURIComponent(query)}` : ''}`)
+    portalFetch('/admin/users/')
       .then(r => r.json()).then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   };
@@ -144,7 +146,7 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     const d = await r.json().catch(() => ({}));
     onToast({ t: r.ok ? d.message || 'Updated' : d.error || 'Could not update', ok: r.ok });
     if (r.ok) {
-      load(q);
+      load();
       if (open?.id === u.id) { setOpen(d.user); inspect(d.user); }
     }
   };
@@ -174,7 +176,18 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     }
   };
 
+  /* Search runs here, over the directory already in hand, rather than as a
+     request per keystroke. The whole company arrives in one payload, so a
+     round-trip per letter bought nothing and cost plenty: it flipped the tab
+     into its loading state, the table collapsed to a skeleton, and the page
+     jumped back to the top between every character typed. */
+  const needle = q.trim().toLowerCase();
+  const hit = (u: any) =>
+    !needle || [u.name, u.email, u.employee_code, u.department, u.designation, u.location]
+      .some(v => (v || '').toLowerCase().includes(needle));
+
   const rows = all
+    .filter(hit)
     .filter(u => matches(u, facet))
     .filter(u => !dept || u.department === dept)
     .filter(u => !appFilter || u.is_superadmin || (u.allowed_apps || []).includes(appFilter))
@@ -193,7 +206,10 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
       return a.name.localeCompare(b.name);
     });
 
-  const facetCount = (f: Facet) => all.filter(u => matches(u, f)).length;
+  // Counted within the search, so the chips break down what you are actually
+  // looking at. Counting the whole company while the table shows nine people
+  // reads as a contradiction.
+  const facetCount = (f: Facet) => all.filter(u => hit(u) && matches(u, f)).length;
 
   /* Bulk work. Opening thirty drawers to give thirty people the same tool is
      how an administrator ends up not bothering, and everyone is left with
@@ -215,7 +231,7 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     if (r.ok) {
       setNote(`${d.message}${d.skipped?.length ? ` Skipped ${d.skipped.join(', ')}.` : ''}`);
       setPicked([]);
-      await load(q);
+      await load();
     } else {
       onToast({ t: d.error || 'That did not work.', ok: false });
     }
@@ -228,7 +244,7 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     if (!r.ok) throw new Error(d.error || 'Could not add them.');
     setNote(d.message);
     setAdding(false);
-    await load(q);
+    await load();
   };
 
   const removePerson = async (u: any, confirmName: string) => {
@@ -239,7 +255,7 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     if (!r.ok) throw new Error(d.error || 'Could not remove them.');
     setNote(`${d.message}${d.warning ? ` ${d.warning}` : ''}`);
     setOpen(null);
-    await load(q);
+    await load();
   };
 
 
@@ -323,7 +339,7 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
 
       <div className="relative">
         <Search className="w-4 h-4 text-slate-300 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input value={q} onChange={e => { setQ(e.target.value); load(e.target.value); }}
+        <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="Search by name, email, code or department…"
           className="w-full border-2 border-slate-200 focus:border-indigo-400 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none" />
       </div>
