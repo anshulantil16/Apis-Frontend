@@ -406,7 +406,8 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
               <UserPlus className="w-4.5 h-4.5 text-amber-500" />New Joiners
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              {loading ? 'Loading…' : `Everyone, newest first · ${joiners.length}`}
+              {loading ? 'Loading…'
+                : `Joined this year · ${joiners.length} ${joiners.length === 1 ? 'person' : 'people'}`}
             </p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
@@ -415,7 +416,7 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-6 space-y-2">
           {!loading && joiners.length === 0 && (
-            <p className="text-sm text-slate-400 py-6 text-center">No joining dates on record yet.</p>
+            <p className="text-sm text-slate-400 py-6 text-center">Nobody has joined this year yet.</p>
           )}
           {joiners.map(j => (
             <div key={j.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
@@ -591,12 +592,12 @@ function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 
         </div>
         <p className="px-6 pt-3 text-[11px] text-slate-400">
           {loading ? 'Loading…'
-            : `Everyone, by date · ${rows.length} ${tab === 'birthdays' ? 'birthdays' : 'anniversaries'}`}
+            : `Still to come this year · ${rows.length} ${tab === 'birthdays' ? 'birthdays' : 'anniversaries'}`}
         </p>
         <div className="p-6 pt-3 space-y-2">
           {!loading && rows.length === 0 && (
             <p className="text-sm text-slate-400 py-6 text-center">
-              No {tab === 'birthdays' ? 'birthdays' : 'anniversaries'} on record yet.
+              No more {tab === 'birthdays' ? 'birthdays' : 'anniversaries'} left this year.
             </p>
           )}
           {rows.map(p => (
