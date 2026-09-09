@@ -4,6 +4,8 @@
    no imaginary products. "What's New" describes real recent platform work;
    "At a Glance" describes the tools platform itself, not the company. */
 import type { ComponentType, SVGProps } from 'react';
+import { useEffect, useState } from 'react';
+import { portalFetch } from '../portal/session';
 import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
@@ -197,18 +199,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export interface NewJoiner { name: string; date: string; }
-
-/* No real HRMS onboarding feed is wired up yet — sample rows showing the
-   New Joiners widget's intended shape (IntranetHomePage.tsx), not real
-   employees. Same honest "sample data" pattern as SAMPLE_BIRTHDAYS below —
-   replace with a real HR feed and drop the caveat rendered under the
-   widget heading once one exists. */
-export const SAMPLE_NEW_JOINERS: NewJoiner[] = [
-  { name: 'Aman Sharma', date: '22 Aug' },
-  { name: 'Priya Rathi', date: '23 Aug' },
-  { name: 'Rohit Kumar', date: '24 Aug' },
-];
+export interface NewJoiner { name: string; date: string; department?: string; days_ago?: number; }
 
 export interface Vacancy { title: string; openings: number; location: string; }
 
@@ -221,24 +212,39 @@ export const SAMPLE_VACANCIES: Vacancy[] = [
   { title: 'Digital Marketing', openings: 1, location: 'Work from Office' },
 ];
 
-export interface CelebrationEntry { name: string; date: string; }
+export interface CelebrationEntry {
+  name: string; date: string; department?: string; designation?: string;
+  days_away?: number; is_today?: boolean; years?: number;
+}
 
-/* No real HRMS/birthday feed is wired up yet — sample rows showing the
-   Birthdays/Anniversaries widget's intended shape (IntranetHomePage.tsx),
-   not real employees or dates. Same honest "sample data" pattern as
-   UPCOMING_EVENTS above — replace with a real HR feed and drop the caveat
-   rendered under the widget heading once one exists. */
-export const SAMPLE_BIRTHDAYS: CelebrationEntry[] = [
-  { name: 'Neha Sharma', date: '22 Aug' },
-  { name: 'Rahul Verma', date: '27 Aug' },
-  { name: 'Pooja Singh', date: '28 Aug' },
-  { name: 'Arjun Mehta', date: '7 Mar' },
-];
-export const SAMPLE_ANNIVERSARIES: CelebrationEntry[] = [
-  { name: 'Kritika Rao', date: '14 Sep' },
-  { name: 'Manish Gupta', date: '3 Jun' },
-  { name: 'Sneha Kapoor', date: '19 Jan' },
-];
+/* Birthdays, work anniversaries and new joiners, straight from the employee
+   master that Pocket HRMS syncs into the portal. Only people who currently
+   work here — the server filters on that, so a leaver can never turn up on
+   the intranet wishing themselves a happy birthday.
+ *
+ * Fetched once here and shared by all four render sites (two cards and their
+ * two "View all" popups), rather than each firing its own request. */
+export function useCelebrations() {
+  const [data, setData] = useState<{
+    birthdays: CelebrationEntry[];
+    anniversaries: CelebrationEntry[];
+    new_joiners: NewJoiner[];
+    has_data: boolean;
+  }>({ birthdays: [], anniversaries: [], new_joiners: [], has_data: false });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    portalFetch('/celebrations/')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (alive && d) setData(d); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+
+  return { ...data, loading };
+}
 
 export interface HomeAnnouncement {
   title: string; body: string; date: string; icon: ComponentType<{ className?: string }>;

@@ -6,9 +6,9 @@ import {
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag,
 } from 'lucide-react';
 import {
-  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_NEW_JOINERS, SAMPLE_VACANCIES,
+  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_VACANCIES,
   OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
-  SAMPLE_BIRTHDAYS, SAMPLE_ANNIVERSARIES, ANNOUNCEMENTS, BSE_TICKER, HOLIDAYS_2026,
+  useCelebrations, ANNOUNCEMENTS, BSE_TICKER, HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
 } from './IntranetHomeShared';
@@ -394,6 +394,7 @@ function PackagingPopup({ product, onClose }: { product: OurProduct; onClose: ()
    cramped two-column width. Still explicitly flagged as sample data, same
    caveat as the card itself. */
 function NewJoinersPopup({ onClose }: { onClose: () => void }) {
+  const { new_joiners: joiners, loading } = useCelebrations();
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
@@ -404,14 +405,17 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
             <p className="text-base font-black text-slate-900 flex items-center gap-2">
               <UserPlus className="w-4.5 h-4.5 text-amber-500" />New Joiners
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Sample data — not yet connected to a real HR feed</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Everyone who joined in the last 45 days</p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-6 space-y-2">
-          {SAMPLE_NEW_JOINERS.map(j => (
+          {!loading && joiners.length === 0 && (
+            <p className="text-sm text-slate-400 py-6 text-center">Nobody has joined in the last 45 days.</p>
+          )}
+          {joiners.map(j => (
             <div key={j.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
               <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 text-base font-black">
                 {j.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -559,7 +563,8 @@ function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
    inside the popup). */
 function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 'anniversaries'; onClose: () => void }) {
   const [tab, setTab] = useState(initialTab);
-  const rows = tab === 'birthdays' ? SAMPLE_BIRTHDAYS : SAMPLE_ANNIVERSARIES;
+  const { birthdays, anniversaries, loading } = useCelebrations();
+  const rows = tab === 'birthdays' ? birthdays : anniversaries;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
@@ -582,8 +587,15 @@ function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 
             <X className="w-5 h-5" />
           </button>
         </div>
-        <p className="px-6 pt-3 text-[11px] text-slate-400">Sample data — not yet connected to a real HR feed</p>
+        <p className="px-6 pt-3 text-[11px] text-slate-400">
+          {tab === 'birthdays' ? 'Birthdays' : 'Work anniversaries'} in the next 30 days
+        </p>
         <div className="p-6 pt-3 space-y-2">
+          {!loading && rows.length === 0 && (
+            <p className="text-sm text-slate-400 py-6 text-center">
+              No {tab === 'birthdays' ? 'birthdays' : 'anniversaries'} in the next 30 days.
+            </p>
+          )}
           {rows.map(p => (
             <div key={p.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-base font-black
@@ -627,6 +639,10 @@ function Particles() {
 }
 
 export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: IntranetHomePageProps) {
+  /* Birthdays, anniversaries and new joiners, live from the employee master.
+     Only currently-employed people; the server enforces that. */
+  const cel = useCelebrations();
+
   /* Every card on this page used to render for every signed-in person,
    * whatever the admin console said they could open — clicking a card was
    * the only place permission was ever checked, and even then only App.tsx's
@@ -1333,9 +1349,11 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                     View all
                   </button>
                 </div>
-                <p className="text-[9px] text-slate-300 mb-2.5">Sample data — not yet connected to a real HR feed</p>
                 <div className="space-y-1.5">
-                  {SAMPLE_NEW_JOINERS.map(j => (
+                  {!cel.loading && cel.new_joiners.length === 0 && (
+                    <p className="text-[10px] text-slate-400 py-3">Nobody in the last 45 days.</p>
+                  )}
+                  {cel.new_joiners.slice(0, 3).map(j => (
                     <div key={j.name} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 text-[10.5px] font-black">
                         {j.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -1401,9 +1419,14 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                   View all
                 </button>
               </div>
-              <p className="text-[9.5px] text-slate-300 mb-3">Sample data — not yet connected to a real HR feed</p>
               <div className="space-y-1">
-                {(celebrationTab === 'birthdays' ? SAMPLE_BIRTHDAYS : SAMPLE_ANNIVERSARIES).map(p => (
+                {(() => {
+                  const list = celebrationTab === 'birthdays' ? cel.birthdays : cel.anniversaries;
+                  return !cel.loading && list.length === 0
+                    ? <p className="text-[10px] text-slate-400 py-3">Nothing in the next 30 days.</p>
+                    : null;
+                })()}
+                {(celebrationTab === 'birthdays' ? cel.birthdays : cel.anniversaries).slice(0, 4).map(p => (
                   <div key={p.name} className="flex items-center gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-black
                                      ${celebrationTab === 'birthdays' ? 'bg-amber-50 text-amber-500' : 'bg-orange-50 text-orange-600'}`}>
