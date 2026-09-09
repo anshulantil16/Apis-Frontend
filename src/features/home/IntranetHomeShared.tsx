@@ -405,7 +405,7 @@ export const OUR_PRODUCTS: OurProduct[] = [
     highlight: 'Boosts immunity, aids digestion and supports metabolism.' },
   { label: 'Saffron', image: '/products/saffron.png', desc: 'Pure, aromatic Kashmiri saffron', weight: '1g', packagingImages: ['/packaging/saffron_packaging.png'],
     highlight: 'Handpicked, natural and pure — part of the Kitchen Mix range, in Classic and Gold saffron packs.' },
-  { label: 'Misk Masala Dates', image: '/products/Masala_dates.png', desc: 'Snackable superfood-on-the-go dates, seedless & sliced', packagingImages: ['/packaging/Masala_packaging_types.png'],
+  { label: 'Misk Masala Dates', image: '/products/Masala_dates1.png', desc: 'Snackable superfood-on-the-go dates, seedless & sliced', packagingImages: ['/packaging/Masala_packaging_types.png'],
     category: 'Dry Fruits', highlight: 'Available in three flavours — Tamarind (Imli), Achari and Chilli Lime.' },
   { label: 'Misk Shahi Khazoor', image: '/products/Misk.png', desc: 'Silver-coated dates, a traditional mouth freshener', packagingImages: ['/packaging/Misk_packaging.png'],
     category: 'Mouth Freshener' },

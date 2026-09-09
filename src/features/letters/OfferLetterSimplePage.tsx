@@ -93,7 +93,7 @@ function LettersHistoryPanel() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search name, employee code, email, department…"
-            className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-400" />
+            className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-400" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
           className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white">
@@ -107,7 +107,7 @@ function LettersHistoryPanel() {
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}/>Refresh
         </button>
         <button onClick={downloadZip} disabled={zipping || rows.length === 0}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 disabled:opacity-50">
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 disabled:opacity-50">
           <Download className="w-3.5 h-3.5"/>{zipping ? 'Zipping…' : (search.trim() || statusFilter ? 'Download Filtered (ZIP)' : 'Download All (ZIP)')}
         </button>
         <button onClick={clearDb} disabled={clearing || summary.total === 0}
@@ -150,7 +150,7 @@ function LettersHistoryPanel() {
                 <td className="py-2.5 px-3 text-slate-500 text-xs">{new Date(r.created_at).toLocaleString()}</td>
                 <td className="py-2.5 px-3">
                   {r.pdf_url
-                    ? <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer" className="text-blue-600 font-semibold hover:underline">View PDF</a>
+                    ? <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer" className="text-amber-600 font-semibold hover:underline">View PDF</a>
                     : <span className="text-slate-400">—</span>}
                 </td>
               </tr>
@@ -276,11 +276,11 @@ export function OfferLetterSimplePage() {
         {/* Tabs */}
         <div className="flex items-center gap-2 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-6 w-fit">
           <button onClick={() => setActiveTab('upload')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'upload' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'upload' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
             <Upload className="w-4 h-4"/>Upload &amp; Send
           </button>
           <button onClick={() => setActiveTab('history')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
             <History className="w-4 h-4"/>Letters History
           </button>
         </div>
@@ -328,8 +328,8 @@ export function OfferLetterSimplePage() {
                      style={{ width: `${progress.total ? Math.round((progress.processed / progress.total) * 100) : 0}%` }} />
               </div>
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
-                  <p className="text-2xl font-black text-blue-600">{progress.generated}</p>
+                <div className="rounded-xl bg-amber-50 border border-amber-100 p-3">
+                  <p className="text-2xl font-black text-amber-600">{progress.generated}</p>
                   <p className="text-xs text-slate-500">Generated</p>
                 </div>
                 <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
@@ -349,7 +349,7 @@ export function OfferLetterSimplePage() {
                 <h2 className="text-lg font-bold text-slate-900 mb-3">Step 1: Download Template</h2>
                 <button
                   onClick={downloadTemplate}
-                  className="w-full py-3 px-4 rounded-xl border-2 border-blue-400 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-sm transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 rounded-xl border-2 border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold text-sm transition-all flex items-center justify-center gap-2"
                 >
                   <Download className="w-5 h-5" />
                   Download Excel Template
@@ -379,13 +379,13 @@ export function OfferLetterSimplePage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
                     <input
                       type="checkbox"
                       id="sendEmails"
                       checked={sendEmails}
                       onChange={(e) => setSendEmails(e.target.checked)}
-                      className="w-4 h-4 cursor-pointer"
+                      className="w-4 h-4 cursor-pointer accent-amber-500"
                     />
                     <label htmlFor="sendEmails" className="flex-1 cursor-pointer">
                       <span className="font-bold text-slate-900 text-sm">Send letters to employee emails</span>
@@ -478,7 +478,7 @@ export function OfferLetterSimplePage() {
                               ? 'bg-rose-100 text-rose-800'
                               : sentEmails
                               ? 'bg-amber-100 text-amber-800'
-                              : 'bg-blue-100 text-blue-800'
+                              : 'bg-slate-100 text-slate-700'
                           }`}>
                             {r.status === 'sent' ? '✓ Sent'
                               : r.status === 'failed' ? '✗ Failed'
@@ -490,7 +490,7 @@ export function OfferLetterSimplePage() {
                         </td>
                         <td className="py-3 px-4 text-xs">
                           {r.pdf_url
-                            ? <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer" className="text-blue-600 font-semibold hover:underline">View PDF</a>
+                            ? <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer" className="text-amber-600 font-semibold hover:underline">View PDF</a>
                             : <span className="text-slate-400">—</span>}
                         </td>
                       </tr>
@@ -513,7 +513,7 @@ export function OfferLetterSimplePage() {
                   setShowFailedOnly(false);
                   setUploadWarnings([]);
                 }}
-                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2"
               >
                 <Upload className="w-4 h-4" />
                 Upload Another File
@@ -523,7 +523,7 @@ export function OfferLetterSimplePage() {
         </div>
 
         {/* Info Box */}
-        <div className="mt-8 p-6 rounded-xl bg-blue-50 border border-blue-200">
+        <div className="mt-8 p-6 rounded-xl bg-amber-50 border border-amber-200">
           <h3 className="font-bold text-slate-900 mb-3">📋 What to include in the Excel file:</h3>
           <ul className="space-y-2 text-sm text-slate-700">
             <li>✓ Employee ID, Employee Name, Email Address</li>
