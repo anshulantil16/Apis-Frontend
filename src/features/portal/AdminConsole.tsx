@@ -305,13 +305,17 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
               People who can open each tool. Administrators count toward every one.
             </p>
           </div>
-          <p className="text-[11px] font-bold text-slate-400">of {data.total ?? all.length} people</p>
+          <p className="text-[11px] font-bold text-slate-400">
+            of {data.active ?? all.length} who can sign in
+          </p>
         </div>
         <div className="space-y-1.5">
           {(data.apps || []).map((a: any) => {
-            // Counted by the server across everyone. Counting the rows in hand
-            // instead made this quietly describe whatever subset had loaded.
-            const total = data.total ?? all.length;
+            // Counted by the server across everyone who can actually sign in.
+            // Counting the rows in hand instead made this quietly describe
+            // whatever subset had loaded; counting disabled people made every
+            // tool look more widely available than it is.
+            const total = data.active ?? all.length;
             const n = a.can_open ?? all.filter(u => u.is_superadmin || (u.allowed_apps || []).includes(a.key)).length;
             const pct = total ? Math.round((n / total) * 100) : 0;
             const on = appFilter === a.key;
