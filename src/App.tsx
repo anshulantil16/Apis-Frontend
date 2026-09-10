@@ -19,7 +19,6 @@ const AppraisalPage = lazy(() => import('./features/appraisal').then(m => ({ def
 const GoalSettingPage = lazy(() => import('./features/goalsetting').then(m => ({ default: m.GoalSettingPage })));
 const EOMPage = lazy(() => import('./features/eom').then(m => ({ default: m.EOMPage })));
 const PMSPage = lazy(() => import('./features/pms').then(m => ({ default: m.PMSPage })));
-const ArrearsPage = lazy(() => import('./features/arrears').then(m => ({ default: m.ArrearsPage })));
 const LettersGeneratorPage = lazy(() => import('./features/letters').then(m => ({ default: m.LettersGeneratorPage })));
 const OfferLetterApprovalDashboard = lazy(() => import('./features/letters').then(m => ({ default: m.OfferLetterApprovalDashboard })));
 const TadaPage = lazy(() => import('./features/tada').then(m => ({ default: m.TadaPage })));
@@ -41,7 +40,7 @@ import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHome
 import { PortalGate } from './features/portal/PortalGate';
 import type { PortalUser } from './features/portal/session';
 
-type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'arrears' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'admin-console';
+type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'admin-console';
 
 /* Header caption per view. The shell renders the sidebar and header for every
    screen, so tools never draw their own top-level chrome. */
@@ -54,7 +53,6 @@ const VIEW_META: Record<AppView, { title: string; subtitle: string }> = {
   'eom':             { title: 'Employee of the Month', subtitle: 'Recognition' },
   'pms':             { title: 'PMS Simulator',       subtitle: 'Performance & Salary' },
   'offer-letters':   { title: 'Letters Generator',   subtitle: 'Appraisal & Warning' },
-  'arrears':         { title: 'Arrears Structure',   subtitle: 'Arrears Compensation' },
   'offer-approvals': { title: 'Letter Approvals',    subtitle: 'Appraisal Letters' },
   'tada':            { title: 'TA/DA Portal',        subtitle: 'Travel & Allowance' },
   'salesiq':         { title: 'SalesIQ',             subtitle: 'Sales Intelligence' },
@@ -208,8 +206,6 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
         <PMSPage />
       ) : view === 'offer-letters' ? (
         <LettersGeneratorPage onNavigateToApprovals={() => navigate('offer-approvals')} />
-      ) : view === 'arrears' ? (
-        <ArrearsPage />
       ) : view === 'offer-approvals' ? (
         <OfferLetterApprovalDashboard />
       ) : view === 'apis-tree' ? (

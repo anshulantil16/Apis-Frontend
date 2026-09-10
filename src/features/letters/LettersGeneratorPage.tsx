@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
   FileText, FileWarning, ArrowLeft, ArrowRight, BarChart3,
-  Mail, CheckCircle2, Layers,
+  Mail, CheckCircle2, Layers, IndianRupee,
 } from 'lucide-react';
 import { OfferLetterSimplePage } from './OfferLetterSimplePage';
 import { WarningLetterPage } from './WarningLetterPage';
+import { ArrearsPage } from '../arrears';
 import { TOOL_STYLES } from '../../Components/toolStyles';
 
 /* Pointer handlers come from the shared kit: it measures once per
@@ -15,7 +16,7 @@ import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const PMS_API = `${_API_BASE}/api/pms`;
 
-type LetterKind = 'appraisal' | 'warning';
+type LetterKind = 'appraisal' | 'warning' | 'arrears';
 
 /* Add a new letter type by appending one entry here plus its page component —
    the hub cards, routing and stat lookups all key off this list. */
@@ -62,6 +63,20 @@ const LETTERS: {
     tagCls: 'bg-yellow-50 text-yellow-700 ring-yellow-100',
     glow: 'rgba(234,179,8,.35)',
     statsPath: 'warning-letter',
+  },
+  {
+    id: 'arrears',
+    title: 'Arrears Structure',
+    tag: 'Compensation',
+    blurb: 'Arrears already owed for a period that has passed, broken down component by component.',
+    bullets: ['Earnings & reimbursements', 'Employee deductions', 'In-hand amount'],
+    icon: IndianRupee,
+    bar: 'from-teal-500 to-emerald-600',
+    hover: 'hover:border-teal-300 hover:shadow-teal-500/10',
+    iconWrap: 'bg-teal-50 text-teal-600 ring-teal-100',
+    tagCls: 'bg-teal-50 text-teal-600 ring-teal-100',
+    glow: 'rgba(20,184,166,.35)',
+    statsPath: 'arrears',
   },
 ];
 
@@ -126,7 +141,9 @@ export function LettersGeneratorPage({ onNavigateToApprovals }: Props) {
             )}
           </div>
         </div>
-        {active.id === 'appraisal' ? <OfferLetterSimplePage /> : <WarningLetterPage />}
+        {active.id === 'appraisal' ? <OfferLetterSimplePage />
+          : active.id === 'arrears' ? <ArrearsPage />
+          : <WarningLetterPage />}
       </div>
     );
   }

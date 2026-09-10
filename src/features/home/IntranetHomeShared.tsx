@@ -10,7 +10,7 @@ import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
   LifeBuoy, Globe2, CalendarClock, Landmark,
-  Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp, IndianRupee,
+  Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp,
 } from 'lucide-react';
 
 /* lucide-react dropped brand icons, so these are small hand-rolled SVG marks
@@ -108,7 +108,7 @@ export const dailyQuote = (): InspirationQuote => {
 
 export type QuickAccessId =
   | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms'
-  | 'offer-letters' | 'arrears' | 'roompulse' | 'salesiq' | 'tada';
+  | 'offer-letters' | 'roompulse' | 'salesiq' | 'tada';
 
 /* Business-function grouping shown as filter tabs on the "Your Tools" grid.
    Purely a UI grouping — has no bearing on access control. */
@@ -136,7 +136,6 @@ export const QUICK_ACCESS: QuickAccessItem[] = [
   { id: 'eom', label: 'EOM Hub', desc: 'Employee of the Month nominations', category: 'Finance', icon: Sparkles, gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.35)', accent: 'text-emerald-600', soft: 'bg-emerald-50' },
   { id: 'pms', label: 'PMS Simulator', desc: 'Performance & salary revision simulator', category: 'HR', icon: BarChart3, gradient: 'from-violet-500 to-fuchsia-600', glow: 'rgba(168,85,247,.35)', accent: 'text-fuchsia-600', soft: 'bg-fuchsia-50' },
   { id: 'offer-letters', label: 'Letters Generator', desc: 'Appraisal & warning letter pipeline', category: 'HR', icon: FileSpreadsheet, gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.35)', accent: 'text-rose-600', soft: 'bg-rose-50' },
-  { id: 'arrears', label: 'Arrears Structure', desc: 'Arrears compensation statements', category: 'HR', icon: IndianRupee, gradient: 'from-teal-400 to-emerald-600', glow: 'rgba(20,184,166,.35)', accent: 'text-teal-600', soft: 'bg-teal-50' },
   { id: 'roompulse', label: 'AdminPulse', desc: 'Room bookings & admin item requests', category: 'Operations', icon: Radar, gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.35)', accent: 'text-cyan-600', soft: 'bg-cyan-50' },
   { id: 'salesiq', label: 'SalesIQ', desc: 'Sales intelligence & forecasting', category: 'Sales', icon: Zap, gradient: 'from-indigo-400 to-violet-600', glow: 'rgba(99,102,241,.35)', accent: 'text-indigo-600', soft: 'bg-indigo-50' },
   { id: 'tada', label: 'TA/DA Portal', desc: 'Travel & daily allowance claims', category: 'Travel', icon: Plane, gradient: 'from-sky-400 to-cyan-600', glow: 'rgba(14,165,233,.35)', accent: 'text-sky-600', soft: 'bg-sky-50' },
@@ -185,7 +184,6 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'People & Documents', icon: Users, accent: 'text-amber-300', hoverAccent: 'hover:text-amber-300', dot: 'bg-amber-400', items: [
       { id: 'extractor', label: 'Data Extractor' },
       { id: 'offer-letters', label: 'Letters Generator' },
-      { id: 'arrears', label: 'Arrears Structure' },
     ],
   },
   {
