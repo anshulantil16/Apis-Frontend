@@ -308,4 +308,17 @@ html.ih-reveal-ready .ih-inview[data-in] { opacity:1; transform:none; }
    on eleven cards. Promote it so the blur is rasterised once and the loop runs
    on the compositor instead of repainting. */
 .ih-halo::before { will-change: transform, opacity; }
+
+/* The shell's main content pane (IntranetShell) stays scrollable — Home's
+   dashboard genuinely needs it — but the scrollbar WIDGET itself is hidden.
+   Windows' classic (non-overlay) scrollbar renders a thick track with visible
+   arrow buttons for even a couple of pixels of overflow, which reads as a
+   layout bug on every screen that's a hair taller than the viewport rather
+   than the one long dashboard it's meant for. Scrolling (wheel/keyboard/drag)
+   still works identically; only the bar disappears. */
+.ih-scroll-clean {
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* old Edge/IE */
+}
+.ih-scroll-clean::-webkit-scrollbar { width: 0; height: 0; display: none; }
 `;

@@ -322,7 +322,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] flex">
+    <div className="h-screen overflow-hidden bg-[#f5f7fa] flex">
       <style>{IH_STYLES}</style>
 
       {/* ── Sidebar — identical on every screen ─────────────────────────── */}
@@ -354,7 +354,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
           </div>
         </div>
 
-        <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2.5 pt-4">
+        <nav className="ih-scroll-clean flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2.5 pt-4">
           <button onClick={() => go('home')} title="Home"
             className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-[13px] font-black mb-1.5 transition-all
                        ${active === 'home'
@@ -653,7 +653,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
           </div>
         </header>
 
-        <div className="flex-1 min-h-0">{children}</div>
+        <div className="ih-scroll-clean flex-1 min-h-0 overflow-y-auto">{children}</div>
       </main>
 
       {/* ── Command palette — ⌘K / Ctrl+K from anywhere in the app ─────────── */}
