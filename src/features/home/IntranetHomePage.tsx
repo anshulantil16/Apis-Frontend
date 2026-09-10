@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
   ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, PartyPopper,
-  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
+  X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_VACANCIES,
   OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
-  useCelebrations, ANNOUNCEMENTS, BSE_TICKER, HOLIDAYS_2026,
+  useCelebrations, useTicker, ANNOUNCEMENTS, HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
 } from './IntranetHomeShared';
@@ -657,6 +657,8 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
   /* Birthdays, anniversaries and new joiners, live from the employee master.
      Only currently-employed people; the server enforces that. */
   const cel = useCelebrations();
+  /* Live BSE price for the banner; server-cached, so this is cheap. */
+  const ticker = useTicker();
 
   /* Every card on this page used to render for every signed-in person,
    * whatever the admin console said they could open — clicking a card was
@@ -764,11 +766,25 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
           <div className="ih-ticker flex items-center w-max whitespace-nowrap" style={{ animationDuration: '75s' }}>
             {Array.from({ length: 12 }, (_, i) => (
               <div key={i} className="flex items-center gap-2.5 px-6 shrink-0">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                <span className="text-[12px] font-bold text-slate-700">{BSE_TICKER.quote}</span>
-                <span className="text-[12px] font-black text-emerald-600">({BSE_TICKER.changePct})</span>
-                <span className="text-amber-300">|</span>
-                <span className="text-[12px] text-slate-500">{BSE_TICKER.tagline}</span>
+                {/* A down day is red with the arrow the other way up. Painting
+                    every movement green was fine while the number never moved. */}
+                {ticker.quote && (ticker.trend_up
+                  ? <TrendingUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  : <TrendingDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />)}
+                {ticker.quote && (
+                  <>
+                    <span className="text-[12px] font-bold text-slate-700">{ticker.quote}</span>
+                    <span className={`text-[12px] font-black ${ticker.trend_up ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      ({ticker.change_pct})
+                    </span>
+                    {/* Says so rather than passing an old price off as today's. */}
+                    {ticker.stale && (
+                      <span className="text-[10px] font-bold text-slate-400">last known</span>
+                    )}
+                    <span className="text-amber-300">|</span>
+                  </>
+                )}
+                <span className="text-[12px] text-slate-500">{ticker.tagline}</span>
                 <span className="text-amber-300">•</span>
               </div>
             ))}

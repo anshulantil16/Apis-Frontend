@@ -454,12 +454,34 @@ export const APIS_GLANCE = [
    snapshot rather than a fabricated number, but not wired to a live market
    feed, so it needs the same manual refresh when checking the latest
    price. */
-export const BSE_TICKER = {
-  quote: 'Apis India Ltd BSE Price: ₹54.72',
-  changePct: '+1.03%',
-  trendUp: true,
-  tagline: 'We here at AIL keep quality on top preference as we believe your trust is our presence..',
-};
+export interface Ticker {
+  quote: string; change_pct: string; trend_up: boolean;
+  tagline: string; stale?: boolean; unavailable?: boolean;
+}
+
+/* The APIS share price for the banner across the top of the dashboard.
+   APIS is listed, so this moves every trading day — it used to be a number
+   typed into this file, which was wrong every day after the one it was
+   written on, and wrong in a way that looked authoritative.
+
+   The server does the fetching and caches it, so all ~660 people loading the
+   dashboard cost one upstream call a quarter hour rather than one each. */
+const TAGLINE = 'We here at AIL keep quality on top preference as we believe your trust is our presence..';
+
+export function useTicker(): Ticker {
+  const [t, setT] = useState<Ticker>({
+    quote: '', change_pct: '', trend_up: true, tagline: TAGLINE, unavailable: true,
+  });
+  useEffect(() => {
+    let alive = true;
+    portalFetch('/ticker/')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (alive && d) setT(d); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return t;
+}
 
 /* Real recent company milestones, same sourcing as APIS_GLANCE above.
    `image` photos are real APIS facility/product photography, uploaded
