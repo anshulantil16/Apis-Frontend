@@ -407,7 +407,7 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {loading ? 'Loading…'
-                : `Joined this year · ${joiners.length} ${joiners.length === 1 ? 'person' : 'people'}`}
+                : `Joined this month · ${joiners.length} ${joiners.length === 1 ? 'person' : 'people'}`}
             </p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
@@ -416,7 +416,7 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-6 space-y-2">
           {!loading && joiners.length === 0 && (
-            <p className="text-sm text-slate-400 py-6 text-center">Nobody has joined this year yet.</p>
+            <p className="text-sm text-slate-400 py-6 text-center">Nobody has joined this month yet.</p>
           )}
           {joiners.map(j => (
             <div key={j.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
@@ -592,12 +592,12 @@ function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 
         </div>
         <p className="px-6 pt-3 text-[11px] text-slate-400">
           {loading ? 'Loading…'
-            : `Still to come this year · ${rows.length} ${tab === 'birthdays' ? 'birthdays' : 'anniversaries'}`}
+            : `Rest of this month · ${rows.length} ${tab === 'birthdays' ? 'birthdays' : 'anniversaries'}`}
         </p>
         <div className="p-6 pt-3 space-y-2">
           {!loading && rows.length === 0 && (
             <p className="text-sm text-slate-400 py-6 text-center">
-              No more {tab === 'birthdays' ? 'birthdays' : 'anniversaries'} left this year.
+              No more {tab === 'birthdays' ? 'birthdays' : 'anniversaries'} left this month.
             </p>
           )}
           {rows.map(p => (
@@ -1385,7 +1385,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 </div>
                 <div className="flex-1 flex flex-col justify-evenly gap-1">
                   {!cel.loading && cel.new_joiners.length === 0 && (
-                    <p className="text-[10px] text-slate-400 py-3">Nobody in the last 45 days.</p>
+                    <p className="text-[10px] text-slate-400 py-3">Nobody joined this week.</p>
                   )}
                   {cel.new_joiners.slice(0, 4).map(j => (
                     <div key={j.name} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
@@ -1457,7 +1457,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 {(() => {
                   const list = celebrationTab === 'birthdays' ? cel.birthdays : cel.anniversaries;
                   return !cel.loading && list.length === 0
-                    ? <p className="text-[10px] text-slate-400 py-3">Nothing in the next 30 days.</p>
+                    ? <p className="text-[10px] text-slate-400 py-3">Nothing in the next 7 days.</p>
                     : null;
                 })()}
                 {(celebrationTab === 'birthdays' ? cel.birthdays : cel.anniversaries).slice(0, 4).map(p => (
