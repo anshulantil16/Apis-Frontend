@@ -117,17 +117,24 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
   const [dept, setDept] = useState('');
   const [appFilter, setAppFilter] = useState('');
   const [sort, setSort] = useState<'name' | 'department' | 'last_login' | 'tools'>('name');
-  const [loading, setLoading] = useState(true);
+  // Two separate ideas, not one `loading` flag. The first fetch has nothing to
+  // show yet and earns a spinner; every later one is a refresh after an edit,
+  // and blanking the whole console to a spinner for it threw away the search
+  // text's results, the open filters and the scroll position - so changing one
+  // person's access bounced the administrator back to the top of a 660-row
+  // table. The stale rows stay on screen instead, with a quiet marker.
+  const [ready, setReady] = useState(false);
+  const [refreshing, setRefreshing] = useState(true);
   const [open, setOpen] = useState<any>(null);       // the person being inspected
   const [detail, setDetail] = useState<any>(null);
 
   // Fetches the whole directory. Searching and filtering both happen on what
   // this returns, so this only runs on arrival and after something is changed.
   const load = () => {
-    setLoading(true);
+    setRefreshing(true);
     portalFetch('/admin/users/')
-      .then(r => r.json()).then(d => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(r => r.json()).then(d => { setData(d); setReady(true); setRefreshing(false); })
+      .catch(() => { setReady(true); setRefreshing(false); });
   };
   useEffect(() => { load(); }, []);
 
@@ -151,7 +158,7 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     }
   };
 
-  if (loading) return <div className="p-10 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
+  if (!ready) return <div className="p-10 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
 
   /* Filtering happens over the fetched page rather than round-tripping: the
      directory is a few hundred people, and an administrator flicking between
@@ -395,7 +402,8 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
             Clear filters
           </button>
         )}
-        <span className="ml-auto text-[11px] font-bold text-slate-400">
+        <span className="ml-auto text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+          {refreshing && <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />}
           Showing {rows.length} of {all.length}
         </span>
         <button onClick={() => setAdding(true)}
@@ -1111,6 +1119,14 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
   const [dept, setDept] = useState('');
   const [only, setOnly] = useState<'all' | 'gaps' | 'admins'>('all');
   const [saving, setSaving] = useState<string>('');
+  /* This grid is one interactive button per person per tool. At ~660 people
+     and ten tools that is ~6,600 live buttons, and every keystroke in the
+     search box re-rendered all of them - which is what made typing here feel
+     like the page had frozen. Rendering a windowful and letting the
+     administrator ask for more keeps the grid responsive, and the filters
+     above are the faster way to find someone anyway. */
+  const ROW_STEP = 100;
+  const [shown, setShown] = useState(ROW_STEP);
 
   const load = async () => {
     const r = await portalFetch('/admin/users/');
@@ -1134,6 +1150,7 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     const hay = `${u.name} ${u.email} ${u.employee_code} ${u.department}`.toLowerCase();
     return hay.includes(q.trim().toLowerCase());
   });
+  const visible = rows.slice(0, shown);
 
   const has = (u: any, key: string) => u.is_superadmin || (u.allowed_apps || []).includes(key);
 
@@ -1176,25 +1193,31 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
     setSaving('');
   };
 
-  const countFor = (key: string) => people.filter(u => has(u, key)).length;
+  /* Counted over people who can actually sign in, matching the server's own
+     definition on the People tab's coverage bars. Counting disabled accounts
+     here too made the same tool show two different numbers in two places of
+     the one console, and the larger of the two was the wrong one - somebody
+     who cannot sign in cannot open anything, whatever their access says. */
+  const signInCount = people.filter(u => u.is_active).length;
+  const countFor = (key: string) => people.filter(u => u.is_active && has(u, key)).length;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input value={q} onChange={e => setQ(e.target.value)}
+          <input value={q} onChange={e => { setQ(e.target.value); setShown(ROW_STEP); }}
             placeholder="Search a person…"
             className="w-full pl-9 pr-3 py-1.5 text-xs font-semibold border-2 border-slate-200 focus:border-indigo-400 rounded-lg outline-none" />
         </div>
-        <select value={dept} onChange={e => setDept(e.target.value)}
+        <select value={dept} onChange={e => { setDept(e.target.value); setShown(ROW_STEP); }}
           className="border-2 border-slate-200 focus:border-indigo-400 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-600 outline-none">
           <option value="">All departments</option>
           {depts.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
         {([['all', 'Everyone'], ['gaps', 'No tools yet'], ['admins', 'Administrators']] as const)
           .map(([k, label]) => (
-            <button key={k} onClick={() => setOnly(k)}
+            <button key={k} onClick={() => { setOnly(k); setShown(ROW_STEP); }}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-black border-2 transition-colors ${
                 only === k ? 'bg-slate-900 text-white border-slate-900'
                            : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
@@ -1208,7 +1231,8 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
 
       <p className="text-[11px] text-slate-400 font-semibold">
         Click any cell to grant or revoke it there and then. Use the arrows in a column
-        heading to do the whole column for the {rows.length} {rows.length === 1 ? 'person' : 'people'} shown.
+        heading to do the whole column for all {rows.length} {rows.length === 1 ? 'person' : 'people'} matching
+        these filters — including any further down than the rows drawn here.
       </p>
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -1226,17 +1250,18 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
                   <th key={a.key}
                     className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 px-2 py-2 align-bottom min-w-[92px]">
                     <p className="font-black text-slate-600 text-[11px] leading-tight mb-1">{a.label}</p>
-                    <p className="text-[10px] font-bold text-slate-400 mb-1.5">
-                      {countFor(a.key)} of {people.length}
+                    <p className="text-[10px] font-bold text-slate-400 mb-1.5"
+                      title="People who can sign in and open this tool">
+                      {countFor(a.key)} of {signInCount}
                     </p>
                     <div className="flex gap-1 justify-center">
                       <button onClick={() => column(a.key, 'grant')} disabled={!!saving}
-                        title={`Give this to all ${rows.length} shown`}
+                        title={`Give this to all ${rows.length} matching these filters`}
                         className="px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-600 hover:bg-emerald-50 text-[10px] font-black disabled:opacity-40">
                         <Check className="w-3 h-3" />
                       </button>
                       <button onClick={() => column(a.key, 'revoke')} disabled={!!saving}
-                        title={`Take this from all ${rows.length} shown`}
+                        title={`Take this from all ${rows.length} matching these filters`}
                         className="px-1.5 py-0.5 rounded border border-rose-200 text-rose-500 hover:bg-rose-50 text-[10px] font-black disabled:opacity-40">
                         <X className="w-3 h-3" />
                       </button>
@@ -1246,7 +1271,7 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
               </tr>
             </thead>
             <tbody>
-              {rows.map(u => (
+              {visible.map(u => (
                 <tr key={u.id} className="group">
                   <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-b border-r border-slate-100 px-3 py-1.5">
                     <p className="font-black text-slate-800 flex items-center gap-1.5 truncate">
@@ -1286,6 +1311,19 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
               {rows.length === 0 && (
                 <tr><td colSpan={apps.length + 1} className="px-3 py-12 text-center text-slate-300 font-semibold">
                   Nobody matches that.
+                </td></tr>
+              )}
+              {/* Says what is being held back and offers the rest, rather than
+                  quietly stopping at 100 and letting the grid look complete. */}
+              {rows.length > visible.length && (
+                <tr><td colSpan={apps.length + 1} className="px-3 py-4 text-center">
+                  <button onClick={() => setShown(s => s + ROW_STEP)}
+                    className="px-3 py-1.5 rounded-lg border-2 border-slate-200 hover:border-slate-300 text-[11px] font-black text-slate-500">
+                    Show {Math.min(ROW_STEP, rows.length - visible.length)} more
+                  </button>
+                  <span className="block text-[10.5px] font-semibold text-slate-400 mt-2">
+                    Showing {visible.length} of {rows.length} — search or filter above to narrow it down.
+                  </span>
                 </td></tr>
               )}
             </tbody>

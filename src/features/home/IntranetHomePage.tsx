@@ -394,7 +394,7 @@ function PackagingPopup({ product, onClose }: { product: OurProduct; onClose: ()
    cramped two-column width. Still explicitly flagged as sample data, same
    caveat as the card itself. */
 function NewJoinersPopup({ onClose }: { onClose: () => void }) {
-  const { new_joiners: joiners, loading } = useCelebrations('all');
+  const { new_joiners: joiners, loading, has_data } = useCelebrations('all');
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
@@ -416,10 +416,18 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-6 space-y-2">
           {!loading && joiners.length === 0 && (
-            <p className="text-sm text-slate-400 py-6 text-center">Nobody has joined this month yet.</p>
+            <p className="text-sm text-slate-400 py-6 text-center">
+              {has_data
+                ? 'Nobody has joined this month yet.'
+                : 'No joining dates on record yet — run a Pocket HRMS sync from the admin console.'}
+            </p>
           )}
-          {joiners.map(j => (
-            <div key={j.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+          {/* Keyed by position, not name. At ~660 employees two people share a
+              name sooner or later, and React silently drops the second row of
+              a duplicated key - so the colleague whose name collided would
+              just never appear on their own birthday. */}
+          {joiners.map((j, i) => (
+            <div key={`${j.name}-${i}`} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
               <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 text-base font-black">
                 {j.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
               </div>
@@ -566,8 +574,9 @@ function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
    inside the popup). */
 function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 'anniversaries'; onClose: () => void }) {
   const [tab, setTab] = useState(initialTab);
-  const { birthdays, anniversaries, loading } = useCelebrations('all');
+  const { birthdays, anniversaries, loading, has_data } = useCelebrations('all');
   const rows = tab === 'birthdays' ? birthdays : anniversaries;
+  const label = tab === 'birthdays' ? 'birthdays' : 'anniversaries';
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
@@ -591,17 +600,23 @@ function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 
           </button>
         </div>
         <p className="px-6 pt-3 text-[11px] text-slate-400">
-          {loading ? 'Loading…'
-            : `Rest of this month · ${rows.length} ${tab === 'birthdays' ? 'birthdays' : 'anniversaries'}`}
+          {loading ? 'Loading…' : !has_data ? 'Employee directory not synced yet'
+            : `Rest of this month · ${rows.length} ${label}`}
         </p>
         <div className="p-6 pt-3 space-y-2">
+          {/* "Nothing this month" and "the directory has never been synced"
+              look identical and mean opposite things - the server sends
+              has_data so the two can be told apart rather than a blank
+              month being read as a broken page. */}
           {!loading && rows.length === 0 && (
             <p className="text-sm text-slate-400 py-6 text-center">
-              No more {tab === 'birthdays' ? 'birthdays' : 'anniversaries'} left this month.
+              {has_data
+                ? `No more ${label} left this month.`
+                : 'No dates of birth or joining on record yet — run a Pocket HRMS sync from the admin console.'}
             </p>
           )}
-          {rows.map(p => (
-            <div key={p.name} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+          {rows.map((p, i) => (
+            <div key={`${p.name}-${i}`} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-base font-black
                                ${tab === 'birthdays' ? 'bg-amber-50 text-amber-500' : 'bg-orange-50 text-orange-600'}`}>
                 {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -621,9 +636,6 @@ function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 
               <span className="text-[12px] font-bold text-slate-400 flex-shrink-0">{p.date}</span>
             </div>
           ))}
-          {rows.length === 0 && (
-            <p className="text-center text-sm text-slate-400 py-8">No {tab} to show.</p>
-          )}
         </div>
       </div>
     </div>
@@ -1363,12 +1375,25 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
               );
             })()}
 
-            {/* New Joiners / Vacancies — two side-by-side cards, replacing
-                the old single Upcoming Events widget. Neither has a real
-                HRMS/ATS feed wired up yet, so both are explicitly labelled
-                sample data rather than presented as real onboarding/open
-                roles (same honest pattern as Birthdays/Anniversaries
-                below). */}
+            {/* The holiday list is a published calendar year, hand-maintained
+                (see HOLIDAYS_2026). Once the last one passes, the card used to
+                disappear from the rail with no explanation, which reads as a
+                broken widget rather than an exhausted list. */}
+            {upcomingHolidays.length === 0 && (
+              <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-5">
+                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-2">
+                  <CalendarDays className="w-3.5 h-3.5 text-amber-500" />Next Holiday
+                </h2>
+                <p className="text-[11.5px] text-slate-400 leading-snug">
+                  No holidays left on the published list. Next year's calendar has not been added yet.
+                </p>
+              </div>
+            )}
+
+            {/* New Joiners / Vacancies — two side-by-side cards. New Joiners
+                is real, from the HRMS-synced employee master. Vacancies has
+                no ATS feed behind it yet and stays labelled as sample data
+                on its own card. */}
             <div className="grid grid-cols-2 gap-3">
               {/* flex column with the list on flex-1: grid cells stretch to the
                   tallest card in the row, and without this the spare height
@@ -1385,10 +1410,12 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 </div>
                 <div className="flex-1 flex flex-col justify-evenly gap-1">
                   {!cel.loading && cel.new_joiners.length === 0 && (
-                    <p className="text-[10px] text-slate-400 py-3">Nobody joined this week.</p>
+                    <p className="text-[10px] text-slate-400 py-3">
+                      {cel.has_data ? 'Nobody joined this week.' : 'Directory not synced yet.'}
+                    </p>
                   )}
-                  {cel.new_joiners.slice(0, 4).map(j => (
-                    <div key={j.name} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
+                  {cel.new_joiners.slice(0, 4).map((j, i) => (
+                    <div key={`${j.name}-${i}`} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
                       <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 text-[10.5px] font-black">
                         {j.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
@@ -1428,12 +1455,10 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
               </div>
             </div>
 
-            {/* Birthdays / Anniversaries — no real HRMS feed is wired up yet,
-                so this is explicitly sample data (see SAMPLE_BIRTHDAYS /
-                SAMPLE_ANNIVERSARIES in IntranetHomeShared.tsx), same honest
-                pattern as Upcoming Events above. Replaces the old Quick
-                Links grid; container sizing (rounded-xl/border/shadow/p-5)
-                is unchanged. */}
+            {/* Birthdays / Anniversaries — real, from the employee master that
+                Pocket HRMS syncs into the portal, currently-employed people
+                only (the server enforces that). The card shows the week
+                ahead; "View all" opens the rest of the month. */}
             <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-5" style={{ animationDelay: '80ms' }}>
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
@@ -1457,11 +1482,13 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 {(() => {
                   const list = celebrationTab === 'birthdays' ? cel.birthdays : cel.anniversaries;
                   return !cel.loading && list.length === 0
-                    ? <p className="text-[10px] text-slate-400 py-3">Nothing in the next 7 days.</p>
+                    ? <p className="text-[10px] text-slate-400 py-3">
+                        {cel.has_data ? 'Nothing in the next 7 days.' : 'Directory not synced yet.'}
+                      </p>
                     : null;
                 })()}
-                {(celebrationTab === 'birthdays' ? cel.birthdays : cel.anniversaries).slice(0, 4).map(p => (
-                  <div key={p.name} className="flex items-center gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
+                {(celebrationTab === 'birthdays' ? cel.birthdays : cel.anniversaries).slice(0, 4).map((p, i) => (
+                  <div key={`${p.name}-${i}`} className="flex items-center gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-black
                                      ${celebrationTab === 'birthdays' ? 'bg-amber-50 text-amber-500' : 'bg-orange-50 text-orange-600'}`}>
                       {p.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
