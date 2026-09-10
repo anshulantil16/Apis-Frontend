@@ -50,80 +50,80 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
   ];
 
   return (
-    <div className="min-h-full relative overflow-hidden bg-[#fdf6e3] py-10 px-4 sm:px-6 flex items-center justify-center">
+    <div className="h-full relative overflow-hidden bg-[#fdf6e3] py-4 px-4 sm:px-6 flex items-center justify-center">
       {/* The illustration is the page, the way Goal Setting's sign-in is — not
           a decorative strip pinned above a form. */}
       <img src="/Tada_bg.png" alt="" aria-hidden decoding="async"
         className="absolute inset-0 w-full h-full object-cover" />
 
-      <div className="relative z-10 w-full max-w-5xl">
+      <div className="relative z-10 w-full max-w-6xl">
         {/* Same tilt + spotlight + gentle float the Goal Setting card uses,
             so every OTP sign-in screen in the intranet reads as one family. */}
         <div onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-          className="ih-tilt3d ih-spotlight ih-float flex rounded-[32px] overflow-hidden border border-amber-100
-            shadow-[0_45px_90px_-25px_rgba(217,119,6,.45)] bg-white">
+          className="ih-tilt3d ih-spotlight ih-float flex rounded-[28px] overflow-hidden border border-amber-100
+            shadow-[0_40px_80px_-25px_rgba(217,119,6,.45)] bg-white">
 
           {/* ── Brand panel ── */}
-          <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[52%] p-10 xl:p-12 relative overflow-hidden bg-amber-50/60">
+          <div className="hidden lg:flex flex-col justify-between w-1/2 xl:w-[52%] p-7 xl:p-9 relative overflow-hidden bg-amber-50/60">
             <div className="relative flex items-center gap-3">
-              <span className="ih-float ih-halo w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500
+              <span className="ih-float ih-halo w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500
                 flex items-center justify-center shadow-lg shadow-amber-500/30"
                 style={{ ['--ih-halo' as string]: 'rgba(245,158,11,.45)' }}>
-                <Plane className="w-7 h-7 text-white" />
+                <Plane className="w-6 h-6 text-white" />
               </span>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-slate-900">APIS TA/DA Portal</h1>
-                <p className="text-slate-500 text-[12.5px] font-semibold">Travel &amp; Daily Allowance</p>
+                <h1 className="text-[17px] font-black tracking-tight text-slate-900">APIS TA/DA Portal</h1>
+                <p className="text-slate-500 text-[12px] font-semibold">Travel &amp; Daily Allowance</p>
               </div>
             </div>
 
-            <div className="relative space-y-6">
+            <div className="relative space-y-4">
               <div>
-                <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider
-                  bg-white text-amber-700 px-3 py-1.5 rounded-full border border-amber-200 mb-4">
+                <p className="inline-flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wider
+                  bg-white text-amber-700 px-3 py-1.5 rounded-full border border-amber-200 mb-3">
                   <MapPin className="w-3.5 h-3.5" /> Apis India Limited
                 </p>
-                <h2 className="text-3xl xl:text-4xl font-black leading-[1.15] text-slate-900">
-                  Travel claims,<br />made simple &amp;<br />
+                <h2 className="text-2xl xl:text-3xl font-black leading-[1.15] text-slate-900">
+                  Travel claims, made simple &amp;{' '}
                   <span className="text-orange-500">policy-perfect.</span>
                 </h2>
-                <p className="text-slate-500 max-w-md mt-4 text-[14px] leading-relaxed font-medium">
+                <p className="text-slate-500 max-w-md mt-2.5 text-[13px] leading-relaxed font-medium">
                   Raise tour sanctions &amp; expense claims, attach bills, and watch them flow through
                   approvals — all within your allowance limits, automatically.
                 </p>
               </div>
 
               <div>
-                <p className="text-[10px] font-black text-amber-600/80 uppercase tracking-[0.14em] mb-2">
+                <p className="text-[9px] font-black text-amber-600/80 uppercase tracking-[0.14em] mb-1.5">
                   Approval workflow
                 </p>
-                <div className="flex items-center gap-1.5 flex-wrap bg-white/70 border border-amber-100 rounded-xl px-2.5 py-2">
+                <div className="flex items-center gap-1 flex-wrap bg-white/70 border border-amber-100 rounded-lg px-2 py-1.5">
                   {steps.map((s, i) => (
-                    <div key={s} className="flex items-center gap-1.5">
-                      <div className={`px-3 py-1.5 rounded-lg text-[12px] font-black ${
+                    <div key={s} className="flex items-center gap-1">
+                      <div className={`px-2 py-1 rounded-md text-[10.5px] font-black ${
                         i === 0 ? 'bg-slate-900 text-white' : 'text-slate-600'}`}>
                         {s}
                       </div>
-                      {i < 3 && <ChevronRight className="w-3.5 h-3.5 text-amber-400" />}
+                      {i < 3 && <ChevronRight className="w-3 h-3 text-amber-400" />}
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="relative pt-5 border-t border-amber-200/50">
-              <p className="text-[10px] font-black text-amber-600/80 uppercase tracking-[0.14em] mb-2.5">
+            <div className="relative pt-3 border-t border-amber-200/50">
+              <p className="text-[9px] font-black text-amber-600/80 uppercase tracking-[0.14em] mb-1.5">
                 Why teams trust it
               </p>
-              <div className="grid grid-cols-2 xl:grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
                 {features.map(f => (
-                  <div key={f.t} className="bg-white/80 backdrop-blur-sm rounded-xl p-2.5 border border-amber-100 flex items-start gap-2">
-                    <span className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center shrink-0 mt-px">
-                      <f.i className="w-3.5 h-3.5 text-amber-500" />
+                  <div key={f.t} className="bg-white/80 backdrop-blur-sm rounded-lg p-1.5 border border-amber-100 flex items-start gap-1.5">
+                    <span className="w-5 h-5 rounded-md bg-amber-50 flex items-center justify-center shrink-0 mt-px">
+                      <f.i className="w-3 h-3 text-amber-500" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[11px] font-black text-slate-800 leading-tight">{f.t}</p>
-                      <p className="text-[9.5px] text-slate-400 font-semibold mt-0.5 leading-snug">{f.d}</p>
+                      <p className="text-[10px] font-black text-slate-800 leading-tight">{f.t}</p>
+                      <p className="text-[8.5px] text-slate-400 font-semibold mt-0.5 leading-snug">{f.d}</p>
                     </div>
                   </div>
                 ))}
@@ -132,33 +132,33 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
           </div>
 
           {/* ── Form panel ── */}
-          <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-white relative overflow-hidden">
+          <div className="flex-1 flex items-center justify-center p-6 sm:p-9 bg-white relative overflow-hidden">
             <div className="w-full max-w-md relative">
-              <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
+              <div className="lg:hidden flex items-center gap-3 mb-6 justify-center">
                 <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg"><Plane className="w-6 h-6 text-white" /></div>
                 <div><h1 className="font-black text-slate-900 text-lg">APIS TA/DA Portal</h1><p className="text-slate-500 text-xs">Travel &amp; Daily Allowance</p></div>
               </div>
 
               {mode === 'admin' && (
-                <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 px-3 py-1 rounded-full mb-4">
+                <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full mb-3.5">
                   <Shield className="w-3 h-3" /> Admin access
                 </div>
               )}
               <h2 className="text-2xl font-black text-slate-900">{step === 'id' ? 'Welcome back' : 'Check your inbox'}</h2>
-              <p className="text-slate-500 text-sm mb-6">{step === 'id' ? 'Sign in with your Employee ID to continue.' : `We emailed a 6-digit code to your registered address.`}</p>
+              <p className="text-slate-500 text-sm mb-5">{step === 'id' ? 'Sign in with your Employee ID to continue.' : `We emailed a 6-digit code to your registered address.`}</p>
 
               {step === 'id' ? (
                 <>
                   <label className="text-xs font-bold text-slate-500 mb-1.5 block">Employee ID</label>
-                  <div className="relative mb-4">
+                  <div className="relative mb-3.5">
                     <UserIcon className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input value={empId} onChange={e => setEmpId(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="e.g. E1001"
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-4 py-3.5 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all font-semibold text-slate-800" />
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all font-semibold text-slate-800" />
                   </div>
-                  <button onClick={() => send(false)} disabled={busy || !empId.trim()} className="w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:shadow-lg hover:shadow-slate-900/30 text-white font-bold py-3.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
+                  <button onClick={() => send(false)} disabled={busy || !empId.trim()} className="w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:shadow-lg hover:shadow-slate-900/30 text-white font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
                     {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <>Send OTP <ArrowRight className="w-4 h-4" /></>}
                   </button>
-                  <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+                  <div className="mt-5 pt-3.5 border-t border-slate-100 text-center">
                     <button onClick={() => send(true)} disabled={busy} className="inline-flex items-center gap-1.5 text-slate-500 hover:text-amber-700 text-xs font-bold transition-colors">
                       <Shield className="w-3.5 h-3.5" /> Admin Login (import users &amp; setup)
                     </button>
@@ -166,23 +166,23 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
                 </>
               ) : (
                 <>
-                  <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-5 text-sm text-amber-700 flex items-center gap-2">
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 shrink-0" /> Code sent to <b>{masked}</b>
                   </div>
                   <label className="text-xs font-bold text-slate-500 mb-1.5 block">One-Time Password</label>
-                  <div className="relative mb-4">
+                  <div className="relative mb-3.5">
                     <KeyRound className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input value={otp} onChange={e => setOtp(e.target.value)} onKeyDown={e => e.key === 'Enter' && verify()} placeholder="000000" maxLength={6} autoFocus
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-4 py-3.5 text-center text-2xl tracking-[0.4em] font-black focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all text-slate-800" />
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-3 text-center text-2xl tracking-[0.4em] font-black focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/15 transition-all text-slate-800" />
                   </div>
-                  <button onClick={verify} disabled={busy || otp.length < 4} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-lg hover:shadow-emerald-500/30 text-white font-bold py-3.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
+                  <button onClick={verify} disabled={busy || otp.length < 4} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:shadow-lg hover:shadow-emerald-500/30 text-white font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
                     {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Verify &amp; Login</>}
                   </button>
                   <button onClick={() => { setStep('id'); setMode('user'); setOtp(''); setMsg(''); }} className="w-full text-slate-500 hover:text-slate-800 text-xs mt-3 font-semibold transition-colors">← Use a different ID</button>
                 </>
               )}
-              {msg && <p className="text-rose-500 text-sm mt-4 flex items-center gap-1.5 bg-rose-50 rounded-lg px-3 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{msg}</p>}
-              <p className="text-center text-slate-400 text-[11px] font-semibold mt-6">Secured by email OTP · Apis India Limited</p>
+              {msg && <p className="text-rose-500 text-sm mt-3 flex items-center gap-1.5 bg-rose-50 rounded-lg px-3 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{msg}</p>}
+              <p className="text-center text-slate-400 text-[11px] font-semibold mt-4">Secured by email OTP · Apis India Limited</p>
             </div>
           </div>
         </div>
