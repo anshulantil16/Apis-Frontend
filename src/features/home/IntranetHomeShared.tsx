@@ -201,49 +201,72 @@ export const NAV_GROUPS: NavGroup[] = [
 
 export interface NewJoiner { name: string; date: string; department?: string; days_ago?: number; }
 
-/* The real HR open-positions sheet (23 roles) — not a live ATS feed (there
-   isn't one), but the actual current hiring plan, transcribed row for row.
-   `location`/`state` is each role's HQ, so the Vacancies popup can show
-   where a role is actually based rather than a generic "Work from Office". */
+const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const VACANCIES_API = `${_API_BASE}/api/vacancies`;
+
+/* Backed by the real `vacancies` Django app — the current hiring plan (23
+   roles, seeded from the same sheet this used to hold as a static array),
+   not a live ATS feed. `location`/`state` is each role's HQ, so the
+   Vacancies popup can show where a role is actually based rather than a
+   generic "Work from Office". */
 export interface VacancyListing {
-  function: string; department: string; title: string; grade: string;
+  id: number; function: string; department: string; title: string; grade: string;
   location: string; state: string; reportingManager: string;
   type: 'New' | 'Replacement'; experience: string; education: string; status: string;
 }
-export const VACANCY_LISTINGS: VacancyListing[] = [
-  { function: 'Sales', department: 'SALES (AT)', title: 'KAE', grade: 'O4', location: 'Kochi', state: 'Kerala', reportingManager: 'Gouri', type: 'Replacement', experience: '3-10 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Factory', department: 'Manufacturing', title: 'Plant Head', grade: 'C1', location: 'Roorkee', state: 'Uttarakhand', reportingManager: 'MD', type: 'Replacement', experience: '15-25 Yrs', education: 'B.E/B.Tech/Masters', status: 'Active' },
-  { function: 'Factory', department: 'Quality', title: 'Executive - Quality Assurance', grade: 'O4', location: 'Roorkee', state: 'Uttarakhand', reportingManager: 'Sunil Tomar', type: 'Replacement', experience: '1-3 Yrs', education: 'B.Sc/M.Sc - Chemistry', status: 'Active' },
-  { function: 'Sales', department: 'SALES (AT)', title: 'KAE ROTN', grade: 'O4', location: 'Coimbatore', state: 'Tamil Nadu', reportingManager: 'Gouri', type: 'Replacement', experience: '3-10 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'HO', department: 'Finance', title: 'DM', grade: 'M2', location: 'Delhi', state: 'Delhi', reportingManager: 'Prateek Agarwal', type: 'New', experience: '2-5 Yrs', education: 'CA', status: 'Active' },
-  { function: 'Factory', department: 'Production', title: 'Production Supervisor - Filling', grade: 'O1', location: 'Roorkee', state: 'Uttarakhand', reportingManager: 'Rahul Dutt', type: 'New', experience: '2-7 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Sales', department: 'SALES (GT)', title: 'AM - Project Execution', grade: 'O4', location: 'New Delhi', state: 'Delhi', reportingManager: 'Arun Mishra', type: 'New', experience: '4-6 Yrs', education: 'MBA', status: 'Active' },
-  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Shimla', state: 'Himachal', reportingManager: 'Mohinder', type: 'Replacement', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Amritsar', state: 'Punjab', reportingManager: 'Munish Kapoor', type: 'New', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Ludhiana', state: 'Punjab', reportingManager: 'Munish Kapoor', type: 'New', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Bhatinda', state: 'Punjab', reportingManager: 'Munish Kapoor', type: 'New', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Jhansi', state: 'UP Central', reportingManager: 'Sourabh', type: 'New', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Agra', state: 'UP West', reportingManager: 'Rajeev', type: 'Replacement', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'HO', department: 'SCM', title: 'Executive - SCM', grade: 'O4', location: 'Delhi', state: 'Delhi', reportingManager: 'Shri Prakash Chaubey', type: 'Replacement', experience: '1-7 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Sales', department: 'SALES (AT)', title: 'KAE Delhi', grade: 'O4', location: 'New Delhi', state: 'Delhi', reportingManager: 'Gouri', type: 'New', experience: '4-6 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'HO', department: 'Digital Marketing', title: 'AM - Digital Marketing', grade: 'M1', location: 'Delhi', state: 'Delhi', reportingManager: 'Nagesh Mishra', type: 'New', experience: '2-6 Yrs', education: 'MBA/Graduate', status: 'Active' },
-  { function: 'HO', department: 'Engineering', title: 'AM/DM - Project Manager', grade: 'M1/M2', location: 'Gujarat / Delhi', state: 'Delhi', reportingManager: 'Pradeep', type: 'New', experience: '4-10 Yrs', education: 'BE/B.Tech/M.Tech - Civil', status: 'Active' },
-  { function: 'HO', department: 'Export', title: 'Dy. Manager', grade: 'M2', location: 'Delhi', state: 'Delhi', reportingManager: 'Ershad Alam', type: 'New', experience: '4-10 Yrs', education: 'MBA - Operations / International Business', status: 'Active' },
-  { function: 'HO', department: 'Export', title: 'Assistant Manager', grade: 'M2', location: 'Delhi', state: 'Delhi', reportingManager: 'Ershad Alam', type: 'New', experience: '3-8 Yrs', education: 'MBA - Operations / International Business', status: 'Active' },
-  { function: 'Sales', department: 'SALES (GT)', title: 'TSM', grade: 'M1', location: 'Kochi', state: 'Kerala', reportingManager: 'Vasant D', type: 'Replacement', experience: '6-15 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Factory', department: 'Engineering', title: 'AM - Electrical Maintenance', grade: 'M1', location: 'Roorkee', state: 'Uttarakhand', reportingManager: 'Sarvana', type: 'New', experience: '3-8 Yrs', education: 'ITI/Diploma - Electrical', status: 'Active' },
-  { function: 'HO', department: 'Procurement', title: 'Sr. Executive', grade: 'O5', location: 'Delhi', state: 'Delhi', reportingManager: 'Pradeep', type: 'Replacement', experience: '3-8 Yrs', education: 'Graduate', status: 'Active' },
-  { function: 'Sales', department: 'SALES (AT)', title: 'KAE', grade: 'O4', location: 'Bangalore', state: 'Bangalore', reportingManager: 'Gouri', type: 'Replacement', experience: '4-10 Yrs', education: 'Graduate', status: 'Active' },
-];
+
+/* Fetches the live list once on mount and exposes add/close mutations that
+   update both the server and local state together — every consumer (the
+   home-dashboard preview widget, the full Vacancies popup, the referral
+   form's dropdown) calls this independently rather than sharing one lifted
+   instance, same convention as useCelebrations elsewhere in this file. */
+export function useVacancies() {
+  const [vacancies, setVacancies] = useState<VacancyListing[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    fetch(`${VACANCIES_API}/`)
+      .then(r => (r.ok ? r.json() : []))
+      .then(d => { if (alive) setVacancies(d); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+
+  async function addVacancy(payload: Omit<VacancyListing, 'id' | 'status'>) {
+    const res = await fetch(`${VACANCIES_API}/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Could not add the vacancy. Please try again.');
+    const created: VacancyListing = await res.json();
+    setVacancies(prev => [created, ...prev]);
+    return created;
+  }
+
+  async function setVacancyStatus(id: number, nextStatus: 'Active' | 'Closed') {
+    const res = await fetch(`${VACANCIES_API}/${id}/status/`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: nextStatus }),
+    });
+    if (!res.ok) throw new Error('Could not update the vacancy. Please try again.');
+    const updated: VacancyListing = await res.json();
+    setVacancies(prev => prev.map(v => v.id === id ? updated : v));
+    return updated;
+  }
+
+  return { vacancies, loading, addVacancy, setVacancyStatus };
+}
 
 export interface Vacancy { title: string; openings: number; location: string; }
 
-/* Small home-dashboard preview derived from VACANCY_LISTINGS — the top 3
-   roles by open-seat count, so the mini widget stays consistent with the
-   full popup instead of showing an unrelated placeholder set. */
-export const SAMPLE_VACANCIES: Vacancy[] = (() => {
+/* Top-3-by-open-seat-count summary for the home-dashboard preview widget,
+   derived from whatever useVacancies() currently holds — call this with
+   that hook's `vacancies` so the mini widget and the full popup can never
+   drift apart. */
+export function summarizeVacancies(vacancies: VacancyListing[]): Vacancy[] {
   const groups = new Map<string, { count: number; locations: Set<string> }>();
-  for (const v of VACANCY_LISTINGS) {
+  for (const v of vacancies) {
+    if (v.status !== 'Active') continue;
     const g = groups.get(v.title) ?? { count: 0, locations: new Set<string>() };
     g.count += 1;
     g.locations.add(v.location);
@@ -256,7 +279,7 @@ export const SAMPLE_VACANCIES: Vacancy[] = (() => {
       title, openings: g.count,
       location: g.locations.size > 1 ? 'Multiple locations' : [...g.locations][0],
     }));
-})();
+}
 
 export interface CelebrationEntry {
   name: string; date: string; department?: string; designation?: string;

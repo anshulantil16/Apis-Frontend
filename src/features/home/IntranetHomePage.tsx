@@ -6,7 +6,7 @@ import {
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw,
 } from 'lucide-react';
 import {
-  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_VACANCIES, VACANCY_LISTINGS,
+  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, useVacancies, summarizeVacancies,
   OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, QUICK_PORTALS, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
   useCelebrations, useTicker, ANNOUNCEMENTS, STATE_HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
@@ -418,32 +418,44 @@ const vacFieldLabelCls = 'block text-[11.5px] font-bold text-slate-600 mb-1.5';
 
 function VacanciesPopup({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<'vacancies' | 'referral'>('vacancies');
-  const [vacancies, setVacancies] = useState<VacancyListing[]>(VACANCY_LISTINGS);
+  const { vacancies, loading, addVacancy, setVacancyStatus } = useVacancies();
   const [addVacancyOpen, setAddVacancyOpen] = useState(false);
   const [newType, setNewType] = useState<'New' | 'Replacement'>('New');
+  const [error, setError] = useState('');
 
-  function handleAddVacancy(e: FormEvent<HTMLFormElement>) {
+  async function handleAddVacancy(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const get = (k: string) => String(fd.get(k) ?? '').trim();
-    const listing: VacancyListing = {
-      title: get('title'), function: get('function'), department: get('department'),
-      grade: get('grade'), location: get('location'), state: get('state'),
-      reportingManager: get('reportingManager'), type: newType,
-      experience: get('experience'), education: get('education'), status: 'Active',
-    };
-    if (!listing.title || !listing.location) return;
-    setVacancies(prev => [listing, ...prev]);
-    setAddVacancyOpen(false);
-    setNewType('New');
-    e.currentTarget.reset();
+    const title = get('title'), location = get('location');
+    if (!title || !location) return;
+
+    setError('');
+    try {
+      await addVacancy({
+        title, function: get('function'), department: get('department'),
+        grade: get('grade'), location, state: get('state'),
+        reportingManager: get('reportingManager'), type: newType,
+        experience: get('experience'), education: get('education'),
+      });
+      setAddVacancyOpen(false);
+      setNewType('New');
+      e.currentTarget.reset();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add the vacancy.');
+    }
   }
 
   // HR toggling a seat closed once it's filled — flips status rather than
   // deleting the row, so a closed position stays visible (greyed out) as a
   // record instead of just vanishing from the list.
-  function toggleVacancyStatus(index: number) {
-    setVacancies(prev => prev.map((v, i) => i === index ? { ...v, status: v.status === 'Active' ? 'Closed' : 'Active' } : v));
+  async function toggleVacancyStatus(v: VacancyListing) {
+    setError('');
+    try {
+      await setVacancyStatus(v.id, v.status === 'Active' ? 'Closed' : 'Active');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update the vacancy.');
+    }
   }
 
   const openCount = vacancies.filter(v => v.status === 'Active').length;
@@ -495,11 +507,19 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
 
         {tab === 'vacancies' ? (
           <div className="p-6">
+            {error && (
+              <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-[12.5px] text-rose-700 font-semibold mb-4">
+                <XCircle className="w-4 h-4 shrink-0" />{error}
+              </div>
+            )}
+            {loading && (
+              <p className="text-center text-sm text-slate-400 py-16">Loading vacancies…</p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-              {vacancies.map((v, i) => {
+              {!loading && vacancies.map(v => {
                 const closed = v.status !== 'Active';
                 return (
-                  <div key={`${v.title}-${v.location}-${i}`}
+                  <div key={v.id}
                     className={`rounded-xl border transition-all p-3.5 ${
                       closed ? 'border-slate-100 bg-slate-50/60 opacity-70' : 'border-slate-200 hover:border-amber-300 hover:shadow-sm'}`}>
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -530,7 +550,7 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
                     <p className="text-[10.5px] text-slate-400 truncate" title={v.education}>{v.education}</p>
                     <div className="flex items-center justify-between gap-2 mt-1.5">
                       <p className="text-[10px] text-slate-300">Reporting to {v.reportingManager}</p>
-                      <button type="button" onClick={() => toggleVacancyStatus(i)}
+                      <button type="button" onClick={() => toggleVacancyStatus(v)}
                         title={closed ? 'Reopen this vacancy' : 'Mark this vacancy as closed/filled'}
                         className={`flex items-center gap-1 text-[10px] font-black shrink-0 transition-colors ${
                           closed ? 'text-emerald-600 hover:text-emerald-700' : 'text-rose-500 hover:text-rose-600'}`}>
@@ -569,11 +589,9 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
-      {/* Add Vacancy — client-side only, same as this array's source data
-          (VACANCY_LISTINGS is a static hiring-plan snapshot, not a live ATS
-          feed); a new opening is added to this popup's own state and shows
-          up in the list immediately, but won't survive a page reload until
-          a real vacancies backend exists. */}
+      {/* Add Vacancy — POSTs to the real `vacancies` Django app via
+          useVacancies(); the new row comes back with a real id and is
+          merged into local state immediately, so it survives a reload. */}
       {addVacancyOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center px-4"
           onClick={() => setAddVacancyOpen(false)}>
@@ -812,6 +830,8 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
   /* Birthdays, anniversaries and new joiners, live from the employee master.
      Only currently-employed people; the server enforces that. */
   const cel = useCelebrations();
+  const vac = useVacancies();
+  const vacSummary = summarizeVacancies(vac.vacancies);
   /* Live BSE price for the banner; server-cached, so this is cheap. */
   const ticker = useTicker();
 
@@ -1566,8 +1586,9 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
 
             {/* New Joiners / Vacancies — two side-by-side cards. New Joiners
                 is real, from the HRMS-synced employee master. Vacancies has
-                no live ATS feed either, but shows the real current hiring
-                plan (VACANCY_LISTINGS) rather than a placeholder set. */}
+                no live ATS feed either, but is backed by the real
+                `vacancies` Django app (useVacancies()) rather than a
+                placeholder set. */}
             <div className="grid grid-cols-2 gap-3">
               {/* flex column with the list on flex-1: grid cells stretch to the
                   tallest card in the row, and without this the spare height
@@ -1612,9 +1633,12 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                     View all
                   </button>
                 </div>
-                <p className="text-[9px] text-slate-300 mb-2.5">Top roles by open seats — {VACANCY_LISTINGS.length} positions in total</p>
+                <p className="text-[9px] text-slate-300 mb-2.5">Top roles by open seats — {vac.vacancies.length} positions in total</p>
                 <div className="flex-1 flex flex-col justify-evenly gap-1">
-                  {SAMPLE_VACANCIES.map(v => (
+                  {!vac.loading && vacSummary.length === 0 && (
+                    <p className="text-[10px] text-slate-400 py-3">No open positions right now.</p>
+                  )}
+                  {vacSummary.map(v => (
                     <div key={v.title} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">
                       <div className="min-w-0 flex-1">
                         <p className="text-[11.5px] font-bold text-slate-800 truncate">{v.title}</p>
