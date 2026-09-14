@@ -1442,25 +1442,10 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
               </p>
             </div>
 
-            {/* The holiday list is a published calendar year, hand-maintained
-                (see HOLIDAYS_2026). Once the last one passes, the card used to
-                disappear from the rail with no explanation, which reads as a
-                broken widget rather than an exhausted list. */}
-            {upcomingHolidays.length === 0 && (
-              <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-5">
-                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-2">
-                  <CalendarDays className="w-3.5 h-3.5 text-amber-500" />Next Holiday
-                </h2>
-                <p className="text-[11.5px] text-slate-400 leading-snug">
-                  No holidays left on the published list. Next year's calendar has not been added yet.
-                </p>
-              </div>
-            )}
-
             {/* New Joiners / Vacancies — two side-by-side cards. New Joiners
                 is real, from the HRMS-synced employee master. Vacancies has
-                no ATS feed behind it yet and stays labelled as sample data
-                on its own card. */}
+                no live ATS feed either, but shows the real current hiring
+                plan (VACANCY_LISTINGS) rather than a placeholder set. */}
             <div className="grid grid-cols-2 gap-3">
               {/* flex column with the list on flex-1: grid cells stretch to the
                   tallest card in the row, and without this the spare height
