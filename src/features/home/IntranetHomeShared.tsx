@@ -201,16 +201,62 @@ export const NAV_GROUPS: NavGroup[] = [
 
 export interface NewJoiner { name: string; date: string; department?: string; days_ago?: number; }
 
+/* The real HR open-positions sheet (23 roles) — not a live ATS feed (there
+   isn't one), but the actual current hiring plan, transcribed row for row.
+   `location`/`state` is each role's HQ, so the Vacancies popup can show
+   where a role is actually based rather than a generic "Work from Office". */
+export interface VacancyListing {
+  function: string; department: string; title: string; grade: string;
+  location: string; state: string; reportingManager: string;
+  type: 'New' | 'Replacement'; experience: string; education: string; status: string;
+}
+export const VACANCY_LISTINGS: VacancyListing[] = [
+  { function: 'Sales', department: 'SALES (AT)', title: 'KAE', grade: 'O4', location: 'Kochi', state: 'Kerala', reportingManager: 'Gouri', type: 'Replacement', experience: '3-10 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Factory', department: 'Manufacturing', title: 'Plant Head', grade: 'C1', location: 'Roorkee', state: 'Uttarakhand', reportingManager: 'MD', type: 'Replacement', experience: '15-25 Yrs', education: 'B.E/B.Tech/Masters', status: 'Active' },
+  { function: 'Factory', department: 'Quality', title: 'Executive - Quality Assurance', grade: 'O4', location: 'Roorkee', state: 'Uttarakhand', reportingManager: 'Sunil Tomar', type: 'Replacement', experience: '1-3 Yrs', education: 'B.Sc/M.Sc - Chemistry', status: 'Active' },
+  { function: 'Sales', department: 'SALES (AT)', title: 'KAE ROTN', grade: 'O4', location: 'Coimbatore', state: 'Tamil Nadu', reportingManager: 'Gouri', type: 'Replacement', experience: '3-10 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'HO', department: 'Finance', title: 'DM', grade: 'M2', location: 'Delhi', state: 'Delhi', reportingManager: 'Prateek Agarwal', type: 'New', experience: '2-5 Yrs', education: 'CA', status: 'Active' },
+  { function: 'Factory', department: 'Production', title: 'Production Supervisor - Filling', grade: 'O1', location: 'Roorkee', state: 'Uttarakhand', reportingManager: 'Rahul Dutt', type: 'New', experience: '2-7 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Sales', department: 'SALES (GT)', title: 'AM - Project Execution', grade: 'O4', location: 'New Delhi', state: 'Delhi', reportingManager: 'Arun Mishra', type: 'New', experience: '4-6 Yrs', education: 'MBA', status: 'Active' },
+  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Shimla', state: 'Himachal', reportingManager: 'Mohinder', type: 'Replacement', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Amritsar', state: 'Punjab', reportingManager: 'Munish Kapoor', type: 'New', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Ludhiana', state: 'Punjab', reportingManager: 'Munish Kapoor', type: 'New', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Bhatinda', state: 'Punjab', reportingManager: 'Munish Kapoor', type: 'New', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Jhansi', state: 'UP Central', reportingManager: 'Sourabh', type: 'New', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Sales', department: 'SALES (GT)', title: 'ASE', grade: 'O4', location: 'Agra', state: 'UP West', reportingManager: 'Rajeev', type: 'Replacement', experience: '2-6 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'HO', department: 'SCM', title: 'Executive - SCM', grade: 'O4', location: 'Delhi', state: 'Delhi', reportingManager: 'Shri Prakash Chaubey', type: 'Replacement', experience: '1-7 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Sales', department: 'SALES (AT)', title: 'KAE Delhi', grade: 'O4', location: 'New Delhi', state: 'Delhi', reportingManager: 'Gouri', type: 'New', experience: '4-6 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'HO', department: 'Digital Marketing', title: 'AM - Digital Marketing', grade: 'M1', location: 'Delhi', state: 'Delhi', reportingManager: 'Nagesh Mishra', type: 'New', experience: '2-6 Yrs', education: 'MBA/Graduate', status: 'Active' },
+  { function: 'HO', department: 'Engineering', title: 'AM/DM - Project Manager', grade: 'M1/M2', location: 'Gujarat / Delhi', state: 'Delhi', reportingManager: 'Pradeep', type: 'New', experience: '4-10 Yrs', education: 'BE/B.Tech/M.Tech - Civil', status: 'Active' },
+  { function: 'HO', department: 'Export', title: 'Dy. Manager', grade: 'M2', location: 'Delhi', state: 'Delhi', reportingManager: 'Ershad Alam', type: 'New', experience: '4-10 Yrs', education: 'MBA - Operations / International Business', status: 'Active' },
+  { function: 'HO', department: 'Export', title: 'Assistant Manager', grade: 'M2', location: 'Delhi', state: 'Delhi', reportingManager: 'Ershad Alam', type: 'New', experience: '3-8 Yrs', education: 'MBA - Operations / International Business', status: 'Active' },
+  { function: 'Sales', department: 'SALES (GT)', title: 'TSM', grade: 'M1', location: 'Kochi', state: 'Kerala', reportingManager: 'Vasant D', type: 'Replacement', experience: '6-15 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Factory', department: 'Engineering', title: 'AM - Electrical Maintenance', grade: 'M1', location: 'Roorkee', state: 'Uttarakhand', reportingManager: 'Sarvana', type: 'New', experience: '3-8 Yrs', education: 'ITI/Diploma - Electrical', status: 'Active' },
+  { function: 'HO', department: 'Procurement', title: 'Sr. Executive', grade: 'O5', location: 'Delhi', state: 'Delhi', reportingManager: 'Pradeep', type: 'Replacement', experience: '3-8 Yrs', education: 'Graduate', status: 'Active' },
+  { function: 'Sales', department: 'SALES (AT)', title: 'KAE', grade: 'O4', location: 'Bangalore', state: 'Bangalore', reportingManager: 'Gouri', type: 'Replacement', experience: '4-10 Yrs', education: 'Graduate', status: 'Active' },
+];
+
 export interface Vacancy { title: string; openings: number; location: string; }
 
-/* No real ATS/careers feed is wired up yet — sample rows showing the
-   Vacancies widget's intended shape, not real open roles. Same honest
-   "sample data" pattern as SAMPLE_NEW_JOINERS above. */
-export const SAMPLE_VACANCIES: Vacancy[] = [
-  { title: 'Data Analyst', openings: 2, location: 'Work from Office' },
-  { title: 'HR Executive', openings: 1, location: 'Work from Office' },
-  { title: 'Digital Marketing', openings: 1, location: 'Work from Office' },
-];
+/* Small home-dashboard preview derived from VACANCY_LISTINGS — the top 3
+   roles by open-seat count, so the mini widget stays consistent with the
+   full popup instead of showing an unrelated placeholder set. */
+export const SAMPLE_VACANCIES: Vacancy[] = (() => {
+  const groups = new Map<string, { count: number; locations: Set<string> }>();
+  for (const v of VACANCY_LISTINGS) {
+    const g = groups.get(v.title) ?? { count: 0, locations: new Set<string>() };
+    g.count += 1;
+    g.locations.add(v.location);
+    groups.set(v.title, g);
+  }
+  return Array.from(groups.entries())
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 3)
+    .map(([title, g]) => ({
+      title, openings: g.count,
+      location: g.locations.size > 1 ? 'Multiple locations' : [...g.locations][0],
+    }));
+})();
 
 export interface CelebrationEntry {
   name: string; date: string; department?: string; designation?: string;
@@ -587,6 +633,191 @@ export const HOLIDAYS_2026 = [
   { date: '2026-11-08', name: 'Diwali (Deepavali)' },
   { date: '2026-11-24', name: 'Guru Nanak Jayanti' },
   { date: '2026-12-25', name: 'Christmas Day' },
+];
+
+/* APIS's own 2026 zone-wise holiday list — transcribed from the signed HR
+   circular (public/Policies/Holiday List- 2026 revised.pdf, Neelendra Kumar
+   Pandey, Sr. Manager HR). Each zone is one page of that PDF; `type` splits
+   the nationally-gazetted days (Republic Day, Independence Day, Gandhi
+   Jayanti, Christmas — identical across every zone) from the
+   region-specific "State Special" ones, the same distinction the circular
+   itself draws. Re-transcribe this block if HR reissues the circular. */
+export interface StateHolidayGroup {
+  id: string;
+  label: string;
+  holidays: { date: string; name: string; type: 'National' | 'State' }[];
+}
+export const STATE_HOLIDAYS_2026: StateHolidayGroup[] = [
+  {
+    id: 'north', label: 'Delhi (NCR) & North Zone', holidays: [
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-08-28', name: 'Rakshabandhan', type: 'State' },
+      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-20', name: 'Dussehra / Vijayadasami', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
+      { date: '2026-11-10', name: 'Diwali Holiday', type: 'State' },
+      { date: '2026-12-25', name: 'Christmas', type: 'National' },
+    ],
+  },
+  {
+    id: 'uttarakhand', label: 'Plant / Uttarakhand', holidays: [
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-08-11', name: 'Shivratri', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-08-28', name: 'Rakshabandhan', type: 'State' },
+      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-20', name: 'Dussehra', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
+      { date: '2026-11-10', name: 'Diwali Holiday', type: 'State' },
+    ],
+  },
+  {
+    id: 'maharashtra', label: 'Maharashtra / Goa', holidays: [
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
+      { date: '2026-09-14', name: 'Ganesh Chaturthi', type: 'State' },
+      { date: '2026-09-25', name: 'Anant Chaturdashi', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-20', name: 'Dussehra / Vijayadasami', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
+      { date: '2026-12-25', name: 'Christmas', type: 'National' },
+    ],
+  },
+  {
+    id: 'tamilnadu', label: 'Tamil Nadu', holidays: [
+      { date: '2026-01-14', name: 'Makar Sankranti / Pongal', type: 'State' },
+      { date: '2026-01-15', name: 'Makar Sankranti / Pongal', type: 'State' },
+      { date: '2026-01-16', name: 'Makar Sankranti / Pongal', type: 'State' },
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-04-14', name: 'Tamil New Year', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
+      { date: '2026-09-14', name: 'Ganesh Chaturthi', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-20', name: 'Ayutha Puja / Dussehra', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
+    ],
+  },
+  {
+    id: 'south', label: 'Andhra Pradesh / Telangana / Karnataka', holidays: [
+      { date: '2026-01-14', name: 'Makar Sankranti / Pongal', type: 'State' },
+      { date: '2026-01-15', name: 'Makar Sankranti / Pongal', type: 'State' },
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-03-19', name: 'Ugadi / Cheti Chand', type: 'State' },
+      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-09-14', name: 'Ganesh Chaturthi', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-21', name: 'Vijayadasami', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-12-25', name: 'Christmas', type: 'National' },
+    ],
+  },
+  {
+    id: 'kerala', label: 'Kerala', holidays: [
+      { date: '2026-01-15', name: 'Makar Sankranti / Pongal', type: 'State' },
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
+      { date: '2026-04-15', name: 'Bihu', type: 'State' },
+      { date: '2026-05-01', name: 'Labour / May Day', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-08-26', name: 'Onam', type: 'State' },
+      { date: '2026-09-14', name: 'Ganesh Chaturthi', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-21', name: 'Vijayadasami', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-12-25', name: 'Christmas', type: 'National' },
+    ],
+  },
+  {
+    id: 'jharkhand', label: 'Jharkhand', holidays: [
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-05-27', name: 'Eid-ul-Zuha (Bakrid)', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-19', name: 'Ashtami', type: 'State' },
+      { date: '2026-10-20', name: 'Dussehra', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
+      { date: '2026-12-25', name: 'Christmas', type: 'National' },
+    ],
+  },
+  {
+    id: 'bihar', label: 'Bihar', holidays: [
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-05-27', name: 'Eid-ul-Zuha (Bakrid)', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-08-26', name: 'Milad-un-Nabi', type: 'State' },
+      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-19', name: 'Ashtami', type: 'State' },
+      { date: '2026-10-20', name: 'Dussehra', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-12-25', name: 'Christmas', type: 'National' },
+    ],
+  },
+  {
+    id: 'eastzone', label: 'West Bengal / Assam', holidays: [
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-04-15', name: 'Bengali New Year Day', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-17', name: 'Saptami', type: 'State' },
+      { date: '2026-10-19', name: 'Navami', type: 'State' },
+      { date: '2026-10-20', name: 'Dussehra', type: 'State' },
+      { date: '2026-10-21', name: 'Durga Idol Immersion Day', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-11-11', name: 'Bhai Dooj', type: 'State' },
+      { date: '2026-12-25', name: 'Christmas', type: 'National' },
+    ],
+  },
+  {
+    id: 'westzone', label: 'Gujarat / Rajasthan', holidays: [
+      { date: '2026-01-14', name: 'Makar Sankranti / Pongal', type: 'State' },
+      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
+      { date: '2026-03-04', name: 'Holi', type: 'State' },
+      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
+      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
+      { date: '2026-08-28', name: 'Rakshabandhan', type: 'State' },
+      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
+      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
+      { date: '2026-10-20', name: 'Dussehra / Vijayadasami', type: 'State' },
+      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
+      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
+      { date: '2026-11-10', name: 'Diwali Holiday', type: 'State' },
+      { date: '2026-12-25', name: 'Christmas', type: 'National' },
+    ],
+  },
 ];
 
 /* Recently-opened tools, tracked purely client-side (no server round-trip

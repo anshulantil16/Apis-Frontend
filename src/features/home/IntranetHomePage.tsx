@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
-  ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, PartyPopper,
+  ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag,
 } from 'lucide-react';
 import {
-  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_VACANCIES,
+  QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_VACANCIES, VACANCY_LISTINGS,
   OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
-  useCelebrations, useTicker, ANNOUNCEMENTS, HOLIDAYS_2026,
+  useCelebrations, useTicker, ANNOUNCEMENTS, STATE_HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
 } from './IntranetHomeShared';
@@ -31,8 +31,6 @@ const LEADERSHIP_SLIDES: LeadershipSlide[] = [
     bio: 'Driven by his passion and conviction, Mr. Vimal Anand received formal training in beekeeping and honey processing from the University of Warmia, Poland. He gradually built a global presence and a robust structure supported by a state-of-the-art production factory to cater to global markets — his undeterred leadership and vision have led the company to reach its heights today, becoming a leading player in the world\'s organized honey trade.',
   },
 ];
-
-const HOLIDAY_COLOURS = ['text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-50', 'text-amber-500 bg-amber-50'];
 
 // One badge icon per COMPANY_MILESTONES entry, in order: founding, revenue
 // milestone, product launch, facility/award, and "coming soon". Cycles via
@@ -454,7 +452,7 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
         className={`ih-palette-in w-full max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5
-          transition-[max-width] ${tab === 'referral' ? 'max-w-4xl' : 'max-w-lg'}`}>
+          transition-[max-width] ${tab === 'referral' ? 'max-w-4xl' : 'max-w-3xl'}`}>
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
           <div>
             <p className="text-base font-black text-slate-900 flex items-center gap-2">
@@ -462,7 +460,7 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {tab === 'referral' ? 'Refer a candidate and help us build a stronger team.'
-                : 'Sample data — not yet connected to a real careers feed'}
+                : `${VACANCY_LISTINGS.length} open positions across the current hiring plan`}
             </p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
@@ -484,18 +482,39 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
         </div>
 
         {tab === 'vacancies' ? (
-          <div className="p-6 space-y-2">
-            {SAMPLE_VACANCIES.map(v => (
-              <div key={v.title} className="flex items-center gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-slate-800 truncate">{v.title}</p>
-                  <p className="text-[12px] text-slate-400 truncate">{v.location}</p>
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {VACANCY_LISTINGS.map((v, i) => (
+                <div key={`${v.title}-${v.location}-${i}`}
+                  className="rounded-xl border border-slate-200 hover:border-amber-300 hover:shadow-sm transition-all p-3.5">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-[13px] font-black text-slate-800 leading-tight">{v.title}</p>
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0
+                                     text-emerald-600 bg-emerald-50 ring-emerald-200">
+                      {v.status}
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-slate-400 font-semibold mb-2 truncate">{v.department} · {v.function}</p>
+                  <div className="flex items-center gap-1.5 text-[11.5px] text-slate-600 font-bold mb-2">
+                    <MapPin className="w-3 h-3 text-amber-500 flex-shrink-0" />{v.location}, {v.state}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    <span className="px-1.5 py-0.5 rounded-md bg-slate-50 ring-1 ring-slate-100 text-[10px] font-bold text-slate-500">
+                      Grade {v.grade}
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded-md ring-1 text-[10px] font-bold
+                      ${v.type === 'New' ? 'bg-sky-50 ring-sky-100 text-sky-600' : 'bg-amber-50 ring-amber-100 text-amber-600'}`}>
+                      {v.type}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-slate-50 ring-1 ring-slate-100 text-[10px] font-bold text-slate-500">
+                      {v.experience}
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-slate-400 truncate" title={v.education}>{v.education}</p>
+                  <p className="text-[10px] text-slate-300 mt-1">Reporting to {v.reportingManager}</p>
                 </div>
-                <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-black flex-shrink-0">
-                  {v.openings}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
 
             {/* Referral CTA — every open role is a reminder that referrals are
                 how most of these seats get filled. */}
@@ -707,18 +726,29 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
   const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
   const filteredTools = category === 'All' ? VISIBLE_TOOLS : VISIBLE_TOOLS.filter(t => t.category === category);
 
-  const upcomingHolidays = useMemo(() => {
+  // Statewise holiday widget — real APIS zones from the HR circular
+  // (STATE_HOLIDAYS_2026), not the generic central-government list.
+  const [holidayStateId, setHolidayStateId] = useState(STATE_HOLIDAYS_2026[0].id);
+  const [holidayWindowStart, setHolidayWindowStart] = useState(0);
+  const HOLIDAY_CARD_COUNT = 3;
+  const upcomingStateHolidays = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    return HOLIDAYS_2026
-      .map(h => ({ ...h, date: new Date(`${h.date}T00:00:00`) }))
-      .filter(h => h.date >= today)
-      .slice(0, 4)
-      .map(h => ({
-        ...h,
-        daysAway: Math.round((h.date.getTime() - today.getTime()) / 86400000),
-      }));
-  }, []);
-  const [holidayIndex, setHolidayIndex] = useState(0);
+    const group = STATE_HOLIDAYS_2026.find(g => g.id === holidayStateId) ?? STATE_HOLIDAYS_2026[0];
+    return group.holidays
+      .map(h => ({ ...h, dateObj: new Date(`${h.date}T00:00:00`) }))
+      .filter(h => h.dateObj >= today)
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+  }, [holidayStateId]);
+  const visibleHolidays = upcomingStateHolidays.slice(holidayWindowStart, holidayWindowStart + HOLIDAY_CARD_COUNT);
+  const [zoneMenuOpen, setZoneMenuOpen] = useState(false);
+  const zoneMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!zoneMenuOpen) return;
+    const h = (e: MouseEvent) => { if (zoneMenuRef.current && !zoneMenuRef.current.contains(e.target as Node)) setZoneMenuOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [zoneMenuOpen]);
+  const selectedZone = STATE_HOLIDAYS_2026.find(g => g.id === holidayStateId) ?? STATE_HOLIDAYS_2026[0];
 
 
   const [factIndex, setFactIndex] = useState(0);
@@ -748,11 +778,9 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
     const iv = setInterval(() => setFactIndex(i => (i + 1) % DID_YOU_KNOW.length), 5000);
     return () => clearInterval(iv);
   }, []);
-  useEffect(() => {
-    if (upcomingHolidays.length < 2) return;
-    const iv = setInterval(() => setHolidayIndex(i => (i + 1) % upcomingHolidays.length), 7000);
-    return () => clearInterval(iv);
-  }, [upcomingHolidays.length]);
+  // Switching state resets the card window rather than leaving it stranded
+  // past the end of a shorter zone's list.
+  useEffect(() => { setHolidayWindowStart(0); }, [holidayStateId]);
   useEffect(() => {
     if (COMPANY_MILESTONES.length < 2) return;
     const iv = setInterval(() => setMilestoneIndex(i => (i + 1) % COMPANY_MILESTONES.length), 5000);
@@ -1318,62 +1346,101 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
 
           {/* ── Right rail ──────────────────────────────────────────────────── */}
           <aside className="hidden xl:block w-[330px] flex-shrink-0 sticky top-[68px] space-y-4">
-            {/* Holidays — India's real central-government gazetted list for 2026,
-                sourced publicly (not APIS's specific internal calendar, which
-                hasn't been provided — see the data file for the honest caveat) */}
-            {upcomingHolidays.length > 0 && (() => {
-              const h = upcomingHolidays[holidayIndex % upcomingHolidays.length];
-              const c = HOLIDAY_COLOURS[holidayIndex % HOLIDAY_COLOURS.length];
-              return (
-                <div className="ih-reveal relative overflow-hidden rounded-xl bg-white border border-slate-200 shadow-sm p-5">
-                  <div className="ih-drift pointer-events-none absolute -top-8 -right-8 w-28 h-28 rounded-full bg-amber-400/10 blur-2xl" />
-                  <div className="relative flex items-center justify-between mb-3">
-                    <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <CalendarDays className="w-3.5 h-3.5 text-amber-500" />Next Holiday
-                    </h2>
-                    {upcomingHolidays.length > 1 && (
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setHolidayIndex(i => (i - 1 + upcomingHolidays.length) % upcomingHolidays.length)}
-                          className="w-5 h-5 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-400">
-                          <ChevronLeft className="w-3 h-3" />
-                        </button>
-                        <button onClick={() => setHolidayIndex(i => (i + 1) % upcomingHolidays.length)}
-                          className="w-5 h-5 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-400">
-                          <ChevronRight className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div key={holidayIndex} className="ih-fade relative flex items-center gap-3">
-                    <div className={`relative w-14 h-14 rounded-xl ${c.split(' ')[1]} flex flex-col items-center justify-center flex-shrink-0`}>
-                      <PartyPopper className={`absolute -top-1.5 -right-1.5 w-4 h-4 ${c.split(' ')[0]} opacity-70`} aria-hidden />
-                      <span className={`text-[19px] font-black leading-none ${c.split(' ')[0]}`}>{h.date.getDate()}</span>
-                      <span className="text-[9px] font-bold uppercase text-slate-400 leading-none mt-1">
-                        {h.date.toLocaleDateString(undefined, { month: 'short' })}
-                      </span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-bold text-slate-800 truncate">
-                        {h.name}{h.tentative && <span className="text-slate-400 font-semibold">*</span>}
-                      </p>
-                      <p className="text-[11px] text-slate-400">
-                        {h.daysAway === 0 ? 'Today' : h.daysAway === 1 ? 'Tomorrow' : `In ${h.daysAway} days`}
-                      </p>
-                    </div>
-                  </div>
-                  {upcomingHolidays.length > 1 && (
-                    <div className="relative flex items-center gap-1 mt-4">
-                      {upcomingHolidays.map((_, i) => (
-                        <span key={i} className={`h-1 rounded-full transition-all duration-300 ${i === holidayIndex ? 'w-5 bg-amber-400' : 'w-1 bg-slate-200'}`} />
-                      ))}
-                    </div>
-                  )}
-                  {h.tentative && (
-                    <p className="relative text-[9.5px] text-slate-300 mt-3">*Date provisional, pending official confirmation</p>
-                  )}
+            {/* Holidays — APIS's own zone-wise 2026 circular (STATE_HOLIDAYS_2026),
+                not a generic public list. A state picker because the circular
+                itself is zone-specific: Delhi/HO sees a different calendar
+                than, say, Kerala or Tamil Nadu. */}
+            {/* No ih-reveal on this outer box: a CSS animation targeting
+                opacity/transform makes an element a stacking-context root
+                for as long as the class stays applied (even once the
+                animation has finished playing) — which silently traps the
+                dropdown menu's z-20 inside this card, so it painted BELOW
+                the next widget down (New Joiners/Vacancies) wherever it
+                overflowed this card's bounds. The one-time entrance fade
+                moves to an inner wrapper that doesn't contain the menu. */}
+            <div className="relative rounded-xl bg-white border border-slate-200 shadow-sm p-5">
+              {/* Clipped to its own layer, not the card, so the dropdown menu
+                  below can overflow the card's bounds without being cut off. */}
+              <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                <div className="ih-drift absolute -top-8 -right-8 w-28 h-28 rounded-full bg-amber-400/10 blur-2xl" />
+              </div>
+              <div className="ih-reveal">
+                <div className="relative flex items-center justify-between mb-1">
+                  <h2 className="text-[13px] font-black text-slate-800 flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-amber-500" />Upcoming Holidays
+                  </h2>
                 </div>
-              );
-            })()}
+                <p className="relative text-[10.5px] text-slate-400 font-medium mb-3">
+                  Check the special (exceptional) holidays for your zone.
+                </p>
+              </div>
+
+              <div ref={zoneMenuRef} className="relative mb-3">
+                <button type="button" onClick={() => setZoneMenuOpen(o => !o)}
+                  className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg ring-1 transition-colors
+                    ${zoneMenuOpen ? 'bg-amber-100/70 ring-amber-300' : 'bg-amber-50/60 ring-amber-100 hover:bg-amber-100/50'}`}>
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 flex-shrink-0">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500" />Your Zone
+                  </span>
+                  <span className="flex items-center gap-1 min-w-0">
+                    <span className="text-[11px] font-black text-slate-700 truncate">{selectedZone.label}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-amber-500 flex-shrink-0 transition-transform duration-200 ${zoneMenuOpen ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+
+                {zoneMenuOpen && (
+                  <div className="ih-pop-in absolute right-0 top-[calc(100%+6px)] z-20 w-64 max-h-72 overflow-y-auto ih-scroll-clean
+                                  rounded-xl bg-white border border-slate-200 shadow-[0_20px_45px_-15px_rgba(0,0,0,.25)] p-1.5">
+                    {STATE_HOLIDAYS_2026.map(g => {
+                      const active = g.id === holidayStateId;
+                      return (
+                        <button key={g.id} type="button"
+                          onClick={() => { setHolidayStateId(g.id); setZoneMenuOpen(false); }}
+                          className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-left text-[12px] font-bold transition-colors
+                            ${active ? 'bg-amber-50 text-amber-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+                          <span className="truncate">{g.label}</span>
+                          {active && <CheckCircle2 className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {visibleHolidays.length > 0 ? (
+                <div className="relative flex items-stretch gap-2">
+                  <button onClick={() => setHolidayWindowStart(s => Math.max(0, s - 1))}
+                    disabled={holidayWindowStart === 0}
+                    className="w-5 flex-shrink-0 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <div key={`${holidayStateId}-${holidayWindowStart}`} className="ih-fade flex-1 grid grid-cols-3 gap-1.5 min-w-0">
+                    {visibleHolidays.map(h => (
+                      <div key={h.date + h.name} className="flex flex-col items-center text-center rounded-lg bg-slate-50 ring-1 ring-slate-100 px-1.5 py-2.5">
+                        <p className="text-[13px] font-black text-amber-600 leading-none">{h.dateObj.getDate()} {h.dateObj.toLocaleDateString(undefined, { month: 'short' })}</p>
+                        <p className="text-[10.5px] font-bold text-slate-700 leading-tight mt-1.5 line-clamp-2">{h.name}</p>
+                        <span className={`mt-1.5 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wide ring-1
+                          ${h.type === 'National' ? 'text-amber-600 bg-amber-50 ring-amber-200' : 'text-sky-600 bg-sky-50 ring-sky-200'}`}>
+                          {h.type === 'National' ? 'National' : 'State Special'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => setHolidayWindowStart(s => Math.min(upcomingStateHolidays.length - HOLIDAY_CARD_COUNT, s + 1))}
+                    disabled={holidayWindowStart + HOLIDAY_CARD_COUNT >= upcomingStateHolidays.length}
+                    className="w-5 flex-shrink-0 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <p className="relative text-[11px] text-slate-400 text-center py-3">No more holidays left in this zone for 2026.</p>
+              )}
+
+              <p className="relative flex items-start gap-1.5 text-[9.5px] text-slate-400 mt-3.5 leading-snug">
+                <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                Different zones may have different holidays — pick yours above to see its list.
+              </p>
+            </div>
 
             {/* The holiday list is a published calendar year, hand-maintained
                 (see HOLIDAYS_2026). Once the last one passes, the card used to
@@ -1438,7 +1505,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                     View all
                   </button>
                 </div>
-                <p className="text-[9px] text-slate-300 mb-2.5">Sample data — not yet connected to a real careers feed</p>
+                <p className="text-[9px] text-slate-300 mb-2.5">Top roles by open seats — {VACANCY_LISTINGS.length} positions in total</p>
                 <div className="flex-1 flex flex-col justify-evenly gap-1">
                   {SAMPLE_VACANCIES.map(v => (
                     <div key={v.title} className="flex items-center gap-2.5 rounded-lg hover:bg-slate-50 p-1 transition-colors">

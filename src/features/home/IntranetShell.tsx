@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
-  LayoutDashboard, Briefcase, HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown,
+  HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown,
   CheckCircle2, Clock, AlertTriangle,
 } from 'lucide-react';
 import {
@@ -363,22 +363,6 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                        ${collapsed ? 'justify-center' : ''}`}>
             <HomeIcon className="w-4 h-4 flex-shrink-0" />{!collapsed && 'Home'}
           </button>
-
-          {!collapsed && <p className="px-2.5 pt-3 pb-1.5 text-[9px] font-bold text-amber-100/40 uppercase tracking-widest">Workspace</p>}
-          <button onClick={() => go('home')} title="Dashboard"
-            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold mb-0.5 transition-all
-                       text-amber-50/80 hover:bg-white/10 hover:text-white ${collapsed ? 'justify-center' : ''}`}>
-            <LayoutDashboard className="w-3.5 h-3.5 flex-shrink-0" />{!collapsed && 'Dashboard'}
-          </button>
-          {/* Not a real route yet — kept visibly non-interactive (same
-              cursor-not-allowed/"Soon" treatment as the Resources items
-              below) rather than wiring it to a page that doesn't exist. */}
-          <div title="My Workspace — not built yet"
-            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-semibold mb-0.5
-                       text-amber-100/50 cursor-not-allowed opacity-60 ${collapsed ? 'justify-center' : 'justify-between'}`}>
-            <span className="flex items-center gap-2.5"><Briefcase className="w-3.5 h-3.5 flex-shrink-0" />{!collapsed && 'My Workspace'}</span>
-            {!collapsed && <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/20 text-amber-100/60">Soon</span>}
-          </div>
 
           {!collapsed && <p className="px-2.5 pt-4 pb-1.5 text-[9px] font-bold text-amber-100/40 uppercase tracking-widest">Tools</p>}
           {VISIBLE_GROUPS.map(group => {
