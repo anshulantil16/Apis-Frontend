@@ -42,6 +42,11 @@ export function ArrearsPage() {
   const [batchId, setBatchId] = useState('');
   const [batch, setBatch] = useState<Batch | null>(null);
   const [letters, setLetters] = useState<Letter[]>([]);
+  /* The server caps what it sends. `total` is how many actually exist, which
+     is a different number once a couple of batches have run - and the one the
+     delete endpoint checks the typed confirmation against. */
+  const [total, setTotal] = useState(0);
+  const [truncated, setTruncated] = useState(false);
   const [q, setQ] = useState('');
   const [clearing, setClearing] = useState(false);
   const [confirmCount, setConfirmCount] = useState('');
@@ -52,6 +57,8 @@ export function ArrearsPage() {
       const r = await fetch(`${API}/history/`);
       const d = await r.json();
       setLetters(d.letters || []);
+      setTotal(d.total ?? (d.letters || []).length);
+      setTruncated(!!d.truncated);
     } catch { /* the table just stays as it was */ }
   }, []);
 
@@ -272,7 +279,10 @@ export function ArrearsPage() {
       <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 flex-wrap">
           <h2 className="text-base font-black text-slate-800">Generated statements</h2>
-          <span className="text-[12px] font-bold text-slate-400">{shown.length} of {letters.length}</span>
+          <span className="text-[12px] font-bold text-slate-400">
+            {shown.length} of {letters.length}
+            {truncated && <span className="text-amber-600"> · newest {letters.length} of {total} loaded</span>}
+          </span>
           <div className="relative ml-auto">
             <Search className="w-4 h-4 text-slate-300 absolute left-3 top-1/2 -translate-y-1/2" />
             <input value={q} onChange={e => setQ(e.target.value)}
@@ -295,13 +305,19 @@ export function ArrearsPage() {
 
         {clearing && (
           <div className="px-5 py-4 bg-rose-50 border-b border-rose-100">
+            {/* The number to type is how many EXIST, not how many are on
+                screen. The server checks the typed count against its own
+                total, so once the history passed the load cap this dialog
+                asked for a number the server would always reject - making
+                Clear impossible to complete rather than merely confusing. */}
             <p className="text-[13px] font-bold text-rose-800 mb-2">
-              This deletes all {letters.length} statement{letters.length === 1 ? '' : 's'} and
-              their PDFs. Type <b>{letters.length}</b> to confirm.
+              This deletes all {total} statement{total === 1 ? '' : 's'} and
+              their PDFs{truncated ? ', including the ones not listed below' : ''}.
+              Type <b>{total}</b> to confirm.
             </p>
             <div className="flex gap-2 flex-wrap">
               <input value={confirmCount} onChange={e => setConfirmCount(e.target.value)}
-                placeholder={String(letters.length)}
+                placeholder={String(total)}
                 className="w-28 border-2 border-rose-200 focus:border-rose-400 rounded-lg px-3 py-2
                            text-[13px] outline-none" />
               <button onClick={clearAll}

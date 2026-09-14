@@ -16,22 +16,10 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
   const [expandedZone, setExpandedZone] = useState<Record<string, boolean>>({});
   const [expandedDesignation, setExpandedDesignation] = useState<Record<string, boolean>>({});
 
-  if (!rawData || !rawData.filter_options || !rawData.summary) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-3xl flex items-center justify-center mb-4 mx-auto">
-            <Globe className="w-10 h-10 text-indigo-500" />
-          </div>
-          <p className="text-lg font-bold text-slate-900">Ready to Explore</p>
-          <p className="text-sm text-slate-500 mt-1">Upload your territory data to begin</p>
-        </div>
-      </div>
-    );
-  }
+  const ready = !!(rawData && rawData.filter_options && rawData.summary);
 
   const filtered = useMemo(() => {
-    let records = rawData.data || [];
+    let records = (ready && rawData.data) || [];
     if (selectedDesignations.size > 0) records = records.filter(r => selectedDesignations.has(r.designation));
     if (selectedStates.size > 0) records = records.filter(r => selectedStates.has(r.state));
     if (selectedZones.size > 0) records = records.filter(r => selectedZones.has(r.zone));
@@ -57,6 +45,26 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
     });
     return { rmCount, zoneCount, designationCount };
   }, [filtered]);
+
+  // Every hook above runs on every render, then the empty state is returned
+  // from here rather than from an early return above them. React counts hooks
+  // by call order: the old early return meant 8 hooks without data and 10
+  // with, so a failed territory upload followed by a successful one - no
+  // remount in between - crashed the whole page with "rendered more hooks
+  // than during the previous render".
+  if (!ready) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-3xl flex items-center justify-center mb-4 mx-auto">
+            <Globe className="w-10 h-10 text-indigo-500" />
+          </div>
+          <p className="text-lg font-bold text-slate-900">Ready to Explore</p>
+          <p className="text-sm text-slate-500 mt-1">Upload your territory data to begin</p>
+        </div>
+      </div>
+    );
+  }
 
   const toggleFilter = (set: Set<string>, value: string) => {
     const newSet = new Set(set);
