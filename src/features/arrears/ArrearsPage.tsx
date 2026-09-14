@@ -134,8 +134,19 @@ export function ArrearsPage() {
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Step 1</p>
             <h2 className="text-base font-black text-slate-800 mt-0.5">Get the template</h2>
             <p className="text-[13px] text-slate-500 mt-1 max-w-xl">
-              One row per employee. The blue columns are required; the green ones are the
-              arrears amounts. The example row is skipped on upload, so you can leave it.
+              Three sheets. <b>Arrears</b> is one row per employee — the blue columns are
+              required. <b>Master</b> is each component's salary before and after the
+              revision. <b>Monthly</b> is one row per employee per month, with what was
+              actually earned old and new.
+            </p>
+            {/* Said here rather than discovered after a batch has gone out: the
+                monthly sheet is what produces the distribution page, and every
+                total is worked out from it rather than typed a second time. */}
+            <p className="text-[12.5px] text-slate-400 mt-2 max-w-xl">
+              Fill Monthly and each letter gets a month-wise distribution page, with the
+              difference and every total worked out for you. Leave it empty and you get
+              the single-page summary exactly as before. The example rows are skipped on
+              upload, so you can leave them in.
             </p>
           </div>
           <a href={`${API}/template/`}
