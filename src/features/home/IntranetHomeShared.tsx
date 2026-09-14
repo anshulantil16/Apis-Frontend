@@ -9,7 +9,7 @@ import { portalFetch } from '../portal/session';
 import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
-  LifeBuoy, Globe2, CalendarClock, Landmark,
+  LifeBuoy, Globe2, CalendarClock, Landmark, Database,
   Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp,
 } from 'lucide-react';
 
@@ -493,6 +493,25 @@ export const APIS_GLANCE = [
   { label: 'Years in Business', value: '100+', sub: 'Since 1924', trend: null, trendUp: null, icon: CalendarClock, ring: 'ring-sky-200', soft: 'bg-sky-50', accent: 'text-sky-600' },
   { label: 'Global Presence', value: '6 Regions', sub: 'EU · USA · Canada · SEA · Africa · ME', trend: null, trendUp: null, icon: Globe2, ring: 'ring-cyan-200', soft: 'bg-cyan-50', accent: 'text-cyan-600' },
   { label: 'Publicly Listed', value: 'BSE 506166', sub: 'Ticker: APIS', trend: null, trendUp: null, icon: Landmark, ring: 'ring-indigo-200', soft: 'bg-indigo-50', accent: 'text-indigo-600' },
+];
+
+/* External company platforms an employee actually needs to jump to from the
+   home page — real destinations, not sample data. `href: null` (ERP) means
+   the link hasn't been provided yet, so the card renders visibly but
+   non-clickable ("Coming soon") rather than pointing nowhere. Hospital List
+   opens a browsable page (ProviderNetwork.html, generated from the real
+   ProviderNetwork.xls — that file is actually an HTML export saved with an
+   .xls extension, which browsers can only download, not render) — the raw
+   file is still one click away from inside that page. */
+export interface QuickPortal {
+  label: string; sub: string; href: string | null; download?: boolean;
+  icon: ComponentType<SVGProps<SVGSVGElement>>; ring: string; soft: string; accent: string;
+}
+export const QUICK_PORTALS: QuickPortal[] = [
+  { label: 'Pocket HRMS', sub: 'Access your HR services, leave & attendance', href: 'https://ess.pockethrms.com/', icon: Users, ring: 'ring-amber-200', soft: 'bg-amber-50', accent: 'text-amber-600' },
+  { label: 'Bizom', sub: 'Track sales, orders & market data in real time', href: 'https://apisindia.bizom.in', icon: BarChart3, ring: 'ring-emerald-200', soft: 'bg-emerald-50', accent: 'text-emerald-600' },
+  { label: 'Hospital List', sub: 'View list of Hospitals associated with APIS', href: '/hospital_list/ProviderNetwork.html', icon: Building2, ring: 'ring-rose-200', soft: 'bg-rose-50', accent: 'text-rose-600' },
+  { label: 'ERP', sub: 'Manage your enterprise resources & operations', href: 'https://erp.apisindia.com/APISLIVE25/SignIn?ReturnUrl=%2FAPISLIVE25%2F', icon: Database, ring: 'ring-violet-200', soft: 'bg-violet-50', accent: 'text-violet-600' },
 ];
 
 /* Scrolling ticker strip above the home page hero. Same "static,

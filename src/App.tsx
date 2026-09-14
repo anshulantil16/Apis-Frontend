@@ -26,6 +26,7 @@ const SalesIQPage = lazy(() => import('./features/salesiq').then(m => ({ default
 const RoomPulsePage = lazy(() => import('./features/roompulse').then(m => ({ default: m.RoomPulsePage })));
 const ApisTreePage = lazy(() => import('./features/tree').then(m => ({ default: m.ApisTreePage })));
 const PoliciesPage = lazy(() => import('./features/policies').then(m => ({ default: m.PoliciesPage })));
+const ApisWallPage = lazy(() => import('./features/wall').then(m => ({ default: m.ApisWallPage })));
 /* Straight at the file, not the barrel: PortalGate is imported eagerly from
    './features/portal' below, so going through the barrel here would pull
    AdminConsole into the entry chunk anyway and the lazy() would buy nothing. */
@@ -40,7 +41,7 @@ import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHome
 import { PortalGate } from './features/portal/PortalGate';
 import type { PortalUser } from './features/portal/session';
 
-type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'admin-console';
+type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'apis-wall' | 'admin-console';
 
 /* Header caption per view. The shell renders the sidebar and header for every
    screen, so tools never draw their own top-level chrome. */
@@ -59,6 +60,7 @@ const VIEW_META: Record<AppView, { title: string; subtitle: string }> = {
   'roompulse':       { title: 'AdminPulse',          subtitle: 'Admin Requests & Facilities' },
   'apis-tree':       { title: 'APIS Tree',           subtitle: 'Organisation Structure' },
   'policies':        { title: 'Policies',            subtitle: 'Policies & Guidelines' },
+  'apis-wall':       { title: 'APIS Wall',            subtitle: 'Moments & Memories' },
   'admin-console':   { title: 'Administrator',       subtitle: 'People, Access & Master Data' },
 };
 
@@ -212,6 +214,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
         <ApisTreePage />
       ) : view === 'policies' ? (
         <PoliciesPage />
+      ) : view === 'apis-wall' ? (
+        <ApisWallPage />
       ) : view === 'goal-setting' ? (
         <GoalSettingPage onNavigateBack={() => navigate('home')} />
       ) : (

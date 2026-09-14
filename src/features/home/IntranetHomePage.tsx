@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
-  ArrowUpRight, Minus, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
+  ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
-  Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag,
+  Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, SAMPLE_VACANCIES, VACANCY_LISTINGS,
-  OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
+  OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, QUICK_PORTALS, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
   useCelebrations, useTicker, ANNOUNCEMENTS, STATE_HOLIDAYS_2026,
   getRecentToolsWithTime, formatRelativeTime,
+  type VacancyListing,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
 } from './IntranetHomeShared';
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
@@ -94,41 +95,6 @@ import { onSpotlightMove, onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 /* Counts up to `target` once the element is on screen. Static numbers read as
    dead; a number that ticks up reads as live data. */
-function useCountUp(target: number, run: boolean, durationMs = 1400) {
-  const [v, setV] = useState(0);
-  useEffect(() => {
-    if (!run) return;
-    let raf = 0; const start = performance.now();
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / durationMs);
-      setV(target * (1 - Math.pow(1 - p, 3)));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, run, durationMs]);
-  return v;
-}
-
-/* Splits "₹390.51 Cr" into prefix/number/suffix so only the numeric part
-   animates. Returns null when there's no number to count (e.g. "BSE 506166"
-   is an identifier, not a quantity — animating it would be nonsense). */
-function splitNumeric(value: string): { pre: string; num: number; post: string; decimals: number } | null {
-  const m = value.match(/^([^\d]*)([\d,]+(?:\.\d+)?)(.*)$/);
-  if (!m) return null;
-  const raw = m[2].replace(/,/g, '');
-  const num = parseFloat(raw);
-  if (!isFinite(num)) return null;
-  return { pre: m[1], num, post: m[3], decimals: (raw.split('.')[1] || '').length };
-}
-
-function AnimatedValue({ value, run }: { value: string; run: boolean }) {
-  const parts = splitNumeric(value);
-  const live = useCountUp(parts?.num ?? 0, run && !!parts);
-  if (!parts) return <>{value}</>;
-  return <>{parts.pre}{live.toFixed(parts.decimals)}{parts.post}</>;
-}
-
 /* Small pine-tree silhouette, scattered along the foreground ridge. */
 function PineTree({ x, scale = 1, fill }: { x: number; scale?: number; fill: string }) {
   return (
@@ -445,8 +411,44 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
    NewJoinersPopup, with the opening-count badge scaled up to match, plus a
    second tab holding the full referral form (ReferralFormPopup.tsx) that
    the "Employee Referral Form" button switches into. */
+const VACANCY_FUNCTIONS = ['Sales', 'Factory', 'HO'];
+const vacFieldCls = 'w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-[13px] text-slate-800 ' +
+  'placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10 transition-all';
+const vacFieldLabelCls = 'block text-[11.5px] font-bold text-slate-600 mb-1.5';
+
 function VacanciesPopup({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<'vacancies' | 'referral'>('vacancies');
+  const [vacancies, setVacancies] = useState<VacancyListing[]>(VACANCY_LISTINGS);
+  const [addVacancyOpen, setAddVacancyOpen] = useState(false);
+  const [newType, setNewType] = useState<'New' | 'Replacement'>('New');
+
+  function handleAddVacancy(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const get = (k: string) => String(fd.get(k) ?? '').trim();
+    const listing: VacancyListing = {
+      title: get('title'), function: get('function'), department: get('department'),
+      grade: get('grade'), location: get('location'), state: get('state'),
+      reportingManager: get('reportingManager'), type: newType,
+      experience: get('experience'), education: get('education'), status: 'Active',
+    };
+    if (!listing.title || !listing.location) return;
+    setVacancies(prev => [listing, ...prev]);
+    setAddVacancyOpen(false);
+    setNewType('New');
+    e.currentTarget.reset();
+  }
+
+  // HR toggling a seat closed once it's filled — flips status rather than
+  // deleting the row, so a closed position stays visible (greyed out) as a
+  // record instead of just vanishing from the list.
+  function toggleVacancyStatus(index: number) {
+    setVacancies(prev => prev.map((v, i) => i === index ? { ...v, status: v.status === 'Active' ? 'Closed' : 'Active' } : v));
+  }
+
+  const openCount = vacancies.filter(v => v.status === 'Active').length;
+  const closedCount = vacancies.length - openCount;
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
@@ -460,7 +462,8 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {tab === 'referral' ? 'Refer a candidate and help us build a stronger team.'
-                : `${VACANCY_LISTINGS.length} open positions across the current hiring plan`}
+                : closedCount > 0 ? `${openCount} open · ${closedCount} closed, out of ${vacancies.length} positions`
+                : `${openCount} open positions across the current hiring plan`}
             </p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
@@ -468,52 +471,76 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-5 px-6 border-b border-slate-100">
-          {([
-            { id: 'referral' as const, label: 'Referral Form' },
-            { id: 'vacancies' as const, label: 'Available Vacancies' },
-          ]).map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`py-3 text-[12.5px] font-black border-b-2 transition-colors ${
-                tab === t.id ? 'text-amber-600 border-amber-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
-              {t.label}
+        <div className="flex items-center justify-between gap-3 px-6 border-b border-slate-100">
+          <div className="flex items-center gap-5">
+            {([
+              { id: 'referral' as const, label: 'Referral Form' },
+              { id: 'vacancies' as const, label: 'Available Vacancies' },
+            ]).map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`py-3 text-[12.5px] font-black border-b-2 transition-colors ${
+                  tab === t.id ? 'text-amber-600 border-amber-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {tab === 'vacancies' && (
+            <button onClick={() => setAddVacancyOpen(true)}
+              className="ih-sheen flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600
+                text-white text-[11.5px] font-black shadow-sm transition-colors shrink-0">
+              <Plus className="w-3.5 h-3.5" />Add Vacancy
             </button>
-          ))}
+          )}
         </div>
 
         {tab === 'vacancies' ? (
           <div className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-              {VACANCY_LISTINGS.map((v, i) => (
-                <div key={`${v.title}-${v.location}-${i}`}
-                  className="rounded-xl border border-slate-200 hover:border-amber-300 hover:shadow-sm transition-all p-3.5">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-[13px] font-black text-slate-800 leading-tight">{v.title}</p>
-                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0
-                                     text-emerald-600 bg-emerald-50 ring-emerald-200">
-                      {v.status}
-                    </span>
+              {vacancies.map((v, i) => {
+                const closed = v.status !== 'Active';
+                return (
+                  <div key={`${v.title}-${v.location}-${i}`}
+                    className={`rounded-xl border transition-all p-3.5 ${
+                      closed ? 'border-slate-100 bg-slate-50/60 opacity-70' : 'border-slate-200 hover:border-amber-300 hover:shadow-sm'}`}>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className={`text-[13px] font-black leading-tight ${closed ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-800'}`}>
+                        {v.title}
+                      </p>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0 ${
+                        closed ? 'text-slate-400 bg-slate-100 ring-slate-200' : 'text-emerald-600 bg-emerald-50 ring-emerald-200'}`}>
+                        {v.status}
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-400 font-semibold mb-2 truncate">{v.department} · {v.function}</p>
+                    <div className="flex items-center gap-1.5 text-[11.5px] text-slate-600 font-bold mb-2">
+                      <MapPin className="w-3 h-3 text-amber-500 flex-shrink-0" />{v.location}, {v.state}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-50 ring-1 ring-slate-100 text-[10px] font-bold text-slate-500">
+                        Grade {v.grade}
+                      </span>
+                      <span className={`px-1.5 py-0.5 rounded-md ring-1 text-[10px] font-bold
+                        ${v.type === 'New' ? 'bg-sky-50 ring-sky-100 text-sky-600' : 'bg-amber-50 ring-amber-100 text-amber-600'}`}>
+                        {v.type}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-50 ring-1 ring-slate-100 text-[10px] font-bold text-slate-500">
+                        {v.experience}
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-400 truncate" title={v.education}>{v.education}</p>
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      <p className="text-[10px] text-slate-300">Reporting to {v.reportingManager}</p>
+                      <button type="button" onClick={() => toggleVacancyStatus(i)}
+                        title={closed ? 'Reopen this vacancy' : 'Mark this vacancy as closed/filled'}
+                        className={`flex items-center gap-1 text-[10px] font-black shrink-0 transition-colors ${
+                          closed ? 'text-emerald-600 hover:text-emerald-700' : 'text-rose-500 hover:text-rose-600'}`}>
+                        {closed ? <RotateCcw className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                        {closed ? 'Reopen Vacancy' : 'Close Vacancy'}
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-[10.5px] text-slate-400 font-semibold mb-2 truncate">{v.department} · {v.function}</p>
-                  <div className="flex items-center gap-1.5 text-[11.5px] text-slate-600 font-bold mb-2">
-                    <MapPin className="w-3 h-3 text-amber-500 flex-shrink-0" />{v.location}, {v.state}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    <span className="px-1.5 py-0.5 rounded-md bg-slate-50 ring-1 ring-slate-100 text-[10px] font-bold text-slate-500">
-                      Grade {v.grade}
-                    </span>
-                    <span className={`px-1.5 py-0.5 rounded-md ring-1 text-[10px] font-bold
-                      ${v.type === 'New' ? 'bg-sky-50 ring-sky-100 text-sky-600' : 'bg-amber-50 ring-amber-100 text-amber-600'}`}>
-                      {v.type}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded-md bg-slate-50 ring-1 ring-slate-100 text-[10px] font-bold text-slate-500">
-                      {v.experience}
-                    </span>
-                  </div>
-                  <p className="text-[10.5px] text-slate-400 truncate" title={v.education}>{v.education}</p>
-                  <p className="text-[10px] text-slate-300 mt-1">Reporting to {v.reportingManager}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Referral CTA — every open role is a reminder that referrals are
@@ -538,9 +565,106 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         ) : (
-          <ReferralForm onCancel={() => setTab('vacancies')} />
+          <ReferralForm onCancel={() => setTab('vacancies')} vacancies={vacancies} />
         )}
       </div>
+
+      {/* Add Vacancy — client-side only, same as this array's source data
+          (VACANCY_LISTINGS is a static hiring-plan snapshot, not a live ATS
+          feed); a new opening is added to this popup's own state and shows
+          up in the list immediately, but won't survive a page reload until
+          a real vacancies backend exists. */}
+      {addVacancyOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center px-4"
+          onClick={() => setAddVacancyOpen(false)}>
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
+          <form onClick={e => e.stopPropagation()} onSubmit={handleAddVacancy}
+            className="ih-pop-in relative w-full max-w-md max-h-[85vh] overflow-y-auto ih-scroll-clean flex flex-col
+                       rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+              <p className="text-[14px] font-black text-slate-900 flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-amber-500" />Add Vacancy
+              </p>
+              <button type="button" onClick={() => setAddVacancyOpen(false)} title="Close"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <div>
+                <label className={vacFieldLabelCls}>Position Title <span className="text-rose-500">*</span></label>
+                <input name="title" required placeholder="e.g. Territory Sales Executive" className={vacFieldCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={vacFieldLabelCls}>Function <span className="text-rose-500">*</span></label>
+                  <select name="function" required defaultValue="" className={vacFieldCls}>
+                    <option value="" disabled>Select function</option>
+                    {VACANCY_FUNCTIONS.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={vacFieldLabelCls}>Department <span className="text-rose-500">*</span></label>
+                  <input name="department" required placeholder="e.g. SALES (GT)" className={vacFieldCls} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={vacFieldLabelCls}>HQ Location <span className="text-rose-500">*</span></label>
+                  <input name="location" required placeholder="e.g. Jaipur" className={vacFieldCls} />
+                </div>
+                <div>
+                  <label className={vacFieldLabelCls}>State <span className="text-rose-500">*</span></label>
+                  <input name="state" required placeholder="e.g. Rajasthan" className={vacFieldCls} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={vacFieldLabelCls}>Grade</label>
+                  <input name="grade" placeholder="e.g. O4" className={vacFieldCls} />
+                </div>
+                <div>
+                  <label className={vacFieldLabelCls}>Experience</label>
+                  <input name="experience" placeholder="e.g. 2-6 Yrs" className={vacFieldCls} />
+                </div>
+              </div>
+              <div>
+                <label className={vacFieldLabelCls}>Reporting Manager</label>
+                <input name="reportingManager" placeholder="Enter reporting manager name" className={vacFieldCls} />
+              </div>
+              <div>
+                <label className={vacFieldLabelCls}>Education Required</label>
+                <input name="education" placeholder="e.g. Graduate" className={vacFieldCls} />
+              </div>
+              <div>
+                <label className={vacFieldLabelCls}>Opening Type</label>
+                <div className="flex gap-2">
+                  {(['New', 'Replacement'] as const).map(t => (
+                    <button key={t} type="button" onClick={() => setNewType(t)}
+                      className={`flex-1 px-3 py-2 rounded-lg border text-[12px] font-bold transition-all ${
+                        newType === t ? 'text-amber-700 border-amber-300 bg-amber-50' : 'text-slate-500 border-slate-200 bg-white hover:border-slate-300'}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-slate-100 bg-slate-50">
+              <button type="button" onClick={() => setAddVacancyOpen(false)}
+                className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all">
+                Cancel
+              </button>
+              <button type="submit"
+                className="ih-sheen inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600
+                           hover:from-amber-600 hover:to-orange-700 text-white text-[13px] font-black shadow-md shadow-amber-200 transition-all">
+                <Plus className="w-4 h-4" />Add Vacancy
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
@@ -753,21 +877,6 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
 
   const [factIndex, setFactIndex] = useState(0);
   const [milestoneIndex, setMilestoneIndex] = useState(0);
-  const [statsVisible, setStatsVisible] = useState(false);
-  const statsRef = useRef<HTMLDivElement>(null);
-
-
-  // Only start the stat count-up once the strip is actually on screen.
-  useEffect(() => {
-    const el = statsRef.current;
-    if (!el || !('IntersectionObserver' in window)) { setStatsVisible(true); return; }
-    const io = new IntersectionObserver(
-      ([en]) => { if (en.isIntersecting) { setStatsVisible(true); io.disconnect(); } },
-      { threshold: 0.25 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   useEffect(() => {
     if (heroSlideCount < 2) return;
@@ -928,36 +1037,49 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
               )}
             </div>
 
-            {/* APIS at a glance — real, publicly-reported figures (BSE: 506166) */}
+            {/* APIS at a glance — quick jump-off points to the real external
+                platforms employees actually use day to day, not company
+                stats (those still live in APIS_GLANCE, feeding the "Did you
+                know" ticker). ERP's href is null until that link is
+                provided, so its card renders as a visible "Coming soon"
+                rather than a dead link. */}
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">APIS at a Glance</h2>
-                <span className="text-[10px] font-bold text-slate-300">Public filings · FY 2025-26</span>
+                <span className="text-[10px] font-bold text-slate-300">Quick access</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {APIS_GLANCE.map((s, i) => {
-                  const Icon = s.icon;
-                  return (
-                    <div key={s.label} onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
-                      className="ih-inview ih-tilt3d ih-spotlight ih-sweep relative rounded-2xl bg-white border border-slate-200 p-4 shadow-sm overflow-hidden text-center"
-                      style={{ transitionDelay: `${i * 60}ms` }}>
-                      <div className="ih-float mx-auto w-11 h-11 rounded-full bg-amber-50 ring-4 ring-amber-50 flex items-center justify-center mb-2.5"
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {QUICK_PORTALS.map((p, i) => {
+                  const Icon = p.icon;
+                  const inner = (
+                    <>
+                      <div className={`ih-float w-11 h-11 rounded-xl ${p.soft} ring-4 ${p.ring} flex items-center justify-center
+                                       flex-shrink-0 transition-transform duration-300 group-hover:scale-110`}
                         style={{ animationDelay: `${i * 300}ms` }}>
-                        <Icon className="w-5 h-5 text-amber-500" />
+                        <Icon className={`w-5 h-5 ${p.accent}`} />
                       </div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{s.label}</p>
-                      <p className="text-base font-black text-slate-900 leading-tight mt-1 tabular-nums">
-                        <AnimatedValue value={s.value} run={statsVisible} />
-                      </p>
-                      {s.trend ? (
-                        <p className={`inline-flex items-center gap-0.5 text-[10px] font-bold mt-1.5 ${
-                          s.trendUp === true ? 'text-emerald-600' : s.trendUp === false ? 'text-rose-600' : 'text-slate-400'}`}>
-                          {s.trendUp === true ? <ArrowUpRight className="w-3 h-3" /> : s.trendUp === false ? null : <Minus className="w-3 h-3" />}
-                          {s.trend}
-                        </p>
-                      ) : (
-                        <p className="text-[10px] text-slate-400 mt-1.5">{s.sub}</p>
-                      )}
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-black text-slate-900 leading-tight">{p.label}</p>
+                        <p className="text-[10.5px] text-slate-400 leading-snug mt-1">{p.sub}</p>
+                      </div>
+                    </>
+                  );
+                  const cardCls = `ih-inview ih-tilt3d ih-spotlight ih-sweep group relative rounded-2xl bg-white border
+                    border-slate-200 p-4 shadow-sm overflow-hidden flex items-start gap-3 text-left transition-all
+                    ${p.href ? 'hover:border-amber-300 hover:shadow-lg hover:-translate-y-0.5' : 'opacity-70'}`;
+                  return p.href ? (
+                    <a key={p.label} href={p.href} {...(p.download ? { download: true } : { target: '_blank', rel: 'noopener noreferrer' })}
+                      onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+                      className={cardCls} style={{ transitionDelay: `${i * 60}ms` }}>
+                      {inner}
+                    </a>
+                  ) : (
+                    <div key={p.label} title="Link coming soon" onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+                      className={cardCls} style={{ transitionDelay: `${i * 60}ms` }}>
+                      {inner}
+                      <span className="absolute top-2.5 right-2.5 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-400">
+                        Soon
+                      </span>
                     </div>
                   );
                 })}

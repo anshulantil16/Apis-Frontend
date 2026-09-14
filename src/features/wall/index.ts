@@ -1,0 +1,1 @@
+export { ApisWallPage } from './ApisWallPage';

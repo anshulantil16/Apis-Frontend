@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
-  HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown,
+  HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images,
   CheckCircle2, Clock, AlertTriangle,
 } from 'lucide-react';
 import {
@@ -38,7 +38,7 @@ const NOTIF_TONE: Record<HeaderNotification['tone'], string> = {
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
    sub-views that live under a parent tool (approvals sits under letters). */
-export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies' | 'admin-console';
+export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies' | 'apis-wall' | 'admin-console';
 
 interface Props {
   active: ShellView;
@@ -431,6 +431,14 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                              ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
                              : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
                 <ShieldCheck className="w-3.5 h-3.5" />Policies & Guidelines
+              </button>
+
+              <button onClick={() => go('apis-wall')} title="APIS Wall"
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
+                           ${active === 'apis-wall'
+                             ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
+                             : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
+                <Images className="w-3.5 h-3.5" />APIS Wall
               </button>
 
               {/* These are genuinely not built yet. They're dimmed and

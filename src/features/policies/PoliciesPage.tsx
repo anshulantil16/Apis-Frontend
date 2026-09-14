@@ -81,11 +81,11 @@ interface CategoryCard {
    sidebar stay the dominant mustard/amber so the page still reads as one
    theme, this is just per-category variety within it. */
 const CATEGORY_CARDS: CategoryCard[] = [
-  { label: 'SOP', count: 6, icon: FileText, action: 'View All', gradient: 'from-amber-400 to-orange-500', glow: 'rgba(245,158,11,.4)', bar: 'bg-amber-500' },
+  { label: 'SOP', count: 0, icon: FileText, action: 'View All', gradient: 'from-amber-400 to-orange-500', glow: 'rgba(245,158,11,.4)', bar: 'bg-amber-500' },
   { label: 'Manual Policy', count: MANUAL_POLICIES.length, icon: ClipboardList, action: 'Browse', gradient: 'from-amber-400 to-yellow-600', glow: 'rgba(217,119,6,.4)', bar: 'bg-yellow-500' },
-  { label: 'Templates', count: 206, icon: LayoutTemplate, action: 'Browse', gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.4)', bar: 'bg-cyan-500' },
-  { label: 'Work Instructions', count: 3, icon: ListChecks, action: 'View All', gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.4)', bar: 'bg-emerald-500' },
-  { label: 'Formats', count: 10, icon: FileStack, action: 'Browse', gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.4)', bar: 'bg-rose-500' },
+  { label: 'Templates', count: 0, icon: LayoutTemplate, action: 'Browse', gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.4)', bar: 'bg-cyan-500' },
+  { label: 'Work Instructions', count: 0, icon: ListChecks, action: 'View All', gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.4)', bar: 'bg-emerald-500' },
+  { label: 'Formats', count: 0, icon: FileStack, action: 'Browse', gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.4)', bar: 'bg-rose-500' },
 ];
 /* Every category a policy can be filed under — drives both the demo cards
    above and the Add Policy form's category select, so the two can't drift. */
@@ -110,17 +110,17 @@ interface PolicyRow {
    the register already used before real files existed. */
 const POLICY_ROWS: PolicyRow[] = MANUAL_POLICIES.map((doc, i) => {
   const meta = [
-    { pages: 9, version: 1, approvedBy: 'Mr. Vimal Anand', approvalDate: '12/3', reviewedBy: 'Mr. Pankaj', department: 'P & C' },
-    { pages: 5, version: 1, approvedBy: 'Mr. Amit Anand', approvalDate: '1/1', reviewedBy: 'Mr. Arun', department: 'P & C' },
-    { pages: 13, version: 1, approvedBy: 'Mr. Vimal Anand', approvalDate: '6/4', reviewedBy: 'Mr. Pankaj', department: 'P & C' },
-    { pages: 5, version: 2, approvedBy: 'Mr. Amit Anand', approvalDate: '15/6', reviewedBy: 'Mr. Arun', department: 'P & C' },
-    { pages: 4, version: 1, approvedBy: 'Mr. Pankaj', approvalDate: '10/2', reviewedBy: 'Mr. Vimal Anand', department: 'Finance' },
-    { pages: 8, version: 1, approvedBy: 'Mr. Vimal Anand', approvalDate: '2/5', reviewedBy: 'Mr. Amit Anand', department: 'P & C' },
-    { pages: 3, version: 1, approvedBy: 'Mr. Arun', approvalDate: '9/1', reviewedBy: 'Mr. Pankaj', department: 'P & C' },
-    { pages: 2, version: 2, approvedBy: 'Mr. Pankaj', approvalDate: '6/6', reviewedBy: 'Mr. Amit Anand', department: 'Sales' },
-    { pages: 3, version: 1, approvedBy: 'Mr. Amit Anand', approvalDate: '20/7', reviewedBy: 'Mr. Vimal Anand', department: 'Admin' },
-    { pages: 3, version: 1, approvedBy: 'Mr. Vimal Anand', approvalDate: '4/8', reviewedBy: 'Mr. Arun', department: 'Finance' },
-    { pages: 2, version: 1, approvedBy: 'Mr. Arun', approvalDate: '18/9', reviewedBy: 'Mr. Pankaj', department: 'P & C' },
+    { pages: 9, version: 1, approvedBy: 'Vimal Anand', approvalDate: '12/3', reviewedBy: 'Pankaj', department: 'P & C' },
+    { pages: 5, version: 1, approvedBy: 'Amit Anand', approvalDate: '1/1', reviewedBy: 'Arun', department: 'P & C' },
+    { pages: 13, version: 1, approvedBy: 'Vimal Anand', approvalDate: '6/4', reviewedBy: 'Pankaj', department: 'P & C' },
+    { pages: 5, version: 2, approvedBy: 'Amit Anand', approvalDate: '15/6', reviewedBy: 'Arun', department: 'P & C' },
+    { pages: 4, version: 1, approvedBy: 'Pankaj', approvalDate: '10/2', reviewedBy: 'Vimal Anand', department: 'Finance' },
+    { pages: 8, version: 1, approvedBy: 'Vimal Anand', approvalDate: '2/5', reviewedBy: 'Amit Anand', department: 'P & C' },
+    { pages: 3, version: 1, approvedBy: 'Arun', approvalDate: '9/1', reviewedBy: 'Pankaj', department: 'P & C' },
+    { pages: 2, version: 2, approvedBy: 'Pankaj', approvalDate: '6/6', reviewedBy: 'Amit Anand', department: 'Sales' },
+    { pages: 3, version: 1, approvedBy: 'Amit Anand', approvalDate: '20/7', reviewedBy: 'Vimal Anand', department: 'Admin' },
+    { pages: 3, version: 1, approvedBy: 'Vimal Anand', approvalDate: '4/8', reviewedBy: 'Arun', department: 'Finance' },
+    { pages: 2, version: 1, approvedBy: 'Arun', approvalDate: '18/9', reviewedBy: 'Pankaj', department: 'P & C' },
   ][i];
   return { doc: doc.title, category: 'Manual Policy', file: doc.file, ...meta };
 });
@@ -577,7 +577,7 @@ export function PoliciesPage() {
               <div>
                 <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approved By (optional)</label>
                 <input value={newApprovedBy} onChange={e => setNewApprovedBy(e.target.value)}
-                  placeholder="e.g. Mr. Vimal Anand"
+                  placeholder="e.g. Vimal Anand"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
                              placeholder:text-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
               </div>
