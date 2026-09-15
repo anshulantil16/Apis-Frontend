@@ -1388,8 +1388,15 @@ function ContentTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => v
   // than in each row so only one reason box is ever open.
   const [rejecting, setRejecting] = useState<string>('');
   const [note, setNote] = useState('');
+  // The photo being looked at full size. A thumbnail is enough to spot what a
+  // photo is, not always enough to decide whether it should be on the wall.
+  const [viewing, setViewing] = useState<any>(null);
+  /* Keyed "type-id" because the queue mixes content types and an id alone is
+     not unique across them. Cleared whenever the filter changes — a selection
+     carried across a filter change acts on rows no longer on screen. */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const reload = useCallback(() => setNonce(n => n + 1), []);
+  const reload = useCallback(() => { setSelected(new Set()); setNonce(n => n + 1); }, []);
 
   useEffect(() => {
     let alive = true;
@@ -1424,6 +1431,49 @@ function ContentTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => v
       setBusy('');
     }
   }
+
+  /* One request per content type: the endpoint takes a type plus its ids, so
+     a mixed selection is several calls rather than one. */
+  async function decideMany(decision: 'approved' | 'rejected', reason = '') {
+    const byType = new Map<string, number[]>();
+    for (const key of selected) {
+      const item = data.items.find((i: any) => `${i.type}-${i.id}` === key);
+      if (!item) continue;
+      byType.set(item.type, [...(byType.get(item.type) || []), item.id]);
+    }
+    if (byType.size === 0) return;
+
+    setBusy('bulk');
+    try {
+      let total = 0;
+      for (const [type, ids] of byType) {
+        const r = await portalFetch('/admin/moderation/', {
+          method: 'POST',
+          body: JSON.stringify({ type, ids, decision, note: reason }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) total += d.updated || 0;
+        else onToast({ t: d.error || 'Could not save that', ok: false });
+      }
+      if (total) {
+        onToast({ t: `${total} item${total === 1 ? '' : 's'} ${decision === 'approved' ? 'approved' : 'rejected'}.`, ok: true });
+        reload();
+      }
+    } finally {
+      setBusy('');
+    }
+  }
+
+  function toggle(key: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  const selectable = data.items.filter((i: any) => i.status === 'pending');
+  const allSelected = selectable.length > 0 && selectable.every((i: any) => selected.has(`${i.type}-${i.id}`));
 
   const chip = (active: boolean) =>
     `px-3 py-1.5 rounded-lg text-[11.5px] font-black transition-colors ${
@@ -1477,12 +1527,60 @@ function ContentTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => v
         </div>
       ) : (
         <div className="space-y-3">
+          {selectable.length > 1 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white border border-slate-200 px-4 py-2.5">
+              <label className="flex items-center gap-2 text-[12px] font-black text-slate-600 cursor-pointer">
+                <input type="checkbox" checked={allSelected}
+                  onChange={() => setSelected(allSelected ? new Set()
+                    : new Set(selectable.map((i: any) => `${i.type}-${i.id}`)))}
+                  className="w-4 h-4 rounded accent-indigo-500 cursor-pointer" />
+                Select all {selectable.length} waiting
+              </label>
+              {selected.size > 0 && (
+                <>
+                  <span className="text-[12px] font-bold text-slate-400">{selected.size} selected</span>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button disabled={busy === 'bulk'} onClick={() => decideMany('approved')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600
+                                 text-white text-[12px] font-black transition-colors disabled:opacity-60">
+                      <Check className="w-3.5 h-3.5" />Approve selected
+                    </button>
+                    <button disabled={busy === 'bulk'}
+                      onClick={() => decideMany('rejected', 'Rejected in a bulk review.')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-rose-200
+                                 text-rose-600 hover:bg-rose-50 text-[12px] font-black transition-colors disabled:opacity-60">
+                      <X className="w-3.5 h-3.5" />Reject selected
+                    </button>
+                    <button onClick={() => setSelected(new Set())}
+                      className="px-2.5 py-1.5 rounded-lg text-slate-400 hover:bg-slate-100 text-[12px] font-bold">
+                      Clear
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           {data.items.map((item: any) => {
             const key = `${item.type}-${item.id}`;
             const working = busy === key;
             return (
               <div key={key} className="bg-white border border-slate-200 rounded-2xl p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
+                  {item.status === 'pending' && selectable.length > 1 && (
+                    <input type="checkbox" checked={selected.has(key)} onChange={() => toggle(key)}
+                      title="Select for a bulk decision"
+                      className="w-4 h-4 mt-1 rounded accent-indigo-500 cursor-pointer shrink-0" />
+                  )}
+                  {/* Whatever is being reviewed, shown rather than described.
+                      Only image content sends a preview. */}
+                  {item.preview && (
+                    <button onClick={() => setViewing(item)} title="Click to see it full size"
+                      className="shrink-0 w-28 h-28 rounded-xl overflow-hidden border border-slate-200
+                                 bg-slate-50 hover:border-indigo-300 hover:shadow-md transition-all group">
+                      <img src={item.preview} alt={item.label} loading="lazy"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    </button>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-black uppercase">
@@ -1518,6 +1616,26 @@ function ContentTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => v
                     </div>
                   </div>
 
+                  {/* Approved content can still be taken down. Without this the
+                      only way to remove something already live was to delete it
+                      outright, which loses the record of it ever being there. */}
+                  {item.status === 'approved' && (
+                    <button disabled={working}
+                      onClick={() => { setRejecting(rejecting === key ? '' : key); setNote(''); }}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200
+                                 text-slate-500 hover:border-rose-200 hover:text-rose-600 text-[12px] font-black
+                                 transition-colors disabled:opacity-60 shrink-0">
+                      <X className="w-3.5 h-3.5" />Take down
+                    </button>
+                  )}
+                  {item.status === 'rejected' && (
+                    <button disabled={working} onClick={() => decide(item, 'approved')}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-emerald-200
+                                 text-emerald-600 hover:bg-emerald-50 text-[12px] font-black transition-colors
+                                 disabled:opacity-60 shrink-0">
+                      <Check className="w-3.5 h-3.5" />Put it up after all
+                    </button>
+                  )}
                   {item.status === 'pending' && (
                     <div className="flex items-center gap-2 shrink-0">
                       <button disabled={working} onClick={() => decide(item, 'approved')}
@@ -1547,7 +1665,7 @@ function ContentTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => v
                     <button disabled={working || !note.trim()} onClick={() => decide(item, 'rejected', note.trim())}
                       className="px-3 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[12px]
                                  font-black transition-colors disabled:opacity-50">
-                      Confirm rejection
+                      {item.status === 'approved' ? 'Confirm take down' : 'Confirm rejection'}
                     </button>
                     <button onClick={() => { setRejecting(''); setNote(''); }}
                       className="px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-100 text-[12px] font-bold">
@@ -1563,6 +1681,46 @@ function ContentTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => v
               Showing the first 100. Approve or reject some to see the rest.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Decide from here too — having to close the photo, find the row again
+          and then choose is how the wrong row gets approved. */}
+      {viewing && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-sm"
+          onClick={() => setViewing(null)}>
+          <div onClick={e => e.stopPropagation()}
+            className="ih-pop-in relative max-w-4xl w-full max-h-full flex flex-col gap-3">
+            <img src={viewing.preview} alt={viewing.label}
+              className="max-h-[70vh] w-auto mx-auto rounded-xl shadow-2xl object-contain" />
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4">
+              <div className="min-w-0">
+                <p className="font-black text-slate-800">{viewing.label}</p>
+                <p className="text-[11.5px] text-slate-400">
+                  Added by {viewing.submitted_by}
+                  {viewing.submitted_at && <span> · {new Date(viewing.submitted_at).toLocaleString()}</span>}
+                </p>
+              </div>
+              {viewing.status === 'pending' && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => { decide(viewing, 'approved'); setViewing(null); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600
+                               text-white text-[12px] font-black transition-colors">
+                    <Check className="w-3.5 h-3.5" />Approve
+                  </button>
+                  <button onClick={() => { setRejecting(`${viewing.type}-${viewing.id}`); setNote(''); setViewing(null); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-rose-200
+                               text-rose-600 hover:bg-rose-50 text-[12px] font-black transition-colors">
+                    <X className="w-3.5 h-3.5" />Reject
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <button onClick={() => setViewing(null)} title="Close"
+            className="absolute top-5 right-5 p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
       )}
     </div>
