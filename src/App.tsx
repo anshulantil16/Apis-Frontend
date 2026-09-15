@@ -215,7 +215,7 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       ) : view === 'policies' ? (
         <PoliciesPage />
       ) : view === 'apis-wall' ? (
-        <ApisWallPage />
+        <ApisWallPage isSuperadmin={session.user.is_superadmin} />
       ) : view === 'goal-setting' ? (
         <GoalSettingPage onNavigateBack={() => navigate('home')} />
       ) : (

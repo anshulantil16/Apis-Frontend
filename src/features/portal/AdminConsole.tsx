@@ -1,23 +1,28 @@
 /* The superadmin's control room.
  *
- * Three things live here, because they are the three questions an
- * administrator actually has:
+ * Each tab answers one question an administrator actually has:
  *   People    — who can sign in, and which tools they may open
+ *   Content   — what staff have added to the dashboard, waiting to be approved
+ *   Activity  — who did what, and when
  *   HRMS      — what Pocket HRMS is sending us, verbatim, and when we last pulled it
  *   Sessions  — who is signed in right now, and how to end it
+ *
+ * Content and Activity are the pair that matter together: nothing a person
+ * submits reaches the dashboard without passing through Content, and every
+ * decision made there is written to Activity.
  *
  * The master data tab shows the raw feed rather than only the fields the
  * portal maps: a wrong department or a missing email needs to be traceable to
  * upstream, not guessed at.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Users, RefreshCw, Database, Monitor, Search, ShieldCheck, X, Check, AlertCircle,
-  Loader2, LogOut, Eye, Crown, UserPlus, Trash2, Grid3x3,
+  Loader2, LogOut, Eye, Crown, UserPlus, Trash2, Grid3x3, ClipboardCheck, ScrollText,
 } from 'lucide-react';
 import { portalFetch, type PortalUser } from './session';
 
-type Tab = 'people' | 'access' | 'hrms' | 'sessions';
+type Tab = 'people' | 'access' | 'content' | 'activity' | 'hrms' | 'sessions';
 
 export function AdminConsole({ me }: { me: PortalUser }) {
   const [tab, setTab] = useState<Tab>('people');
@@ -32,6 +37,8 @@ export function AdminConsole({ me }: { me: PortalUser }) {
   const TABS: { k: Tab; label: string; icon: any }[] = [
     { k: 'people', label: 'People', icon: Users },
     { k: 'access', label: 'Who can open what', icon: Grid3x3 },
+    { k: 'content', label: 'Dashboard Content', icon: ClipboardCheck },
+    { k: 'activity', label: 'Activity Log', icon: ScrollText },
     { k: 'hrms', label: 'HRMS Master Data', icon: Database },
     { k: 'sessions', label: 'Live Sessions', icon: Monitor },
   ];
@@ -89,6 +96,8 @@ export function AdminConsole({ me }: { me: PortalUser }) {
 
       {tab === 'people' && <PeopleTab onToast={setToast} />}
       {tab === 'access' && <AccessTab onToast={setToast} />}
+      {tab === 'content' && <ContentTab onToast={setToast} />}
+      {tab === 'activity' && <ActivityTab onToast={setToast} />}
       {tab === 'hrms' && <HrmsTab onToast={setToast} />}
       {tab === 'sessions' && <SessionsTab onToast={setToast} />}
       </div>
@@ -1346,6 +1355,336 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
           sign-in disabled, so nothing is reachable
         </span>
       </div>
+    </div>
+  );
+}
+
+
+// ── dashboard content ────────────────────────────────────────────────────────
+/* What is waiting to go on the dashboard, and who put it there.
+ *
+ * One queue for every kind of content rather than an approval screen per tool.
+ * Vacancies, wall photos and anything added later arrive here together,
+ * oldest first, because the question an administrator has is "what is waiting
+ * on me" — not "what is waiting on me in the vacancies tool specifically".
+ *
+ * Nothing a person submits reaches the company until it is approved here.
+ */
+function ContentTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void }) {
+  const [data, setData] = useState<any>({ items: [], pending_counts: {}, types: [] });
+  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [kind, setKind] = useState('');
+  const [busy, setBusy] = useState<string>('');
+  /* Loading is derived, not stored. Setting a flag true inside the effect
+     that starts the fetch costs an extra render pass on every filter change;
+     comparing which filter the held data belongs to says the same thing for
+     free, and cannot get stuck true if a request throws. Bumping `nonce` is
+     how the refresh button and a decision force a refetch. */
+  const [loadedKey, setLoadedKey] = useState('');
+  const [nonce, setNonce] = useState(0);
+  const filterKey = `${status}|${kind}|${nonce}`;
+  const loading = loadedKey !== filterKey;
+  // Which row is being rejected, and the reason being typed. Held here rather
+  // than in each row so only one reason box is ever open.
+  const [rejecting, setRejecting] = useState<string>('');
+  const [note, setNote] = useState('');
+
+  const reload = useCallback(() => setNonce(n => n + 1), []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const params = new URLSearchParams({ status });
+        if (kind) params.set('type', kind);
+        const r = await portalFetch(`/admin/moderation/?${params}`);
+        if (alive && r.ok) setData(await r.json());
+        else if (alive) onToast({ t: 'Could not load the queue', ok: false });
+      } catch {
+        if (alive) onToast({ t: 'Could not load the queue', ok: false });
+      } finally {
+        if (alive) setLoadedKey(filterKey);
+      }
+    })();
+    return () => { alive = false; };
+  }, [status, kind, filterKey, onToast]);
+
+  async function decide(item: any, decision: 'approved' | 'rejected', reason = '') {
+    const key = `${item.type}-${item.id}`;
+    setBusy(key);
+    try {
+      const r = await portalFetch('/admin/moderation/', {
+        method: 'POST',
+        body: JSON.stringify({ type: item.type, ids: [item.id], decision, note: reason }),
+      });
+      const d = await r.json().catch(() => ({}));
+      onToast({ t: r.ok ? d.message : d.error || 'Could not save that', ok: r.ok });
+      if (r.ok) { setRejecting(''); setNote(''); reload(); }
+    } finally {
+      setBusy('');
+    }
+  }
+
+  const chip = (active: boolean) =>
+    `px-3 py-1.5 rounded-lg text-[11.5px] font-black transition-colors ${
+      active ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'}`;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {([['pending', 'Waiting'], ['approved', 'Approved'], ['rejected', 'Not approved'], ['all', 'Everything']] as const)
+          .map(([k, label]) => (
+            <button key={k} onClick={() => setStatus(k)} className={chip(status === k)}>
+              {label}
+              {k === 'pending' && data.pending_total > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[9.5px]">
+                  {data.pending_total}
+                </span>
+              )}
+            </button>
+          ))}
+        <span className="w-px h-5 bg-slate-200 mx-1" />
+        <button onClick={() => setKind('')} className={chip(!kind)}>All content</button>
+        {(data.types || []).map((t: any) => (
+          <button key={t.key} onClick={() => setKind(t.key)} className={chip(kind === t.key)}>
+            {t.label}
+            {data.pending_counts?.[t.key] > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[9.5px]">
+                {data.pending_counts[t.key]}
+              </span>
+            )}
+          </button>
+        ))}
+        <button onClick={reload} title="Refresh"
+          className="ml-auto p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white transition-colors">
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="p-10 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+      ) : data.items.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
+          <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-3" />
+          <p className="font-black text-slate-700">
+            {status === 'pending' ? 'Nothing is waiting for approval.' : 'Nothing here.'}
+          </p>
+          <p className="text-[12.5px] text-slate-400 mt-1">
+            {status === 'pending'
+              ? 'Anything staff add to the dashboard will appear here before it goes live.'
+              : 'Try a different filter.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {data.items.map((item: any) => {
+            const key = `${item.type}-${item.id}`;
+            const working = busy === key;
+            return (
+              <div key={key} className="bg-white border border-slate-200 rounded-2xl p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-black uppercase">
+                        {item.type_label}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                        item.status === 'pending' ? 'bg-amber-100 text-amber-700'
+                          : item.status === 'approved' ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-rose-100 text-rose-700'}`}>
+                        {item.status === 'pending' ? 'Waiting' : item.status === 'approved' ? 'Approved' : 'Not approved'}
+                      </span>
+                    </div>
+                    <p className="font-black text-slate-800 text-[13.5px] break-words">{item.label}</p>
+                    <p className="text-[11.5px] text-slate-400 mt-0.5">
+                      Added by <span className="font-bold text-slate-500">{item.submitted_by}</span>
+                      {item.submitted_by_email && <span className="text-slate-300"> · {item.submitted_by_email}</span>}
+                      {item.submitted_at && <span> · {new Date(item.submitted_at).toLocaleString()}</span>}
+                    </p>
+                    {item.reviewed_by && (
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Reviewed by {item.reviewed_by}
+                        {item.review_note && <span> — &ldquo;{item.review_note}&rdquo;</span>}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-2">
+                      {Object.entries(item.detail || {})
+                        .filter(([, v]) => v)
+                        .map(([k, v]) => (
+                          <span key={k} className="text-[11px] text-slate-500">
+                            <span className="text-slate-400">{k}:</span> <span className="font-bold">{String(v)}</span>
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+
+                  {item.status === 'pending' && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button disabled={working} onClick={() => decide(item, 'approved')}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600
+                                   text-white text-[12px] font-black transition-colors disabled:opacity-60">
+                        <Check className="w-3.5 h-3.5" />Approve
+                      </button>
+                      <button disabled={working}
+                        onClick={() => { setRejecting(rejecting === key ? '' : key); setNote(''); }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-rose-200
+                                   text-rose-600 hover:bg-rose-50 text-[12px] font-black transition-colors disabled:opacity-60">
+                        <X className="w-3.5 h-3.5" />Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* The reason is shown back to whoever submitted it, so it is
+                    worth asking for rather than rejecting silently. */}
+                {rejecting === key && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                    <input autoFocus value={note} onChange={e => setNote(e.target.value)}
+                      placeholder="Why is this not going up? (shown to whoever added it)"
+                      onKeyDown={e => { if (e.key === 'Enter' && note.trim()) decide(item, 'rejected', note.trim()); }}
+                      className="flex-1 min-w-[240px] px-3 py-2 rounded-lg border border-slate-200 text-[12.5px]
+                                 focus:outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-400/10" />
+                    <button disabled={working || !note.trim()} onClick={() => decide(item, 'rejected', note.trim())}
+                      className="px-3 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[12px]
+                                 font-black transition-colors disabled:opacity-50">
+                      Confirm rejection
+                    </button>
+                    <button onClick={() => { setRejecting(''); setNote(''); }}
+                      className="px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-100 text-[12px] font-bold">
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {data.truncated && (
+            <p className="text-center text-[12px] text-slate-400 font-semibold py-2">
+              Showing the first 100. Approve or reject some to see the rest.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ── activity ─────────────────────────────────────────────────────────────────
+/* Who did what, newest first.
+ *
+ * Read-only on purpose: there is no control here that edits or removes an
+ * entry, for a superadmin either. A record that the person being audited can
+ * tidy away is not a record.
+ */
+function ActivityTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void }) {
+  const [data, setData] = useState<any>({ items: [], total: 0 });
+  const [q, setQ] = useState('');
+  const [action, setAction] = useState('');
+  const [shown, setShown] = useState(100);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: String(shown) });
+      if (q.trim()) params.set('q', q.trim());
+      if (action) params.set('action', action);
+      const r = await portalFetch(`/admin/activity/?${params}`);
+      if (r.ok) setData(await r.json());
+    } catch {
+      onToast({ t: 'Could not load the activity log', ok: false });
+    } finally {
+      setLoading(false);
+    }
+  }, [q, action, shown, onToast]);
+
+  // Debounced so typing in the search box does not fire a request per key.
+  useEffect(() => {
+    const t = setTimeout(() => { void load(); }, 250);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  const ACTIONS = ['created', 'approved', 'rejected', 'edited', 'deleted', 'published', 'hidden'];
+  const tone: Record<string, string> = {
+    created: 'bg-sky-100 text-sky-700', approved: 'bg-emerald-100 text-emerald-700',
+    rejected: 'bg-rose-100 text-rose-700', edited: 'bg-amber-100 text-amber-700',
+    deleted: 'bg-slate-200 text-slate-600', published: 'bg-emerald-100 text-emerald-700',
+    hidden: 'bg-slate-200 text-slate-600',
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="w-4 h-4 text-slate-300 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input value={q} onChange={e => setQ(e.target.value)}
+            placeholder="Search by person or what changed…"
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 bg-white text-[12.5px]
+                       focus:outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-400/10" />
+        </div>
+        <select value={action} onChange={e => setAction(e.target.value)}
+          className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-[12.5px] font-bold text-slate-600">
+          <option value="">Every action</option>
+          {ACTIONS.map(a => <option key={a} value={a}>{a[0].toUpperCase() + a.slice(1)}</option>)}
+        </select>
+        <button onClick={() => void load()} title="Refresh"
+          className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white transition-colors">
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto max-w-full">
+          <table className="w-full min-w-[820px] text-xs">
+            <thead className="bg-slate-50 text-slate-400">
+              <tr>{['When', 'Who', 'Did', 'What', 'From'].map(h => (
+                <th key={h} className="px-3 py-2 text-left font-black">{h}</th>))}</tr>
+            </thead>
+            <tbody>
+              {data.items.map((r: any) => (
+                <tr key={r.id} className="border-t border-slate-100 align-top">
+                  <td className="px-3 py-2 text-slate-500 whitespace-nowrap">
+                    {new Date(r.at).toLocaleString()}
+                  </td>
+                  <td className="px-3 py-2">
+                    <p className="font-black text-slate-800">{r.actor}</p>
+                    <p className="text-slate-400">{r.actor_email}</p>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${tone[r.action] || 'bg-slate-100 text-slate-600'}`}>
+                      {r.action}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-slate-600 font-semibold break-words max-w-[420px]">
+                    {r.summary || `${r.object_type} #${r.object_id}`}
+                    {r.detail?.note && <span className="block text-slate-400 font-normal">&ldquo;{r.detail.note}&rdquo;</span>}
+                  </td>
+                  <td className="px-3 py-2 text-slate-400 font-mono whitespace-nowrap">{r.ip_address || '—'}</td>
+                </tr>
+              ))}
+              {!loading && data.items.length === 0 && (
+                <tr><td colSpan={5} className="px-3 py-10 text-center text-slate-300 font-semibold">
+                  Nothing recorded yet.
+                </td></tr>
+              )}
+              {loading && (
+                <tr><td colSpan={5} className="px-3 py-10 text-center text-slate-300">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {data.truncated && (
+        <button onClick={() => setShown(s => s + 100)}
+          className="w-full py-2.5 rounded-xl bg-white border border-slate-200 text-[12.5px] font-black
+                     text-slate-500 hover:border-slate-300 transition-colors">
+          Show 100 more — {data.returned} of {data.total} shown
+        </button>
+      )}
     </div>
   );
 }

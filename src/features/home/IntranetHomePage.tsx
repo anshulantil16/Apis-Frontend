@@ -3,7 +3,7 @@ import {
   ArrowRight, LayoutGrid, Sparkles, Building2, History, Lightbulb,
   ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
-  Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw,
+  Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw, Clock,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, useVacancies, summarizeVacancies,
@@ -416,12 +416,17 @@ const vacFieldCls = 'w-full px-3 py-2 rounded-lg border border-slate-200 bg-whit
   'placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10 transition-all';
 const vacFieldLabelCls = 'block text-[11.5px] font-bold text-slate-600 mb-1.5';
 
-function VacanciesPopup({ onClose }: { onClose: () => void }) {
+function VacanciesPopup({ onClose, isSuperadmin = false }:
+  { onClose: () => void; isSuperadmin?: boolean }) {
   const [tab, setTab] = useState<'vacancies' | 'referral'>('vacancies');
   const { vacancies, loading, addVacancy, setVacancyStatus } = useVacancies();
   const [addVacancyOpen, setAddVacancyOpen] = useState(false);
   const [newType, setNewType] = useState<'New' | 'Replacement'>('New');
   const [error, setError] = useState('');
+  // What the server said about the last submission — whether it went live or
+  // went into the approval queue depends on who is adding it, so the message
+  // comes back from the server rather than being decided here.
+  const [notice, setNotice] = useState('');
 
   async function handleAddVacancy(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -432,12 +437,13 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
 
     setError('');
     try {
-      await addVacancy({
+      const created = await addVacancy({
         title, function: get('function'), department: get('department'),
         grade: get('grade'), location, state: get('state'),
         reportingManager: get('reportingManager'), type: newType,
         experience: get('experience'), education: get('education'),
       });
+      setNotice(created.message || '');
       setAddVacancyOpen(false);
       setNewType('New');
       e.currentTarget.reset();
@@ -446,9 +452,10 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
     }
   }
 
-  // HR toggling a seat closed once it's filled — flips status rather than
-  // deleting the row, so a closed position stays visible (greyed out) as a
-  // record instead of just vanishing from the list.
+  // Closing a seat once it's filled — flips status rather than deleting the
+  // row, so a closed position stays visible (greyed out) as a record instead
+  // of just vanishing. Administrators only: closing one takes it off the
+  // dashboard for the whole company, and the server enforces the same rule.
   async function toggleVacancyStatus(v: VacancyListing) {
     setError('');
     try {
@@ -458,8 +465,13 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const openCount = vacancies.filter(v => v.status === 'Active').length;
-  const closedCount = vacancies.length - openCount;
+  // Counts describe what the company can see. A pending row is visible to
+  // its own submitter, so counting it here would tell them there is one more
+  // open position than anyone else can find.
+  const live = vacancies.filter(v => v.moderationStatus === 'approved');
+  const awaiting = vacancies.filter(v => v.moderationStatus === 'pending');
+  const openCount = live.filter(v => v.status === 'Active').length;
+  const closedCount = live.length - openCount;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
@@ -512,25 +524,58 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
                 <XCircle className="w-4 h-4 shrink-0" />{error}
               </div>
             )}
+            {notice && (
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-[12.5px] text-amber-800 font-semibold mb-4">
+                <Clock className="w-4 h-4 shrink-0 mt-px" />
+                <span className="flex-1">{notice}</span>
+                <button type="button" onClick={() => setNotice('')} title="Dismiss"
+                  className="shrink-0 text-amber-500 hover:text-amber-700"><X className="w-3.5 h-3.5" /></button>
+              </div>
+            )}
+            {isSuperadmin && awaiting.length > 0 && (
+              <div className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-[12.5px] text-sky-800 font-semibold mb-4">
+                <Clock className="w-4 h-4 shrink-0" />
+                {awaiting.length} vacanc{awaiting.length === 1 ? 'y is' : 'ies are'} waiting for your approval — review {awaiting.length === 1 ? 'it' : 'them'} in Admin Console › Dashboard Content.
+              </div>
+            )}
             {loading && (
               <p className="text-center text-sm text-slate-400 py-16">Loading vacancies…</p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               {!loading && vacancies.map(v => {
                 const closed = v.status !== 'Active';
+                const pending = v.moderationStatus === 'pending';
+                const rejected = v.moderationStatus === 'rejected';
                 return (
                   <div key={v.id}
                     className={`rounded-xl border transition-all p-3.5 ${
-                      closed ? 'border-slate-100 bg-slate-50/60 opacity-70' : 'border-slate-200 hover:border-amber-300 hover:shadow-sm'}`}>
+                      pending ? 'border-amber-200 bg-amber-50/40 border-dashed'
+                        : rejected ? 'border-rose-100 bg-rose-50/40'
+                        : closed ? 'border-slate-100 bg-slate-50/60 opacity-70'
+                        : 'border-slate-200 hover:border-amber-300 hover:shadow-sm'}`}>
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className={`text-[13px] font-black leading-tight ${closed ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-800'}`}>
+                      <p className={`text-[13px] font-black leading-tight ${closed && !pending ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-800'}`}>
                         {v.title}
                       </p>
                       <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0 ${
-                        closed ? 'text-slate-400 bg-slate-100 ring-slate-200' : 'text-emerald-600 bg-emerald-50 ring-emerald-200'}`}>
-                        {v.status}
+                        pending ? 'text-amber-700 bg-amber-100 ring-amber-200'
+                          : rejected ? 'text-rose-600 bg-rose-50 ring-rose-200'
+                          : closed ? 'text-slate-400 bg-slate-100 ring-slate-200'
+                          : 'text-emerald-600 bg-emerald-50 ring-emerald-200'}`}>
+                        {pending ? 'Awaiting approval' : rejected ? 'Not approved' : v.status}
                       </span>
                     </div>
+                    {/* Only ever shown to the submitter and to administrators —
+                        the server does not send these rows to anyone else. */}
+                    {pending && (
+                      <p className="text-[10px] text-amber-700 font-bold mb-1.5">
+                        {v.isMine ? 'Your submission — visible only to you until an administrator approves it.'
+                          : `Submitted by ${v.submittedBy} · not yet on the dashboard`}
+                      </p>
+                    )}
+                    {rejected && v.reviewNote && (
+                      <p className="text-[10px] text-rose-600 font-bold mb-1.5">Not approved: {v.reviewNote}</p>
+                    )}
                     <p className="text-[10.5px] text-slate-400 font-semibold mb-2 truncate">{v.department} · {v.function}</p>
                     <div className="flex items-center gap-1.5 text-[11.5px] text-slate-600 font-bold mb-2">
                       <MapPin className="w-3 h-3 text-amber-500 flex-shrink-0" />{v.location}, {v.state}
@@ -550,13 +595,15 @@ function VacanciesPopup({ onClose }: { onClose: () => void }) {
                     <p className="text-[10.5px] text-slate-400 truncate" title={v.education}>{v.education}</p>
                     <div className="flex items-center justify-between gap-2 mt-1.5">
                       <p className="text-[10px] text-slate-300">Reporting to {v.reportingManager}</p>
-                      <button type="button" onClick={() => toggleVacancyStatus(v)}
-                        title={closed ? 'Reopen this vacancy' : 'Mark this vacancy as closed/filled'}
-                        className={`flex items-center gap-1 text-[10px] font-black shrink-0 transition-colors ${
-                          closed ? 'text-emerald-600 hover:text-emerald-700' : 'text-rose-500 hover:text-rose-600'}`}>
-                        {closed ? <RotateCcw className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                        {closed ? 'Reopen Vacancy' : 'Close Vacancy'}
-                      </button>
+                      {isSuperadmin && !pending && !rejected && (
+                        <button type="button" onClick={() => toggleVacancyStatus(v)}
+                          title={closed ? 'Reopen this vacancy' : 'Mark this vacancy as closed/filled'}
+                          className={`flex items-center gap-1 text-[10px] font-black shrink-0 transition-colors ${
+                            closed ? 'text-emerald-600 hover:text-emerald-700' : 'text-rose-500 hover:text-rose-600'}`}>
+                          {closed ? <RotateCcw className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          {closed ? 'Reopen Vacancy' : 'Close Vacancy'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1288,7 +1335,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
 
             {openProduct && <PackagingPopup product={openProduct} onClose={() => setOpenProduct(null)} />}
             {openListPopup === 'joiners' && <NewJoinersPopup onClose={() => setOpenListPopup(null)} />}
-            {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} />}
+            {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} isSuperadmin={isSuperadmin} />}
             {openListPopup === 'announcements' && <AnnouncementsPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'celebrations' && <CelebrationsPopup initialTab={celebrationTab} onClose={() => setOpenListPopup(null)} />}
 

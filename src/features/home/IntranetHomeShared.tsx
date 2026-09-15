@@ -4,8 +4,8 @@
    no imaginary products. "What's New" describes real recent platform work;
    "At a Glance" describes the tools platform itself, not the company. */
 import type { ComponentType, SVGProps } from 'react';
-import { useEffect, useState } from 'react';
-import { portalFetch } from '../portal/session';
+import { useCallback, useEffect, useState } from 'react';
+import { apiFetch, portalFetch } from '../portal/session';
 import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
@@ -209,10 +209,20 @@ const VACANCIES_API = `${_API_BASE}/api/vacancies`;
    not a live ATS feed. `location`/`state` is each role's HQ, so the
    Vacancies popup can show where a role is actually based rather than a
    generic "Work from Office". */
+export type ModerationStatus = 'pending' | 'approved' | 'rejected';
+
 export interface VacancyListing {
   id: number; function: string; department: string; title: string; grade: string;
   location: string; state: string; reportingManager: string;
   type: 'New' | 'Replacement'; experience: string; education: string; status: string;
+  /* Whether an administrator has let this onto the dashboard. Distinct from
+     `status`, which is whether the position itself is still open. The server
+     only ever sends a non-approved row to the person who submitted it and to
+     administrators, so anything here that is not 'approved' is the viewer's
+     own pending work. */
+  moderationStatus: ModerationStatus;
+  submittedBy: string; submittedByEmail: string;
+  reviewNote: string; isMine: boolean;
 }
 
 /* Fetches the live list once on mount and exposes add/close mutations that
@@ -224,37 +234,69 @@ export function useVacancies() {
   const [vacancies, setVacancies] = useState<VacancyListing[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let alive = true;
-    fetch(`${VACANCIES_API}/`)
-      .then(r => (r.ok ? r.json() : []))
-      .then(d => { if (alive) setVacancies(d); })
-      .catch(() => {})
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+  const load = useCallback(async () => {
+    try {
+      const r = await apiFetch(`${VACANCIES_API}/`);
+      return r.ok ? ((await r.json()) as VacancyListing[]) : [];
+    } catch {
+      return [];
+    }
   }, []);
 
-  async function addVacancy(payload: Omit<VacancyListing, 'id' | 'status'>) {
-    const res = await fetch(`${VACANCIES_API}/`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  useEffect(() => {
+    let alive = true;
+    load()
+      .then(d => { if (alive) setVacancies(d); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [load]);
+
+  /* Returns the server's own message rather than a fixed string: whether a
+     new vacancy is published at once or queued for approval depends on who
+     is adding it, and only the server knows that. */
+  async function addVacancy(payload: Omit<VacancyListing, 'id' | 'status' | 'moderationStatus'
+    | 'submittedBy' | 'submittedByEmail' | 'reviewNote' | 'isMine'>) {
+    const res = await apiFetch(`${VACANCIES_API}/`, {
+      method: 'POST', body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Could not add the vacancy. Please try again.');
-    const created: VacancyListing = await res.json();
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || 'Could not add the vacancy. Please try again.');
+    const created = body as VacancyListing & { message?: string };
     setVacancies(prev => [created, ...prev]);
     return created;
   }
 
   async function setVacancyStatus(id: number, nextStatus: 'Active' | 'Closed') {
-    const res = await fetch(`${VACANCIES_API}/${id}/status/`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: nextStatus }),
+    const res = await apiFetch(`${VACANCIES_API}/${id}/status/`, {
+      method: 'PATCH', body: JSON.stringify({ status: nextStatus }),
     });
-    if (!res.ok) throw new Error('Could not update the vacancy. Please try again.');
-    const updated: VacancyListing = await res.json();
-    setVacancies(prev => prev.map(v => v.id === id ? updated : v));
-    return updated;
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || 'Could not update the vacancy. Please try again.');
+    setVacancies(prev => prev.map(v => v.id === id ? (body as VacancyListing) : v));
+    return body as VacancyListing;
   }
 
-  return { vacancies, loading, addVacancy, setVacancyStatus };
+  async function editVacancy(id: number, patch: Partial<VacancyListing>) {
+    const res = await apiFetch(`${VACANCIES_API}/${id}/`, {
+      method: 'PATCH', body: JSON.stringify(patch),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || 'Could not save the changes.');
+    setVacancies(prev => prev.map(v => v.id === id ? (body as VacancyListing) : v));
+    return body as VacancyListing;
+  }
+
+  async function removeVacancy(id: number) {
+    const res = await apiFetch(`${VACANCIES_API}/${id}/`, { method: 'DELETE' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Could not remove the vacancy.');
+    }
+    setVacancies(prev => prev.filter(v => v.id !== id));
+  }
+
+  return { vacancies, loading, addVacancy, setVacancyStatus, editVacancy, removeVacancy,
+           refresh: () => load().then(setVacancies) };
 }
 
 export interface Vacancy { title: string; openings: number; location: string; }
@@ -266,7 +308,10 @@ export interface Vacancy { title: string; openings: number; location: string; }
 export function summarizeVacancies(vacancies: VacancyListing[]): Vacancy[] {
   const groups = new Map<string, { count: number; locations: Set<string> }>();
   for (const v of vacancies) {
-    if (v.status !== 'Active') continue;
+    // Approved and open. A pending row is visible to its own submitter,
+    // and without this check their preview widget would count it as if
+    // the whole company could see it.
+    if (v.status !== 'Active' || v.moderationStatus !== 'approved') continue;
     const g = groups.get(v.title) ?? { count: 0, locations: new Set<string>() };
     g.count += 1;
     g.locations.add(v.location);

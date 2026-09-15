@@ -1,18 +1,37 @@
 /* APIS Wall — a photo wall of real team moments, events and celebrations.
-   The 8 seed photos are real, hand-uploaded into public/Apis_wall/. "Upload
-   Image" lets anyone add their own on top of those — client-side only (no
-   photo backend exists yet), so an uploaded photo becomes a browser object
-   URL held in this component's own state: it's fully visible and openable
-   for the rest of the session, same as Add Policy/Add Vacancy elsewhere in
-   this app, but won't survive a page reload until a real upload endpoint
-   exists. Seed-photo captions/categories are hand-written to match each
-   photo's actual content; dates are intentionally omitted rather than
-   guessed, since none of the source files carry capture-date metadata. */
-import { useRef, useState, type FormEvent } from 'react';
+
+   The 8 seed photos ship with the build in public/Apis_wall/ and are not user
+   content: nobody uploaded them, so there is nothing to attribute or approve
+   and they always show.
+
+   Everything else comes from the `wall` Django app. An upload is stored on the
+   server, attributed to whoever is signed in, and held back until a superadmin
+   approves it — a photograph is opaque in a way a form field is not, so
+   somebody has to actually look at it before it goes on the company's wall.
+   Until then the uploader sees their own photo marked "Awaiting approval" and
+   nobody else sees it at all.
+
+   Seed-photo captions/categories are hand-written to match each photo's actual
+   content; dates are intentionally omitted rather than guessed, since none of
+   the source files carry capture-date metadata. */
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ChevronRight, X, Sparkles, Image as ImageIcon, PartyPopper, Users, HeartHandshake, Plus, UploadCloud } from 'lucide-react';
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
+import { apiFetch } from '../portal/session';
 
-interface WallPhoto { src: string; title: string; category: string; }
+interface WallPhoto {
+  src: string; title: string; category: string;
+  /* Absent on the seed photos, which are part of the build rather than
+     anything a person uploaded. */
+  id?: number;
+  moderationStatus?: 'pending' | 'approved' | 'rejected';
+  submittedBy?: string;
+  reviewNote?: string;
+  isMine?: boolean;
+}
+
+const WALL_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/wall`;
+const UPLOAD_CATEGORIES = ['Celebrations', 'Team Moments', 'CSR', 'Events', 'Other'];
 
 const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall01.jpeg', title: 'Happy Independence Day', category: 'Celebrations' },
@@ -39,36 +58,99 @@ const uploadFieldCls = 'w-full px-3 py-2 rounded-lg border border-slate-200 bg-w
   'placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10 transition-all';
 const uploadLabelCls = 'block text-[11.5px] font-bold text-slate-600 mb-1.5';
 
-export function ApisWallPage() {
-  const [photos, setPhotos] = useState<WallPhoto[]>(SEED_PHOTOS);
+export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean } = {}) {
+  /* Uploaded photos are kept apart from the seed ones rather than merged into
+     a single state: the seeds are build assets with no id and no approval
+     state, and mixing them would mean every render having to work out which
+     kind each photo is. */
+  const [uploaded, setUploaded] = useState<WallPhoto[]>([]);
   const [filter, setFilter] = useState('All');
   const [lightbox, setLightbox] = useState<WallPhoto | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [previewSrc, setPreviewSrc] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const categoryList = Array.from(new Set(SEED_PHOTOS.map(p => p.category)));
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await apiFetch(`${WALL_API}/photos/`);
+        if (alive && r.ok) setUploaded((await r.json()) as WallPhoto[]);
+      } catch {
+        /* The wall still works from its seed photos if the server is down. */
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const photos = [...uploaded, ...SEED_PHOTOS];
+  const categoryList = Array.from(new Set(photos.map(p => p.category)));
   const categories = ['All', ...categoryList];
   const filtered = filter === 'All' ? photos : photos.filter(p => p.category === filter);
   const countFor = (c: string) => c === 'All' ? photos.length : photos.filter(p => p.category === c).length;
+  const awaiting = uploaded.filter(p => p.moderationStatus === 'pending');
 
   function resetUploadForm() {
     setPreviewSrc('');
+    setError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  function handleUpload(e: FormEvent<HTMLFormElement>) {
+  async function handleUpload(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const title = String(fd.get('title') ?? '').trim();
-    const category = String(fd.get('category') ?? '').trim() || 'Celebrations';
     const file = fileInputRef.current?.files?.[0];
-    if (!title || !file) return;
+    if (!title || !file) {
+      setError('Add a title and choose a photo.');
+      return;
+    }
 
-    setPhotos(prev => [{ src: URL.createObjectURL(file), title, category }, ...prev]);
-    setUploadOpen(false);
-    resetUploadForm();
-    e.currentTarget.reset();
+    // Rebuilt rather than posting the form's own FormData: the field names
+    // the API expects are not all the names on the form, and the file input
+    // is read through its ref.
+    const body = new FormData();
+    body.append('title', title);
+    body.append('category', String(fd.get('category') ?? '').trim() || 'Other');
+    body.append('caption', String(fd.get('caption') ?? '').trim());
+    body.append('image', file);
+
+    setBusy(true);
+    setError('');
+    try {
+      const res = await apiFetch(`${WALL_API}/photos/`, { method: 'POST', body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || 'Could not upload that photo. Please try again.');
+        return;
+      }
+      setUploaded(prev => [data as WallPhoto, ...prev]);
+      setNotice(data.message || '');
+      setUploadOpen(false);
+      resetUploadForm();
+      form.reset();
+    } catch {
+      setError('Could not reach the server. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removePhoto(photo: WallPhoto) {
+    if (!photo.id) return;
+    try {
+      const res = await apiFetch(`${WALL_API}/photos/${photo.id}/`, { method: 'DELETE' });
+      if (res.ok) {
+        setUploaded(prev => prev.filter(p => p.id !== photo.id));
+        setLightbox(null);
+      }
+    } catch {
+      setError('Could not remove that photo.');
+    }
   }
 
   return (
@@ -146,6 +228,21 @@ export function ApisWallPage() {
           </div>
         </div>
 
+        {notice && (
+          <div className="ih-fade flex items-start gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-[12.5px] font-bold text-amber-800">
+            <UploadCloud className="w-4 h-4 shrink-0 mt-px" />
+            <span className="flex-1">{notice}</span>
+            <button type="button" onClick={() => setNotice('')} title="Dismiss"
+              className="shrink-0 text-amber-500 hover:text-amber-700"><X className="w-3.5 h-3.5" /></button>
+          </div>
+        )}
+        {isSuperadmin && awaiting.length > 0 && (
+          <div className="ih-fade flex items-center gap-2 rounded-2xl bg-sky-50 border border-sky-200 px-4 py-3 text-[12.5px] font-bold text-sky-800">
+            <ImageIcon className="w-4 h-4 shrink-0" />
+            {awaiting.length} photo{awaiting.length === 1 ? '' : 's'} waiting for your approval — review {awaiting.length === 1 ? 'it' : 'them'} in Admin Console › Dashboard Content.
+          </div>
+        )}
+
         {/* masonry photo wall — CSS columns, not a fixed-row grid, so every
             photo keeps its own real size/aspect ratio instead of being
             cropped to a uniform tile. */}
@@ -153,14 +250,25 @@ export function ApisWallPage() {
           {filtered.map((p, i) => {
             const s = styleFor(p.category);
             const CatIcon = s.icon;
+            const pending = p.moderationStatus === 'pending';
+            const rejected = p.moderationStatus === 'rejected';
             return (
-              <button key={p.src} onClick={() => setLightbox(p)}
+              <button key={p.id ? `u${p.id}` : p.src} onClick={() => setLightbox(p)}
                 onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
                 style={{ animationDelay: `${i * 60}ms` }}
-                className="ih-pop-in ih-tilt3d group relative block w-full mb-4 break-inside-avoid rounded-2xl overflow-hidden
-                           bg-white border border-slate-200 shadow-sm hover:shadow-2xl transition-all text-left">
+                className={`ih-pop-in ih-tilt3d group relative block w-full mb-4 break-inside-avoid rounded-2xl overflow-hidden
+                           bg-white shadow-sm hover:shadow-2xl transition-all text-left ${
+                  pending ? 'border-2 border-dashed border-amber-300'
+                    : rejected ? 'border-2 border-rose-200' : 'border border-slate-200'}`}>
                 <img src={p.src} alt={p.title} loading="lazy"
-                  className="w-full h-auto block transition-transform duration-500 group-hover:scale-105" />
+                  className={`w-full h-auto block transition-transform duration-500 group-hover:scale-105 ${
+                    pending ? 'opacity-60' : ''}`} />
+                {(pending || rejected) && (
+                  <span className={`absolute top-10 left-2.5 z-10 px-2 py-1 rounded-lg text-[9.5px] font-black uppercase
+                                    tracking-wide shadow-sm ${pending ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'}`}>
+                    {pending ? 'Awaiting approval' : 'Not approved'}
+                  </span>
+                )}
                 {/* permanent scrim so captions stay legible on bright photos,
                     strengthening further on hover rather than appearing from nothing */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent
@@ -169,10 +277,25 @@ export function ApisWallPage() {
                                   uppercase tracking-wide shadow-sm backdrop-blur-sm ${s.chip}`}>
                   <CatIcon className="w-2.5 h-2.5" />{p.category}
                 </span>
-                <p className="absolute bottom-2.5 left-2.5 right-2.5 text-[12.5px] font-black text-white leading-snug drop-shadow
-                             transition-transform duration-300 group-hover:-translate-y-0.5">
-                  {p.title}
-                </p>
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 transition-transform duration-300 group-hover:-translate-y-0.5">
+                  <p className="text-[12.5px] font-black text-white leading-snug drop-shadow">{p.title}</p>
+                  {p.submittedBy && (
+                    <p className="text-[10px] font-bold text-white/70 drop-shadow mt-0.5">
+                      {pending && p.isMine ? 'Your upload — visible only to you until approved'
+                        : `Uploaded by ${p.submittedBy}`}
+                    </p>
+                  )}
+                </div>
+                {isSuperadmin && p.id && (
+                  <span role="button" tabIndex={0}
+                    onClick={ev => { ev.stopPropagation(); void removePhoto(p); }}
+                    onKeyDown={ev => { if (ev.key === 'Enter') { ev.stopPropagation(); void removePhoto(p); } }}
+                    title="Remove this photo from the wall"
+                    className="absolute top-2.5 right-2.5 z-20 p-1.5 rounded-lg bg-white/90 text-rose-500 opacity-0
+                               group-hover:opacity-100 hover:bg-white hover:text-rose-600 transition-all shadow-sm cursor-pointer">
+                    <X className="w-3.5 h-3.5" />
+                  </span>
+                )}
               </button>
             );
           })}
@@ -228,9 +351,13 @@ export function ApisWallPage() {
               </div>
               <div>
                 <label className={uploadLabelCls}>Category</label>
-                <select name="category" defaultValue={categoryList[0]} className={uploadFieldCls}>
-                  {categoryList.map(c => <option key={c} value={c}>{c}</option>)}
+                <select name="category" defaultValue="Celebrations" className={uploadFieldCls}>
+                  {UPLOAD_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className={uploadLabelCls}>Description <span className="text-slate-400 font-semibold">(optional)</span></label>
+                <input name="caption" placeholder="A line about this moment" className={uploadFieldCls} />
               </div>
               <div>
                 <label className={uploadLabelCls}>Photo <span className="text-rose-500">*</span></label>
@@ -246,23 +373,38 @@ export function ApisWallPage() {
                     {previewSrc ? 'Photo selected — click to change' : 'Click to choose a photo…'}
                   </span>
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" required className="hidden"
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+                  required className="hidden"
                   onChange={e => {
                     const f = e.target.files?.[0];
                     setPreviewSrc(f ? URL.createObjectURL(f) : '');
                   }} />
+                <p className="text-[10.5px] text-slate-400 font-semibold mt-1.5">JPG, PNG, WebP or GIF · up to 8 MB</p>
               </div>
+
+              {error && (
+                <p className="rounded-lg bg-rose-50 border border-rose-100 px-3 py-2 text-[12px] font-bold text-rose-700">{error}</p>
+              )}
+              {/* Said before they upload rather than after, so the wait is
+                  expected rather than looking like the upload failed. */}
+              {!isSuperadmin && (
+                <p className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 text-[11.5px] font-semibold text-slate-500">
+                  Your photo goes to the administrator for approval before it appears on the wall.
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-slate-100 bg-slate-50">
-              <button type="button" onClick={() => { setUploadOpen(false); resetUploadForm(); }}
-                className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all">
+              <button type="button" disabled={busy}
+                onClick={() => { setUploadOpen(false); resetUploadForm(); }}
+                className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all disabled:opacity-60">
                 Cancel
               </button>
-              <button type="submit"
+              <button type="submit" disabled={busy}
                 className="ih-sheen inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600
-                           hover:from-amber-600 hover:to-orange-700 text-white text-[13px] font-black shadow-md shadow-amber-200 transition-all">
-                <Plus className="w-4 h-4" />Add to Wall
+                           hover:from-amber-600 hover:to-orange-700 text-white text-[13px] font-black shadow-md shadow-amber-200
+                           transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                <Plus className="w-4 h-4" />{busy ? 'Uploading…' : isSuperadmin ? 'Add to Wall' : 'Send for Approval'}
               </button>
             </div>
           </form>

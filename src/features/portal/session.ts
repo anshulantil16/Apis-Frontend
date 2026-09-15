@@ -43,17 +43,34 @@ export const clearToken = () => {
   try { localStorage.removeItem(TOKEN_KEY); } catch { /* nothing to clear */ }
 };
 
-/** fetch with the session token attached. */
-export async function portalFetch(path: string, init: RequestInit = {}) {
+/** fetch any URL with the session token attached.
+ *
+ * Use this for the tool APIs outside /api/accounts/portal — vacancies, the
+ * wall — so that a write is attributable to whoever made it. Everything the
+ * dashboard shows is now gated on the server by the caller's identity, and a
+ * plain fetch() carries none.
+ *
+ * Content-Type is left alone for a FormData body: the browser has to set it
+ * itself, because only it knows the multipart boundary. Forcing
+ * application/json there produces a request the server cannot parse and an
+ * upload that fails for no visible reason.
+ */
+export async function apiFetch(url: string, init: RequestInit = {}) {
   const token = getToken();
-  return fetch(`${PORTAL_API}${path}`, {
+  const isForm = typeof FormData !== 'undefined' && init.body instanceof FormData;
+  return fetch(url, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isForm ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init.headers || {}),
     },
   });
+}
+
+/** fetch a portal endpoint with the session token attached. */
+export async function portalFetch(path: string, init: RequestInit = {}) {
+  return apiFetch(`${PORTAL_API}${path}`, init);
 }
 
 /** Whoever the stored token belongs to, or null if it is missing or dead. */
