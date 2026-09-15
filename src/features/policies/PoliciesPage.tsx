@@ -110,7 +110,7 @@ interface PolicyRow {
    the register already used before real files existed. */
 const POLICY_ROWS: PolicyRow[] = MANUAL_POLICIES.map((doc, i) => {
   const meta = [
-    { pages: 9, version: 1, approvedBy: 'Vimal Anand', approvalDate: '12/3', reviewedBy: 'Pankaj', department: 'P & C' },
+    { pages: 9, version: 1, approvedBy: 'Vimal Anand', approvalDate: '1/1', reviewedBy: 'Pankaj', department: 'P & C' },
     { pages: 5, version: 1, approvedBy: 'Amit Anand', approvalDate: '1/1', reviewedBy: 'Arun', department: 'P & C' },
     { pages: 13, version: 1, approvedBy: 'Vimal Anand', approvalDate: '6/4', reviewedBy: 'Pankaj', department: 'P & C' },
     { pages: 5, version: 2, approvedBy: 'Amit Anand', approvalDate: '15/6', reviewedBy: 'Arun', department: 'P & C' },

@@ -101,7 +101,7 @@ const SUB_TREE_ROOTS: Record<string, SubTreeRoot> = {
    at the top, not a vacant position title. General Trade Sales (Arun
    Mishra) has twelve regional GTR heads reporting straight to him, too many
    for the 3-column manager grid the nested variant assumes. */
-const FLAT_TREE_IDS = new Set<string>(['arun-mishra']);
+const FLAT_TREE_IDS = new Set<string>(['arun-mishra', 'pradeep-krishali', 'ershad-alam']);
 
 const SUB_TREES: Record<string, TeamMember[]> = {
   'pankaj-tripathi': [
@@ -223,6 +223,111 @@ const SUB_TREES: Record<string, TeamMember[]> = {
         { name: 'Gaurav Dapral', role: 'O5- Sr. Executive- HQ- Delhi' },
         { name: 'Vishal Mahaur', role: 'O5- Sr. Executive- HQ- Delhi' },
         { name: 'Pooja Arora', role: 'O5- Sr. Executive- HQ- Delhi' },
+      ],
+    },
+  ],
+  // Business Excellence & Strategy / Supply Chain Management (R. Manigandan)
+  // — per the org chart supplied, both level-2 slots are department-group
+  // labels (same reuse of the "manager" slot as Vaibhav Mishra's tree
+  // above), each recursing three people deep via ReportBoxCard. The vacant
+  // seat under Sanjeev Lamba is modelled the same way PPC's vacant Plant
+  // Head root is — the position title as the card, "Vacant" as its role.
+  'r-manigandan': [
+    {
+      name: 'Supply Chain Management', role: 'Department',
+      reports: [
+        {
+          name: 'S.P. Chaubey', role: 'Sr. Manager',
+          reports: [
+            {
+              name: 'Sanjeev Lamba', role: 'AM',
+              reports: [
+                { name: 'Executive', role: 'Vacant' },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'Business Excellence & Strategy', role: 'Department',
+      reports: [
+        {
+          name: 'SFA', role: 'Department',
+          reports: [
+            {
+              name: 'Krishna', role: 'AM',
+              reports: [
+                { name: 'K. Ninay', role: 'Executive' },
+              ],
+            },
+          ],
+        },
+        {
+          name: 'Assurance – GT', role: 'Department',
+          reports: [
+            {
+              name: 'Sunetro Banerjee', role: 'Manager',
+              reports: [
+                { name: 'Rajesh Sharma', role: 'Sr. Executive' },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  // New Product Development (Dinesh Kumar) — three direct reports, no
+  // further nesting, per the org chart supplied. Same shape as
+  // narendra-gangwar's single-report entry above, just three instead of
+  // one; the default nested-variant rendering (HOD card → T-connector →
+  // manager boxes) already matches that chart with no extra layout needed.
+  'dinesh-kumar': [
+    { name: 'Deepak Joshi', role: 'M1- AM- HO' },
+    { name: 'Meeran Alam', role: 'O4- Exec- HO' },
+    { name: 'Mahesh', role: 'O5- Sr. Exec- HO' },
+  ],
+  // Purchase & Procurement (Pradeep Krishali) — six flat direct reports,
+  // one of them a vacant seat, per the org chart supplied. Added to
+  // FLAT_TREE_IDS above (like Arun Mishra's 12 GTRs) rather than the
+  // nested variant, since none of these six have reports of their own.
+  'pradeep-krishali': [
+    { name: 'Kundan', role: 'Dy. Manager', location: 'HO' },
+    { name: 'Vacant', role: 'O5- Sr. Executive', location: 'HO' },
+    { name: 'Rakesh', role: 'O4- Executive', location: 'HO' },
+    { name: 'Swamendra', role: 'M2- Dy. Manager', location: 'HO' },
+    { name: 'Ashish Pal', role: 'O5- Sr. Executive', location: 'HO' },
+    { name: 'Neeraj Krishnatray', role: 'M1- AM', location: 'Factory' },
+  ],
+  // CS & Legal (Vikas Aggarwal) — one direct report, per the org chart
+  // supplied. Same shape as narendra-gangwar's single-entry tree above.
+  'vikas-aggarwal': [
+    { name: 'Sonal', role: 'O4- Executive- HO' },
+  ],
+  // Export (Ershad Alam) — five flat direct reports, two of them vacant
+  // seats, per the org chart supplied. Added to FLAT_TREE_IDS above. The
+  // two vacant seats need distinct names (grade folded in) since every
+  // flat-tree card is keyed by name.
+  'ershad-alam': [
+    { name: 'Nickey Sasi', role: 'M3- Manager' },
+    { name: 'Vacant (M1-AM)', role: 'M1- AM', location: 'HO' },
+    { name: 'Vacant (M2-DM)', role: 'M2- DM', location: 'HO' },
+    { name: 'Gholam', role: 'M1- AM', location: 'HO' },
+    { name: 'Deepak', role: 'O5- Sr. Executive', location: 'HO' },
+  ],
+  // Marketing (Naagesh Mishra) — one manager (Pankaj Jha) with four flat
+  // direct reports of his own, one a vacant seat, per the org chart
+  // supplied. Default nested-variant rendering already matches this shape:
+  // HOD → single-manager stem → ManagerCard → green-spine leaf list (none
+  // of the four have reports of their own).
+  'naagesh-mishra': [
+    {
+      name: 'Pankaj Jha', role: 'M4- Sr. Manager- Marketing- HO',
+      reports: [
+        { name: 'Aman Bhawadwaj', role: 'M1- AM- ATL- HO' },
+        { name: 'Abhishek Naagar', role: 'O4- Sr. Executive- HO' },
+        { name: 'Anoop Sehgal', role: 'O5- Sr. Executive- Design- HO' },
+        { name: 'Performance Marketing (Vacant)', role: 'M1- AM' },
       ],
     },
   ],
@@ -356,11 +461,11 @@ function TeamMemberAvatar({ name, photo }: { name: string; photo?: string }) {
   if (photo && !broken) {
     return (
       <img src={encodeURI(photo)} alt={name} onError={() => setBroken(true)}
-        className="w-12 h-12 shrink-0 rounded-full object-cover object-top ring-2 ring-white shadow" />
+        className="w-14 h-14 shrink-0 rounded-full object-cover object-top ring-2 ring-white shadow" />
     );
   }
   return (
-    <div className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center font-black bg-amber-100 text-amber-700 text-sm">
+    <div className="w-14 h-14 shrink-0 rounded-full flex items-center justify-center font-black bg-amber-100 text-amber-700 text-base">
       {initials(name)}
     </div>
   );
@@ -373,9 +478,9 @@ function ManagerCard({ member }: { member: TeamMember }) {
   return (
     <div onMouseMove={onSpotlightMove}
       className="ih-spotlight ih-neon relative w-full rounded-2xl border border-amber-200
-                 bg-gradient-to-br from-amber-50 to-white shadow-sm p-4"
+                 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5"
       style={{ ['--ih-neon' as string]: '#8b5cf6' }}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3.5">
         <TeamMemberAvatar name={member.name} photo={member.photo} />
         <div className="min-w-0 flex-1">
           {member.hod && (
@@ -383,8 +488,8 @@ function ManagerCard({ member }: { member: TeamMember }) {
               HOD
             </span>
           )}
-          <p className="font-black text-slate-900 text-base mt-1 truncate">{member.name}</p>
-          <p className="text-[12.5px] font-bold text-amber-700 mt-0.5 leading-snug">{member.role}</p>
+          <p className="font-black text-slate-900 text-lg mt-1 truncate">{member.name}</p>
+          <p className="text-sm font-bold text-amber-700 mt-0.5 leading-snug">{member.role}</p>
         </div>
       </div>
     </div>
@@ -795,7 +900,7 @@ function DeptSubTree({ hod, root, members, onBack }: {
                     const nested = hasNestedReports(reports);
                     return (
                       <div className="ih-pop-in relative flex flex-col items-center" style={{ animationDelay: '140ms' }}>
-                        <div className="relative w-full max-w-[260px]">
+                        <div className="relative w-full max-w-[300px]">
                           <ManagerCard member={mgr} />
                           {reports.length > 0 && (
                             <CollapseToggle collapsed={!branchOpen} onClick={() => toggleBranch(mgr.name)}
@@ -825,13 +930,21 @@ function DeptSubTree({ hod, root, members, onBack }: {
                     const branchOpen = !closedBranches.has(mgr.name);
                     const reports = mgr.reports ?? [];
                     const nested = hasNestedReports(reports);
+                    // Exactly two managers: put them in the grid's outer two
+                    // columns (skipping the middle one) instead of letting
+                    // auto-placement pack them into columns 1-2, which left
+                    // the second card sitting near-centre rather than out at
+                    // the T-bar's right-hand stem — this is also exactly
+                    // where that stem (left-/right-[16.6%] above) is drawn,
+                    // so the two now line up correctly too.
+                    const twoUpColStart = members.length === 2 ? (i === 0 ? 'sm:col-start-1' : 'sm:col-start-3') : '';
                     return (
-                      <div key={mgr.name} className="ih-pop-in relative flex flex-col items-center"
+                      <div key={mgr.name} className={`ih-pop-in relative flex flex-col items-center ${twoUpColStart}`}
                         style={{ animationDelay: `${140 + i * 100}ms` }}>
                         {/* stem from the T-bar down to this manager's box */}
                         <div aria-hidden className="hidden sm:block absolute -top-10 left-1/2 -translate-x-1/2 w-px h-10 bg-sky-300" />
 
-                        <div className="relative w-full max-w-[260px]">
+                        <div className="relative w-full max-w-[300px]">
                           <ManagerCard member={mgr} />
                           {reports.length > 0 && (
                             <CollapseToggle collapsed={!branchOpen} onClick={() => toggleBranch(mgr.name)}
