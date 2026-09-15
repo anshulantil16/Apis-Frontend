@@ -5,10 +5,11 @@ import {
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw, Clock,
 } from 'lucide-react';
+import type { StateHolidayGroup } from './IntranetHomeShared';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, useVacancies, summarizeVacancies,
   OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, QUICK_PORTALS, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
-  useCelebrations, useTicker, ANNOUNCEMENTS, STATE_HOLIDAYS_2026,
+  useCelebrations, useTicker, useAnnouncements, useHolidayZones,
   getRecentToolsWithTime, formatRelativeTime,
   type VacancyListing,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
@@ -738,6 +739,7 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
    NewJoinersPopup/VacanciesPopup, with each row's icon tile carrying the
    announcement's own icon instead of initials. */
 function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
+  const { announcements, loading } = useAnnouncements();
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
@@ -748,17 +750,26 @@ function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
             <p className="text-base font-black text-slate-900 flex items-center gap-2">
               <Megaphone className="w-4.5 h-4.5 text-amber-500" />Announcements
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Sample data — not yet connected to a real announcements feed</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {loading ? 'Loading…'
+                : announcements.length ? `${announcements.length} notice${announcements.length === 1 ? '' : 's'} from HR`
+                : 'Nothing posted yet'}
+            </p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-6 space-y-2">
-          {ANNOUNCEMENTS.map(a => {
+          {!loading && announcements.length === 0 && (
+            <p className="text-center text-sm text-slate-400 py-10">
+              No announcements yet. HR posts these from Admin Console.
+            </p>
+          )}
+          {announcements.map(a => {
             const Icon = a.icon;
             return (
-              <div key={a.title} className="flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+              <div key={a.id} className="flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
                   <Icon className="w-5 h-5 text-amber-500" />
                 </div>
@@ -917,19 +928,26 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
   const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
   const filteredTools = category === 'All' ? VISIBLE_TOOLS : VISIBLE_TOOLS.filter(t => t.category === category);
 
-  // Statewise holiday widget — real APIS zones from the HR circular
-  // (STATE_HOLIDAYS_2026), not the generic central-government list.
-  const [holidayStateId, setHolidayStateId] = useState(STATE_HOLIDAYS_2026[0].id);
+  const { announcements, loading: announcementsLoading } = useAnnouncements();
+
+  // Statewise holiday widget — APIS's own zones, now served from the
+  // `noticeboard` app rather than a hard-coded array, so next year's circular
+  // is a change an administrator makes rather than a deploy.
+  const { zones } = useHolidayZones();
+  const [holidayStateId, setHolidayStateId] = useState('');
   const [holidayWindowStart, setHolidayWindowStart] = useState(0);
   const HOLIDAY_CARD_COUNT = 3;
   const upcomingStateHolidays = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const group = STATE_HOLIDAYS_2026.find(g => g.id === holidayStateId) ?? STATE_HOLIDAYS_2026[0];
+    // Falls back to the first zone until one is picked, and to nothing at all
+    // while the zones are still loading.
+    const group = zones.find(g => g.id === holidayStateId) ?? zones[0];
+    if (!group) return [];
     return group.holidays
       .map(h => ({ ...h, dateObj: new Date(`${h.date}T00:00:00`) }))
       .filter(h => h.dateObj >= today)
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
-  }, [holidayStateId]);
+  }, [holidayStateId, zones]);
   const visibleHolidays = upcomingStateHolidays.slice(holidayWindowStart, holidayWindowStart + HOLIDAY_CARD_COUNT);
   const [zoneMenuOpen, setZoneMenuOpen] = useState(false);
   const zoneMenuRef = useRef<HTMLDivElement>(null);
@@ -939,7 +957,11 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [zoneMenuOpen]);
-  const selectedZone = STATE_HOLIDAYS_2026.find(g => g.id === holidayStateId) ?? STATE_HOLIDAYS_2026[0];
+  /* Undefined until the zones arrive — the list is fetched, so the first
+     render has none. Typed as possibly-missing because it genuinely is; the
+     picker renders a placeholder rather than reading .label off nothing. */
+  const selectedZone: StateHolidayGroup | undefined =
+    zones.find(g => g.id === holidayStateId) ?? zones[0];
 
 
   const [factIndex, setFactIndex] = useState(0);
@@ -1572,7 +1594,9 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                     <MapPin className="w-3.5 h-3.5 text-amber-500" />Your Zone
                   </span>
                   <span className="flex items-center gap-1 min-w-0">
-                    <span className="text-[11px] font-black text-slate-700 truncate">{selectedZone.label}</span>
+                    <span className="text-[11px] font-black text-slate-700 truncate">
+                      {selectedZone?.label ?? 'Loading…'}
+                    </span>
                     <ChevronDown className={`w-3.5 h-3.5 text-amber-500 flex-shrink-0 transition-transform duration-200 ${zoneMenuOpen ? 'rotate-180' : ''}`} />
                   </span>
                 </button>
@@ -1580,7 +1604,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 {zoneMenuOpen && (
                   <div className="ih-pop-in absolute right-0 top-[calc(100%+6px)] z-20 w-64 max-h-72 overflow-y-auto ih-scroll-clean
                                   rounded-xl bg-white border border-slate-200 shadow-[0_20px_45px_-15px_rgba(0,0,0,.25)] p-1.5">
-                    {STATE_HOLIDAYS_2026.map(g => {
+                    {zones.map(g => {
                       const active = g.id === holidayStateId;
                       return (
                         <button key={g.id} type="button"
@@ -1753,10 +1777,9 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
               </div>
             </div>
 
-            {/* Announcements — no real announcements/CMS feed is wired up
-                yet, so this is explicitly sample data (see ANNOUNCEMENTS in
-                IntranetHomeShared.tsx), same honest pattern as the
-                Birthdays/Anniversaries card above. Sits directly under it. */}
+            {/* Announcements — real notices from the `noticeboard` app,
+                written by HR in Admin Console › Dashboard Content. Sits
+                directly under the Birthdays/Anniversaries card. */}
             <div className="ih-reveal rounded-xl bg-white border border-slate-200 shadow-sm p-5" style={{ animationDelay: '90ms' }}>
               <div className="flex items-center justify-between mb-1">
                 <h2 className="text-[10.5px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
@@ -1767,12 +1790,16 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                   View all
                 </button>
               </div>
-              <p className="text-[9.5px] text-slate-300 mb-3">Sample data — not yet connected to a real announcements feed</p>
-              <div className="space-y-3">
-                {ANNOUNCEMENTS.map(a => {
+              <div className="space-y-3 mt-3">
+                {!announcementsLoading && announcements.length === 0 && (
+                  <p className="text-[11px] text-slate-400 py-3">
+                    Nothing posted yet.
+                  </p>
+                )}
+                {announcements.slice(0, 3).map(a => {
                   const Icon = a.icon;
                   return (
-                    <div key={a.title} className="flex items-start gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
+                    <div key={a.id} className="flex items-start gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
                       <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
                         <Icon className="w-4 h-4 text-amber-500" />
                       </div>

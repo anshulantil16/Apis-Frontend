@@ -11,6 +11,7 @@ import {
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
   LifeBuoy, Globe2, CalendarClock, Landmark, Database,
   Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp,
+  Info, PartyPopper, AlertTriangle,
 } from 'lucide-react';
 
 /* lucide-react dropped brand icons, so these are small hand-rolled SVG marks
@@ -203,6 +204,7 @@ export interface NewJoiner { name: string; date: string; department?: string; da
 
 const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const VACANCIES_API = `${_API_BASE}/api/vacancies`;
+const NOTICEBOARD_API = `${_API_BASE}/api/noticeboard`;
 
 /* Backed by the real `vacancies` Django app — the current hiring plan (23
    roles, seeded from the same sheet this used to hold as a static array),
@@ -363,16 +365,54 @@ export function useCelebrations(scope: 'card' | 'all' = 'card') {
 }
 
 export interface HomeAnnouncement {
-  title: string; body: string; date: string; icon: ComponentType<{ className?: string }>;
+  id: number; title: string; body: string; date: string;
+  tone: string; pinned: boolean;
+  icon: ComponentType<{ className?: string }>;
+  moderationStatus: 'pending' | 'approved' | 'rejected';
+  submittedBy: string; isMine: boolean;
 }
-/* No real announcements/CMS feed is wired up yet — sample rows shown on the
-   home dashboard's Announcements card (IntranetHomePage.tsx), shaped the way
-   a real feed would look. Same honest "sample data" pattern as
-   SAMPLE_BIRTHDAYS above; also reused as-is on the Helpdesk page. */
-export const ANNOUNCEMENTS: HomeAnnouncement[] = [
-  { title: 'Helpdesk Portal Maintenance', body: 'The Helpdesk portal will be under maintenance on 2 Sep 2026 (11:00 PM – 12:00 AM).', date: '31 Aug 2026', icon: Sparkles },
-  { title: 'New Ticketing System Update', body: "We've upgraded our ticketing system for faster and better support.", date: '28 Aug 2026', icon: Megaphone },
-];
+
+/* The backend stores a short tone key rather than a component, so that it
+   never has an opinion about which icon set this app uses. */
+const TONE_ICON: Record<string, ComponentType<{ className?: string }>> = {
+  general: Megaphone, maintenance: Info, update: Sparkles,
+  celebration: PartyPopper, urgent: AlertTriangle,
+};
+
+/* Real notices from the `noticeboard` app, written by HR in Admin Console ›
+   Dashboard Content. This card used to show two hard-coded placeholder rows
+   about a helpdesk maintenance window in 2026; they were sample data, so they
+   were not carried over — an empty card is honest, stale fiction under the
+   company's name is not. */
+export function useAnnouncements() {
+  const [announcements, setAnnouncements] = useState<HomeAnnouncement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await apiFetch(`${NOTICEBOARD_API}/announcements/`);
+        const d = r.ok ? await r.json() : [];
+        if (alive) {
+          setAnnouncements((d as any[]).map(a => ({
+            ...a,
+            icon: TONE_ICON[a.tone] ?? Megaphone,
+            date: new Date(a.date).toLocaleDateString('en-IN',
+              { day: '2-digit', month: 'short', year: 'numeric' }),
+          })));
+        }
+      } catch {
+        /* Leaves the card empty rather than breaking the dashboard. */
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  return { announcements, loading };
+}
 
 export const COMING_SOON = [
   { label: 'Budget', icon: Wallet, soft: 'bg-emerald-50', accent: 'text-emerald-500' },
@@ -695,6 +735,45 @@ export const APIS_FACTS = [
   'Engages in ethical beekeeping and sustainable sourcing.',
 ];
 
+/* One zone's holiday list, as the dashboard's zone picker consumes it. */
+export interface StateHolidayGroup {
+  id: string;
+  label: string;
+  holidays: { id?: number; date: string; name: string; type: 'National' | 'State' }[];
+}
+
+/* APIS's own zone-wise holiday list, from the `noticeboard` app.
+
+   This was STATE_HOLIDAYS_2026, ~200 lines hand-transcribed from the signed
+   HR circular into this file — which meant next year's list needed a
+   developer and a deploy. The 2026 list was migrated into the database
+   verbatim (noticeboard/migrations/0002_seed_holiday_circular.py: the same
+   ten zones in the same order, thirteen days each), and an administrator now
+   maintains it from Admin Console. The array is deliberately not kept here as
+   a fallback — two copies of a holiday list drift, and the stale one is the
+   one people plan leave around. */
+export function useHolidayZones() {
+  const [zones, setZones] = useState<StateHolidayGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await apiFetch(`${NOTICEBOARD_API}/holidays/`);
+        if (alive && r.ok) setZones((await r.json()) as StateHolidayGroup[]);
+      } catch {
+        /* The widget shows its own empty state rather than breaking. */
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  return { zones, loading };
+}
+
 /* India's central-government gazetted (compulsory) public holidays for
    2026 — real, sourced, not company-specific. APIS's actual internal
    holiday list (which may add regional/restricted holidays, or drop some
@@ -722,190 +801,6 @@ export const HOLIDAYS_2026 = [
   { date: '2026-12-25', name: 'Christmas Day' },
 ];
 
-/* APIS's own 2026 zone-wise holiday list — transcribed from the signed HR
-   circular (public/Policies/Holiday List- 2026 revised.pdf, Neelendra Kumar
-   Pandey, Sr. Manager HR). Each zone is one page of that PDF; `type` splits
-   the nationally-gazetted days (Republic Day, Independence Day, Gandhi
-   Jayanti, Christmas — identical across every zone) from the
-   region-specific "State Special" ones, the same distinction the circular
-   itself draws. Re-transcribe this block if HR reissues the circular. */
-export interface StateHolidayGroup {
-  id: string;
-  label: string;
-  holidays: { date: string; name: string; type: 'National' | 'State' }[];
-}
-export const STATE_HOLIDAYS_2026: StateHolidayGroup[] = [
-  {
-    id: 'north', label: 'Delhi (NCR) & North Zone', holidays: [
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-08-28', name: 'Rakshabandhan', type: 'State' },
-      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-20', name: 'Dussehra / Vijayadasami', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
-      { date: '2026-11-10', name: 'Diwali Holiday', type: 'State' },
-      { date: '2026-12-25', name: 'Christmas', type: 'National' },
-    ],
-  },
-  {
-    id: 'uttarakhand', label: 'Plant / Uttarakhand', holidays: [
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-08-11', name: 'Shivratri', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-08-28', name: 'Rakshabandhan', type: 'State' },
-      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-20', name: 'Dussehra', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
-      { date: '2026-11-10', name: 'Diwali Holiday', type: 'State' },
-    ],
-  },
-  {
-    id: 'maharashtra', label: 'Maharashtra / Goa', holidays: [
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
-      { date: '2026-09-14', name: 'Ganesh Chaturthi', type: 'State' },
-      { date: '2026-09-25', name: 'Anant Chaturdashi', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-20', name: 'Dussehra / Vijayadasami', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
-      { date: '2026-12-25', name: 'Christmas', type: 'National' },
-    ],
-  },
-  {
-    id: 'tamilnadu', label: 'Tamil Nadu', holidays: [
-      { date: '2026-01-14', name: 'Makar Sankranti / Pongal', type: 'State' },
-      { date: '2026-01-15', name: 'Makar Sankranti / Pongal', type: 'State' },
-      { date: '2026-01-16', name: 'Makar Sankranti / Pongal', type: 'State' },
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-04-14', name: 'Tamil New Year', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
-      { date: '2026-09-14', name: 'Ganesh Chaturthi', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-20', name: 'Ayutha Puja / Dussehra', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
-    ],
-  },
-  {
-    id: 'south', label: 'Andhra Pradesh / Telangana / Karnataka', holidays: [
-      { date: '2026-01-14', name: 'Makar Sankranti / Pongal', type: 'State' },
-      { date: '2026-01-15', name: 'Makar Sankranti / Pongal', type: 'State' },
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-03-19', name: 'Ugadi / Cheti Chand', type: 'State' },
-      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-09-14', name: 'Ganesh Chaturthi', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-21', name: 'Vijayadasami', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-12-25', name: 'Christmas', type: 'National' },
-    ],
-  },
-  {
-    id: 'kerala', label: 'Kerala', holidays: [
-      { date: '2026-01-15', name: 'Makar Sankranti / Pongal', type: 'State' },
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
-      { date: '2026-04-15', name: 'Bihu', type: 'State' },
-      { date: '2026-05-01', name: 'Labour / May Day', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-08-26', name: 'Onam', type: 'State' },
-      { date: '2026-09-14', name: 'Ganesh Chaturthi', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-21', name: 'Vijayadasami', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-12-25', name: 'Christmas', type: 'National' },
-    ],
-  },
-  {
-    id: 'jharkhand', label: 'Jharkhand', holidays: [
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-05-27', name: 'Eid-ul-Zuha (Bakrid)', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-19', name: 'Ashtami', type: 'State' },
-      { date: '2026-10-20', name: 'Dussehra', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
-      { date: '2026-12-25', name: 'Christmas', type: 'National' },
-    ],
-  },
-  {
-    id: 'bihar', label: 'Bihar', holidays: [
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-03-21', name: 'Eid-ul-Fitr (Ramzan)', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-05-27', name: 'Eid-ul-Zuha (Bakrid)', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-08-26', name: 'Milad-un-Nabi', type: 'State' },
-      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-19', name: 'Ashtami', type: 'State' },
-      { date: '2026-10-20', name: 'Dussehra', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-12-25', name: 'Christmas', type: 'National' },
-    ],
-  },
-  {
-    id: 'eastzone', label: 'West Bengal / Assam', holidays: [
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-04-15', name: 'Bengali New Year Day', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-17', name: 'Saptami', type: 'State' },
-      { date: '2026-10-19', name: 'Navami', type: 'State' },
-      { date: '2026-10-20', name: 'Dussehra', type: 'State' },
-      { date: '2026-10-21', name: 'Durga Idol Immersion Day', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-11-11', name: 'Bhai Dooj', type: 'State' },
-      { date: '2026-12-25', name: 'Christmas', type: 'National' },
-    ],
-  },
-  {
-    id: 'westzone', label: 'Gujarat / Rajasthan', holidays: [
-      { date: '2026-01-14', name: 'Makar Sankranti / Pongal', type: 'State' },
-      { date: '2026-01-26', name: 'Republic Day', type: 'National' },
-      { date: '2026-03-04', name: 'Holi', type: 'State' },
-      { date: '2026-05-01', name: 'Buddha Purnima / Labour Day', type: 'State' },
-      { date: '2026-08-15', name: 'Independence Day', type: 'National' },
-      { date: '2026-08-28', name: 'Rakshabandhan', type: 'State' },
-      { date: '2026-09-04', name: 'Janmashtami', type: 'State' },
-      { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti', type: 'National' },
-      { date: '2026-10-20', name: 'Dussehra / Vijayadasami', type: 'State' },
-      { date: '2026-11-08', name: 'Deepawali', type: 'State' },
-      { date: '2026-11-09', name: 'Govardhan Pooja', type: 'State' },
-      { date: '2026-11-10', name: 'Diwali Holiday', type: 'State' },
-      { date: '2026-12-25', name: 'Christmas', type: 'National' },
-    ],
-  },
-];
 
 /* Recently-opened tools, tracked purely client-side (no server round-trip
    needed for something this low-stakes). Newest first, capped at 4. Stored

@@ -3,6 +3,7 @@
  * Each tab answers one question an administrator actually has:
  *   People    — who can sign in, and which tools they may open
  *   Content   — what staff have added to the dashboard, waiting to be approved
+ *   Noticeboard — announcements and the holiday circular, written by HR
  *   Activity  — who did what, and when
  *   HRMS      — what Pocket HRMS is sending us, verbatim, and when we last pulled it
  *   Sessions  — who is signed in right now, and how to end it
@@ -15,14 +16,14 @@
  * portal maps: a wrong department or a missing email needs to be traceable to
  * upstream, not guessed at.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
   Users, RefreshCw, Database, Monitor, Search, ShieldCheck, X, Check, AlertCircle,
-  Loader2, LogOut, Eye, Crown, UserPlus, Trash2, Grid3x3, ClipboardCheck, ScrollText,
+  Loader2, LogOut, Eye, Crown, UserPlus, Trash2, Grid3x3, ClipboardCheck, ScrollText, Megaphone,
 } from 'lucide-react';
-import { portalFetch, type PortalUser } from './session';
+import { apiFetch, portalFetch, type PortalUser } from './session';
 
-type Tab = 'people' | 'access' | 'content' | 'activity' | 'hrms' | 'sessions';
+type Tab = 'people' | 'access' | 'content' | 'noticeboard' | 'activity' | 'hrms' | 'sessions';
 
 export function AdminConsole({ me }: { me: PortalUser }) {
   const [tab, setTab] = useState<Tab>('people');
@@ -38,6 +39,7 @@ export function AdminConsole({ me }: { me: PortalUser }) {
     { k: 'people', label: 'People', icon: Users },
     { k: 'access', label: 'Who can open what', icon: Grid3x3 },
     { k: 'content', label: 'Dashboard Content', icon: ClipboardCheck },
+    { k: 'noticeboard', label: 'Noticeboard', icon: Megaphone },
     { k: 'activity', label: 'Activity Log', icon: ScrollText },
     { k: 'hrms', label: 'HRMS Master Data', icon: Database },
     { k: 'sessions', label: 'Live Sessions', icon: Monitor },
@@ -97,6 +99,7 @@ export function AdminConsole({ me }: { me: PortalUser }) {
       {tab === 'people' && <PeopleTab onToast={setToast} />}
       {tab === 'access' && <AccessTab onToast={setToast} />}
       {tab === 'content' && <ContentTab onToast={setToast} />}
+      {tab === 'noticeboard' && <NoticeboardTab onToast={setToast} />}
       {tab === 'activity' && <ActivityTab onToast={setToast} />}
       {tab === 'hrms' && <HrmsTab onToast={setToast} />}
       {tab === 'sessions' && <SessionsTab onToast={setToast} />}
@@ -1842,6 +1845,425 @@ function ActivityTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => 
                      text-slate-500 hover:border-slate-300 transition-colors">
           Show 100 more — {data.returned} of {data.total} shown
         </button>
+      )}
+    </div>
+  );
+}
+
+
+// ── noticeboard ──────────────────────────────────────────────────────────────
+/* The two things on the dashboard that HR writes rather than a developer.
+ *
+ * Announcements and the holiday circular both used to be hard-coded arrays in
+ * the frontend, so changing either meant a code change and a deploy. They are
+ * together on one tab because they are the same job — keeping what the
+ * dashboard tells people current — even though they are governed differently:
+ * anyone may propose an announcement and it queues, while the holiday list is
+ * a transcription of a signed circular and only an administrator writes it.
+ */
+const NOTICEBOARD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/noticeboard`;
+
+const TONES = [
+  ['general', 'General'], ['maintenance', 'Maintenance / downtime'],
+  ['update', 'Product or system update'], ['celebration', 'Celebration'],
+  ['urgent', 'Urgent'],
+] as const;
+
+const nbField = 'w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-[13px] text-slate-800 ' +
+  'placeholder:text-slate-400 focus:outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-400/10 transition-all';
+const nbLabel = 'block text-[11.5px] font-bold text-slate-600 mb-1.5';
+
+function NoticeboardTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void }) {
+  const [section, setSection] = useState<'announcements' | 'holidays'>('announcements');
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        {([['announcements', 'Announcements'], ['holidays', 'Holiday List']] as const).map(([k, label]) => (
+          <button key={k} onClick={() => setSection(k)}
+            className={`px-3 py-1.5 rounded-lg text-[11.5px] font-black transition-colors ${
+              section === k ? 'bg-slate-900 text-white'
+                : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {section === 'announcements' ? <AnnouncementsAdmin onToast={onToast} />
+        : <HolidaysAdmin onToast={onToast} />}
+    </div>
+  );
+}
+
+
+function AnnouncementsAdmin({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [nonce, setNonce] = useState(0);
+  const [loadedNonce, setLoadedNonce] = useState(-1);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const loading = loadedNonce !== nonce;
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await apiFetch(`${NOTICEBOARD_API}/announcements/`);
+        if (alive && r.ok) setRows(await r.json());
+      } catch {
+        if (alive) onToast({ t: 'Could not load announcements', ok: false });
+      } finally {
+        if (alive) setLoadedNonce(nonce);
+      }
+    })();
+    return () => { alive = false; };
+  }, [nonce, onToast]);
+
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const get = (k: string) => String(fd.get(k) ?? '').trim();
+    const payload = {
+      title: get('title'), body: get('body'), tone: get('tone'),
+      date: get('date') || undefined,
+      expiresOn: get('expiresOn') || null,
+      pinned: fd.get('pinned') === 'on',
+    };
+    if (!payload.title || !payload.body) {
+      onToast({ t: 'A notice needs a title and something to say', ok: false });
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const url = editing ? `${NOTICEBOARD_API}/announcements/${editing.id}/`
+        : `${NOTICEBOARD_API}/announcements/`;
+      const r = await apiFetch(url, {
+        method: editing ? 'PATCH' : 'POST', body: JSON.stringify(payload),
+      });
+      const d = await r.json().catch(() => ({}));
+      onToast({ t: r.ok ? (d.message || 'Saved') : (d.error || 'Could not save it'), ok: r.ok });
+      if (r.ok) { setOpen(false); setEditing(null); setNonce(n => n + 1); }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(a: any) {
+    const r = await apiFetch(`${NOTICEBOARD_API}/announcements/${a.id}/`, { method: 'DELETE' });
+    const d = await r.json().catch(() => ({}));
+    onToast({ t: r.ok ? 'Announcement removed' : (d.error || 'Could not remove it'), ok: r.ok });
+    if (r.ok) setNonce(n => n + 1);
+  }
+
+  const startEdit = (a: any) => { setEditing(a); setOpen(true); };
+  const startNew = () => { setEditing(null); setOpen(true); };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[12px] text-slate-400 font-semibold">
+          Shown on the dashboard&rsquo;s Announcements card. A notice with an end date
+          stops showing after it, but stays here as a record.
+        </p>
+        <button onClick={startNew}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600
+                     text-white text-[12px] font-black transition-colors shrink-0">
+          <UserPlus className="w-3.5 h-3.5" />Write a notice
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="p-10 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+      ) : rows.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
+          <Megaphone className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+          <p className="font-black text-slate-700">Nothing posted yet.</p>
+          <p className="text-[12.5px] text-slate-400 mt-1">
+            The card on the dashboard is empty until you write something here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map(a => {
+            const expired = a.expiresOn && new Date(a.expiresOn) < new Date();
+            return (
+              <div key={a.id}
+                className={`bg-white border rounded-xl p-3.5 ${expired ? 'border-slate-100 opacity-70' : 'border-slate-200'}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <p className="font-black text-slate-800 text-[13.5px]">{a.title}</p>
+                      {a.pinned && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9.5px] font-black uppercase">
+                          Pinned
+                        </span>
+                      )}
+                      {a.moderationStatus !== 'approved' && (
+                        <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-black uppercase ${
+                          a.moderationStatus === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                          {a.moderationStatus === 'pending' ? 'Waiting approval' : 'Not approved'}
+                        </span>
+                      )}
+                      {expired && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[9.5px] font-black uppercase">
+                          Expired
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[12px] text-slate-500 leading-snug">{a.body}</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {new Date(a.date).toLocaleDateString()}
+                      {a.expiresOn && <span> &rarr; {new Date(a.expiresOn).toLocaleDateString()}</span>}
+                      {a.submittedBy && <span> &middot; by {a.submittedBy}</span>}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => startEdit(a)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-500
+                                 hover:border-indigo-300 hover:text-indigo-600 text-[11.5px] font-black transition-colors">
+                      Edit
+                    </button>
+                    <button onClick={() => remove(a)} title="Remove this notice"
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {open && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-slate-900/50 backdrop-blur-sm"
+          onClick={() => { setOpen(false); setEditing(null); }}>
+          <form onClick={e => e.stopPropagation()} onSubmit={save}
+            className="ih-pop-in relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="sticky top-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 bg-white/95">
+              <p className="text-[14px] font-black text-slate-900 flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-indigo-500" />
+                {editing ? 'Edit notice' : 'Write a notice'}
+              </p>
+              <button type="button" onClick={() => { setOpen(false); setEditing(null); }} title="Close"
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <div>
+                <label className={nbLabel}>Title <span className="text-rose-500">*</span></label>
+                <input name="title" required defaultValue={editing?.title || ''}
+                  placeholder="e.g. Plant shutdown on Friday" className={nbField} />
+              </div>
+              <div>
+                <label className={nbLabel}>What it says <span className="text-rose-500">*</span></label>
+                <textarea name="body" required rows={3} defaultValue={editing?.body || ''}
+                  placeholder="The detail people need, in a sentence or two."
+                  className={`${nbField} resize-y`} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={nbLabel}>Type</label>
+                  <select name="tone" defaultValue={editing?.tone || 'general'} className={nbField}>
+                    {TONES.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={nbLabel}>Dated</label>
+                  <input type="date" name="date"
+                    defaultValue={editing?.date || new Date().toISOString().slice(0, 10)}
+                    className={nbField} />
+                </div>
+              </div>
+              <div>
+                <label className={nbLabel}>
+                  Stop showing after <span className="text-slate-400 font-semibold">(optional)</span>
+                </label>
+                <input type="date" name="expiresOn" defaultValue={editing?.expiresOn || ''} className={nbField} />
+                <p className="text-[10.5px] text-slate-400 font-semibold mt-1.5">
+                  Leave blank to keep it up until you take it down.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-[12.5px] font-bold text-slate-600 cursor-pointer">
+                <input type="checkbox" name="pinned" defaultChecked={!!editing?.pinned}
+                  className="w-4 h-4 rounded accent-indigo-500 cursor-pointer" />
+                Keep this at the top of the card
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-slate-100 bg-slate-50">
+              <button type="button" onClick={() => { setOpen(false); setEditing(null); }}
+                className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all">
+                Cancel
+              </button>
+              <button type="submit" disabled={busy}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600
+                           text-white text-[13px] font-black transition-all disabled:opacity-60">
+                <Check className="w-4 h-4" />{busy ? 'Saving…' : editing ? 'Save changes' : 'Post it'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function HolidaysAdmin({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void }) {
+  const [zones, setZones] = useState<any[]>([]);
+  const [zoneKey, setZoneKey] = useState('');
+  const [nonce, setNonce] = useState(0);
+  const [loadedNonce, setLoadedNonce] = useState(-1);
+  const [adding, setAdding] = useState(false);
+  const loading = loadedNonce !== nonce;
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await apiFetch(`${NOTICEBOARD_API}/holidays/`);
+        if (alive && r.ok) setZones(await r.json());
+      } catch {
+        if (alive) onToast({ t: 'Could not load the holiday list', ok: false });
+      } finally {
+        if (alive) setLoadedNonce(nonce);
+      }
+    })();
+    return () => { alive = false; };
+  }, [nonce, onToast]);
+
+  const zone = zones.find(z => z.id === zoneKey) ?? zones[0];
+
+  async function add(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!zone) return;
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const r = await apiFetch(`${NOTICEBOARD_API}/holidays/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        zone: zone.id, date: String(fd.get('date') ?? ''),
+        name: String(fd.get('name') ?? '').trim(),
+        type: String(fd.get('type') ?? 'State'),
+      }),
+    });
+    const d = await r.json().catch(() => ({}));
+    onToast({ t: r.ok ? 'Holiday added' : (d.error || 'Could not add it'), ok: r.ok });
+    if (r.ok) { form.reset(); setAdding(false); setNonce(n => n + 1); }
+  }
+
+  async function remove(h: any) {
+    const r = await apiFetch(`${NOTICEBOARD_API}/holidays/${h.id}/`, { method: 'DELETE' });
+    const d = await r.json().catch(() => ({}));
+    onToast({ t: r.ok ? 'Holiday removed' : (d.error || 'Could not remove it'), ok: r.ok });
+    if (r.ok) setNonce(n => n + 1);
+  }
+
+  if (loading) {
+    return <div className="p-10 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[12px] text-slate-400 font-semibold">
+        The zone-wise list behind the dashboard&rsquo;s Upcoming Holidays widget,
+        transcribed from the signed HR circular. Each change is recorded in the
+        Activity Log.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {zones.map(z => (
+          <button key={z.id} onClick={() => setZoneKey(z.id)}
+            className={`px-3 py-1.5 rounded-lg text-[11.5px] font-black transition-colors ${
+              zone?.id === z.id ? 'bg-indigo-500 text-white'
+                : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}>
+            {z.label}
+            <span className={`ml-1.5 text-[9.5px] ${zone?.id === z.id ? 'text-white/70' : 'text-slate-400'}`}>
+              {z.holidays.length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {zone && (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
+            <p className="font-black text-slate-800 text-[13px]">{zone.label}</p>
+            <button onClick={() => setAdding(a => !a)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600
+                         text-white text-[11.5px] font-black transition-colors">
+              <UserPlus className="w-3.5 h-3.5" />Add a day
+            </button>
+          </div>
+
+          {adding && (
+            <form onSubmit={add} className="flex flex-wrap items-end gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
+              <div className="flex-1 min-w-[160px]">
+                <label className={nbLabel}>Name</label>
+                <input name="name" required placeholder="e.g. Ambedkar Jayanti" className={nbField} />
+              </div>
+              <div>
+                <label className={nbLabel}>Date</label>
+                <input type="date" name="date" required className={nbField} />
+              </div>
+              <div>
+                <label className={nbLabel}>Type</label>
+                <select name="type" defaultValue="State" className={nbField}>
+                  <option value="State">State</option>
+                  <option value="National">National</option>
+                </select>
+              </div>
+              <button type="submit"
+                className="px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-[12px] font-black transition-colors">
+                Add
+              </button>
+              <button type="button" onClick={() => setAdding(false)}
+                className="px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-100 text-[12px] font-bold">
+                Cancel
+              </button>
+            </form>
+          )}
+
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 text-slate-400">
+              <tr>{['Date', 'Holiday', 'Type', ''].map(h => (
+                <th key={h} className="px-4 py-2 text-left font-black">{h}</th>))}</tr>
+            </thead>
+            <tbody>
+              {zone.holidays.map((h: any) => (
+                <tr key={h.id} className="border-t border-slate-100">
+                  <td className="px-4 py-2 text-slate-600 font-bold whitespace-nowrap">
+                    {new Date(`${h.date}T00:00:00`).toLocaleDateString('en-IN',
+                      { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="px-4 py-2 text-slate-700 font-semibold">{h.name}</td>
+                  <td className="px-4 py-2">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                      h.type === 'National' ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700'}`}>
+                      {h.type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <button onClick={() => remove(h)} title="Remove this day"
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {zone.holidays.length === 0 && (
+                <tr><td colSpan={4} className="px-4 py-10 text-center text-slate-300 font-semibold">
+                  No holidays listed for this zone.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
