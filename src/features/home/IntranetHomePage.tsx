@@ -890,6 +890,8 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
   const cel = useCelebrations();
   const vac = useVacancies();
   const vacSummary = summarizeVacancies(vac.vacancies);
+  const liveVacancyCount = vac.vacancies.filter(
+    v => v.moderationStatus === 'approved' && v.status === 'Active').length;
   /* Live BSE price for the banner; server-cached, so this is cheap. */
   const ticker = useTicker();
 
@@ -906,7 +908,6 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
     () => (isSuperadmin || !allowedApps
       ? QUICK_ACCESS
       : QUICK_ACCESS.filter(t => allowedApps.includes(t.id))),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [allowedApps, isSuperadmin],
   );
   // Top-level hero carousel: slide 0 is the "Our Products" showcase, with
@@ -1704,7 +1705,13 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                     View all
                   </button>
                 </div>
-                <p className="text-[9px] text-slate-300 mb-2.5">Top roles by open seats — {vac.vacancies.length} positions in total</p>
+                {/* Counted over what the whole company can see, not over the
+                    raw list: a superadmin (and a submitter) is served their
+                    own pending rows too, and counting those here promised
+                    more open positions than anyone else could find. */}
+                <p className="text-[9px] text-slate-300 mb-2.5">
+                  Top roles by open seats — {liveVacancyCount} position{liveVacancyCount === 1 ? '' : 's'} in total
+                </p>
                 <div className="flex-1 flex flex-col justify-evenly gap-1">
                   {!vac.loading && vacSummary.length === 0 && (
                     <p className="text-[10px] text-slate-400 py-3">No open positions right now.</p>

@@ -94,7 +94,12 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
   const awaiting = uploaded.filter(p => p.moderationStatus === 'pending');
 
   function resetUploadForm() {
-    setPreviewSrc('');
+    // Same reason as the file picker below: dropping the reference without
+    // revoking it leaves the blob held for the life of the page.
+    setPreviewSrc(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return '';
+    });
     setError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
@@ -377,7 +382,13 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
                   required className="hidden"
                   onChange={e => {
                     const f = e.target.files?.[0];
-                    setPreviewSrc(f ? URL.createObjectURL(f) : '');
+                    // Release the previous preview before replacing it.
+                    // Picking a different file repeatedly otherwise leaks a
+                    // blob of the full image each time, and these are photos.
+                    setPreviewSrc(prev => {
+                      if (prev) URL.revokeObjectURL(prev);
+                      return f ? URL.createObjectURL(f) : '';
+                    });
                   }} />
                 <p className="text-[10.5px] text-slate-400 font-semibold mt-1.5">JPG, PNG, WebP or GIF · up to 8 MB</p>
               </div>
