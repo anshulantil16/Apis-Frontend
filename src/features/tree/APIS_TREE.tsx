@@ -81,6 +81,11 @@ type TeamMember = {
    * own bracketed sub-group off the main bus, not a plain direct stem (see
    * FlatBranch). */
   functional?: boolean;
+  /** Small pill label on this member's own stem down from the HOD/T-bar —
+   * e.g. "Functional Reporting", when the org chart calls out that
+   * particular line as a functional (not direct) reporting relationship.
+   * Only rendered in the 2/3-manager grid tier, not on leaf rows. */
+  stemLabel?: string;
 };
 
 /* A sub-tree's top node isn't always the HOD who was clicked — PPC's Plant
@@ -88,10 +93,37 @@ type TeamMember = {
    sits at the top of her department's chart. SUB_TREE_ROOTS overrides the
    top node for any department where that's the case; departments without
    an entry here just show the clicked HOD's own card (Pankaj Tripathi's
-   tree, e.g.). */
-type SubTreeRoot = { title: string; vacant?: boolean; department?: string };
+   tree, e.g.).
+   PPC actually has three peer top-level positions per the org chart
+   supplied — the vacant Plant Head seat, Heera Swami's own GM seat, and
+   Nischal Bharadwaj (who reports to Heera Swami functionally, drawn as a
+   third column off to the right with its own "Reporting to functional
+   head" label) — side by side with no shared parent above them. `peer` /
+   `peerMembers` carries Heera Swami's column, `peer2` / `peer2Members` /
+   `peer2Label` carries Nischal Bharadwaj's. */
+type SubTreeRoot = {
+  title: string; vacant?: boolean; department?: string;
+  peer?: { name: string; role: string; department?: string };
+  peerMembers?: TeamMember[];
+  peer2?: { name: string; role: string; department?: string };
+  peer2Members?: TeamMember[];
+  peer2Label?: string;
+};
 const SUB_TREE_ROOTS: Record<string, SubTreeRoot> = {
-  'heera-swami': { title: 'Plant Head- Roorkee', vacant: true, department: 'PPC' },
+  'heera-swami': {
+    title: 'Plant Head- Roorkee', vacant: true, department: 'PPC',
+    peer: { name: 'Heera Swami', role: 'C1- GM- HO', department: 'PPC' },
+    peerMembers: [
+      { name: 'Sandeep', role: 'M1- AM- HO' },
+      { name: 'Kamaljeet', role: 'O5- Sr. Executive- HO' },
+      { name: 'Sanjay', role: 'O4- Executive- HO' },
+    ],
+    peer2: { name: 'Nischal Bharadwaj', role: 'M4- Sr. Manager- Finance & Accounts- Roorkee', department: 'PPC' },
+    peer2Members: [
+      { name: 'Praveen Sharma', role: 'M3- Manager- P&C- Roorkee' },
+    ],
+    peer2Label: 'Reporting to functional head',
+  },
 };
 
 /* Departments whose members hang directly off the HOD as one flat,
@@ -141,25 +173,20 @@ const SUB_TREES: Record<string, TeamMember[]> = {
       ],
     },
   ],
-  // Flat structure (see SUB_TREE_ROOTS above for the vacant "Plant Head"
-  // top node) — six people reporting into that vacant position, no further
-  // nesting. No photos were supplied for this department, so every card
-  // here uses the generic person icon rather than attempting one.
-  //
-  // Four (Rahul Dutt Sharma, Sarovan Kumar, Amir Khan, Sunil Kumar) report
-  // straight into the seat; Nischal Bharadwaj and Praveen Sharma are
-  // `functional: true` — per the org chart supplied, they report to their
-  // own functional head elsewhere, so FlatBranch draws them as a separate
-  // bracketed pair off the main bus rather than two more plain direct
-  // stems. Order matters here: direct members first, functional pair last,
-  // so they render left-group/right-group as in that chart.
+  // Straight top-to-bottom chain (see SUB_TREE_ROOTS above for the vacant
+  // "Plant Head" top node) — four people reporting straight into that
+  // vacant position, one after another, no further nesting. Nischal
+  // Bharadwaj and Praveen Sharma used to sit here as a bracketed
+  // "functional reporting" pair off this same seat, but per the org chart
+  // supplied they're actually their own third peer column (SUB_TREE_ROOTS'
+  // peer2) hanging off Heera Swami, not off the vacant seat — see peer2
+  // above. No photos were supplied for this department, so every card here
+  // uses the generic person icon rather than attempting one.
   'heera-swami': [
     { name: 'Rahul Dutt Sharma', role: 'M5- AGM- Production- Roorkee', location: 'Roorkee' },
     { name: 'Sarvan Kumar', role: 'M3- Manager- Engineering- Roorkee', location: 'Roorkee' },
     { name: 'Amir Khan', role: 'M1- AM- Store & Dispatch- Roorkee', location: 'Roorkee' },
     { name: 'Sunil Kumar', role: 'M3- Manager- QA & QC- Roorkee', location: 'Roorkee' },
-    { name: 'Nischal Bharadwaj', role: 'M4- Sr. Manager- Finance & Accounts- Roorkee- Functional Reporting', location: 'Roorkee', functional: true },
-    { name: 'Praveen Sharma', role: 'M3- Manager- P&C- Roorkee- Functional Reporting', location: 'Roorkee', functional: true },
   ],
   // General Trade Sales (Arun Mishra). Flat — twelve regional GTR heads
   // reporting straight to him, no further nesting — rendered via FlatBranch
@@ -328,6 +355,60 @@ const SUB_TREES: Record<string, TeamMember[]> = {
         { name: 'Abhishek Naagar', role: 'O4- Sr. Executive- HO' },
         { name: 'Anoop Sehgal', role: 'O5- Sr. Executive- Design- HO' },
         { name: 'Performance Marketing (Vacant)', role: 'M1- AM' },
+      ],
+    },
+  ],
+  // F&A / Internal Audit (Ankit Nagar) — same two-department-group shape as
+  // r-manigandan above (Internal Audit / Finance & Accounting), each
+  // recursing through its own manager(s). Nischal Bhardwaj sits at the same
+  // level as Prateek Aggarwal and Amit Madan under Finance & Accounting but
+  // has no reports of his own, per the org chart supplied — ReportBoxCard
+  // already renders a childless node as a plain box with no line below, so
+  // no special-casing is needed for that.
+  'ankit-nagar': [
+    {
+      name: 'Internal Audit', role: 'Department', stemLabel: 'Functional Reporting',
+      reports: [
+        {
+          name: 'Tapon Behera', role: 'M4- Sr. Manager- HO',
+          reports: [
+            { name: 'Harpal Singh', role: 'M1- AM' },
+            { name: 'Rishab', role: 'O5- Sr. Executive' },
+            { name: 'Pravesh Kumar', role: 'O5- Sr. Executive' },
+            { name: 'Puneet Singh', role: 'O4- Executive' },
+            { name: 'Abhishek', role: 'O4- Executive' },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'Finance & Accounting', role: 'Department',
+      reports: [
+        {
+          name: 'Prateek Aggarwal', role: 'M4- Sr. Manager- AP- HO',
+          reports: [
+            { name: 'Salendra', role: 'M1- AM' },
+            { name: 'Azad', role: 'O5- Sr. Executive' },
+            { name: 'Bhumika', role: 'O4- Executive' },
+            { name: 'Gaurav', role: 'O5- Sr. Executive' },
+            { name: 'Sallabh', role: 'O4- Executive' },
+            { name: 'Neha', role: 'O4- Executive' },
+          ],
+        },
+        {
+          name: 'Amit Madan', role: 'M5- AGM – AR- HO',
+          reports: [
+            { name: 'Sumit', role: 'M3- Manager' },
+            { name: 'Mayank', role: 'O4- Executive' },
+            { name: 'Roshan', role: 'O5- Sr. Executive' },
+            { name: 'Ashu', role: 'O4- Executive' },
+            { name: 'Anil', role: 'O4- Executive' },
+            { name: 'Sunil Kumar', role: 'O5- Sr. Executive' },
+          ],
+        },
+        {
+          name: 'Nischal Bhardwaj', role: 'M4- Sr. Manager- Plant Costing & Budgeting- Factory',
+        },
       ],
     },
   ],
@@ -531,14 +612,21 @@ function ReportLeafList({ members, baseDelay }: { members: TeamMember[]; baseDel
    their own reports) — recurses via a blue stem, same connector language
    as the HOD→managers T-connector above, just smaller. This is what makes
    Kunal → Rainy Chaudhary read as "one more branch of the org chart"
-   rather than a flat list entry. */
+   rather than a flat list entry.
+   Fixed width plus a clamped, reserved-height role line (same fixed-space
+   idea as FlatMemberCard) rather than sizing to each card's own text — a
+   long role like Nischal Bhardwaj's ("Plant Costing & Budgeting- Factory")
+   used to make his card visibly taller/wider than siblings sitting right
+   next to it (Prateek Aggarwal, Amit Madan) in the same row. */
 function ReportBoxCard({ member, delayMs }: { member: TeamMember; delayMs: number }) {
   const kids = member.reports ?? [];
   return (
     <div className="ih-pop-in flex flex-col items-center" style={{ animationDelay: `${delayMs}ms` }}>
-      <div className="ih-tilt rounded-xl bg-amber-50 border border-amber-200 shadow-sm px-2 py-1.5 min-w-[92px] max-w-[122px]">
-        <p className="text-[11.5px] font-black text-slate-900 leading-tight">{member.name}</p>
-        <p className="text-[10px] font-bold text-amber-600 mt-0.5 leading-snug">{member.role}</p>
+      <div className="ih-tilt rounded-xl bg-amber-50 border border-amber-200 shadow-sm px-2.5 py-1.5 w-[122px]">
+        <p className="text-sm font-black text-slate-900 leading-tight line-clamp-1" title={member.name}>{member.name}</p>
+        <p className="text-[12px] font-bold text-amber-600 mt-1 leading-snug line-clamp-3 min-h-[3.6em]" title={member.role}>
+          {member.role}
+        </p>
       </div>
       {kids.length > 0 && (
         <>
@@ -651,6 +739,23 @@ function FlatMemberCard({ member }: { member: TeamMember }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/* Straight top-to-bottom chain of cards, one stem per link — used for PPC's
+   peer columns (Plant Head / Heera Swami / Nischal Bharadwaj) per the org
+   chart supplied, which draws each column as a single vertical line of
+   boxes rather than a bus fanning out to siblings. */
+function VerticalChainBranch({ members }: { members: TeamMember[] }) {
+  return (
+    <div className="flex flex-col items-center">
+      {members.map((m, i) => (
+        <div key={m.name} className="ih-pop-in flex flex-col items-center" style={{ animationDelay: `${140 + i * 90}ms` }}>
+          <div aria-hidden className="w-px h-6 bg-amber-300" />
+          <div className="w-[210px]"><FlatMemberCard member={m} /></div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -845,34 +950,105 @@ function DeptSubTree({ hod, root, members, onBack }: {
       </button>
 
       <div className="flex flex-col items-center">
-        {/* level 1 — the HOD, or a vacant position title for flat trees */}
-        <div className="ih-pop-in relative w-full max-w-md">
-          {root ? (
-            <SubTreeRootCard root={root} />
-          ) : (
-            <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5">
-              <div className="flex items-center gap-3.5">
-                <PersonAvatar person={hod} big />
-                <div className="min-w-0 flex-1">
-                  <p className="font-black text-slate-900 text-lg">{hod.name}</p>
-                  <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 inline-block mt-1">
-                    HOD
-                  </span>
-                  <p className="text-sm font-bold text-amber-700 mt-1">{hod.role}- {hod.department}- HO</p>
-                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
-                    <Building2 className="w-4 h-4" />
-                    <span className="truncate">{hod.department}</span>
+        {/* level 1 — the HOD, a vacant position title for flat trees, or (PPC)
+            two peer boxes side by side with no shared parent above them. The
+            peer case puts each box AND its own branch in one flex column
+            together (not a separate box row + separate branch row) so a
+            narrow box still centres correctly over its own much wider
+            branch below it — matching how every other sub-tree's narrow HOD
+            box already sits above its wider T-bar/branch, just doubled. */}
+        {root?.peer ? (
+          <div className="ih-pop-in w-full">
+            <div className="flex flex-wrap items-start justify-center gap-x-10 sm:gap-x-16 gap-y-10">
+              <div className="flex flex-col items-center">
+                <div className="relative w-full max-w-xs">
+                  <SubTreeRootCard root={root} />
+                  {/* connector into Heera Swami's column, in the flex gap */}
+                  <div aria-hidden className="hidden sm:block absolute top-1/2 -translate-y-1/2 -right-10 sm:-right-16 w-10 sm:w-16 h-px bg-amber-300" />
+                </div>
+                <Collapsible open={!collapsed}>
+                  <div aria-hidden className="w-px h-8 bg-amber-300 mx-auto" />
+                  <VerticalChainBranch members={members} />
+                </Collapsible>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="relative w-72">
+                  <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5">
+                    <div className="flex items-center gap-3.5">
+                      <GenericAvatar big />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-black text-slate-900 text-lg">{root.peer.name}</p>
+                        <p className="text-sm font-bold text-amber-700 mt-1">{root.peer.role}</p>
+                        {root.peer.department && (
+                          <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                            <Building2 className="w-4 h-4" />
+                            <span className="truncate">{root.peer.department}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed(c => !c)}
+                    title={collapsed ? 'Expand team' : 'Collapse team'} />
+                  {/* connector into Nischal Bharadwaj's column, in the flex gap */}
+                  {root.peer2 && (
+                    <div aria-hidden className="hidden sm:block absolute top-1/2 -translate-y-1/2 -right-10 sm:-right-16 w-10 sm:w-16 h-px bg-amber-300" />
+                  )}
+                </div>
+                <Collapsible open={!collapsed}>
+                  <div aria-hidden className="w-px h-8 bg-amber-300 mx-auto" />
+                  <VerticalChainBranch members={root.peerMembers ?? []} />
+                </Collapsible>
+              </div>
+              {root.peer2 && (
+                <div className="flex flex-col items-center">
+                  <div className="relative w-[210px]">
+                    {root.peer2Label && (
+                      <span className="hidden sm:block absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap
+                                       text-[9px] font-black uppercase tracking-wide text-amber-700 bg-amber-50
+                                       border border-amber-200 rounded-full px-2 py-0.5 shadow-sm">
+                        {root.peer2Label}
+                      </span>
+                    )}
+                    <FlatMemberCard member={{ name: root.peer2.name, role: root.peer2.role }} />
+                  </div>
+                  <Collapsible open={!collapsed}>
+                    <div aria-hidden className="w-px h-8 bg-amber-300 mx-auto" />
+                    <VerticalChainBranch members={root.peer2Members ?? []} />
+                  </Collapsible>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="ih-pop-in relative w-full max-w-md">
+            {root ? (
+              <SubTreeRootCard root={root} />
+            ) : (
+              <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5">
+                <div className="flex items-center gap-3.5">
+                  <PersonAvatar person={hod} big />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-slate-900 text-lg">{hod.name}</p>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 inline-block mt-1">
+                      HOD
+                    </span>
+                    <p className="text-sm font-bold text-amber-700 mt-1">{hod.role}- {hod.department}- HO</p>
+                    <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                      <Building2 className="w-4 h-4" />
+                      <span className="truncate">{hod.department}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-          <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed(c => !c)}
-            title={collapsed ? 'Expand team' : 'Collapse team'} />
-        </div>
+            )}
+            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed(c => !c)}
+              title={collapsed ? 'Expand team' : 'Collapse team'} />
+          </div>
+        )}
 
         <Collapsible open={!collapsed}>
-          {root || FLAT_TREE_IDS.has(hod.id) ? (
+          {root?.peer ? null : root || FLAT_TREE_IDS.has(hod.id) ? (
             <>
               {/* flat tree: one amber stem straight into the T-connector, no manager tier */}
               <div aria-hidden className="w-px h-8 bg-amber-300 mx-auto" />
@@ -943,6 +1119,13 @@ function DeptSubTree({ hod, root, members, onBack }: {
                         style={{ animationDelay: `${140 + i * 100}ms` }}>
                         {/* stem from the T-bar down to this manager's box */}
                         <div aria-hidden className="hidden sm:block absolute -top-10 left-1/2 -translate-x-1/2 w-px h-10 bg-sky-300" />
+                        {mgr.stemLabel && (
+                          <span className="hidden sm:block absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap
+                                           text-[9px] font-black uppercase tracking-wide text-amber-700 bg-amber-50
+                                           border border-amber-200 rounded-full px-2 py-0.5 shadow-sm">
+                            {mgr.stemLabel}
+                          </span>
+                        )}
 
                         <div className="relative w-full max-w-[300px]">
                           <ManagerCard member={mgr} />
