@@ -1091,13 +1091,13 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                       <LeaderPhoto src={leader.photo} name={leader.name}
                         className="w-32 h-32 md:w-40 md:h-40 shrink-0 rounded-full object-cover object-top
                                    ring-4 ring-white/10 shadow-2xl mx-auto md:mx-0" />
-                      <div className="min-w-0 text-center md:text-left">
-                        <h1 className="text-xl md:text-2xl font-black text-amber-300 uppercase tracking-wide mb-1">
+                      <div className="min-w-0 flex-1 text-center md:text-left">
+                        <h1 className="text-2xl md:text-3xl font-black text-amber-300 uppercase tracking-wide mb-1">
                           {leader.name}
                         </h1>
-                        <p className="text-sm font-bold text-slate-300 mb-3">{leader.role}</p>
+                        <p className="text-base font-bold text-slate-300 mb-3">{leader.role}</p>
                         <div className="w-12 h-1 rounded-full bg-amber-500 mb-3 mx-auto md:mx-0" />
-                        <p className="text-slate-300 text-[13px] leading-relaxed max-w-xl">{leader.bio}</p>
+                        <p className="text-slate-300 text-[15px] leading-relaxed">{leader.bio}</p>
                       </div>
                     </div>
                   );

@@ -618,8 +618,8 @@ export interface QuickPortal {
 export const QUICK_PORTALS: QuickPortal[] = [
   { label: 'Pocket HRMS', sub: 'Access your HR services, leave & attendance', href: 'https://ess.pockethrms.com/', icon: Users, ring: 'ring-amber-200', soft: 'bg-amber-50', accent: 'text-amber-600' },
   { label: 'Bizom', sub: 'Track sales, orders & market data in real time', href: 'https://apisindia.bizom.in', icon: BarChart3, ring: 'ring-emerald-200', soft: 'bg-emerald-50', accent: 'text-emerald-600' },
-  { label: 'Hospital List', sub: 'View list of Hospitals associated with APIS', href: '/hospital_list/ProviderNetwork.html', icon: Building2, ring: 'ring-rose-200', soft: 'bg-rose-50', accent: 'text-rose-600' },
   { label: 'ERP', sub: 'Manage your enterprise resources & operations', href: 'https://erp.apisindia.com/APISLIVE25/SignIn?ReturnUrl=%2FAPISLIVE25%2F', icon: Database, ring: 'ring-violet-200', soft: 'bg-violet-50', accent: 'text-violet-600' },
+  { label: 'Hospital List', sub: 'View list of Hospitals associated with APIS', href: '/hospital_list/ProviderNetwork.html', icon: Building2, ring: 'ring-rose-200', soft: 'bg-rose-50', accent: 'text-rose-600' },
 ];
 
 /* Scrolling ticker strip above the home page hero. Same "static,

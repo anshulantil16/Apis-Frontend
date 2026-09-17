@@ -374,7 +374,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
           reports: [
             { name: 'Harpal Singh', role: 'M1- AM' },
             { name: 'Rishab', role: 'O5- Sr. Executive' },
-            { name: 'Pravesh Kumar', role: 'O5- Sr. Executive' },
+            { name: 'Pravesh', role: 'O5- Sr. Executive' },
             { name: 'Puneet Singh', role: 'O4- Executive' },
             { name: 'Abhishek', role: 'O4- Executive' },
           ],
@@ -623,7 +623,7 @@ function ReportBoxCard({ member, delayMs }: { member: TeamMember; delayMs: numbe
   return (
     <div className="ih-pop-in flex flex-col items-center" style={{ animationDelay: `${delayMs}ms` }}>
       <div className="ih-tilt rounded-xl bg-amber-50 border border-amber-200 shadow-sm px-2.5 py-1.5 w-[122px]">
-        <p className="text-sm font-black text-slate-900 leading-tight line-clamp-1" title={member.name}>{member.name}</p>
+        <p className="text-sm font-black text-slate-900 leading-tight line-clamp-2" title={member.name}>{member.name}</p>
         <p className="text-[12px] font-bold text-amber-600 mt-1 leading-snug line-clamp-3 min-h-[3.6em]" title={member.role}>
           {member.role}
         </p>
