@@ -850,7 +850,7 @@ function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
       <Panel title="Upload primary sales" icon={Upload}
-        subtitle="Pre-Sales Dump (.xlsx) — export it from the ERP and drop it in as-is">
+        subtitle="Both sheets in one workbook is fine — each tab is read on its own">
         <button
           onClick={async () => {
             setErr('');
@@ -890,7 +890,7 @@ function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void
                 {file ? file.name : 'Drop your sales file here, or click to browse'}
               </p>
               <p className="text-[11px] text-slate-400 mt-1">
-                Columns are matched by name, so the raw export works unchanged
+                Pre-Sales Dump and AOP vs ACH — columns matched by name, raw export works
               </p>
             </>
           )}
@@ -911,6 +911,28 @@ function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void
                 {res.message} · ₹{shortInr(res.total_revenue)}
               </p>
             </div>
+            {/* Which tab gave what. Without this a two-sheet workbook reports
+                one number and there is no way to tell whether both sheets were
+                actually read — which is exactly how a silently skipped tab
+                went unnoticed. */}
+            {res.sheets && Object.keys(res.sheets).length > 0 && (
+              <div className="mb-3 space-y-1.5">
+                {Object.entries(res.sheets).map(([name, info]: [string, any]) => (
+                  <div key={name}
+                    className="flex items-center justify-between gap-3 rounded-lg border
+                               border-slate-200 bg-white px-3 py-2">
+                    <span className="text-[12px] font-bold text-slate-700 truncate">{name}</span>
+                    <span className="text-[11px] font-black text-slate-400 shrink-0">
+                      {info.rows?.toLocaleString()} rows
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 uppercase text-[9.5px]">
+                        {info.kind === 'aop' ? 'AOP vs ACH' : 'Sales dump'}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* What was loaded but deliberately left out of the figures.
                 Shown as its own line rather than buried in the warnings —
                 a cancelled invoice missing from a total is the first thing
