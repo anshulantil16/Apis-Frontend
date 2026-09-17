@@ -107,6 +107,16 @@ function Kpi({ icon: Icon, label, value, format = shortInr, prefix = '', sub, de
 /* ════════════════════════════════════════════════════════════════════════ */
 type Tab = 'overview' | 'intelligence' | 'geography' | 'products' | 'customers' | 'team' | 'forecast' | 'data';
 
+/* Only label a slice big enough to read.
+ *
+ * A category split with a long tail drew a label for every slice, so a dozen
+ * sub-1% names piled on top of each other in a stack of unreadable colour.
+ * Small slices keep their colour, their tooltip and their legend row; they
+ * just stop shouting over one another on the chart itself. */
+const PIE_LABEL_MIN_PCT = 4;
+const pieLabel = (e: any) =>
+  (e.share_pct ?? 0) >= PIE_LABEL_MIN_PCT ? `${e.name} ${e.share_pct}%` : '';
+
 export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // Auth gate. Session is read once on mount; loadSession() also enforces the
   // 12-hour expiry, so a stale localStorage entry can't grant access.
@@ -604,7 +614,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   <PieChart>
                     <Pie data={breaks.category.results} dataKey="revenue" nameKey="name"
                       innerRadius={60} outerRadius={105} paddingAngle={3} animationDuration={1000}
-                      label={(e: any) => `${e.name} ${e.share_pct}%`} labelLine={false}>
+                      label={pieLabel} labelLine={false}>
                       {breaks.category.results.map((_: any, i: number) => (
                         <Cell key={i} fill={PALETTE[i % PALETTE.length]} stroke="#fff" strokeWidth={2} />
                       ))}
@@ -653,6 +663,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         {/* ══ TEAM ══ */}
         {!loading && hasData && tab === 'team' && (
           <div className="space-y-5">
+            {/* The three hierarchy panels below used to be nested inside this
+                salesperson check, so a file with RSM, ASM and Head but no
+                individual salesperson — which is both of the primary-sales
+                files — rendered an empty tab while holding all the data to
+                fill it. They stand on their own now. */}
             {breaks.salesperson?.results?.length ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -679,33 +694,40 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     </Reveal>
                   ))}
                 </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                  <Panel title="Salesperson leaderboard" icon={Trophy} delay={240}>
-                    <Leaderboard rows={breaks.salesperson.results} showTarget />
-                  </Panel>
-                  <div className="space-y-5">
-                    <Panel title="ASM performance" icon={Users} delay={300}>
-                      {breaks.asm?.results?.length ? <Leaderboard rows={breaks.asm.results} showTarget />
-                        : <Empty msg="No ASM column" />}
-                    </Panel>
-                    <Panel title="RSM performance" icon={Users} delay={360}>
-                      {breaks.rsm?.results?.length ? <Leaderboard rows={breaks.rsm.results} showTarget />
-                        : <Empty msg="No RSM column" />}
-                    </Panel>
-                    {/* Above RSM in the AOP sheet's hierarchy:
-                        HEAD > GTR HEAD > REPORT.INCHARGE. */}
-                    {breaks.sales_head?.results?.length > 0 && (
-                      <Panel title="Head performance" icon={Users}
-                        subtitle="Above RSM in the reporting line" delay={420}>
-                        <Leaderboard rows={breaks.sales_head.results} showTarget />
-                      </Panel>
-                    )}
-                  </div>
-                </div>
+                <Panel title="Salesperson leaderboard" icon={Trophy} delay={240}>
+                  <Leaderboard rows={breaks.salesperson.results} showTarget />
+                </Panel>
               </>
-            ) : (
+            ) : null}
+
+            {/* The reporting line, deepest first. */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              {breaks.asm?.results?.length > 0 && (
+                <Panel title="ASM performance" icon={Users}
+                  subtitle="Reporting manager" delay={300}>
+                  <Leaderboard rows={breaks.asm.results} showTarget />
+                </Panel>
+              )}
+              {breaks.rsm?.results?.length > 0 && (
+                <Panel title="RSM performance" icon={Users}
+                  subtitle="GTR head" delay={360}>
+                  <Leaderboard rows={breaks.rsm.results} showTarget />
+                </Panel>
+              )}
+              {breaks.sales_head?.results?.length > 0 && (
+                <Panel title="Head performance" icon={Users}
+                  subtitle="Above RSM in the reporting line" delay={420}>
+                  <Leaderboard rows={breaks.sales_head.results} showTarget />
+                </Panel>
+              )}
+            </div>
+
+            {!breaks.salesperson?.results?.length
+              && !breaks.asm?.results?.length
+              && !breaks.rsm?.results?.length
+              && !breaks.sales_head?.results?.length && (
               <Panel title="Sales team" icon={Users}>
-                <Empty msg="No salesperson column in your upload — add one to see the leaderboard" />
+                <Empty msg="No salesperson, ASM, RSM or Head column in your upload" />
               </Panel>
             )}
           </div>
@@ -1002,12 +1024,33 @@ function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void
                 </p>
               </details>
             )}
+            {/* Amber is for something lost or something needing a decision.
+                A note saying the import did exactly what it should is not
+                that, and dressing it as one made a clean import of a normal
+                ERP export look like seven faults. */}
             {res.warnings?.map((w: string, i: number) => (
               <div key={i} className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 mb-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                 <p className="text-[12px] text-amber-900 leading-relaxed">{w}</p>
               </div>
             ))}
+            {res.notes?.length > 0 && (
+              <details className="mt-1" open={!res.warnings?.length}>
+                <summary className="cursor-pointer text-[10px] font-black uppercase tracking-widest
+                                    text-slate-300 hover:text-slate-500 transition-colors mb-1.5">
+                  What the import did · {res.notes.length}
+                </summary>
+                <div className="space-y-1.5">
+                  {res.notes.map((n: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2 rounded-lg bg-slate-50
+                                            border border-slate-100 p-2.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-slate-300 mt-0.5 flex-shrink-0" />
+                      <p className="text-[11.5px] text-slate-500 leading-relaxed">{n}</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
         )}
       </Panel>
@@ -1036,11 +1079,15 @@ function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void
                     {u.rows.toLocaleString()} rows · ₹{shortInr(u.revenue)}
                     {u.period_start && ` · ${u.period_start} → ${u.period_end}`}
                   </p>
-                  {u.warnings?.length > 0 && (
+                  {u.warnings?.length > 0 ? (
                     <p className="text-[10px] text-amber-600 font-semibold mt-0.5">
                       {u.warnings.length} warning{u.warnings.length > 1 ? 's' : ''}
                     </p>
-                  )}
+                  ) : u.notes?.length > 0 ? (
+                    <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                      Imported cleanly
+                    </p>
+                  ) : null}
                 </div>
                 <button onClick={() => removeUpload(u.id)}
                   className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0">
