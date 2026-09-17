@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
-  Upload, Download, TrendingUp, Target, Users, Package, MapPin,
+  Upload, Download, TrendingUp, Target, Users, Package, MapPin, Building2,
   Zap, RefreshCw, Trash2, AlertTriangle, CheckCircle2, Info, Sparkles,
   BarChart3, Globe2, ShoppingCart, Boxes, X, Filter, ArrowUpRight, ArrowDownRight,
   Activity, Layers, FileSpreadsheet, Trophy, Radar, Brain, UserSearch,
@@ -148,8 +148,14 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
       return r.json();
     };
     try {
+      // The two primary-sales files carry more hierarchy than the original
+      // template did. Panels for these hide themselves when a dimension comes
+      // back empty, so a file that does not have one costs a card rather than
+      // showing an empty one.
       const dims = ['state', 'zone', 'area', 'category', 'product', 'sku', 'channel',
-                    'salesperson', 'asm', 'rsm', 'customer'];
+                    'salesperson', 'asm', 'rsm', 'customer',
+                    'sales_head', 'subzone', 'district', 'location',
+                    'business_type', 'warehouse_type', 'variant', 'prod_group'];
       const [ov, tr, ins, fc, fo, up,
              pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price,
              rfm, cohorts, newRepeat, paretoCustomer,
@@ -570,6 +576,22 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               {breaks.customer?.results?.length ? <Leaderboard rows={breaks.customer.results.slice(0, 12)} />
                 : <Empty msg="No customer column in your upload" />}
             </Panel>
+            {breaks.subzone?.results?.length > 0 && (
+              <Panel title="Sub-zone performance" icon={MapPin} delay={240}>
+                <Leaderboard rows={breaks.subzone.results.slice(0, 12)} showTarget />
+              </Panel>
+            )}
+            {breaks.district?.results?.length > 0 && (
+              <Panel title="Top districts" icon={MapPin} delay={300}>
+                <Leaderboard rows={breaks.district.results.slice(0, 12)} />
+              </Panel>
+            )}
+            {breaks.location?.results?.length > 0 && (
+              <Panel title="Billing depot" icon={Building2} subtitle="Which location invoiced it"
+                delay={360}>
+                <Leaderboard rows={breaks.location.results.slice(0, 12)} />
+              </Panel>
+            )}
           </div>
         )}
 
@@ -604,6 +626,27 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               {breaks.channel?.results?.length ? <Leaderboard rows={breaks.channel.results} showTarget />
                 : <Empty msg="No channel column in your upload" />}
             </Panel>
+            {breaks.prod_group?.results?.length > 0 && (
+              <Panel title="Product group" icon={Boxes} delay={240}>
+                <Leaderboard rows={breaks.prod_group.results.slice(0, 12)} />
+              </Panel>
+            )}
+            {breaks.variant?.results?.length > 0 && (
+              <Panel title="By variant" icon={Layers} subtitle="Pack format within a product"
+                delay={300}>
+                <Leaderboard rows={breaks.variant.results.slice(0, 12)} />
+              </Panel>
+            )}
+            {breaks.business_type?.results?.length > 0 && (
+              <Panel title="Customer business type" icon={Users} delay={360}>
+                <Leaderboard rows={breaks.business_type.results.slice(0, 10)} />
+              </Panel>
+            )}
+            {breaks.warehouse_type?.results?.length > 0 && (
+              <Panel title="Warehouse type" icon={Building2} delay={420}>
+                <Leaderboard rows={breaks.warehouse_type.results.slice(0, 10)} />
+              </Panel>
+            )}
           </div>
         )}
 
@@ -649,6 +692,14 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                       {breaks.rsm?.results?.length ? <Leaderboard rows={breaks.rsm.results} showTarget />
                         : <Empty msg="No RSM column" />}
                     </Panel>
+                    {/* Above RSM in the AOP sheet's hierarchy:
+                        HEAD > GTR HEAD > REPORT.INCHARGE. */}
+                    {breaks.sales_head?.results?.length > 0 && (
+                      <Panel title="Head performance" icon={Users}
+                        subtitle="Above RSM in the reporting line" delay={420}>
+                        <Leaderboard rows={breaks.sales_head.results} showTarget />
+                      </Panel>
+                    )}
                   </div>
                 </div>
               </>

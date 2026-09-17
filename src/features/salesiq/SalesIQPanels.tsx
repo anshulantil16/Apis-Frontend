@@ -32,7 +32,12 @@ export function IntelligencePanel({ data, dim, setDim }: {
 }) {
   const { pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price } = data;
 
-  const DIMS = ['state', 'category', 'product', 'channel', 'salesperson', 'customer'];
+  // Anything the two primary-sales files can slice by. One request each,
+  // made only when the button is pressed, so a longer list costs nothing
+  // until it is used.
+  const DIMS = ['state', 'zone', 'subzone', 'category', 'prod_group', 'product',
+                'variant', 'channel', 'salesperson', 'rsm', 'sales_head',
+                'customer', 'business_type', 'location'];
 
   const quadCounts = (matrix?.results || []).reduce((a: any, r: any) => {
     a[r.quadrant] = (a[r.quadrant] || 0) + 1; return a;
