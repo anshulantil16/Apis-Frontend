@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Area, BarChart, Bar, PieChart, Pie, Cell, ComposedChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import {
-  Upload, Download, TrendingUp, Target, Users, Package, MapPin, Building2,
+  Upload, Download, TrendingUp, Target, Users, Package, MapPin, Building2, Network, ChevronDown,
   Zap, RefreshCw, Trash2, AlertTriangle, CheckCircle2, Info, Sparkles,
   BarChart3, Globe2, ShoppingCart, Boxes, X, Filter, ArrowUpRight, ArrowDownRight,
-  Activity, Layers, FileSpreadsheet, Trophy, Radar, Brain, UserSearch,
+  Activity, Layers, FileSpreadsheet, Trophy, Radar, Brain, UserSearch, CalendarDays,
 } from 'lucide-react';
 import {
   API, _API_BASE, inr, shortInr, PALETTE, useCountUp, Counter, Reveal, Panel,
@@ -105,7 +105,7 @@ function Kpi({ icon: Icon, label, value, format = shortInr, prefix = '', sub, de
 }
 
 /* ════════════════════════════════════════════════════════════════════════ */
-type Tab = 'overview' | 'intelligence' | 'geography' | 'products' | 'customers' | 'team' | 'forecast' | 'data';
+type Tab = 'overview' | 'intelligence' | 'geography' | 'products' | 'customers' | 'team' | 'structure' | 'forecast' | 'data';
 
 /* Only label a slice big enough to read.
  *
@@ -128,6 +128,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   const [insights, setInsights] = useState<any[]>([]);
   const [forecast, setForecast] = useState<any>(null);
   const [breaks, setBreaks] = useState<Record<string, any>>({});
+  const [org, setOrg] = useState<any>(null);
+  const [yoy, setYoy] = useState<any>(null);
+  const [orgLevels, setOrgLevels] = useState('sales_head,rsm,asm');
   const [filterOpts, setFilterOpts] = useState<any>(null);
   const [uploads, setUploads] = useState<any>(null);
   const [intel, setIntel] = useState<any>({});
@@ -168,7 +171,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     'business_type', 'warehouse_type', 'variant', 'prod_group'];
       const [ov, tr, ins, fc, fo, up,
              pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price,
-             rfm, cohorts, newRepeat, paretoCustomer,
+             rfm, cohorts, newRepeat, paretoCustomer, orgTree, yoyData,
              ...bs] = await Promise.all([
         get('overview/'), get('trend/'), get('insights/'),
         get(`forecast/?periods=${horizon}`), fetch(`${API}/filters/`).then(r => r.json()),
@@ -179,19 +182,21 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         get(`heatmap/?dim=${intelDim}`), get('pacing/'), get('price/'),
         // customers tab
         get('rfm/'), get('cohorts/'), get('new-repeat/'), get('pareto/?dim=customer'),
+        get(`org/?levels=${orgLevels}`), get('yoy/'),
         ...dims.map(d => get(`breakdown/?dim=${d}&limit=12`)),
       ]);
       setOverview(ov); setTrend(tr); setInsights(ins.insights || []);
       setForecast(fc); setFilterOpts(fo); setUploads(up);
       setIntel({ pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price });
       setCust({ rfm, cohorts, newRepeat, paretoCustomer });
+      setOrg(orgTree); setYoy(yoyData);
       const map: Record<string, any> = {};
       dims.forEach((d, i) => { map[d] = bs[i]; });
       setBreaks(map);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load dashboard');
     } finally { setLoading(false); }
-  }, [qs, horizon, intelDim]);
+  }, [qs, horizon, intelDim, orgLevels]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -231,6 +236,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     { id: 'products', label: 'Products', icon: Package },
     { id: 'customers', label: 'Customers', icon: UserSearch },
     { id: 'team', label: 'Sales Team', icon: Users },
+    { id: 'structure', label: 'Structure', icon: Network },
     { id: 'forecast', label: 'Forecast', icon: Radar },
     { id: 'data', label: 'Data', icon: FileSpreadsheet },
   ];
@@ -547,6 +553,45 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ INTELLIGENCE ══ */}
+        {!loading && hasData && tab === 'overview' && yoy?.results?.length > 1
+          && (yoy.years?.length || 0) > 1 && (
+          <Panel title="Year on year" icon={CalendarDays}
+            subtitle={`Same month, ${yoy.years.join(' vs ')} — where the year is actually being won or lost`}>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={yoy.results} margin={{ left: 4, right: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false}
+                  tickLine={false} tickFormatter={(v: number) => shortInr(v)} width={64} />
+                <Tooltip content={<ChartTip />} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                {yoy.years.map((y: string, i: number) => (
+                  i === yoy.years.length - 1 ? (
+                    <Area key={y} type="monotone" dataKey={y} name={y}
+                      stroke={PALETTE[i % PALETTE.length]} strokeWidth={2.5}
+                      fill={PALETTE[i % PALETTE.length]} fillOpacity={0.12}
+                      animationDuration={900} />
+                  ) : (
+                    <Line key={y} type="monotone" dataKey={y} name={y}
+                      stroke={PALETTE[i % PALETTE.length]} strokeWidth={2}
+                      strokeDasharray="5 4" dot={false} animationDuration={900} />
+                  )
+                ))}
+              </ComposedChart>
+            </ResponsiveContainer>
+            {yoy.growth !== null && yoy.growth !== undefined && (
+              <p className="text-[12px] font-bold text-slate-500 mt-3">
+                {yoy.years[yoy.years.length - 1]} is{' '}
+                <span className={yoy.growth >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                  {yoy.growth >= 0 ? 'up' : 'down'} {Math.abs(yoy.growth).toFixed(1)}%
+                </span>{' '}
+                on {yoy.years[yoy.years.length - 2]}.
+              </p>
+            )}
+          </Panel>
+        )}
+
         {!loading && hasData && tab === 'intelligence' && (
           <IntelligencePanel data={intel} dim={intelDim} setDim={setIntelDim} />
         )}
@@ -734,6 +779,10 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ FORECAST ══ */}
+        {!loading && hasData && tab === 'structure' && (
+          <StructureTab org={org} levels={orgLevels} setLevels={setOrgLevels} />
+        )}
+
         {!loading && hasData && tab === 'forecast' && forecast && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1103,3 +1152,144 @@ function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void
 }
 
 export default SalesIQPage;
+
+
+/* ── the selling organisation ─────────────────────────────────────────────
+ *
+ * Every other view flattens the reporting line, so an ASM could be ranked
+ * against another and you would never see whose team either was on. This
+ * shows the line itself, with each person's sales rolled up into whoever
+ * they report to.
+ */
+function OrgNode({ node, max, depth = 0 }: { node: any; max: number; depth?: number }) {
+  // Deep branches stay closed: an org opened all the way is a wall of names.
+  const [open, setOpen] = useState(depth < 1);
+  const kids = node.children || [];
+  const width = max > 0 ? Math.max(2, (node.revenue / max) * 100) : 0;
+  const LEVEL_TONE: Record<string, string> = {
+    sales_head: 'from-violet-500 to-fuchsia-600',
+    rsm: 'from-indigo-500 to-violet-600',
+    asm: 'from-sky-500 to-indigo-500',
+    salesperson: 'from-cyan-500 to-sky-500',
+  };
+  const tone = LEVEL_TONE[node.level] || 'from-slate-400 to-slate-500';
+
+  return (
+    <div style={{ marginLeft: depth ? 18 : 0 }}>
+      <div className={`relative rounded-xl border border-slate-200 bg-white p-3 mb-2
+                       transition-all hover:border-indigo-300 hover:shadow-sm
+                       ${depth ? 'border-l-2 border-l-slate-200' : ''}`}>
+        <div className="flex items-center gap-3">
+          {kids.length > 0 ? (
+            <button onClick={() => setOpen(o => !o)}
+              className="w-5 h-5 shrink-0 rounded-md bg-slate-100 text-slate-500 hover:bg-indigo-100
+                         hover:text-indigo-600 flex items-center justify-center transition-colors"
+              title={open ? 'Collapse' : 'Expand'}>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
+            </button>
+          ) : <span className="w-5 shrink-0" />}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-black text-slate-800 text-[13px] truncate">{node.name}</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-400 text-[9.5px]
+                               font-black uppercase tracking-wide">
+                {node.level === 'sales_head' ? 'Head' : node.level.toUpperCase()}
+              </span>
+              {node.reports > 0 && (
+                <span className="text-[10.5px] font-bold text-slate-400">
+                  {node.reports} direct · {node.team} in team
+                </span>
+              )}
+            </div>
+            <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+              <div className={`h-full rounded-full bg-gradient-to-r ${tone} siq-grow`}
+                style={{ width: `${width}%` }} />
+            </div>
+            <div className="flex items-center gap-3 flex-wrap mt-1.5 text-[10.5px] text-slate-400 font-semibold">
+              <span>{node.customers} customers</span>
+              <span>{node.areas} areas</span>
+              <span>{node.skus} SKUs</span>
+              {node.field_officers > 0 && <span>{node.field_officers} field officers</span>}
+            </div>
+          </div>
+
+          <div className="text-right shrink-0">
+            <p className="font-black text-slate-800 tabular-nums">₹{shortInr(node.revenue)}</p>
+            {node.achievement_pct !== null && node.achievement_pct !== undefined && (
+              <p className={`text-[10.5px] font-black ${
+                node.achievement_pct >= 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {node.achievement_pct.toFixed(0)}% of plan
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+      {open && kids.map((k: any) => (
+        <OrgNode key={`${k.level}-${k.name}`} node={k} max={max} depth={depth + 1} />
+      ))}
+    </div>
+  );
+}
+
+
+function StructureTab({ org, levels, setLevels }: {
+  org: any; levels: string; setLevels: (v: string) => void;
+}) {
+  const SHAPES: { k: string; label: string }[] = [
+    { k: 'sales_head,rsm,asm', label: 'Reporting line' },
+    { k: 'zone,state,subzone', label: 'Geography' },
+    { k: 'zone,rsm,asm', label: 'Zone → team' },
+    { k: 'category,sub_category,brand', label: 'Product' },
+    { k: 'channel,business_type,customer_name', label: 'Channel' },
+  ];
+
+  if (!org) {
+    return <Panel title="Structure" icon={Users}><Empty msg="Loading the organisation…" /></Panel>;
+  }
+  const max = Math.max(1, ...(org.tree || []).map((n: any) => n.revenue));
+  const counts = org.level_counts || [];
+
+  return (
+    <div className="space-y-5">
+      <Reveal>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Break it down by
+          </span>
+          {SHAPES.map(sh => (
+            <button key={sh.k} onClick={() => setLevels(sh.k)}
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all
+                ${levels === sh.k
+                  ? 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25'
+                  : 'bg-white border border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'}`}>
+              {sh.label}
+            </button>
+          ))}
+        </div>
+      </Reveal>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {counts.filter((c: any) => c.count > 0).map((c: any, i: number) => (
+          <Kpi key={c.level} icon={Users} label={c.level.replace('_', ' ')}
+            value={c.count} accent="from-indigo-500 to-violet-600" delay={i * 60}
+            sub="in the current selection" />
+        ))}
+        <Kpi icon={Users} label="Customers" value={org.totals?.customers || 0}
+          accent="from-emerald-500 to-teal-600" delay={counts.length * 60}
+          sub="covered" />
+      </div>
+
+      <Panel title="Who reports to whom" icon={Users}
+        subtitle="Sales roll up into whoever they report to — click a row to open its team">
+        {(org.tree || []).length ? (
+          <div className="max-h-[560px] overflow-y-auto pr-1">
+            {org.tree.map((n: any) => (
+              <OrgNode key={`${n.level}-${n.name}`} node={n} max={max} />
+            ))}
+          </div>
+        ) : <Empty msg="No reporting columns in your upload" />}
+      </Panel>
+    </div>
+  );
+}
