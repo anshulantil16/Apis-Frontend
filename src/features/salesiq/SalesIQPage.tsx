@@ -430,9 +430,17 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         {!loading && hasData && tab === 'overview' && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+              {/* "Prior period" is the stretch immediately before this one,
+                  which for a seasonal business compares a festive quarter
+                  with a quiet one. Where the file has last year in it, show
+                  April against April instead — the comparison the review
+                  sheet makes in its LYTD column. */}
               <Kpi icon={TrendingUp} label="Revenue" value={overview.revenue} prefix="₹"
-                delta={overview.revenue_growth_pct} accent="from-indigo-500 to-violet-600" delay={0}
-                sub={`vs ₹${shortInr(overview.prev_revenue)} prior period`} />
+                delta={overview.vs_last_year?.growth_pct ?? overview.revenue_growth_pct}
+                accent="from-indigo-500 to-violet-600" delay={0}
+                sub={overview.vs_last_year
+                  ? `vs ₹${shortInr(overview.vs_last_year.last_year)} same ${overview.vs_last_year.months} months last year`
+                  : `vs ₹${shortInr(overview.prev_revenue)} prior period`} />
               <Kpi icon={Target} label="Target" value={overview.target || 0} prefix="₹"
                 accent="from-emerald-500 to-teal-600" delay={60}
                 sub={overview.achievement_pct !== null
@@ -580,7 +588,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         {!loading && hasData && tab === 'overview' && yoy?.results?.length > 1
           && (yoy.years?.length || 0) > 1 && (
           <Panel title="Year on year" icon={CalendarDays}
-            subtitle={`Same month, ${yoy.years.join(' vs ')} — where the year is actually being won or lost`}>
+            subtitle={`Same month, ${yoy.years.join(' vs ')} · April to March — where the year is actually being won or lost`}>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={yoy.results} margin={{ left: 4, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
@@ -595,24 +603,31 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     <Area key={y} type="monotone" dataKey={y} name={y}
                       stroke={PALETTE[i % PALETTE.length]} strokeWidth={2.5}
                       fill={PALETTE[i % PALETTE.length]} fillOpacity={0.12}
-                      animationDuration={900} />
+                      animationDuration={900} connectNulls={false} />
                   ) : (
                     <Line key={y} type="monotone" dataKey={y} name={y}
                       stroke={PALETTE[i % PALETTE.length]} strokeWidth={2}
-                      strokeDasharray="5 4" dot={false} animationDuration={900} />
+                      strokeDasharray="5 4" dot={false} animationDuration={900}
+                      connectNulls={false} />
                   )
                 ))}
               </ComposedChart>
             </ResponsiveContainer>
-            {yoy.growth !== null && yoy.growth !== undefined && (
-              <p className="text-[12px] font-bold text-slate-500 mt-3">
-                {yoy.years[yoy.years.length - 1]} is{' '}
-                <span className={yoy.growth >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                  {yoy.growth >= 0 ? 'up' : 'down'} {Math.abs(yoy.growth).toFixed(1)}%
-                </span>{' '}
-                on {yoy.years[yoy.years.length - 2]}.
-              </p>
-            )}
+            {(() => {
+              const latest = yoy.years[yoy.years.length - 1];
+              const g = yoy.growth?.[latest];
+              if (!g || g.pct === null || g.pct === undefined) return null;
+              return (
+                <p className="text-[12px] font-bold text-slate-500 mt-3">
+                  {latest} is{' '}
+                  <span className={g.pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                    {g.pct >= 0 ? 'up' : 'down'} {Math.abs(g.pct).toFixed(1)}%
+                  </span>{' '}
+                  on {yoy.years[yoy.years.length - 2]}, over the {g.months} month
+                  {g.months === 1 ? '' : 's'} both years have.
+                </p>
+              );
+            })()}
           </Panel>
         )}
 
@@ -647,10 +662,15 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               {breaks.zone?.results?.length ? <Leaderboard rows={breaks.zone.results} showTarget />
                 : <Empty msg="No zone column in your upload" />}
             </Panel>
-            <Panel title="Top areas" icon={MapPin} subtitle="Beat / district level" delay={120} right={<Coverage coverage={breaks.area?.coverage} />}>
-              {breaks.area?.results?.length ? <Leaderboard rows={breaks.area.results.slice(0, 12)} showTarget />
-                : <Empty msg="No area column in your upload" />}
-            </Panel>
+            {/* Neither primary-sales file carries an Area column, so this
+                drew an empty box on every load. A panel with nothing to put
+                in it is not drawn; the Data tab lists what the upload is
+                missing, in one place, instead of six blank cards. */}
+            {breaks.area?.results?.length > 0 && (
+              <Panel title="Top areas" icon={MapPin} subtitle="Beat / district level" delay={120} right={<Coverage coverage={breaks.area?.coverage} />}>
+                <Leaderboard rows={breaks.area.results.slice(0, 12)} showTarget />
+              </Panel>
+            )}
             <Panel title="Top customers" icon={Users} delay={180} right={<Coverage coverage={breaks.customer?.coverage} />}>
               {breaks.customer?.results?.length ? <Leaderboard rows={breaks.customer.results.slice(0, 12)} />
                 : <Empty msg="No customer column in your upload" />}
@@ -902,7 +922,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 
         {/* ══ DATA ══ */}
         {!loading && tab === 'data' && (
-          <DataPanel uploads={uploads} onChanged={loadAll} />
+          <DataPanel uploads={uploads} onChanged={loadAll}
+            absentDims={filterOpts?.absent_dimensions || []} />
         )}
       </div>
     </div>
@@ -910,7 +931,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 }
 
 /* ── data / upload tab ──────────────────────────────────────────────────── */
-function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void }) {
+function DataPanel({ uploads, onChanged, absentDims = [] }:
+  { uploads: any; onChanged: () => void; absentDims?: string[] }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<any>(null);
@@ -1127,6 +1149,26 @@ function DataPanel({ uploads, onChanged }: { uploads: any; onChanged: () => void
           </div>
         )}
       </Panel>
+
+      {/* One honest list of what the files do not carry, instead of a blank
+          panel wherever one of them would have gone. */}
+      {absentDims.length > 0 && (
+        <Panel title="Not in your upload" icon={Info}
+          subtitle="These breakdowns are hidden because no column feeds them">
+          <div className="flex flex-wrap gap-2">
+            {absentDims.map((d: string) => (
+              <span key={d} className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500
+                                       text-[11px] font-bold capitalize">
+                {d.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-400 mt-3 leading-relaxed">
+            Add any of these as a column and re-upload, and its views turn on
+            by themselves. Nothing else needs changing.
+          </p>
+        </Panel>
+      )}
 
       <Panel title="Uploaded files" icon={FileSpreadsheet}
         subtitle={`${uploads?.total_rows?.toLocaleString() || 0} rows in total`}
