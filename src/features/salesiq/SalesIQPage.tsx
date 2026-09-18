@@ -201,6 +201,10 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   useEffect(() => { loadAll(); }, [loadAll]);
 
   const hasData = overview?.has_data;
+  // Achievement is measured only over months that carry both a plan and a
+  // result, so the panel says how many that is rather than leaving the
+  // reader to assume it is the whole span on screen.
+  const monthsCompared: number = overview?.achievement_basis?.months ?? 0;
   const activeFilters = Object.values(sel).flat().length + (dFrom ? 1 : 0) + (dTo ? 1 : 0);
 
   const toggle = (k: string, v: string) =>
@@ -431,7 +435,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 sub={`vs ₹${shortInr(overview.prev_revenue)} prior period`} />
               <Kpi icon={Target} label="Target" value={overview.target || 0} prefix="₹"
                 accent="from-emerald-500 to-teal-600" delay={60}
-                sub={overview.achievement_pct !== null ? `${overview.achievement_pct}% achieved` : 'no target set'} />
+                sub={overview.achievement_pct !== null
+                  ? `${overview.achievement_pct}% of plan to date (${overview.achievement_basis?.months ?? 0} mo)`
+                  : 'no target set'} />
               <Kpi icon={ShoppingCart} label="Orders" value={overview.orders} format={inr}
                 accent="from-amber-500 to-orange-600" delay={120}
                 sub={`₹${shortInr(overview.avg_order_value)} avg value`} />
@@ -474,15 +480,28 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 ) : <Empty msg="No trend data" />}
               </Panel>
 
-              <Panel title="Target achievement" subtitle="Actual vs plan" icon={Target} delay={400}>
+              {/* The ring compares the months that carry BOTH a plan and a
+                  result. Showing full revenue beside it implied the whole
+                  Rs 274 crore was being measured against this year's plan,
+                  when 12 of those 18 months are last year and have no plan
+                  at all. */}
+              <Panel title="Target achievement"
+                subtitle={monthsCompared
+                  ? `Plan vs actual · ${monthsCompared} month${monthsCompared > 1 ? 's' : ''} to date`
+                  : 'Actual vs plan'}
+                icon={Target} delay={400}>
                 <div className="flex flex-col items-center justify-center h-[300px]">
                   {overview.achievement_pct !== null ? (
                     <>
                       <AchievementRing value={overview.achievement_pct} />
                       <div className="grid grid-cols-2 gap-3 w-full mt-4">
                         <div className="rounded-xl bg-slate-50 p-3 text-center">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Actual</p>
-                          <p className="text-sm font-black text-slate-800">₹{shortInr(overview.revenue)}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            Actual to date
+                          </p>
+                          <p className="text-sm font-black text-slate-800">
+                            ₹{shortInr(overview.achievement_basis?.revenue ?? overview.revenue)}
+                          </p>
                         </div>
                         <div className="rounded-xl bg-slate-50 p-3 text-center">
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
