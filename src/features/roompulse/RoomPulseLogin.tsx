@@ -65,6 +65,7 @@ export function RoomPulseLogin({ onSuccess }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [left, setLeft] = useState(0);
+  const [devNote, setDevNote] = useState('');
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -90,7 +91,25 @@ export function RoomPulseLogin({ onSuccess }: {
     try {
       const d = await post({ action: 'send_otp', email: email.trim().toLowerCase() });
       setMasked(d.masked_email || email);
-      setStep('otp'); setOtp(['', '', '', '', '', '']); setLeft(d.expires_in || 300);
+      setStep('otp'); setLeft(d.expires_in || 300);
+      /* Local development only — see PORTAL_DEV_LOGIN on the server, same
+         pattern as the main portal and Goal Setting logins. There is no
+         SMTP configured on a developer's machine, so the server hands the
+         code back directly instead of emailing it. */
+      if (typeof d.dev_otp === 'string') {
+        setOtp(d.dev_otp.padEnd(6, ' ').slice(0, 6).split(''));
+        setDevNote('Development sign-in — code filled in for you.');
+        // Filling the boxes via setOtp (rather than the per-digit onChange
+        // path in setDigit) never trips the "all six digits present" check
+        // that normally submits, so without this the dev shortcut left the
+        // code sitting in the boxes with no way to actually sign in.
+        // Awaited so the outer finally's setBusy(false) doesn't fire while
+        // verify()'s own fetch is still in flight.
+        await verify(d.dev_otp);
+        return;
+      }
+      setOtp(['', '', '', '', '', '']);
+      setDevNote('');
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : 'Could not send the code');
     } finally { setBusy(false); }
@@ -227,6 +246,9 @@ export function RoomPulseLogin({ onSuccess }: {
                 Sent to <b className="text-amber-700">{masked}</b>. Expires in{' '}
                 <b className="text-amber-700 tabular-nums">{mmss}</b>.
               </p>
+              {devNote && (
+                <p className="text-[12px] font-bold text-emerald-600 mb-4 -mt-3">{devNote}</p>
+              )}
               <div className="flex gap-2 justify-between" onPaste={onPaste}>
                 {otp.map((d, i) => (
                   <input key={i} ref={el => { boxes.current[i] = el; }}

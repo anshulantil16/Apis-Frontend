@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users, MapPin, X, Plus, Send, Loader, AlertTriangle, CheckCircle2,
   Calendar as CalendarIcon, LogOut, ShieldCheck, LayoutGrid, ListChecks,
-  ClipboardList, Package,
+  ClipboardList, Package, Headphones,
 } from 'lucide-react';
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
@@ -11,8 +11,9 @@ import {
 } from './RoomPulseShared';
 import { RoomPulseLogin } from './RoomPulseLogin';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './RoomPulseAdminPanels';
+import { TicketsPanel } from './RoomPulseTickets';
 
-type Tab = 'rooms' | 'mine' | 'approvals' | 'calendar' | 'manage';
+type Tab = 'rooms' | 'mine' | 'tickets' | 'approvals' | 'calendar' | 'manage';
 
 /* ── room card: the live-status tile that drives the whole dashboard ────── */
 const ROOM_GLOW: Record<string, string> = {
@@ -553,6 +554,7 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
   const TABS: { id: Tab; label: string; icon: any; roles?: string[] }[] = [
     { id: 'rooms', label: 'Rooms', icon: LayoutGrid },
     { id: 'mine', label: 'My Requests', icon: ClipboardList },
+    { id: 'tickets', label: 'Ticket+', icon: Headphones },
     { id: 'approvals', label: 'Approvals', icon: ListChecks, roles: ['admin', 'super_admin'] },
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon, roles: ['admin', 'super_admin'] },
     { id: 'manage', label: 'Manage', icon: ShieldCheck, roles: ['super_admin'] },
@@ -659,6 +661,8 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
             <MyRequestsPanel session={session} refreshKey={refreshKey} />
           </Panel>
         )}
+
+        {tab === 'tickets' && <TicketsPanel session={session} />}
 
         {tab === 'approvals' && isStaff && (
           <ApprovalsPanel session={session} onChanged={() => { setRefreshKey(k => k + 1); loadRooms(); }} />
