@@ -499,8 +499,8 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
         <div className="flex items-center justify-between gap-3 px-6 border-b border-slate-100">
           <div className="flex items-center gap-5">
             {([
-              { id: 'referral' as const, label: 'Referral Form' },
               { id: 'vacancies' as const, label: 'Available Vacancies' },
+              { id: 'referral' as const, label: 'Referral Form' },
             ]).map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`py-3 text-[12.5px] font-black border-b-2 transition-colors ${

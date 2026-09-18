@@ -16,7 +16,6 @@
    the source files carry capture-date metadata. */
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ChevronRight, X, Sparkles, Image as ImageIcon, PartyPopper, Users, HeartHandshake, Plus, UploadCloud } from 'lucide-react';
-import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 import { apiFetch } from '../portal/session';
 
 interface WallPhoto {
@@ -33,15 +32,27 @@ interface WallPhoto {
 const WALL_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/wall`;
 const UPLOAD_CATEGORIES = ['Celebrations', 'Team Moments', 'CSR', 'Events', 'Other'];
 
+/* Order here is deliberate — the wall below is a CSS-columns masonry, which
+   fills column 1 top-to-bottom before moving to column 2, then 3, then 4, so
+   whatever's placed at the end of this array lands bunched together in the
+   last column or two rather than spread across the wall. Interleaving the
+   later additions among the originals keeps every new photo landing in a
+   different column instead of piling up on the right. */
 const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall01.jpeg', title: 'Happy Independence Day', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall02.jpeg', title: 'Community Outreach Drive', category: 'CSR' },
+  { src: '/Apis_wall/Apiswall09.png', title: 'Wall of Gratitude', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall03.jpeg', title: 'Office Birthday Celebration', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall04.jpeg', title: 'Birthday Surprise', category: 'Celebrations' },
+  { src: '/Apis_wall/Apiswall10.png', title: 'Traditional Office Celebration', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall05.jpeg', title: 'Team Lunch Together', category: 'Team Moments' },
+  { src: '/Apis_wall/Apiswall14.png', title: 'AIL Cares Community Drive', category: 'CSR' },
   { src: '/Apis_wall/Apiswall06.jpeg', title: 'Birthday Wishes', category: 'Celebrations' },
+  { src: '/Apis_wall/Apiswall11.png', title: 'Team Stretch Break', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall07.jpeg', title: 'Lunch Break Bonding', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall08.jpeg', title: 'Cutting the Cake', category: 'Celebrations' },
+  { src: '/Apis_wall/Apiswall12.png', title: 'Celebrating Team Spirit', category: 'Team Moments' },
+  { src: '/Apis_wall/Apiswall13.png', title: 'Team Moments', category: 'Events' },
 ];
 
 /* One accent per category — drives the filter pill, the chip on each tile,
@@ -159,7 +170,7 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
   }
 
   return (
-    <div className="min-h-full bg-[#fdfbf6] relative">
+    <div className="min-h-full bg-[#fdfbf6] relative overflow-x-hidden">
       <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="ih-drift absolute -top-40 -left-32 w-[32rem] h-[32rem] rounded-full bg-amber-300/20 blur-[130px]" />
         <div className="ih-aurora absolute top-1/3 -right-32 w-[30rem] h-[30rem] rounded-full bg-orange-300/15 blur-[130px]" />
@@ -259,9 +270,8 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
             const rejected = p.moderationStatus === 'rejected';
             return (
               <button key={p.id ? `u${p.id}` : p.src} onClick={() => setLightbox(p)}
-                onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
                 style={{ animationDelay: `${i * 60}ms` }}
-                className={`ih-pop-in ih-tilt3d group relative block w-full mb-4 break-inside-avoid rounded-2xl overflow-hidden
+                className={`ih-pop-in group relative block w-full mb-4 break-inside-avoid rounded-2xl overflow-hidden
                            bg-white shadow-sm hover:shadow-2xl transition-all text-left ${
                   pending ? 'border-2 border-dashed border-amber-300'
                     : rejected ? 'border-2 border-rose-200' : 'border border-slate-200'}`}>

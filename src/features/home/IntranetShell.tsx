@@ -645,7 +645,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
           </div>
         </header>
 
-        <div className="ih-scroll-clean flex-1 min-h-0 overflow-y-auto">{children}</div>
+        <div className="ih-scroll-clean flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</div>
       </main>
 
       {/* ── Command palette — ⌘K / Ctrl+K from anywhere in the app ─────────── */}
