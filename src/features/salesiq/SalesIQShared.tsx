@@ -89,6 +89,31 @@ export function Panel({ title, icon: Icon, subtitle, right, children, delay = 0,
   );
 }
 
+/* ── how much of the business a breakdown can actually speak for ──────────
+ *
+ * Neither primary-sales file carries every column. The monthly review sheet
+ * has no customer and no SKU; the ERP dump has no brand and no sales head;
+ * and the national accounts — Amazon, D-Mart, export — belong to no state at
+ * all. So a category chart can be perfectly correct and still add up to a
+ * fraction of the headline, and there was nothing on screen to say so: it
+ * simply looked as though Rs 258 crore had gone missing.
+ */
+export function Coverage({ coverage }: { coverage?: any }) {
+  if (!coverage || coverage.pct === null || coverage.pct === undefined) return null;
+  if (coverage.pct >= 99.5) return null;
+  const tone = coverage.pct >= 75
+    ? 'bg-slate-100 text-slate-500'
+    : 'bg-amber-50 text-amber-700 border border-amber-200';
+  return (
+    <span className={`px-2 py-1 rounded-lg text-[10px] font-black whitespace-nowrap ${tone}`}
+      title={`Rs ${Math.round(coverage.unattributed).toLocaleString('en-IN')} of sales `
+           + `has nothing in this column, so it cannot appear here. `
+           + `The figure is right — it just does not cover the whole business.`}>
+      covers {coverage.pct}% of sales
+    </span>
+  );
+}
+
 export const Skel = ({ className = '' }: { className?: string }) => (
   <div className={`siq-shimmer rounded-xl bg-slate-100 ${className}`} />
 );

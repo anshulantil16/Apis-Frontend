@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import {
   API, _API_BASE, inr, shortInr, PALETTE, useCountUp, Counter, Reveal, Panel,
-  Skel, Empty, ChartTip, Leaderboard,
+  Skel, Empty, ChartTip, Leaderboard, Coverage,
 } from './SalesIQShared';
 import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
 import { SalesIQLogin, loadSession, clearSession } from './SalesIQLogin';
@@ -460,8 +460,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                       <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <YAxis tickFormatter={shortInr} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={60} />
                       <Tooltip content={<ChartTip />} />
+                      {/* A month with a plan against it and nothing sold yet
+                          comes back as null, not zero. Without this the line
+                          dropped to the axis for the rest of the financial
+                          year and read as a collapse. The dashed target line
+                          carries on past it, which is the real story. */}
                       <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#6366f1" strokeWidth={2.5}
-                        fill="url(#gRev)" animationDuration={1100} />
+                        fill="url(#gRev)" animationDuration={1100} connectNulls={false} />
                       <Line type="monotone" dataKey="target" name="Target" stroke="#f59e0b" strokeWidth={2}
                         strokeDasharray="5 4" dot={false} animationDuration={1300} />
                     </ComposedChart>
@@ -525,11 +530,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <Panel title="Top states" icon={MapPin} delay={520}>
+              <Panel title="Top states" icon={MapPin} delay={520} right={<Coverage coverage={breaks.state?.coverage} />}>
                 {breaks.state?.results?.length ? <Leaderboard rows={breaks.state.results.slice(0, 7)} showTarget />
                   : <Empty msg="No state data" />}
               </Panel>
-              <Panel title="Top categories" icon={Package} delay={560}>
+              <Panel title="Top categories" icon={Package} delay={560} right={<Coverage coverage={breaks.category?.coverage} />}>
                 {breaks.category?.results?.length ? <Leaderboard rows={breaks.category.results.slice(0, 7)} />
                   : <Empty msg="No category data" />}
               </Panel>
@@ -602,7 +607,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         {/* ══ GEOGRAPHY ══ */}
         {!loading && hasData && tab === 'geography' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-            <Panel title="Revenue by state" icon={MapPin} subtitle="Ranked by contribution" delay={0}>
+            <Panel title="Revenue by state" icon={MapPin} subtitle="Ranked by contribution" delay={0} right={<Coverage coverage={breaks.state?.coverage} />}>
               {breaks.state?.results?.length ? (
                 <ResponsiveContainer width="100%" height={Math.max(280, breaks.state.results.length * 34)}>
                   <BarChart data={breaks.state.results} layout="vertical" margin={{ left: 10 }}>
@@ -619,15 +624,15 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 </ResponsiveContainer>
               ) : <Empty msg="No state column in your upload" />}
             </Panel>
-            <Panel title="Zone performance" icon={Globe2} delay={60}>
+            <Panel title="Zone performance" icon={Globe2} delay={60} right={<Coverage coverage={breaks.zone?.coverage} />}>
               {breaks.zone?.results?.length ? <Leaderboard rows={breaks.zone.results} showTarget />
                 : <Empty msg="No zone column in your upload" />}
             </Panel>
-            <Panel title="Top areas" icon={MapPin} subtitle="Beat / district level" delay={120}>
+            <Panel title="Top areas" icon={MapPin} subtitle="Beat / district level" delay={120} right={<Coverage coverage={breaks.area?.coverage} />}>
               {breaks.area?.results?.length ? <Leaderboard rows={breaks.area.results.slice(0, 12)} showTarget />
                 : <Empty msg="No area column in your upload" />}
             </Panel>
-            <Panel title="Top customers" icon={Users} delay={180}>
+            <Panel title="Top customers" icon={Users} delay={180} right={<Coverage coverage={breaks.customer?.coverage} />}>
               {breaks.customer?.results?.length ? <Leaderboard rows={breaks.customer.results.slice(0, 12)} />
                 : <Empty msg="No customer column in your upload" />}
             </Panel>
@@ -653,7 +658,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         {/* ══ PRODUCTS ══ */}
         {!loading && hasData && tab === 'products' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-            <Panel title="Category contribution" icon={Package} delay={0}>
+            <Panel title="Category contribution" icon={Package} delay={0} right={<Coverage coverage={breaks.category?.coverage} />}>
               {breaks.category?.results?.length ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
