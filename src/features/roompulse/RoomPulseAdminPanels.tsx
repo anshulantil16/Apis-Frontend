@@ -11,7 +11,7 @@ import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
   REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './RoomPulseShared';
-import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, fmtTicketWhen } from './RoomPulseTickets';
+import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, ticketStatusMeta, fmtTicketWhen } from './RoomPulseTickets';
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
   "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
@@ -947,30 +947,112 @@ function TeamManage({ session }: { session: Session }) {
   );
 }
 
+/* ── Analytics ────────────────────────────────────────────────────────────
+   Three things used to leave this page looking broken rather than empty:
+   a failed request was fed straight to setData, so a 403 rendered as a grid
+   of dashes; the window was fixed at 30 days with no way to widen it; and
+   the helpdesk — the busiest part of AdminPulse — was not counted at all.
+   Zeroes here now mean zero, and say so against the all-time totals. ───── */
+const RANGES = [
+  { days: 7, label: '7 days' },
+  { days: 30, label: '30 days' },
+  { days: 90, label: '90 days' },
+  { days: 365, label: '1 year' },
+];
+
 function AnalyticsPanel({ session }: { session: Session }) {
   const [data, setData] = useState<any>(null);
-  useEffect(() => {
-    rpFetch(`${API}/analytics/?email=${encodeURIComponent(session.email)}`)
-      .then(r => r.json()).then(setData);
-  }, [session.email]);
+  const [err, setErr] = useState('');
+  const [days, setDays] = useState(30);
 
+  useEffect(() => {
+    let live = true;
+    setData(null);
+    setErr('');
+    rpFetch(`${API}/analytics/?days=${days}`)
+      .then(async r => {
+        const body = await r.json().catch(() => ({}));
+        if (!live) return;
+        // A non-OK body is an error message, not a report. Rendering it as
+        // one is what turned "you do not have permission" into a blank page.
+        if (!r.ok) setErr(body.error || `Could not load analytics (${r.status}).`);
+        else setData(body);
+      })
+      .catch(() => { if (live) setErr('Could not reach the server.'); });
+    return () => { live = false; };
+  }, [session.email, days]);
+
+  const rangePicker = (
+    <div className="flex gap-1">
+      {RANGES.map(r => (
+        <button key={r.days} onClick={() => setDays(r.days)}
+          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+            days === r.days ? 'bg-cyan-600 text-white'
+                            : 'bg-white border border-slate-200 text-slate-500 hover:border-cyan-300'}`}>
+          {r.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (err) return (
+    <Panel title="Analytics" icon={BarChart3} right={rangePicker}>
+      <div className="flex items-center gap-2 text-[13px] text-rose-600 font-semibold py-6 justify-center">
+        <AlertTriangle className="w-4 h-4" /> {err}
+      </div>
+    </Panel>
+  );
   if (!data) return <Skel className="h-64" />;
 
   const PALETTE = ['#0891b2', '#8b5cf6', '#f59e0b', '#ec4899', '#10b981', '#ef4444'];
+  const tickets = data.tickets || {};
+  const totals = data.totals || {};
   const purposeData = (data.by_purpose || []).map((p: any) => ({ name: PURPOSE_LABEL[p.purpose] || p.purpose, value: p.n }));
   const categoryData = (data.resource_requests?.by_category || [])
     .map((c: any) => ({ name: CATEGORY_LABEL[c.category] || c.category, value: c.n }));
+  const ticketCatData = (tickets.by_category || [])
+    .map((c: any) => ({ name: TICKET_CATEGORY_LABEL[c.category] || c.category, value: c.n }));
+  const ticketStatus = Object.entries(tickets.by_status || {}) as [string, number][];
+
+  // Nothing in the window, but something on file: that is a range problem,
+  // not an empty system, and the difference is the whole question here.
+  const inWindow = (data.total_bookings || 0) + (data.resource_requests?.total || 0) + (tickets.total || 0);
+  const allTime = (totals.bookings || 0) + (totals.resource_requests || 0) + (totals.tickets || 0);
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+          Last {data.period_days} days{data.since ? ` · since ${fmtDate(data.since)}` : ''}
+        </p>
+        {rangePicker}
+      </div>
+
+      {!inWindow && allTime > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-800">
+          Nothing was raised in the last {data.period_days} days. On file all time:{' '}
+          <b>{totals.bookings || 0}</b> bookings, <b>{totals.tickets || 0}</b> tickets,{' '}
+          <b>{totals.resource_requests || 0}</b> item requests — widen the range above to see them.
+        </div>
+      )}
+      {!allTime && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[12px] text-slate-500">
+          No bookings, tickets or item requests have been raised yet. This page fills in as people use AdminPulse.
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
         {[
           { l: 'Total Bookings', v: data.total_bookings, icon: Building2 },
           { l: 'Approval Rate', v: data.approval_rate_pct, suffix: '%', icon: Percent },
           { l: 'Avg. Turnaround', v: data.avg_turnaround_minutes, suffix: 'm', icon: Timer },
-          { l: 'Busiest Hour', v: data.busiest_hour !== null ? `${data.busiest_hour}:00` : '—', icon: TrendingUp, raw: true },
+          { l: 'Busiest Hour', v: data.busiest_hour !== null && data.busiest_hour !== undefined
+              ? `${data.busiest_hour}:00` : '—', icon: TrendingUp, raw: true },
           { l: 'Item Requests', v: data.resource_requests?.total ?? 0, icon: PackageCheck, raw: true,
             sub: `${data.resource_requests?.pending ?? 0} pending` },
+          { l: 'Tickets Raised', v: tickets.total ?? 0, icon: Headphones, raw: true,
+            sub: `${tickets.open ?? 0} still open` },
+          { l: 'Avg. Fix Time', v: tickets.avg_resolution_minutes, suffix: 'm', icon: History },
         ].map((s: any, i) => {
           const Icon = s.icon;
           return (
@@ -981,7 +1063,7 @@ function AnalyticsPanel({ session }: { session: Session }) {
                                 group-hover:bg-cyan-400/10 blur-xl transition-colors duration-500" />
                 <Icon className="w-4 h-4 text-cyan-600 mb-2 transition-transform duration-300 group-hover:scale-125 group-hover:-rotate-6" />
                 <p className="rp-pop-in text-2xl font-black text-slate-900 tabular-nums">
-                  {s.raw ? s.v : (s.v ?? '—')}{!s.raw && s.suffix}
+                  {s.raw ? s.v : (s.v ?? '—')}{!s.raw && s.v !== null && s.v !== undefined && s.suffix}
                 </p>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{s.l}</p>
                 {s.sub && <p className="text-[10px] text-slate-400 mt-0.5">{s.sub}</p>}
@@ -992,26 +1074,84 @@ function AnalyticsPanel({ session }: { session: Session }) {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <Panel title="Top Rooms" icon={Building2}>
-          <div className="space-y-2.5">
-            {(data.top_rooms || []).map((r: any, i: number) => (
-              <div key={r.room}>
-                <div className="flex justify-between text-[12px] mb-1">
-                  <span className="font-bold text-slate-600">{r.room}</span>
-                  <span className="font-black text-slate-800">{r.bookings}</span>
+        {!!data.top_rooms?.length && (
+          <Panel title="Top Rooms" icon={Building2}>
+            <div className="space-y-2.5">
+              {data.top_rooms.map((r: any, i: number) => (
+                <div key={r.room}>
+                  <div className="flex justify-between text-[12px] mb-1">
+                    <span className="font-bold text-slate-600">{r.room}</span>
+                    <span className="font-black text-slate-800">{r.bookings}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="rp-grow h-full rounded-full"
+                      style={{ width: `${(r.bookings / (data.top_rooms[0]?.bookings || 1)) * 100}%`,
+                               background: PALETTE[i % PALETTE.length] }} />
+                  </div>
                 </div>
-                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="rp-grow h-full rounded-full"
-                    style={{ width: `${(r.bookings / (data.top_rooms[0]?.bookings || 1)) * 100}%`,
-                             background: PALETTE[i % PALETTE.length] }} />
+              ))}
+            </div>
+          </Panel>
+        )}
+
+        {!!ticketStatus.length && (
+          <Panel title="Tickets by Status" icon={Headphones}>
+            <div className="space-y-2.5">
+              {ticketStatus.map(([status, n], i) => (
+                <div key={status}>
+                  <div className="flex justify-between text-[12px] mb-1">
+                    <span className="font-bold text-slate-600">{ticketStatusMeta(status).label}</span>
+                    <span className="font-black text-slate-800">{n}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="rp-grow h-full rounded-full"
+                      style={{ width: `${(n / Math.max(...ticketStatus.map(([, c]) => c), 1)) * 100}%`,
+                               background: PALETTE[i % PALETTE.length] }} />
+                  </div>
                 </div>
-              </div>
-            ))}
-            {!data.top_rooms?.length && <Empty msg="No bookings in this period" />}
-          </div>
-        </Panel>
-        <Panel title="Purpose Mix" icon={BarChart3}>
-          {purposeData.length ? (
+              ))}
+            </div>
+          </Panel>
+        )}
+
+        {!!ticketCatData.length && (
+          <Panel title="Ticket Categories" icon={Headphones}>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={ticketCatData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3}>
+                  {ticketCatData.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Panel>
+        )}
+
+        {!!(tickets.by_priority || []).length && (
+          <Panel title="Ticket Priority" icon={AlertTriangle}>
+            <div className="space-y-2.5">
+              {tickets.by_priority.map((p: any) => {
+                const meta = ticketPriorityMeta(p.priority);
+                const top = Math.max(...tickets.by_priority.map((x: any) => x.n), 1);
+                return (
+                  <div key={p.priority}>
+                    <div className="flex justify-between text-[12px] mb-1">
+                      <span className={`font-bold ${meta.text}`}>{meta.label}</span>
+                      <span className="font-black text-slate-800">{p.n}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className={`rp-grow h-full rounded-full ${meta.dot}`}
+                        style={{ width: `${(p.n / top) * 100}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+        )}
+
+        {!!purposeData.length && (
+          <Panel title="Purpose Mix" icon={BarChart3}>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={purposeData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3}>
@@ -1020,10 +1160,11 @@ function AnalyticsPanel({ session }: { session: Session }) {
                 <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12 }} />
               </PieChart>
             </ResponsiveContainer>
-          ) : <Empty msg="No data yet" />}
-        </Panel>
-        <Panel title="Item Request Categories" icon={PackageCheck}>
-          {categoryData.length ? (
+          </Panel>
+        )}
+
+        {!!categoryData.length && (
+          <Panel title="Item Request Categories" icon={PackageCheck}>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3}>
@@ -1032,8 +1173,8 @@ function AnalyticsPanel({ session }: { session: Session }) {
                 <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12 }} />
               </PieChart>
             </ResponsiveContainer>
-          ) : <Empty msg="No item requests in this period" />}
-        </Panel>
+          </Panel>
+        )}
       </div>
     </div>
   );
