@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users, MapPin, X, Plus, Send, Loader, AlertTriangle, CheckCircle2,
   Calendar as CalendarIcon, LogOut, ShieldCheck, LayoutGrid, ListChecks,
-  ClipboardList, Package, Headphones,
+  ClipboardList, Headphones, Paperclip, RotateCcw,
 } from 'lucide-react';
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
@@ -11,9 +11,12 @@ import {
 } from './RoomPulseShared';
 import { RoomPulseLogin } from './RoomPulseLogin';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './RoomPulseAdminPanels';
-import { TicketsPanel } from './RoomPulseTickets';
+import {
+  type SupportTicket, type Priority,
+  TICKET_CATEGORY_LABEL, TICKET_RELATED_TO_OPTIONS, TICKET_PRIORITY_META, fmtTicketWhen,
+} from './RoomPulseTickets';
 
-type Tab = 'rooms' | 'mine' | 'tickets' | 'approvals' | 'calendar' | 'manage';
+type Tab = 'rooms' | 'mine' | 'approvals' | 'calendar' | 'manage';
 
 /* ── room card: the live-status tile that drives the whole dashboard ────── */
 const ROOM_GLOW: Record<string, string> = {
@@ -266,12 +269,18 @@ function StatusPillWrap({ status }: { status: string }) {
   return <div className="flex justify-center"><StatusPill status={status === 'approved' ? 'free' : 'upcoming'} /></div>;
 }
 
-/* ── item / resource request modal — everything Admin provides that isn't
-   a room (stationery, IT equipment, furniture, pantry, printing...) ────── */
-function ItemRequestModal({ session, onClose, onDone }: {
-  session: Session; onClose: () => void; onDone: () => void;
-}) {
-  const [category, setCategory] = useState('stationery');
+/* ── Support Desk popup: "Admin Ticket" (item/resource requests — stationery,
+   IT equipment, furniture, pantry, printing...) and "IT Tickets" (technical
+   support tickets, formerly their own "Ticket+" tab) share one entry point
+   now, since both are just different flavours of "something Admin needs to
+   action for you". Each tab keeps its own form/submit logic; the popup only
+   owns which tab is showing. ────────────────────────────────────────────── */
+const deskInputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
+  "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
+const deskLabelCls = "block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5";
+
+function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => void }) {
+  const [category, setCategory] = useState('stationery_office_supplies');
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [urgency, setUrgency] = useState('normal');
@@ -284,8 +293,6 @@ function ItemRequestModal({ session, onClose, onDone }: {
   const [result, setResult] = useState<any>(null);
 
   const isStaff = session.role === 'admin' || session.role === 'super_admin';
-  const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
-    "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,140 +314,352 @@ function ItemRequestModal({ session, onClose, onDone }: {
     } finally { setBusy(false); }
   };
 
+  if (result) {
+    return (
+      <div className="p-5 text-center py-8">
+        <div className={`rp-pop-in w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center
+          ${result.status === 'approved' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+          <CheckCircle2 className={`w-8 h-8 ${result.status === 'approved' ? 'text-emerald-500' : 'text-amber-500'}`} />
+        </div>
+        <p className="text-slate-900 font-black text-lg mb-1">{result.message}</p>
+        <button onClick={onDone}
+          className="mt-6 w-full px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600
+                     text-white font-black shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all">
+          Done
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="p-5 space-y-4">
+      <div>
+        <label className={deskLabelCls}>Category</label>
+        <select value={category} onChange={e => setCategory(e.target.value)} className={deskInputCls}>
+          {Object.entries(CATEGORY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={deskLabelCls}>What do you need?</label>
+        <input value={itemName} onChange={e => setItemName(e.target.value)}
+          placeholder="e.g. A4 paper, wireless mouse, whiteboard markers" className={deskInputCls} />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className={deskLabelCls}>Quantity</label>
+          <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
+            className={`${deskInputCls} px-2.5 text-xs`} />
+        </div>
+        <div className="col-span-2">
+          <label className={deskLabelCls}>Urgency</label>
+          <select value={urgency} onChange={e => setUrgency(e.target.value)} className={deskInputCls}>
+            {Object.entries(URGENCY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={deskLabelCls}>Your name</label>
+          <input value={name} onChange={e => setName(e.target.value)} className={deskInputCls} />
+        </div>
+        <div>
+          <label className={deskLabelCls}>Department</label>
+          <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Sales" className={deskInputCls} />
+        </div>
+      </div>
+      <div>
+        <label className={deskLabelCls}>Needed by (optional)</label>
+        <input type="date" value={neededBy} onChange={e => setNeededBy(e.target.value)} className={deskInputCls} />
+      </div>
+      <div>
+        <label className={deskLabelCls}>Reason / notes (optional)</label>
+        <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Why do you need this?" className={deskInputCls} />
+      </div>
+
+      {err && (
+        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
+          <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+          <p className="text-[12px] text-rose-700">{err}</p>
+        </div>
+      )}
+
+      <button type="submit" disabled={busy}
+        className="rp-sheen w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
+                   bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-black
+                   shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all
+                   disabled:opacity-50 disabled:translate-y-0">
+        {busy ? <><Loader className="w-4 h-4 animate-spin" />Submitting…</>
+          : <><Send className="w-4 h-4" />{isStaff ? 'Record (instant)' : 'Send request'}</>}
+      </button>
+      {!isStaff && (
+        <p className="text-[11px] text-slate-400 text-center">
+          Your request goes to an admin for approval, then fulfilment.
+        </p>
+      )}
+    </form>
+  );
+}
+
+/* ── IT ticket form — same fields/format the standalone "Ticket+" page used
+   to offer, now living as the popup's second tab and backed by the real
+   /tickets/ endpoints (see Apis-Backend/roompulse/views/tickets.py). Raised
+   by an Employee it lands Pending for IT Support to triage; raised by IT
+   Support/Super Admin it's auto-approved, same convention rooms and item
+   requests already use. ────────────────────────────────────────────────── */
+function ItTicketForm({ session, onDone }: { session: Session; onDone: () => void }) {
+  const TICKET_CATEGORY_OPTIONS = Object.keys(TICKET_CATEGORY_LABEL);
+  const blank = { category: TICKET_CATEGORY_OPTIONS[0], priority: 'medium' as Priority, subject: '', description: '', relatedTo: TICKET_RELATED_TO_OPTIONS[0] };
+  const [form, setForm] = useState(blank);
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [result, setResult] = useState<{ status: string; message: string; ticket: SupportTicket } | null>(null);
+
+  const isItStaff = session.role === 'it_support' || session.role === 'super_admin';
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.subject.trim() || !form.description.trim()) { setErr('Subject and description are required.'); return; }
+    setBusy(true); setErr('');
+    try {
+      // multipart, not JSON — attachments are real files now (see
+      // TicketAttachment on the backend), not just filenames.
+      const fd = new FormData();
+      fd.append('email', session.email);
+      fd.append('requested_by_name', session.name);
+      fd.append('category', form.category);
+      fd.append('priority', form.priority);
+      fd.append('subject', form.subject);
+      fd.append('description', form.description);
+      fd.append('related_to', form.relatedTo);
+      files.forEach(f => fd.append('attachments', f));
+      const res = await fetch(`${API}/tickets/`, { method: 'POST', body: fd });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Ticket submission failed');
+      setResult(d);
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Ticket submission failed');
+    } finally { setBusy(false); }
+  };
+
+  if (result) {
+    return (
+      <div className="p-5 text-center py-8">
+        <div className={`rp-pop-in w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center
+          ${result.status === 'approved' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+          <CheckCircle2 className={`w-8 h-8 ${result.status === 'approved' ? 'text-emerald-500' : 'text-amber-500'}`} />
+        </div>
+        <p className="text-slate-900 font-black text-lg mb-1">Ticket #{result.ticket.id} submitted</p>
+        <p className="text-[12.5px] text-slate-400">{result.message}</p>
+        <button onClick={onDone}
+          className="mt-6 w-full px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600
+                     text-white font-black shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all">
+          Done
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="p-5 space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={deskLabelCls}>Issue Category</label>
+          <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={deskInputCls}>
+            {TICKET_CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{TICKET_CATEGORY_LABEL[c]}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className={deskLabelCls}>Priority</label>
+          <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Priority }))} className={deskInputCls}>
+            {Object.entries(TICKET_PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className={deskLabelCls}>Subject</label>
+        <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
+          placeholder="Enter a short and clear subject" className={deskInputCls} />
+      </div>
+      <div>
+        <label className={deskLabelCls}>Description</label>
+        <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+          placeholder="Describe your issue in detail (what happened, any error messages, etc.)"
+          rows={4} className={`${deskInputCls} resize-none`} />
+      </div>
+      <div>
+        <label className={deskLabelCls}>Related to</label>
+        <select value={form.relatedTo} onChange={e => setForm(f => ({ ...f, relatedTo: e.target.value }))} className={deskInputCls}>
+          {TICKET_RELATED_TO_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={deskLabelCls}>Attachments <span className="text-slate-400 normal-case font-semibold">(optional)</span></label>
+        <label className="flex flex-col items-center justify-center gap-1.5 px-4 py-4 rounded-xl border-2 border-dashed
+                          border-slate-200 bg-slate-50/60 hover:bg-cyan-50/40 hover:border-cyan-300
+                          cursor-pointer transition-all text-center">
+          <Paperclip className="w-4 h-4 text-cyan-500" />
+          <p className="text-[11.5px] font-bold text-slate-600">Click to attach files</p>
+          <p className="text-[10px] text-slate-400">(Max 5MB per file)</p>
+          <input type="file" multiple className="hidden"
+            onChange={e => setFiles(f => [...f, ...Array.from(e.target.files || [])])} />
+        </label>
+        {files.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {files.map((f, i) => (
+              <span key={i} className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-lg bg-cyan-50
+                                       border border-cyan-200 text-[10.5px] font-bold text-cyan-700">
+                {f.name}
+                <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                  className="p-0.5 rounded hover:bg-cyan-200/60 text-cyan-500">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {err && (
+        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
+          <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+          <p className="text-[12px] text-rose-700">{err}</p>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => { setForm(blank); setFiles([]); setErr(''); }}
+          className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-slate-200 text-slate-500
+                     text-[12.5px] font-black hover:bg-slate-50 transition-all flex-shrink-0">
+          <RotateCcw className="w-3.5 h-3.5" />Reset
+        </button>
+        <button type="submit" disabled={busy}
+          className="rp-sheen flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl
+                     bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-black
+                     shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all
+                     disabled:opacity-50 disabled:translate-y-0">
+          {busy ? <><Loader className="w-4 h-4 animate-spin" />Submitting…</>
+            : <><Send className="w-3.5 h-3.5" />{isItStaff ? 'Record (instant)' : 'Submit Ticket'}</>}
+        </button>
+      </div>
+      {!isItStaff && (
+        <p className="text-[11px] text-slate-400 text-center">
+          Your ticket goes to IT Support for review before work starts.
+        </p>
+      )}
+    </form>
+  );
+}
+
+/* ── the popup itself: two tabs sharing one header — but each reviewing
+   role only raises the OTHER kind here, not its own: an Admin approves item
+   requests for everyone else, so raising one for themselves through this
+   same popup would be reviewing their own request; same reasoning keeps
+   the IT Tickets tab away from IT Support. Employee and Super Admin see
+   both, same as always. ─────────────────────────────────────────────────── */
+function SupportDeskModal({ session, onClose, onDone }: {
+  session: Session; onClose: () => void; onDone: () => void;
+}) {
+  const canAdminTicket = session.role !== 'admin';
+  const canItTicket = session.role !== 'it_support';
+  const showTabs = canAdminTicket && canItTicket;
+  const [deskTab, setDeskTab] = useState<'admin' | 'it'>(canAdminTicket ? 'admin' : 'it');
+
   return (
     <div className="rp-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
       <div className="rp-pop w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl
                       max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
-          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-cyan-600" />
-            {result ? 'Request submitted' : 'Request an item'}
-          </h3>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {result ? (
-          <div className="p-6 text-center">
-            <div className={`rp-pop-in w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center
-              ${result.status === 'approved' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-              <CheckCircle2 className={`w-8 h-8 ${result.status === 'approved' ? 'text-emerald-500' : 'text-amber-500'}`} />
+        <div className="p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
+          <div className={`flex items-start justify-between gap-3 ${showTabs ? 'mb-4' : ''}`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-600
+                              flex items-center justify-center shadow-md shadow-cyan-500/25 flex-shrink-0">
+                <Headphones className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-slate-900">Help Desk</h3>
+                <p className="text-[11.5px] text-slate-400">
+                  {showTabs ? 'Create a support ticket or view your existing tickets.'
+                    : deskTab === 'admin' ? 'Request stationery, IT equipment, or anything else Admin provides.'
+                    : 'Raise an IT support ticket.'}
+                </p>
+              </div>
             </div>
-            <p className="text-slate-900 font-black text-lg mb-1">{result.message}</p>
-            <button onClick={onDone}
-              className="mt-6 w-full px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600
-                         text-white font-black shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all">
-              Done
+            <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex-shrink-0">
+              <X className="w-4 h-4" />
             </button>
           </div>
-        ) : (
-          <form onSubmit={submit} className="p-5 space-y-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Category</label>
-              <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
-                {Object.entries(CATEGORY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">
-                What do you need?
-              </label>
-              <input value={itemName} onChange={e => setItemName(e.target.value)}
-                placeholder="e.g. A4 paper, wireless mouse, whiteboard markers" className={inputCls} />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Quantity</label>
-                <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
-                  className={`${inputCls} px-2.5 text-xs`} />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Urgency</label>
-                <select value={urgency} onChange={e => setUrgency(e.target.value)} className={inputCls}>
-                  {Object.entries(URGENCY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Your name</label>
-                <input value={name} onChange={e => setName(e.target.value)} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Department</label>
-                <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Sales" className={inputCls} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">
-                Needed by (optional)
-              </label>
-              <input type="date" value={neededBy} onChange={e => setNeededBy(e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">
-                Reason / notes (optional)
-              </label>
-              <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Why do you need this?" className={inputCls} />
-            </div>
 
-            {err && (
-              <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
-                <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
-                <p className="text-[12px] text-rose-700">{err}</p>
-              </div>
-            )}
+          {showTabs && (
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100">
+              <button type="button" onClick={() => setDeskTab('admin')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px]
+                           font-black transition-all ${deskTab === 'admin'
+                             ? 'bg-white text-cyan-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                <ClipboardList className="w-3.5 h-3.5" />Admin Ticket
+              </button>
+              <button type="button" onClick={() => setDeskTab('it')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px]
+                           font-black transition-all ${deskTab === 'it'
+                             ? 'bg-white text-cyan-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                <Headphones className="w-3.5 h-3.5" />IT Tickets
+              </button>
+            </div>
+          )}
+        </div>
 
-            <button type="submit" disabled={busy}
-              className="rp-sheen w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
-                         bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-black
-                         shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all
-                         disabled:opacity-50 disabled:translate-y-0">
-              {busy ? <><Loader className="w-4 h-4 animate-spin" />Submitting…</>
-                : <><Send className="w-4 h-4" />{isStaff ? 'Record (instant)' : 'Send request'}</>}
-            </button>
-            {!isStaff && (
-              <p className="text-[11px] text-slate-400 text-center">
-                Your request goes to an admin for approval, then fulfilment.
-              </p>
-            )}
-          </form>
-        )}
+        {deskTab === 'admin'
+          ? <AdminTicketForm session={session} onDone={onDone} />
+          : <ItTicketForm session={session} onDone={onDone} />}
       </div>
     </div>
   );
 }
 
-/* ── my requests: room bookings + item requests, merged into one timeline ─ */
+/* ── my requests: room bookings + item requests + IT tickets, merged into
+   one timeline ───────────────────────────────────────────────────────── */
 function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey: number }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
+    // All three request types are backend-backed now — one Promise.all, one
+    // catch, so a failed fetch never leaves the list half-populated.
+    let bookingRows: any[] = [];
+    let resourceRows: any[] = [];
+    let ticketRows: any[] = [];
     try {
       const email = encodeURIComponent(session.email);
-      const [br, rr] = await Promise.all([
+      const [br, rr, tr] = await Promise.all([
         fetch(`${API}/bookings/?mine=${email}`).then(r => r.json()),
         fetch(`${API}/resource-requests/?mine=${email}`).then(r => r.json()),
+        fetch(`${API}/tickets/?mine=${email}`).then(r => r.json()),
       ]);
-      // Merge both request types into one timeline, newest first. `kind`
-      // distinguishes them for rendering; bookings don't carry `kind` from
-      // the API (unlike resource requests) so it's tagged on here.
-      const merged = [
-        ...(br.results || []).map((b: any) => ({ ...b, kind: 'room', sortKey: b.created_at })),
-        ...(rr.results || []).map((r: any) => ({ ...r, sortKey: r.created_at })),
-      ].sort((a, b) => (a.sortKey < b.sortKey ? 1 : -1));
+      // `kind` distinguishes each row for rendering; bookings don't carry
+      // `kind` from the API (unlike resource requests/tickets) so it's
+      // tagged on here.
+      bookingRows = (br.results || []).map((b: any) => ({ ...b, kind: 'room', sortKey: b.created_at }));
+      resourceRows = (rr.results || []).map((r: any) => ({ ...r, sortKey: r.created_at }));
+      ticketRows = (tr.results || []).map((t: SupportTicket) => ({ ...t, sortKey: t.created_at }));
+    } catch {
+      // Backend unreachable right now — show an empty list rather than a
+      // half-merged one; the Retry is just switching tabs back to this one.
+    } finally {
+      const merged = [...bookingRows, ...resourceRows, ...ticketRows]
+        .sort((a, b) => (a.sortKey < b.sortKey ? 1 : -1));
       setRows(merged);
-    } finally { setLoading(false); }
+      setLoading(false);
+    }
   }, [session.email]);
   useEffect(() => { load(); }, [load, refreshKey]);
 
   const cancel = async (row: any) => {
-    const label = row.kind === 'room' ? 'this booking' : 'this request';
+    const label = row.kind === 'room' ? 'this booking' : row.kind === 'ticket' ? 'this ticket' : 'this request';
     if (!confirm(`Cancel ${label}?`)) return;
-    const url = row.kind === 'room' ? `${API}/bookings/${row.id}/` : `${API}/resource-requests/${row.id}/`;
+    const url = row.kind === 'room' ? `${API}/bookings/${row.id}/`
+              : row.kind === 'ticket' ? `${API}/tickets/${row.id}/`
+              : `${API}/resource-requests/${row.id}/`;
     await fetch(url, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'cancel', email: session.email }),
@@ -449,14 +668,20 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
   };
 
   if (loading) return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-16" />)}</div>;
-  if (!rows.length) return <Empty msg="No requests yet — book a room or request an item above" icon={ClipboardList} />;
+  if (!rows.length) return <Empty msg="No requests yet — book a room, request an item, or raise a ticket above" icon={ClipboardList} />;
 
   return (
     <div className="space-y-2.5">
       {rows.map((row, i) => {
         const isRoom = row.kind === 'room';
-        const accent = isRoom ? PURPOSE_COLOUR[row.purpose] : CATEGORY_COLOUR[row.category];
-        const cancellable = row.status === 'pending' || row.status === 'approved';
+        const isTicket = row.kind === 'ticket';
+        const accent = isRoom ? PURPOSE_COLOUR[row.purpose] : isTicket ? '#f59e0b' : CATEGORY_COLOUR[row.category];
+        // Tickets share the same pending/approved/rejected badge set as
+        // every other request type here, plus in_progress/closed of their
+        // own — see REQUEST_STATUS_BADGE in RoomPulseShared.tsx. Only
+        // cancellable while still pending (once IT Support triages it,
+        // only they drive it forward — same rule the backend enforces).
+        const cancellable = isTicket ? row.status === 'pending' : (row.status === 'pending' || row.status === 'approved');
         return (
           <Reveal key={`${row.kind}-${row.id}`} delay={i * 40}>
             <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3.5">
@@ -464,18 +689,20 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-500">
-                    {isRoom ? 'Room' : row.category_label}
+                    {isRoom ? 'Room' : isTicket ? 'IT Ticket' : row.category_label}
                   </span>
                   <p className="text-[13px] font-bold text-slate-800 truncate">
-                    {isRoom ? row.room_name : `${row.item_name} × ${row.quantity}`}
+                    {isRoom ? row.room_name : isTicket ? row.subject : `${row.item_name} × ${row.quantity}`}
                   </p>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 ${REQUEST_STATUS_BADGE[row.status]}`}>
-                    {row.status}
+                    {isTicket ? row.status_label : row.status}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400">
                   {isRoom
                     ? <>{fmtDate(row.date)} · {row.start_time}–{row.end_time} · {PURPOSE_LABEL[row.purpose]}</>
+                    : isTicket
+                    ? <>{TICKET_PRIORITY_META[row.priority as Priority].label} priority · {row.related_to} · {fmtTicketWhen(row.created_at)}</>
                     : <>{URGENCY_LABEL[row.urgency]} urgency{row.needed_by ? ` · needed by ${fmtDate(row.needed_by)}` : ''}</>}
                 </p>
                 {row.admin_remarks && (
@@ -505,7 +732,7 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
   const [loading, setLoading] = useState(true);
   const [bookRoom, setBookRoom] = useState<any>(null);
   const [showBooking, setShowBooking] = useState(false);
-  const [showItemRequest, setShowItemRequest] = useState(false);
+  const [showSupportDesk, setShowSupportDesk] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const loadRooms = useCallback(async () => {
@@ -549,20 +776,20 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
   }
 
   const isStaff = session.role === 'admin' || session.role === 'super_admin';
+  const canApprove = session.role === 'admin' || session.role === 'it_support' || session.role === 'super_admin';
   const isSuper = session.role === 'super_admin';
 
   const TABS: { id: Tab; label: string; icon: any; roles?: string[] }[] = [
     { id: 'rooms', label: 'Rooms', icon: LayoutGrid },
     { id: 'mine', label: 'My Requests', icon: ClipboardList },
-    { id: 'tickets', label: 'Ticket+', icon: Headphones },
-    { id: 'approvals', label: 'Approvals', icon: ListChecks, roles: ['admin', 'super_admin'] },
+    { id: 'approvals', label: 'Approvals', icon: ListChecks, roles: ['admin', 'it_support', 'super_admin'] },
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon, roles: ['admin', 'super_admin'] },
     { id: 'manage', label: 'Manage', icon: ShieldCheck, roles: ['super_admin'] },
   ];
   const visibleTabs = TABS.filter(t => !t.roles || t.roles.includes(session.role));
 
   const onBookingDone = () => { setShowBooking(false); setBookRoom(null); setRefreshKey(k => k + 1); loadRooms(); };
-  const onItemRequestDone = () => { setShowItemRequest(false); setRefreshKey(k => k + 1); };
+  const onSupportDeskDone = () => { setShowSupportDesk(false); setRefreshKey(k => k + 1); };
 
   return (
     <div className="min-h-full bg-[#f5f7fa] relative">
@@ -595,11 +822,11 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
                          hover:-translate-y-0.5 hover:shadow-xl hover:shadow-cyan-500/30 transition-all">
               <Plus className="w-3.5 h-3.5" />Book Room
             </button>
-            <button onClick={() => setShowItemRequest(true)}
+            <button onClick={() => setShowSupportDesk(true)}
               className="rp-sheen flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200
                          text-slate-600 text-[12px] font-black hover:border-cyan-300 hover:text-cyan-700
                          hover:-translate-y-0.5 transition-all">
-              <Package className="w-3.5 h-3.5" />Request Item
+              <Headphones className="w-3.5 h-3.5" />Support Ticket
             </button>
             <div className="flex items-center gap-2 pl-1">
               <div className="hidden sm:block text-right leading-none">
@@ -657,14 +884,12 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {tab === 'mine' && (
-          <Panel title="My Requests" icon={ClipboardList} subtitle="Room bookings and item requests you've made, and their status">
+          <Panel title="My Requests" icon={ClipboardList} subtitle="Room bookings, item requests, and IT tickets you've made, and their status">
             <MyRequestsPanel session={session} refreshKey={refreshKey} />
           </Panel>
         )}
 
-        {tab === 'tickets' && <TicketsPanel session={session} />}
-
-        {tab === 'approvals' && isStaff && (
+        {tab === 'approvals' && canApprove && (
           <ApprovalsPanel session={session} onChanged={() => { setRefreshKey(k => k + 1); loadRooms(); }} />
         )}
         {tab === 'calendar' && isStaff && <CalendarPanel rooms={rooms} />}
@@ -675,9 +900,9 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
         <BookingModal room={bookRoom} rooms={rooms.length ? rooms : []} session={session}
           onClose={() => { setShowBooking(false); setBookRoom(null); }} onDone={onBookingDone} />
       )}
-      {showItemRequest && (
-        <ItemRequestModal session={session}
-          onClose={() => setShowItemRequest(false)} onDone={onItemRequestDone} />
+      {showSupportDesk && (
+        <SupportDeskModal session={session}
+          onClose={() => setShowSupportDesk(false)} onDone={onSupportDeskDone} />
       )}
     </div>
   );

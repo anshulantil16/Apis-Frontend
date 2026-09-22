@@ -5,19 +5,38 @@ import {
   CheckCircle2, XCircle, Clock, AlertTriangle, Users, Building2, Shield,
   UploadCloud, Download, Trash2, Plus, RefreshCw, TrendingUp, Timer,
   ChevronLeft, ChevronRight, FileSpreadsheet, UserPlus, Percent, BarChart3,
-  PackageCheck, Truck,
+  PackageCheck, Truck, Headphones, PlayCircle, History, Inbox, Paperclip,
 } from 'lucide-react';
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
-  fmtDate, isoLocal,
+  REQUEST_STATUS_BADGE, fmtDate, isoLocal,
 } from './RoomPulseShared';
+import { TICKET_CATEGORY_LABEL, TICKET_PRIORITY_META, fmtTicketWhen } from './RoomPulseTickets';
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
   "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
 
-/* ── Approvals — room bookings + item requests, merged into one queue ────── */
+/* ── Approvals — which queue(s) a role sees. Admin reviews room bookings and
+   item requests ("Admin Ticket" in the Support Desk popup); IT Support
+   reviews IT tickets; Super Admin gets both, matching "super admin has
+   access to everything". Each queue's history stays with its own queue —
+   Admin never sees IT Support's closed tickets and vice versa. ─────────── */
 export function ApprovalsPanel({ session, onChanged }: { session: Session; onChanged: () => void }) {
+  const showAdminQueue = session.role === 'admin' || session.role === 'super_admin';
+  const showTicketQueue = session.role === 'it_support' || session.role === 'super_admin';
+  return (
+    <div className="space-y-5">
+      {showAdminQueue && <AdminApprovalsSection session={session} onChanged={onChanged} />}
+      {showAdminQueue && <AdminTicketHistorySection />}
+      {showTicketQueue && <TicketApprovalsSection session={session} onChanged={onChanged} />}
+      {showTicketQueue && <ItTicketHistorySection />}
+    </div>
+  );
+}
+
+/* ── Admin queue — room bookings + item requests, merged into one queue ──── */
+function AdminApprovalsSection({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const [rows, setRows] = useState<any[]>([]);
   const [readyToFulfil, setReadyToFulfil] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,6 +220,339 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
   );
 }
 
+/* ── IT Support queue — tickets, pending triage + active work ────────────── */
+function TicketApprovalsSection({ session, onChanged }: { session: Session; onChanged: () => void }) {
+  const [pending, setPending] = useState<any[]>([]);
+  const [active, setActive] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [remarks, setRemarks] = useState<Record<number, string>>({});
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [p, approved, inProgress] = await Promise.all([
+        fetch(`${API}/tickets/?status=pending&limit=200`).then(r => r.json()),
+        fetch(`${API}/tickets/?status=approved&limit=200`).then(r => r.json()),
+        fetch(`${API}/tickets/?status=in_progress&limit=200`).then(r => r.json()),
+      ]);
+      setPending(p.results || []);
+      setActive([...(approved.results || []), ...(inProgress.results || [])]);
+    } finally { setLoading(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const act = async (id: number, action: 'approve' | 'reject' | 'start' | 'close') => {
+    setBusyId(id); setErr('');
+    try {
+      const r = await fetch(`${API}/tickets/${id}/`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, email: session.email, remarks: remarks[id] || '' }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Action failed');
+      load(); onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Action failed');
+    } finally { setBusyId(null); }
+  };
+
+  return (
+    <div className="space-y-5">
+      <Panel title="Pending Tickets" icon={Headphones} subtitle={`${pending.length} ticket(s) awaiting triage`}
+        right={
+          <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        }>
+        {err && (
+          <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 mb-4">
+            <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+            <p className="text-[12px] text-rose-700">{err}</p>
+          </div>
+        )}
+        {loading ? (
+          <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-24" />)}</div>
+        ) : !pending.length ? (
+          <Empty msg="Nothing pending — all caught up" icon={CheckCircle2} />
+        ) : (
+          <div className="space-y-3">
+            {pending.map((t, i) => (
+              <Reveal key={t.id} delay={i * 60}>
+                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-white
+                                         text-slate-500 ring-1 ring-slate-200">
+                          {TICKET_CATEGORY_LABEL[t.category] || t.category}
+                        </span>
+                        <p className="text-[13px] font-black text-slate-800">{t.subject}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1
+                                          ring-slate-200 bg-white ${TICKET_PRIORITY_META[t.priority].text}`}>
+                          {TICKET_PRIORITY_META[t.priority].label}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {t.related_to || '—'} · {fmtTicketWhen(t.created_at)}
+                      </p>
+                      <p className="text-[11px] text-slate-600 mt-1">
+                        {t.requested_by_name} ({t.requested_by_email}){t.department && ` · ${t.department}`}
+                      </p>
+                      {t.description && (
+                        <p className="text-[11px] text-slate-400 mt-1 italic">"{t.description}"</p>
+                      )}
+                      {t.attachments?.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                          <Paperclip className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                          {t.attachments.map((a: { id: number; name: string; url: string }) => (
+                            <a key={a.id} href={a.url} target="_blank" rel="noreferrer"
+                              className="px-1.5 py-0.5 rounded bg-white border border-slate-200
+                                        text-[10px] font-bold text-cyan-700 hover:bg-cyan-50 hover:border-cyan-300
+                                        underline decoration-dotted transition-colors">
+                              {a.name}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <input value={remarks[t.id] || ''} onChange={e => setRemarks(r => ({ ...r, [t.id]: e.target.value }))}
+                    placeholder="Optional remark (shown to the requester)"
+                    className={`${inputCls} mb-3 py-2 text-[12px]`} />
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => act(t.id, 'approve')} disabled={busyId === t.id}
+                      className="rp-sheen flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                                 bg-emerald-50 text-emerald-700 text-[12px] font-black
+                                 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                      {busyId === t.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}Approve
+                    </button>
+                    <button onClick={() => act(t.id, 'reject')} disabled={busyId === t.id}
+                      className="rp-sheen flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                                 bg-rose-50 text-rose-700 text-[12px] font-black
+                                 hover:bg-rose-100 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                      <XCircle className="w-3.5 h-3.5" />Reject
+                    </button>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      {/* Approving a ticket only means "yes, IT Support will work it" — it
+          isn't done until someone starts, then finishes, the actual work. */}
+      <Panel title="Active Tickets" icon={PlayCircle}
+        subtitle={`${active.length} approved / in-progress ticket(s)`}>
+        {!active.length ? (
+          <Empty msg="Nothing active right now" icon={Headphones} />
+        ) : (
+          <div className="space-y-2.5">
+            {active.map((t, i) => (
+              <Reveal key={t.id} delay={i * 50}>
+                <div className="rp-tilt flex items-center gap-3 rounded-xl bg-cyan-50/50 border border-cyan-200 p-3.5">
+                  <div className="w-2 h-full min-h-[36px] rounded-full flex-shrink-0" style={{ background: '#f59e0b' }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-slate-800 truncate">
+                      {t.subject} <span className="text-slate-400 font-semibold">· {TICKET_CATEGORY_LABEL[t.category] || t.category}</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      For {t.requested_by_name}{t.department && ` · ${t.department}`} · {t.status_label}
+                    </p>
+                  </div>
+                  {t.status === 'approved' ? (
+                    <button onClick={() => act(t.id, 'start')} disabled={busyId === t.id}
+                      className="rp-sheen flex items-center gap-1.5 px-3 py-2 rounded-lg bg-sky-600 text-white
+                                 text-[12px] font-black hover:bg-sky-700 hover:-translate-y-0.5 transition-all disabled:opacity-50 flex-shrink-0">
+                      <PlayCircle className="w-3.5 h-3.5" />Start Progress
+                    </button>
+                  ) : (
+                    <button onClick={() => act(t.id, 'close')} disabled={busyId === t.id}
+                      className="rp-sheen flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 text-white
+                                 text-[12px] font-black hover:bg-cyan-700 hover:-translate-y-0.5 transition-all disabled:opacity-50 flex-shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5" />Close Ticket
+                    </button>
+                  )}
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+/* ── IT Ticket History — daily volume/throughput summary + a recent-tickets
+   log, at the bottom of the IT Support queue only. ───────────────────────── */
+function ItTicketHistorySection() {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/tickets/?limit=500`);
+      const d = await r.json();
+      setTickets(d.results || []);
+    } finally { setLoading(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const today = isoLocal(new Date());
+  const isToday = (iso: string) => isoLocal(new Date(iso)) === today;
+
+  const receivedToday = tickets.filter(t => isToday(t.created_at)).length;
+  const solvedToday = tickets.filter(t => t.status === 'closed' && isToday(t.updated_at)).length;
+  const pending = tickets.filter(t => t.status === 'pending').length;
+  const inProgress = tickets.filter(t => t.status === 'in_progress').length;
+
+  const STAT_TILES = [
+    { label: 'Received Today', value: receivedToday, icon: Inbox, cls: 'text-cyan-600' },
+    { label: 'Solved Today', value: solvedToday, icon: CheckCircle2, cls: 'text-emerald-600' },
+    { label: 'In Progress', value: inProgress, icon: PlayCircle, cls: 'text-sky-600' },
+    { label: 'Pending', value: pending, icon: Clock, cls: 'text-amber-600' },
+  ];
+
+  const recent = tickets.slice(0, 15);
+
+  return (
+    <Panel title="IT Ticket History" icon={History} subtitle="Today's volume, throughput, and the most recent IT tickets"
+      right={
+        <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      }>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        {STAT_TILES.map(s => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+              <Icon className={`w-4 h-4 mb-1.5 ${s.cls}`} />
+              <p className="text-xl font-black text-slate-900 tabular-nums">{loading ? '—' : s.value}</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400 mt-0.5">{s.label}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
+      ) : !recent.length ? (
+        <Empty msg="No IT tickets raised yet" icon={History} />
+      ) : (
+        <div className="space-y-2">
+          {recent.map((t, i) => (
+            <Reveal key={t.id} delay={i * 30}>
+              <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3">
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0
+                  ${t.status === 'closed' ? 'bg-emerald-50 text-emerald-600 ring-emerald-200'
+                    : t.status === 'in_progress' ? 'bg-sky-50 text-sky-600 ring-sky-200'
+                    : t.status === 'rejected' ? 'bg-rose-50 text-rose-600 ring-rose-200'
+                    : t.status === 'approved' ? 'bg-emerald-50 text-emerald-600 ring-emerald-200'
+                    : 'bg-amber-50 text-amber-600 ring-amber-200'}`}>
+                  {t.status_label}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-bold text-slate-800 truncate">{t.subject}</p>
+                  <p className="text-[10.5px] text-slate-400 truncate">
+                    {t.requested_by_name} · {TICKET_CATEGORY_LABEL[t.category] || t.category} · {fmtTicketWhen(t.created_at)}
+                  </p>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+/* ── Admin Ticket History — same shape as IT's, but for item/resource
+   requests ("Admin Ticket" in the Support Desk popup), at the bottom of
+   the Admin queue only. ResourceRequest already tracks `fulfilled_at`
+   separately, so "Fulfilled Today" doesn't need an updated_at field the
+   way the IT ticket version does. ────────────────────────────────────── */
+function AdminTicketHistorySection() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/resource-requests/?limit=500`);
+      const d = await r.json();
+      setRequests(d.results || []);
+    } finally { setLoading(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const today = isoLocal(new Date());
+  const isToday = (iso: string) => isoLocal(new Date(iso)) === today;
+
+  const receivedToday = requests.filter(r => isToday(r.created_at)).length;
+  const fulfilledToday = requests.filter(r => r.status === 'fulfilled' && r.fulfilled_at && isToday(r.fulfilled_at)).length;
+  const awaitingFulfilment = requests.filter(r => r.status === 'approved').length;
+  const pending = requests.filter(r => r.status === 'pending').length;
+
+  const STAT_TILES = [
+    { label: 'Received Today', value: receivedToday, icon: Inbox, cls: 'text-cyan-600' },
+    { label: 'Fulfilled Today', value: fulfilledToday, icon: CheckCircle2, cls: 'text-emerald-600' },
+    { label: 'Awaiting Fulfilment', value: awaitingFulfilment, icon: PlayCircle, cls: 'text-sky-600' },
+    { label: 'Pending', value: pending, icon: Clock, cls: 'text-amber-600' },
+  ];
+
+  const recent = requests.slice(0, 15);
+
+  return (
+    <Panel title="Admin Ticket History" icon={History} subtitle="Today's volume, throughput, and the most recent item requests"
+      right={
+        <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      }>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        {STAT_TILES.map(s => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+              <Icon className={`w-4 h-4 mb-1.5 ${s.cls}`} />
+              <p className="text-xl font-black text-slate-900 tabular-nums">{loading ? '—' : s.value}</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400 mt-0.5">{s.label}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
+      ) : !recent.length ? (
+        <Empty msg="No item requests raised yet" icon={History} />
+      ) : (
+        <div className="space-y-2">
+          {recent.map((r, i) => (
+            <Reveal key={r.id} delay={i * 30}>
+              <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3">
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0 ${REQUEST_STATUS_BADGE[r.status]}`}>
+                  {r.status}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-bold text-slate-800 truncate">{r.item_name} × {r.quantity}</p>
+                  <p className="text-[10.5px] text-slate-400 truncate">
+                    {r.requested_by_name} · {r.category_label} · {fmtDate(r.created_at.slice(0, 10))}
+                  </p>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /* ── Calendar (per-room day timeline) ─────────────────────────────────────── */
 export function CalendarPanel({ rooms }: { rooms: any[] }) {
   const [roomId, setRoomId] = useState<number | null>(rooms[0]?.id || null);
@@ -328,9 +680,9 @@ function DangerZone({ session }: { session: Session }) {
 
   const reset = async () => {
     if (typed !== 'RESET') return;
-    if (!confirm('This permanently deletes ALL bookings, item requests, the employee directory '
-                + 'and every admin (except the fixed Super Admin), then restores only the 3 real '
-                + 'rooms. This cannot be undone. Continue?')) return;
+    if (!confirm('This permanently deletes ALL bookings, item requests, IT tickets, the employee '
+                + 'directory and every admin/IT Support account (except the fixed Super Admin), '
+                + 'then restores only the 3 real rooms. This cannot be undone. Continue?')) return;
     setBusy(true); setErr(''); setResult('');
     try {
       const r = await fetch(`${API}/reset/`, {
@@ -362,8 +714,9 @@ function DangerZone({ session }: { session: Session }) {
           <h3 className="text-sm font-black text-rose-700 tracking-tight">Danger Zone</h3>
         </div>
         <p className="text-[12px] text-rose-600/80 mb-4 ml-[42px]">
-          Permanently deletes all bookings, item requests, the employee directory and every admin
-          (the fixed Super Admin is unaffected), then restores only the 3 real APIS rooms. Cannot be undone.
+          Permanently deletes all bookings, item requests, IT tickets, the employee directory and
+          every admin/IT Support account (the fixed Super Admin is unaffected), then restores only
+          the 3 real APIS rooms. Cannot be undone.
         </p>
         <div className="flex flex-wrap items-center gap-2 ml-[42px]">
           <input value={typed} onChange={e => setTyped(e.target.value)}
@@ -466,9 +819,16 @@ function RoomsManage({ session, onChanged }: { session: Session; onChanged: () =
   );
 }
 
+const SCOPE_LABEL: Record<string, string> = { admin: 'Admin', it_support: 'IT Support' };
+const SCOPE_BADGE: Record<string, string> = {
+  admin: 'bg-cyan-50 text-cyan-700 ring-cyan-200',
+  it_support: 'bg-amber-50 text-amber-700 ring-amber-200',
+};
+
 function TeamManage({ session }: { session: Session }) {
   const [admins, setAdmins] = useState<any[]>([]);
   const [newAdmin, setNewAdmin] = useState('');
+  const [newScope, setNewScope] = useState<'admin' | 'it_support'>('admin');
   const [employees, setEmployees] = useState<{ count: number }>({ count: 0 });
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadMsg, setUploadMsg] = useState('');
@@ -489,7 +849,7 @@ function TeamManage({ session }: { session: Session }) {
     try {
       const r = await fetch(`${API}/admins/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: session.email, new_admin_email: newAdmin }),
+        body: JSON.stringify({ email: session.email, new_admin_email: newAdmin, scope: newScope }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
@@ -522,10 +882,15 @@ function TeamManage({ session }: { session: Session }) {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-      <Panel title="Admins" icon={Shield} subtitle={`${admins.length} admin(s) — Super Admin is fixed`}>
+      <Panel title="Admins & IT Support" icon={Shield} subtitle={`${admins.length} on the roster — Super Admin is fixed`}>
         <form onSubmit={addAdmin} className="flex gap-2 mb-4">
           <input value={newAdmin} onChange={e => setNewAdmin(e.target.value)} placeholder="name@apisindia.com"
             className={`flex-1 ${inputCls}`} />
+          <select value={newScope} onChange={e => setNewScope(e.target.value as 'admin' | 'it_support')}
+            className={`${inputCls} w-auto`}>
+            <option value="admin">Admin</option>
+            <option value="it_support">IT Support</option>
+          </select>
           <button type="submit" className="rp-sheen flex items-center gap-1.5 px-4 py-2.5 rounded-xl
                                            bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-[12px] font-black
                                            hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/25 transition-all">
@@ -537,7 +902,12 @@ function TeamManage({ session }: { session: Session }) {
           {admins.map(a => (
             <div key={a.id} className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-bold text-slate-800 truncate">{a.email}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[12px] font-bold text-slate-800 truncate">{a.email}</p>
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ring-1 flex-shrink-0 ${SCOPE_BADGE[a.scope] || SCOPE_BADGE.admin}`}>
+                    {SCOPE_LABEL[a.scope] || 'Admin'}
+                  </span>
+                </div>
                 <p className="text-[10px] text-slate-400">added by {a.added_by || '—'}</p>
               </div>
               <button onClick={() => removeAdmin(a.id)}
@@ -546,7 +916,7 @@ function TeamManage({ session }: { session: Session }) {
               </button>
             </div>
           ))}
-          {!admins.length && <Empty msg="No admins added yet" icon={Shield} />}
+          {!admins.length && <Empty msg="No admins or IT Support added yet" icon={Shield} />}
         </div>
       </Panel>
 
@@ -568,9 +938,9 @@ function TeamManage({ session }: { session: Session }) {
           </p>
         </label>
         <p className="text-[11px] text-slate-400 mt-3 leading-relaxed">
-          Tip: put <b className="text-slate-500">"Admin"</b> in the Role column to grant that person
-          Admin access in the same upload — no need to add them separately below. A blank or
-          "Employee" cell never removes existing admin access.
+          Tip: put <b className="text-slate-500">"Admin"</b> or <b className="text-slate-500">"IT Support"</b> in
+          the Role column to grant that access in the same upload — no need to add them separately
+          above. A blank or "Employee" cell never removes existing access.
         </p>
         {uploadMsg && <p className="text-[12px] text-cyan-700 mt-3">{uploadMsg}</p>}
       </Panel>

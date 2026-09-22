@@ -10,7 +10,7 @@ export const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:
 export const API = `${_API_BASE}/api/roompulse`;
 
 export const SESSION_KEY = 'roompulse_session';
-export type Role = 'employee' | 'admin' | 'super_admin';
+export type Role = 'employee' | 'admin' | 'it_support' | 'super_admin';
 export interface Session { email: string; name: string; role: Role; ts: number; }
 
 export function loadSession(): Session | null {
@@ -30,7 +30,7 @@ export const saveSession = (s: Omit<Session, 'ts'>) =>
 export const clearSession = () => localStorage.removeItem(SESSION_KEY);
 
 export const ROLE_LABEL: Record<Role, string> = {
-  employee: 'Employee', admin: 'Admin', super_admin: 'Super Admin',
+  employee: 'Employee', admin: 'Admin', it_support: 'IT Support', super_admin: 'Super Admin',
 };
 
 /* ── animated counter ───────────────────────────────────────────────────── */
@@ -146,14 +146,52 @@ export const PURPOSE_COLOUR: Record<string, string> = {
   vendor_meeting: '#8b5cf6', other: '#94a3b8',
 };
 
-/* ── resource/item request badges ──────────────────────────────────────── */
+/* ── resource/item request badges — everything Admin covers that isn't IT
+   (that lives on the ticket side — see TICKET_CATEGORY_LABEL in
+   RoomPulseTickets.tsx). Keys mirror ResourceRequest.CATEGORY_CHOICES. ── */
 export const CATEGORY_LABEL: Record<string, string> = {
-  stationery: 'Stationery', it_equipment: 'IT Equipment', furniture: 'Furniture',
-  pantry: 'Pantry / Housekeeping', printing: 'Printing', other: 'Other',
+  stationery_office_supplies: 'Stationery & Office Supplies',
+  housekeeping: 'Housekeeping',
+  pantry_refreshments: 'Pantry & Refreshments',
+  furniture_seating: 'Furniture & Seating',
+  facility_maintenance: 'Facility Maintenance',
+  electricity_lighting: 'Electricity & Lighting',
+  plumbing: 'Plumbing',
+  security_access: 'Security & Access',
+  id_card_employee_badge: 'ID Card / Employee Badge',
+  courier_dispatch: 'Courier & Dispatch',
+  travel_accommodation: 'Travel & Accommodation',
+  cab_transportation: 'Cab / Transportation',
+  meeting_room: 'Meeting Room',
+  office_equipment: 'Office Equipment',
+  printing_photocopy: 'Printing & Photocopy',
+  events_administration: 'Events & Administration',
+  vendor_service_request: 'Vendor / Service Request',
+  workplace_safety: 'Workplace Safety',
+  general_administration: 'General Administration',
+  other: 'Other',
 };
 export const CATEGORY_COLOUR: Record<string, string> = {
-  stationery: '#0891b2', it_equipment: '#6366f1', furniture: '#b45309',
-  pantry: '#10b981', printing: '#8b5cf6', other: '#94a3b8',
+  stationery_office_supplies: '#0891b2',
+  housekeeping: '#10b981',
+  pantry_refreshments: '#f59e0b',
+  furniture_seating: '#b45309',
+  facility_maintenance: '#64748b',
+  electricity_lighting: '#eab308',
+  plumbing: '#3b82f6',
+  security_access: '#e11d48',
+  id_card_employee_badge: '#8b5cf6',
+  courier_dispatch: '#f97316',
+  travel_accommodation: '#0ea5e9',
+  cab_transportation: '#6366f1',
+  meeting_room: '#14b8a6',
+  office_equipment: '#a855f7',
+  printing_photocopy: '#d946ef',
+  events_administration: '#ec4899',
+  vendor_service_request: '#84cc16',
+  workplace_safety: '#ef4444',
+  general_administration: '#6b7280',
+  other: '#94a3b8',
 };
 export const URGENCY_LABEL: Record<string, string> = {
   low: 'Low', normal: 'Normal', urgent: 'Urgent',
@@ -162,13 +200,16 @@ export const URGENCY_COLOUR: Record<string, string> = {
   low: '#64748b', normal: '#0891b2', urgent: '#e11d48',
 };
 
-/* Shared across both request types (room bookings + item requests) — the
-   union of every status either can have, so one badge map covers both in
-   the unified My Requests / Approvals views. */
+/* Shared across all three request types (room bookings, item requests, IT
+   tickets) — the union of every status any of them can have, so one badge
+   map covers all in the unified My Requests / Approvals views. `in_progress`
+   and `closed` only apply to tickets; the rest are shared. */
 export const REQUEST_STATUS_BADGE: Record<string, string> = {
   pending: 'bg-amber-50 text-amber-600 ring-amber-200',
   approved: 'bg-emerald-50 text-emerald-600 ring-emerald-200',
   fulfilled: 'bg-cyan-50 text-cyan-700 ring-cyan-200',
+  in_progress: 'bg-sky-50 text-sky-600 ring-sky-200',
+  closed: 'bg-emerald-50 text-emerald-600 ring-emerald-200',
   rejected: 'bg-rose-50 text-rose-600 ring-rose-200',
   cancelled: 'bg-slate-50 text-slate-400 ring-slate-200',
 };

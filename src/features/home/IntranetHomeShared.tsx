@@ -188,8 +188,8 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Admin & Facilities', icon: Building2, accent: 'text-cyan-300', hoverAccent: 'hover:text-cyan-300', dot: 'bg-cyan-400', items: [
-      { id: 'roompulse', label: 'AdminPulse' },
+    label: 'Support Tickets', icon: Building2, accent: 'text-cyan-300', hoverAccent: 'hover:text-cyan-300', dot: 'bg-cyan-400', items: [
+      { id: 'roompulse', label: 'Help Desk' },
     ],
   },
   {
