@@ -22,7 +22,39 @@ type Tab = 'rooms' | 'mine' | 'approvals' | 'calendar' | 'manage';
 const ROOM_GLOW: Record<string, string> = {
   occupied: 'rgba(244,63,94,.30)', upcoming: 'rgba(245,158,11,.28)', free: 'rgba(16,185,129,.22)',
 };
-function RoomCard({ room, delay, onBook }: { room: any; delay: number; onBook: () => void }) {
+function RoomCard({ room, delay, onBook, canManage, onFreed }: {
+  room: any; delay: number; onBook: () => void; canManage: boolean; onFreed: () => void;
+}) {
+  // Freeing a room early. The grid is otherwise driven entirely by the clock,
+  // so a meeting that finished at 10:30 left the room showing Occupied until
+  // its booked 11:00 and nobody could take it. Admin and Super Admin can end
+  // it ("it finished") or cancel it ("it never happened") -- two different
+  // records, both of which free the room now.
+  const [freeing, setFreeing] = useState<'' | 'release' | 'cancel'>('');
+  const [askFree, setAskFree] = useState(false);
+  const [freeErr, setFreeErr] = useState('');
+
+  const freeRoom = async (action: 'release' | 'cancel') => {
+    const id = room.current_booking?.id;
+    if (!id) return;
+    setFreeing(action);
+    setFreeErr('');
+    try {
+      const r = await rpFetch(`${API}/bookings/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          action,
+          remarks: action === 'release' ? 'Meeting ended early' : 'Meeting cancelled',
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setFreeErr(d.error || 'Could not free the room.'); return; }
+      setAskFree(false);
+      onFreed();
+    } catch {
+      setFreeErr('Could not reach the server.');
+    } finally { setFreeing(''); }
+  };
   const ring = room.status === 'occupied' ? 'hover:border-rose-300'
              : room.status === 'upcoming' ? 'hover:border-amber-300' : 'hover:border-emerald-300';
   return (
@@ -68,6 +100,36 @@ function RoomCard({ room, delay, onBook }: { room: any; delay: number; onBook: (
             <p className="text-[10px] text-rose-400 mt-0.5">
               {PURPOSE_LABEL[room.current_booking.purpose]}
             </p>
+
+            {canManage && !askFree && (
+              <button onClick={() => { setAskFree(true); setFreeErr(''); }}
+                className="mt-2.5 w-full px-2 py-1.5 rounded-lg bg-white border border-rose-200
+                           text-[11px] font-black text-rose-600 hover:bg-rose-100 transition-colors">
+                Free this room now
+              </button>
+            )}
+            {canManage && askFree && (
+              <div className="mt-2.5 space-y-1.5">
+                <p className="text-[10px] text-rose-500 font-bold">Why is it free?</p>
+                <button disabled={!!freeing} onClick={() => freeRoom('release')}
+                  className="w-full px-2 py-1.5 rounded-lg bg-white border border-rose-200
+                             text-[11px] font-black text-rose-600 hover:bg-rose-100
+                             disabled:opacity-50 transition-colors">
+                  {freeing === 'release' ? 'Freeing…' : 'The meeting finished early'}
+                </button>
+                <button disabled={!!freeing} onClick={() => freeRoom('cancel')}
+                  className="w-full px-2 py-1.5 rounded-lg bg-white border border-rose-200
+                             text-[11px] font-black text-rose-600 hover:bg-rose-100
+                             disabled:opacity-50 transition-colors">
+                  {freeing === 'cancel' ? 'Cancelling…' : 'The meeting was cancelled'}
+                </button>
+                <button disabled={!!freeing} onClick={() => setAskFree(false)}
+                  className="w-full px-2 py-1 text-[10px] font-bold text-rose-400 hover:text-rose-600">
+                  Never mind
+                </button>
+              </div>
+            )}
+            {freeErr && <p className="mt-1.5 text-[10px] font-bold text-rose-700">{freeErr}</p>}
           </div>
         )}
         {room.status === 'upcoming' && room.next_booking && (
@@ -898,6 +960,8 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {rooms.map((r, i) => (
                 <RoomCard key={r.id} room={r} delay={i * 80}
+                  canManage={session.role === 'admin' || session.role === 'super_admin'}
+                  onFreed={loadRooms}
                   onBook={() => { setBookRoom(r); setShowBooking(true); }} />
               ))}
               {!rooms.length && (

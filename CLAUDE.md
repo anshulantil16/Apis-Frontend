@@ -44,6 +44,12 @@ login screen. The server takes identity from that header alone — sending
 `email: session.email` in a body does nothing now, and used to be the whole
 of the security model.
 
+The room grid is live: it re-fetches every 30s and the server derives each
+room's status from the clock, so a meeting frees its room on its own. Admin
+and Super Admin also get a "Free this room now" control on an occupied card —
+finished early (`action: 'release'`) or cancelled (`action: 'cancel'`), which
+are two different records, not two words for the same thing.
+
 Vocabularies the server owns (ticket status, priority) are read through
 `ticketStatusMeta()` / `ticketPriorityMeta()`, which fall back to rendering
 the raw value rather than reading `.label` off `undefined`. Both lists have
