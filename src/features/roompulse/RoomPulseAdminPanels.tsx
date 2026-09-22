@@ -12,7 +12,7 @@ import {
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
   REQUEST_STATUS_BADGE, fmtDate, isoLocal,
 } from './RoomPulseShared';
-import { TICKET_CATEGORY_LABEL, TICKET_PRIORITY_META, fmtTicketWhen } from './RoomPulseTickets';
+import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, fmtTicketWhen } from './RoomPulseTickets';
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
   "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
@@ -290,8 +290,8 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                         </span>
                         <p className="text-[13px] font-black text-slate-800">{t.subject}</p>
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1
-                                          ring-slate-200 bg-white ${TICKET_PRIORITY_META[t.priority].text}`}>
-                          {TICKET_PRIORITY_META[t.priority].label}
+                                          ring-slate-200 bg-white ${ticketPriorityMeta(t.priority).text}`}>
+                          {ticketPriorityMeta(t.priority).label}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5">

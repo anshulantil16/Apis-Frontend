@@ -59,6 +59,19 @@ export const TICKET_PRIORITY_META: Record<Priority, { label: string; dot: string
   critical: { label: 'Critical', dot: 'bg-rose-500',    text: 'text-rose-600' },
 };
 
+/* Priority as it arrives from the API is just a string, and the queues that
+ * render it hold their rows as any[]. Indexing the table above with that is
+ * both a type error and a latent crash: an unrecognised priority would read
+ * .label off undefined and blank the panel. One lookup, with a fallback. */
+export function ticketPriorityMeta(priority: unknown) {
+  const key = String(priority ?? '').toLowerCase() as Priority;
+  return TICKET_PRIORITY_META[key] ?? {
+    label: String(priority ?? 'Unknown'),
+    dot: 'bg-slate-400',
+    text: 'text-slate-500',
+  };
+}
+
 export function fmtTicketWhen(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })

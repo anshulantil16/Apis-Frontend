@@ -13,7 +13,8 @@ import { RoomPulseLogin } from './RoomPulseLogin';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './RoomPulseAdminPanels';
 import {
   type SupportTicket, type Priority,
-  TICKET_CATEGORY_LABEL, TICKET_RELATED_TO_OPTIONS, TICKET_PRIORITY_META, fmtTicketWhen,
+  TICKET_CATEGORY_LABEL, TICKET_RELATED_TO_OPTIONS, TICKET_PRIORITY_META,
+  ticketPriorityMeta, fmtTicketWhen,
 } from './RoomPulseTickets';
 
 type Tab = 'rooms' | 'mine' | 'approvals' | 'calendar' | 'manage';
@@ -702,7 +703,7 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
                   {isRoom
                     ? <>{fmtDate(row.date)} · {row.start_time}–{row.end_time} · {PURPOSE_LABEL[row.purpose]}</>
                     : isTicket
-                    ? <>{TICKET_PRIORITY_META[row.priority as Priority].label} priority · {row.related_to} · {fmtTicketWhen(row.created_at)}</>
+                    ? <>{ticketPriorityMeta(row.priority).label} priority · {row.related_to} · {fmtTicketWhen(row.created_at)}</>
                     : <>{URGENCY_LABEL[row.urgency]} urgency{row.needed_by ? ` · needed by ${fmtDate(row.needed_by)}` : ''}</>}
                 </p>
                 {row.admin_remarks && (
