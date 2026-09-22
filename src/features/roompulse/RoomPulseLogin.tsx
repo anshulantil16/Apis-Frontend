@@ -3,7 +3,7 @@ import {
   LayoutGrid, Mail, ShieldCheck, ArrowRight, Loader, AlertTriangle, RotateCcw,
   Headphones, Ticket, Plus,
 } from 'lucide-react';
-import { API, RP_STYLES } from './RoomPulseShared';
+import { API, RP_STYLES, rpFetch} from './RoomPulseShared';
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 /* ── the "raise a ticket" stub — AdminPulse's visual signature, standing in
@@ -56,7 +56,7 @@ function Particles() {
 }
 
 export function RoomPulseLogin({ onSuccess }: {
-  onSuccess: (s: { email: string; name: string; role: string }) => void;
+  onSuccess: (s: { email: string; name: string; role: string; token: string }) => void;
 }) {
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
@@ -76,7 +76,7 @@ export function RoomPulseLogin({ onSuccess }: {
   useEffect(() => { if (step === 'otp') boxes.current[0]?.focus(); }, [step]);
 
   const post = async (body: any) => {
-    const r = await fetch(`${API}/login/`, {
+    const r = await rpFetch(`${API}/login/`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
     const d = await r.json().catch(() => ({}));
@@ -119,7 +119,9 @@ export function RoomPulseLogin({ onSuccess }: {
     setBusy(true); setErr('');
     try {
       const d = await post({ action: 'verify_otp', email: email.trim().toLowerCase(), otp: code });
-      onSuccess({ email: d.email, name: d.name, role: d.role });
+      // The token is the session now; without carrying it through, every
+      // call after sign-in would come back 401.
+      onSuccess({ email: d.email, name: d.name, role: d.role, token: d.token });
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : 'Verification failed');
       setOtp(['', '', '', '', '', '']);

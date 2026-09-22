@@ -6,9 +6,27 @@
    the Team roster. */
 
 export type Priority = 'low' | 'medium' | 'high' | 'critical';
-export type TicketStatus = 'pending' | 'approved' | 'rejected' | 'in_progress' | 'closed';
+export type TicketStatus =
+  | 'pending' | 'approved' | 'rejected' | 'in_progress' | 'closed'
+  // A requester withdrawing their own ticket used to be stored as
+  // 'rejected', which read as though IT had turned it down.
+  | 'cancelled';
 
 export interface TicketAttachment { id: number; name: string; url: string; }
+
+/* One line of a ticket's history. The ticket row holds only the most
+   recent review, so this is where "who approved it" survives somebody
+   later closing it. Append-only on the server. */
+export interface TicketEvent {
+  action: 'created' | 'approved' | 'rejected' | 'started' | 'closed' | 'cancelled';
+  label: string;
+  from_status: string;
+  to_status: string;
+  actor_email: string;
+  actor_role: string;
+  remarks: string;
+  at: string;
+}
 
 export interface SupportTicket {
   id: number;
@@ -31,6 +49,7 @@ export interface SupportTicket {
   admin_remarks: string;
   created_at: string;
   updated_at: string;
+  history: TicketEvent[];
 }
 
 export const TICKET_CATEGORY_LABEL: Record<string, string> = {
@@ -63,6 +82,26 @@ export const TICKET_PRIORITY_META: Record<Priority, { label: string; dot: string
  * render it hold their rows as any[]. Indexing the table above with that is
  * both a type error and a latent crash: an unrecognised priority would read
  * .label off undefined and blank the panel. One lookup, with a fallback. */
+/* Status, for display. Same shape and same reason as ticketPriorityMeta
+   below: the server owns this vocabulary and it has grown once already, so a
+   value this table has not heard of renders as itself rather than blank. */
+export const TICKET_STATUS_META: Record<TicketStatus, { label: string; cls: string }> = {
+  pending:     { label: 'Pending',     cls: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  approved:    { label: 'Approved',    cls: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  in_progress: { label: 'In Progress', cls: 'bg-violet-50 text-violet-700 ring-violet-200' },
+  closed:      { label: 'Closed',      cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  rejected:    { label: 'Rejected',    cls: 'bg-rose-50 text-rose-700 ring-rose-200' },
+  cancelled:   { label: 'Cancelled',   cls: 'bg-slate-100 text-slate-500 ring-slate-200' },
+};
+
+export function ticketStatusMeta(status: unknown) {
+  const key = String(status ?? '').toLowerCase() as TicketStatus;
+  return TICKET_STATUS_META[key] ?? {
+    label: String(status ?? 'Unknown'),
+    cls: 'bg-slate-100 text-slate-500 ring-slate-200',
+  };
+}
+
 export function ticketPriorityMeta(priority: unknown) {
   const key = String(priority ?? '').toLowerCase() as Priority;
   return TICKET_PRIORITY_META[key] ?? {

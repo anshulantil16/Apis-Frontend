@@ -11,7 +11,7 @@ export const API = `${_API_BASE}/api/roompulse`;
 
 export const SESSION_KEY = 'roompulse_session';
 export type Role = 'employee' | 'admin' | 'it_support' | 'super_admin';
-export interface Session { email: string; name: string; role: Role; ts: number; }
+export interface Session { email: string; name: string; role: Role; token: string; ts: number; }
 
 export function loadSession(): Session | null {
   try {
@@ -28,6 +28,37 @@ export function loadSession(): Session | null {
 export const saveSession = (s: Omit<Session, 'ts'>) =>
   localStorage.setItem(SESSION_KEY, JSON.stringify({ ...s, ts: Date.now() }));
 export const clearSession = () => localStorage.removeItem(SESSION_KEY);
+
+/* Every AdminPulse call goes through here.
+ *
+ * The server used to take the caller's word for who they were — each request
+ * carried an `email` field and was believed — so the sign-in bought nothing
+ * and anybody could act as anybody. Identity is now the token minted when the
+ * OTP was verified, sent in a header; the server looks it up rather than
+ * reading a name off the request body.
+ *
+ * Nothing calls fetch directly any more, so there is no call site that can
+ * quietly forget to identify itself. */
+export async function rpFetch(url: string, init: RequestInit = {}) {
+  const token = loadSession()?.token || '';
+  const isForm = typeof FormData !== 'undefined' && init.body instanceof FormData;
+  const headers: Record<string, string> = {
+    ...(init.headers as Record<string, string> | undefined),
+  };
+  if (token) headers['X-AdminPulse-Session'] = token;
+  if (!isForm && init.body && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const res = await fetch(url, { ...init, headers });
+  // The token has a 12-hour life and can be revoked; when it is gone the
+  // honest thing is to send them back to the sign-in screen rather than
+  // render a page full of empty panels.
+  if (res.status === 401) {
+    clearSession();
+    if (typeof window !== 'undefined') window.location.reload();
+  }
+  return res;
+}
 
 export const ROLE_LABEL: Record<Role, string> = {
   employee: 'Employee', admin: 'Admin', it_support: 'IT Support', super_admin: 'Super Admin',

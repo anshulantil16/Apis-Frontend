@@ -10,8 +10,7 @@ import {
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
-  REQUEST_STATUS_BADGE, fmtDate, isoLocal,
-} from './RoomPulseShared';
+  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './RoomPulseShared';
 import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, fmtTicketWhen } from './RoomPulseTickets';
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
@@ -48,9 +47,9 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
     setLoading(true);
     try {
       const [br, rr, approved] = await Promise.all([
-        fetch(`${API}/bookings/?status=pending&limit=200`).then(r => r.json()),
-        fetch(`${API}/resource-requests/?status=pending&limit=200`).then(r => r.json()),
-        fetch(`${API}/resource-requests/?status=approved&limit=200`).then(r => r.json()),
+        rpFetch(`${API}/bookings/?status=pending&limit=200`).then(r => r.json()),
+        rpFetch(`${API}/resource-requests/?status=pending&limit=200`).then(r => r.json()),
+        rpFetch(`${API}/resource-requests/?status=approved&limit=200`).then(r => r.json()),
       ]);
       const merged = [
         ...(br.results || []).map((b: any) => ({ ...b, kind: 'room' })),
@@ -67,7 +66,7 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
     setBusyId(key); setErr('');
     try {
       const url = row.kind === 'room' ? `${API}/bookings/${row.id}/` : `${API}/resource-requests/${row.id}/`;
-      const r = await fetch(url, {
+      const r = await rpFetch(url, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, email: session.email, remarks: remarks[key] || '' }),
       });
@@ -82,7 +81,7 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
   const fulfil = async (id: number) => {
     setBusyId(`resource-${id}`); setErr('');
     try {
-      const r = await fetch(`${API}/resource-requests/${id}/`, {
+      const r = await rpFetch(`${API}/resource-requests/${id}/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'fulfil', email: session.email }),
       });
@@ -233,9 +232,9 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
     setLoading(true);
     try {
       const [p, approved, inProgress] = await Promise.all([
-        fetch(`${API}/tickets/?status=pending&limit=200`).then(r => r.json()),
-        fetch(`${API}/tickets/?status=approved&limit=200`).then(r => r.json()),
-        fetch(`${API}/tickets/?status=in_progress&limit=200`).then(r => r.json()),
+        rpFetch(`${API}/tickets/?status=pending&limit=200`).then(r => r.json()),
+        rpFetch(`${API}/tickets/?status=approved&limit=200`).then(r => r.json()),
+        rpFetch(`${API}/tickets/?status=in_progress&limit=200`).then(r => r.json()),
       ]);
       setPending(p.results || []);
       setActive([...(approved.results || []), ...(inProgress.results || [])]);
@@ -246,7 +245,7 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
   const act = async (id: number, action: 'approve' | 'reject' | 'start' | 'close') => {
     setBusyId(id); setErr('');
     try {
-      const r = await fetch(`${API}/tickets/${id}/`, {
+      const r = await rpFetch(`${API}/tickets/${id}/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, email: session.email, remarks: remarks[id] || '' }),
       });
@@ -394,7 +393,7 @@ function ItTicketHistorySection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/tickets/?limit=500`);
+      const r = await rpFetch(`${API}/tickets/?limit=500`);
       const d = await r.json();
       setTickets(d.results || []);
     } finally { setLoading(false); }
@@ -482,7 +481,7 @@ function AdminTicketHistorySection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/resource-requests/?limit=500`);
+      const r = await rpFetch(`${API}/resource-requests/?limit=500`);
       const d = await r.json();
       setRequests(d.results || []);
     } finally { setLoading(false); }
@@ -566,7 +565,7 @@ export function CalendarPanel({ rooms }: { rooms: any[] }) {
     if (!roomId) return;
     setLoading(true);
     try {
-      const r = await fetch(`${API}/rooms/${roomId}/calendar/?date=${date}`);
+      const r = await rpFetch(`${API}/rooms/${roomId}/calendar/?date=${date}`);
       setData(await r.json());
     } finally { setLoading(false); }
   }, [roomId, date]);
@@ -685,7 +684,7 @@ function DangerZone({ session }: { session: Session }) {
                 + 'then restores only the 3 real rooms. This cannot be undone. Continue?')) return;
     setBusy(true); setErr(''); setResult('');
     try {
-      const r = await fetch(`${API}/reset/`, {
+      const r = await rpFetch(`${API}/reset/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: session.email, confirm: 'RESET' }),
       });
@@ -744,7 +743,7 @@ function RoomsManage({ session, onChanged }: { session: Session; onChanged: () =
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
-    const r = await fetch(`${API}/rooms/`);
+    const r = await rpFetch(`${API}/rooms/`);
     setRooms((await r.json()).results || []);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -752,7 +751,7 @@ function RoomsManage({ session, onChanged }: { session: Session; onChanged: () =
   const create = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
     try {
-      const r = await fetch(`${API}/rooms/`, {
+      const r = await rpFetch(`${API}/rooms/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, email: session.email }),
       });
@@ -766,7 +765,7 @@ function RoomsManage({ session, onChanged }: { session: Session; onChanged: () =
 
   const retire = async (id: number, name: string) => {
     if (!confirm(`Retire "${name}"? It will be hidden from the live grid but existing bookings stay.`)) return;
-    await fetch(`${API}/rooms/${id}/?email=${encodeURIComponent(session.email)}`, { method: 'DELETE' });
+    await rpFetch(`${API}/rooms/${id}/?email=${encodeURIComponent(session.email)}`, { method: 'DELETE' });
     load(); onChanged();
   };
 
@@ -835,11 +834,11 @@ function TeamManage({ session }: { session: Session }) {
   const [err, setErr] = useState('');
 
   const loadAdmins = useCallback(async () => {
-    const r = await fetch(`${API}/admins/?email=${encodeURIComponent(session.email)}`);
+    const r = await rpFetch(`${API}/admins/?email=${encodeURIComponent(session.email)}`);
     if (r.ok) setAdmins((await r.json()).results || []);
   }, [session.email]);
   const loadEmployees = useCallback(async () => {
-    const r = await fetch(`${API}/employees/?limit=1`);
+    const r = await rpFetch(`${API}/employees/?limit=1`);
     setEmployees(await r.json());
   }, []);
   useEffect(() => { loadAdmins(); loadEmployees(); }, [loadAdmins, loadEmployees]);
@@ -847,7 +846,7 @@ function TeamManage({ session }: { session: Session }) {
   const addAdmin = async (e: React.FormEvent) => {
     e.preventDefault(); setErr('');
     try {
-      const r = await fetch(`${API}/admins/`, {
+      const r = await rpFetch(`${API}/admins/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: session.email, new_admin_email: newAdmin, scope: newScope }),
       });
@@ -857,12 +856,12 @@ function TeamManage({ session }: { session: Session }) {
     } catch (e2) { setErr(e2 instanceof Error ? e2.message : 'Failed'); }
   };
   const removeAdmin = async (id: number) => {
-    await fetch(`${API}/admins/?id=${id}&email=${encodeURIComponent(session.email)}`, { method: 'DELETE' });
+    await rpFetch(`${API}/admins/?id=${id}&email=${encodeURIComponent(session.email)}`, { method: 'DELETE' });
     loadAdmins();
   };
 
   const downloadTemplate = async () => {
-    const res = await fetch(`${API}/employees/template/`);
+    const res = await rpFetch(`${API}/employees/template/`);
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'AdminPulse_Employee_Template.xlsx';
@@ -872,7 +871,7 @@ function TeamManage({ session }: { session: Session }) {
     setUploadBusy(true); setUploadMsg('');
     try {
       const fd = new FormData(); fd.append('file', file); fd.append('email', session.email);
-      const r = await fetch(`${API}/employees/upload/`, { method: 'POST', body: fd });
+      const r = await rpFetch(`${API}/employees/upload/`, { method: 'POST', body: fd });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Upload failed');
       setUploadMsg(d.message); loadEmployees();
@@ -951,7 +950,7 @@ function TeamManage({ session }: { session: Session }) {
 function AnalyticsPanel({ session }: { session: Session }) {
   const [data, setData] = useState<any>(null);
   useEffect(() => {
-    fetch(`${API}/analytics/?email=${encodeURIComponent(session.email)}`)
+    rpFetch(`${API}/analytics/?email=${encodeURIComponent(session.email)}`)
       .then(r => r.json()).then(setData);
   }, [session.email]);
 

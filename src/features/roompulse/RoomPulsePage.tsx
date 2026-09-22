@@ -7,12 +7,11 @@ import {
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
   ROLE_LABEL, Reveal, Panel, Skel, Empty, StatusPill, PURPOSE_LABEL, PURPOSE_COLOUR,
-  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal,
-} from './RoomPulseShared';
+  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './RoomPulseShared';
 import { RoomPulseLogin } from './RoomPulseLogin';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './RoomPulseAdminPanels';
 import {
-  type SupportTicket, type Priority,
+  type SupportTicket, type Priority, type TicketEvent,
   TICKET_CATEGORY_LABEL, TICKET_RELATED_TO_OPTIONS, TICKET_PRIORITY_META,
   ticketPriorityMeta, fmtTicketWhen,
 } from './RoomPulseTickets';
@@ -134,7 +133,7 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
     e.preventDefault();
     setBusy(true); setErr(''); setConflict(null);
     try {
-      const res = await fetch(`${API}/bookings/`, {
+      const res = await rpFetch(`${API}/bookings/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: session.email, requested_by_name: name, room_id: roomId, date,
@@ -300,7 +299,7 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
     if (!itemName.trim()) { setErr('What do you need?'); return; }
     setBusy(true); setErr('');
     try {
-      const res = await fetch(`${API}/resource-requests/`, {
+      const res = await rpFetch(`${API}/resource-requests/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: session.email, requested_by_name: name, category, item_name: itemName,
@@ -434,7 +433,7 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
       fd.append('description', form.description);
       fd.append('related_to', form.relatedTo);
       files.forEach(f => fd.append('attachments', f));
-      const res = await fetch(`${API}/tickets/`, { method: 'POST', body: fd });
+      const res = await rpFetch(`${API}/tickets/`, { method: 'POST', body: fd });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Ticket submission failed');
       setResult(d);
@@ -633,9 +632,9 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
     try {
       const email = encodeURIComponent(session.email);
       const [br, rr, tr] = await Promise.all([
-        fetch(`${API}/bookings/?mine=${email}`).then(r => r.json()),
-        fetch(`${API}/resource-requests/?mine=${email}`).then(r => r.json()),
-        fetch(`${API}/tickets/?mine=${email}`).then(r => r.json()),
+        rpFetch(`${API}/bookings/?mine=${email}`).then(r => r.json()),
+        rpFetch(`${API}/resource-requests/?mine=${email}`).then(r => r.json()),
+        rpFetch(`${API}/tickets/?mine=${email}`).then(r => r.json()),
       ]);
       // `kind` distinguishes each row for rendering; bookings don't carry
       // `kind` from the API (unlike resource requests/tickets) so it's
@@ -661,7 +660,7 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
     const url = row.kind === 'room' ? `${API}/bookings/${row.id}/`
               : row.kind === 'ticket' ? `${API}/tickets/${row.id}/`
               : `${API}/resource-requests/${row.id}/`;
-    await fetch(url, {
+    await rpFetch(url, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'cancel', email: session.email }),
     });
@@ -709,6 +708,14 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
                 {row.admin_remarks && (
                   <p className="text-[11px] text-slate-400 mt-0.5">Note: {row.admin_remarks}</p>
                 )}
+                {/* What actually happened to this ticket, in order. The row
+                    itself only carries the most recent review, so before this
+                    existed, a closed ticket no longer showed who had approved
+                    it — the thing you most want when the ticket is the
+                    record. */}
+                {isTicket && row.history?.length > 1 && (
+                  <TicketTrail history={row.history} />
+                )}
               </div>
               {cancellable && (
                 <button onClick={() => cancel(row)}
@@ -721,6 +728,24 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
           </Reveal>
         );
       })}
+    </div>
+  );
+}
+
+/* A ticket's history, read left to right. Deliberately plain text rather
+   than a timeline graphic: it is evidence, and it should be as easy to read
+   out loud on a call as it is to glance at. */
+function TicketTrail({ history }: { history: TicketEvent[] }) {
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+      {history.map((h, i) => (
+        <span key={i} className="inline-flex items-center gap-1 text-[10.5px] text-slate-400">
+          {i > 0 && <span className="text-slate-300">→</span>}
+          <span className="font-bold text-slate-500">{h.label}</span>
+          {h.actor_email && <span>by {h.actor_email.split('@')[0]}</span>}
+          <span className="text-slate-300">{fmtTicketWhen(h.at)}</span>
+        </span>
+      ))}
     </div>
   );
 }
@@ -739,7 +764,7 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
   const loadRooms = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/rooms/`);
+      const r = await rpFetch(`${API}/rooms/`);
       const d = await r.json();
       setRooms(d.results || []);
     } finally { setLoading(false); }
