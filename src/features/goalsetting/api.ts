@@ -92,6 +92,9 @@ export interface Plan {
   versions: Version[];
   events: PlanEvent[];
   problems?: string[];
+  /* What the person who asked for this sheet is TO IT — not their user_type.
+     The server decides it from the org chart; the screen follows. */
+  your_role?: Role;
 }
 
 export interface PlanSummary {
@@ -127,6 +130,11 @@ export interface Employee {
   hod_name: string;
   user_type: Role;
   is_active: boolean;
+  /* How many people actually report to this person. The screen decides who
+     is a reviewer from these, not from user_type — a manager typed into the
+     upload sheet as "Employee" would otherwise sign in to no team at all. */
+  reports_count?: number;
+  hod_reports_count?: number;
 }
 
 export interface Cycle {
@@ -162,10 +170,38 @@ export class ApiError extends Error {
   }
 }
 
+/* The token minted when an OTP is verified. Every call carries it, and the
+   server reads identity from it alone — an employee_id in a body is what the
+   caller typed, not proof of who they are. Held in sessionStorage so it dies
+   with the tab rather than lingering on a shared machine. */
+const SESSION_KEY = 'goalsetting_session';
+
+export const saveGsSession = (token: string) => {
+  try { sessionStorage.setItem(SESSION_KEY, token); } catch { /* private mode */ }
+};
+export const clearGsSession = () => {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch { /* private mode */ }
+};
+const gsSession = () => {
+  try { return sessionStorage.getItem(SESSION_KEY) || ''; } catch { return ''; }
+};
+
+/* For the two file downloads, which go straight to fetch for the blob rather
+   than through call(). They still have to prove who is asking. */
+const gsAuthHeaders = (): Record<string, string> => {
+  const t = gsSession();
+  return t ? { 'X-GoalSetting-Session': t } : {};
+};
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let r: Response;
+  const token = gsSession();
+  const withSession: RequestInit = token
+    ? { ...init, headers: { ...(init?.headers as Record<string, string> | undefined),
+                            'X-GoalSetting-Session': token } }
+    : (init ?? {});
   try {
-    r = await fetch(`${GS_API}${path}`, init);
+    r = await fetch(`${GS_API}${path}`, withSession);
   } catch {
     throw new ApiError('Could not reach the server. Check your connection.');
   }
@@ -191,13 +227,13 @@ export const sendOtp = (employee_id: string) =>
   call<{ masked_email: string; name: string; dev_otp?: string }>('/auth/send-otp/', json({ employee_id }));
 
 export const verifyOtp = (employee_id: string, otp: string) =>
-  call<{ employee: Employee }>('/auth/verify-otp/', json({ employee_id, otp }));
+  call<{ employee: Employee; session: string }>('/auth/verify-otp/', json({ employee_id, otp }));
 
 export const sendAdminOtp = () =>
   call<{ masked_email: string; dev_otp?: string }>('/auth/admin-otp/', json({}));
 
 export const verifyAdminOtp = (otp: string) =>
-  call<{ employee: Employee }>('/auth/admin-verify/', json({ otp }));
+  call<{ employee: Employee; session: string }>('/auth/admin-verify/', json({ otp }));
 
 // ── reference ─────────────────────────────────────────────────────────────────
 export const getMeta = () =>
@@ -213,16 +249,22 @@ export const updateCycle = (id: number, body: Partial<Cycle>) =>
   call<Cycle>(`/cycles/${id}/`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 // ── the goal sheet ────────────────────────────────────────────────────────────
-/* `role` is not decoration: only an employee's own visit may CREATE a sheet.
-   A reviewer opening a colleague who has not started gets a clear 404 rather
-   than silently bringing a plan into existence just by looking at it. */
-export const getPlan = (employeeId: string, cycleId: number, role: Role) =>
-  call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/?role=${role}`);
+/* Every call says who is making it (`actorId`), and the server works out what
+   that person is TO THIS SHEET — its owner, their manager, their HOD, admin.
+   `role` still goes along for older servers, but it is no longer the answer:
+   a manager's own sheet is one where they are the employee, and reading the
+   role off their user_type is what stopped every manager and HOD in the
+   company from filling in their own goals. */
+export const getPlan = (employeeId: string, cycleId: number, role: Role, actorId: string) =>
+  call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/`
+             + `?role=${role}&actor_employee_id=${encodeURIComponent(actorId)}`);
 
 export const getPlanById = (planId: number) => call<Plan>(`/plans/${planId}/`);
 
-export const savePlan = (employeeId: string, cycleId: number, role: Role, kras: KRA[]) =>
-  call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/`, json({ role, kras }));
+export const savePlan = (employeeId: string, cycleId: number, role: Role,
+                         kras: KRA[], actorId: string) =>
+  call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/`,
+             json({ role, kras, actor_employee_id: actorId }));
 
 export const actOnPlan = (planId: number, body: {
   role: Role; action: string; kras?: KRA[]; note?: string;
@@ -255,7 +297,7 @@ export const updateEmployee = (employeeId: string, body: Partial<Employee>) =>
    from the importer's. A plain link would do, but going through fetch means a
    failure surfaces as a message rather than a browser error page. */
 export const downloadTemplate = async () => {
-  const r = await fetch(`${GS_API}/employees/template/`);
+  const r = await fetch(`${GS_API}/employees/template/`, { headers: gsAuthHeaders() });
   if (!r.ok) throw new ApiError('Could not build the template. Try again.');
   const blob = await r.blob();
   const url = URL.createObjectURL(blob);
@@ -311,16 +353,17 @@ export const getActivity = (cycleId?: number, limit = 150) => {
 };
 
 /* An admin save carries a name, because the version it writes needs one. */
-export const savePlanAsAdmin = (employeeId: string, cycleId: number, kras: KRA[], actor_name: string) =>
+export const savePlanAsAdmin = (employeeId: string, cycleId: number, kras: KRA[],
+                                actor_name: string, actorId: string) =>
   call<Plan>(`/plans/${encodeURIComponent(employeeId)}/${cycleId}/`,
-             json({ role: 'admin', kras, actor_name }));
+             json({ role: 'admin', kras, actor_name, actor_employee_id: actorId }));
 
 /* The agreed goals as a workbook. Defaults to accepted sheets only, because
    "the final goals" is what this is for; pass 'all' for the mid-cycle view. */
 export const downloadExport = async (cycleId?: number, status: 'accepted' | 'all' = 'accepted') => {
   const q = new URLSearchParams({ status });
   if (cycleId) q.set('cycle_id', String(cycleId));
-  const r = await fetch(`${GS_API}/export/?${q}`);
+  const r = await fetch(`${GS_API}/export/?${q}`, { headers: gsAuthHeaders() });
   if (!r.ok) throw new ApiError('Could not build the export. Try again.');
   const blob = await r.blob();
   const name = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || '')?.[1]

@@ -10,7 +10,8 @@ import {
   Mail, KeyRound, Lock, Zap, ArrowRight, Users, Lightbulb,
 } from 'lucide-react';
 import {
-  ApiError, getCycles, getMeta, myPlans, sendAdminOtp, sendOtp, verifyAdminOtp, verifyOtp,
+  ApiError, clearGsSession, getCycles, getMeta, myPlans, saveGsSession,
+  sendAdminOtp, sendOtp, verifyAdminOtp, verifyOtp,
 } from './api';
 import type { Cycle, Employee, PlanSummary, Role } from './api';
 import { STATUS_TONE, d } from './api';
@@ -93,6 +94,8 @@ function SignIn({ onSignedIn }: { onSignedIn: (e: Employee) => void }) {
     try {
       const r = mode === 'admin' ? await verifyAdminOtp(otp.trim())
                                  : await verifyOtp(empId.trim(), otp.trim());
+      // Keep the token before anything else runs: every later call needs it.
+      if (r.session) saveGsSession(r.session);
       onSignedIn(r.employee);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not sign you in.');
@@ -381,6 +384,13 @@ export function GoalSettingPage({ onNavigateBack }: { onNavigateBack?: () => voi
   const role: Role = me.user_type;
   const cycle = cycles.find(c => c.id === cycleId) || null;
 
+  // Who is a reviewer is decided by who actually reports to them, not by the
+  // user_type column in the uploaded sheet. A manager labelled "Employee"
+  // there used to sign in and find no team, with nothing explaining why.
+  const manages = me.reports_count ?? 0;
+  const heads = me.hod_reports_count ?? 0;
+  const isReviewer = manages > 0 || heads > 0 || role === 'manager' || role === 'hod';
+
   return (
     <div className="min-h-full bg-[#f8fafc] relative overflow-hidden">
       <Ambient />
@@ -419,7 +429,7 @@ export function GoalSettingPage({ onNavigateBack }: { onNavigateBack?: () => voi
                 </div>
               )}
 
-              <button onClick={() => { setMe(null); setOpenFor(null); }}
+              <button onClick={() => { clearGsSession(); setMe(null); setOpenFor(null); }}
                 className="flex items-center gap-1.5 text-[12px] font-bold text-amber-100/70 hover:text-white px-2.5 py-2 rounded-lg hover:bg-white/10 transition-colors">
                 <LogOut className="w-3.5 h-3.5" /> Sign out
               </button>
@@ -434,7 +444,8 @@ export function GoalSettingPage({ onNavigateBack }: { onNavigateBack?: () => voi
         ) : role === 'admin' ? (
           openFor ? (
             <PlanWorkspace
-              employeeId={openFor} cycleId={cycleId!} role="admin" actorName={me.name}
+              employeeId={openFor} cycleId={cycleId!} role="admin"
+              actorId={me.employee_id} actorName={me.name}
               categories={meta.categories} frequencies={meta.frequencies}
               onBack={() => setOpenFor(null)} backLabel="Back to the console" />
           ) : (
@@ -450,12 +461,17 @@ export function GoalSettingPage({ onNavigateBack }: { onNavigateBack?: () => voi
           </Panel>
         ) : openFor ? (
           <PlanWorkspace
-            employeeId={openFor} cycleId={cycleId} role={role} actorName={me.name}
+            employeeId={openFor} cycleId={cycleId}
+            /* Your own sheet is one where you are the employee, whatever your
+               user_type is. The server checks this too and has the last word;
+               this just stops the screen opening in the wrong mode first. */
+            role={openFor === me.employee_id ? 'employee' : role}
+            actorId={me.employee_id} actorName={me.name}
             categories={meta.categories} frequencies={meta.frequencies}
             onBack={() => setOpenFor(null)}
             backLabel={openFor === me.employee_id ? 'Back to my goal sheets' : 'Back to my team'}
           />
-        ) : role === 'employee' ? (
+        ) : !isReviewer ? (
           <MySheets employeeId={me.employee_id} cycles={cycles}
             onOpen={id => { setCycleId(id); setOpenFor(me.employee_id); }} />
         ) : (
@@ -481,8 +497,21 @@ export function GoalSettingPage({ onNavigateBack }: { onNavigateBack?: () => voi
                 Open <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </button>
-            <TeamView actorId={me.employee_id} role={role} cycleId={cycleId}
-              cycleName={cycle?.name || ''} onOpen={setOpenFor} />
+            {/* Someone can be both: directly managing a few people and
+                heading a department containing others. Showing one list would
+                hide half of who is waiting on them. */}
+            {manages > 0 && (
+              <TeamView actorId={me.employee_id} role="manager" cycleId={cycleId}
+                cycleName={cycle?.name || ''} onOpen={setOpenFor} />
+            )}
+            {heads > 0 && (
+              <TeamView actorId={me.employee_id} role="hod" cycleId={cycleId}
+                cycleName={cycle?.name || ''} onOpen={setOpenFor} />
+            )}
+            {manages === 0 && heads === 0 && (
+              <TeamView actorId={me.employee_id} role={role === 'hod' ? 'hod' : 'manager'}
+                cycleId={cycleId} cycleName={cycle?.name || ''} onOpen={setOpenFor} />
+            )}
           </>
         )}
       </div>

@@ -62,6 +62,23 @@ full of dashes instead of a message.
 A ticket's `history` is its audit trail — shown by `TicketTrail` in My
 Requests. The ticket row itself only carries the most recent review.
 
+## Goal Setting (`src/features/goalsetting/`)
+
+Calls go through `call()` in `api.ts`, which attaches the session token minted
+at sign-in (`X-GoalSetting-Session`). The two file downloads use `fetch`
+directly and carry the header themselves — anything new that does the same
+must too.
+
+A sheet comes back with `your_role`: what the signed-in person is **to that
+sheet**, decided by the server from the org chart. Obey it rather than
+`me.user_type`. On your own sheet you are the employee, even if you are an HOD
+— reading the role off user_type is what stopped managers and HODs filling in
+their own goals.
+
+Who is a reviewer is decided by `reports_count` / `hod_reports_count` — who
+actually reports to them — not by user_type, so a manager typed into the
+upload sheet as "Employee" still gets their team.
+
 ## SalesIQ (`src/features/salesiq/`)
 
 Figures come from two source files with different coverage, so panels carry a

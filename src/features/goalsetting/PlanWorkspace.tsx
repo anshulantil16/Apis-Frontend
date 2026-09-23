@@ -77,11 +77,16 @@ const WAITING_ON: Record<Plan['status'], string> = {
 };
 
 export function PlanWorkspace({
-  employeeId, cycleId, role, actorName, categories, frequencies, onBack, backLabel,
+  employeeId, cycleId, role, actorId, actorName, categories, frequencies, onBack, backLabel,
 }: {
   employeeId: string;
   cycleId: number;
+  /* What the signed-in person is to THIS sheet. The server decides it from
+     the org chart and returns it as `your_role`; this prop is the opening
+     guess, used until the sheet has loaded. On your own sheet you are the
+     employee, whatever your user_type says. */
   role: Role;
+  actorId: string;
   actorName: string;
   categories: string[];
   frequencies: string[];
@@ -105,7 +110,7 @@ export function PlanWorkspace({
   const load = async () => {
     setLoading(true); setError('');
     try {
-      const p = await getPlan(employeeId, cycleId, role);
+      const p = await getPlan(employeeId, cycleId, role, actorId);
       setPlan(p);
       setKras(p.kras);
       setDirty(false);
@@ -119,21 +124,25 @@ export function PlanWorkspace({
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [employeeId, cycleId]);
 
+  // The server's verdict wins. `role` is only what the screen guessed before
+  // the sheet arrived.
+  const myRole: Role = plan?.your_role ?? role;
+
   const canEdit = useMemo(() => {
     if (!plan) return false;
     // The admin seat edits at any stage and regardless of the cycle being
     // locked. Every such save is versioned server-side, so the power is
     // visible in the history rather than silent.
-    if (role === 'admin') return true;
+    if (myRole === 'admin') return true;
     if (plan.cycle_status !== 'open') return false;
     const editors: Record<Plan['status'], Role[]> = {
       draft: ['employee'], returned: ['employee'], submitted: ['manager'],
       with_hod: ['hod'], awaiting_employee: [], accepted: [],
     };
-    return editors[plan.status].includes(role);
-  }, [plan, role]);
+    return editors[plan.status].includes(myRole);
+  }, [plan, myRole]);
 
-  const actions = plan ? actionsFor(role, plan.status) : [];
+  const actions = plan ? actionsFor(myRole, plan.status) : [];
 
   /* Recomputed on every edit, not just on save — this is what makes
      completeness feel mandatory rather than merely checked. See sheetProblems
@@ -150,9 +159,9 @@ export function PlanWorkspace({
     // a beat later, so this call is about persisting, not re-checking.
     setBusy('save'); setError('');
     try {
-      const p = role === 'admin'
-        ? await savePlanAsAdmin(employeeId, cycleId, kras, actorName)
-        : await savePlan(employeeId, cycleId, role, kras);
+      const p = myRole === 'admin'
+        ? await savePlanAsAdmin(employeeId, cycleId, kras, actorName, actorId)
+        : await savePlan(employeeId, cycleId, myRole, kras, actorId);
       setPlan(p); setKras(p.kras); setDirty(false);
       setSaved(`Saved at ${new Date().toLocaleTimeString()}`);
     } catch (e) {
@@ -167,8 +176,10 @@ export function PlanWorkspace({
     setBusy(action.key); setError(''); setProblems([]);
     try {
       const p = await actOnPlan(plan.id, {
-        role, action: action.key, note: note.trim(),
-        actor_name: actorName, actor_employee_id: employeeId,
+        role: myRole, action: action.key, note: note.trim(),
+        // Whoever is signed in -- this used to send the SHEET OWNER's id, so
+        // every review a manager made was recorded against the employee.
+        actor_name: actorName, actor_employee_id: actorId,
         ...(canEdit ? { kras } : {}),
       });
       setPlan(p); setKras(p.kras); setDirty(false); setNote(''); setNoteFor(null);
@@ -259,7 +270,7 @@ export function PlanWorkspace({
       </div>
 
       {/* The employee's acceptance step leads with what changed. */}
-      {role === 'employee' && plan.status === 'awaiting_employee' && (
+      {myRole === 'employee' && plan.status === 'awaiting_employee' && (
         <ChangesSinceMine plan={plan} />
       )}
 
@@ -415,7 +426,7 @@ export function PlanWorkspace({
         </div>
       )}
 
-      {role === 'admin' && (
+      {myRole === 'admin' && (
         <div className="bg-white border-2 border-dashed border-rose-200 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-1">
             <ShieldAlert className="w-4 h-4 text-rose-500" />
