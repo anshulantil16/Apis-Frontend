@@ -23,7 +23,7 @@ const LettersGeneratorPage = lazy(() => import('./features/letters').then(m => (
 const OfferLetterApprovalDashboard = lazy(() => import('./features/letters').then(m => ({ default: m.OfferLetterApprovalDashboard })));
 const TadaPage = lazy(() => import('./features/tada').then(m => ({ default: m.TadaPage })));
 const SalesIQPage = lazy(() => import('./features/salesiq').then(m => ({ default: m.SalesIQPage })));
-const RoomPulsePage = lazy(() => import('./features/roompulse').then(m => ({ default: m.RoomPulsePage })));
+const HelpDeskPage = lazy(() => import('./features/helpdesk').then(m => ({ default: m.HelpDeskPage })));
 const ApisTreePage = lazy(() => import('./features/tree').then(m => ({ default: m.ApisTreePage })));
 const PoliciesPage = lazy(() => import('./features/policies').then(m => ({ default: m.PoliciesPage })));
 const ApisWallPage = lazy(() => import('./features/wall').then(m => ({ default: m.ApisWallPage })));
@@ -41,7 +41,7 @@ import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHome
 import { PortalGate } from './features/portal/PortalGate';
 import type { PortalUser } from './features/portal/session';
 
-type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'roompulse' | 'apis-tree' | 'policies' | 'apis-wall' | 'admin-console';
+type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'helpdesk' | 'apis-tree' | 'policies' | 'apis-wall' | 'admin-console';
 
 /* Header caption per view. The shell renders the sidebar and header for every
    screen, so tools never draw their own top-level chrome. */
@@ -57,7 +57,7 @@ const VIEW_META: Record<AppView, { title: string; subtitle: string }> = {
   'offer-approvals': { title: 'Letter Approvals',    subtitle: 'Appraisal Letters' },
   'tada':            { title: 'TA/DA Portal',        subtitle: 'Travel & Allowance' },
   'salesiq':         { title: 'SalesIQ',             subtitle: 'Sales Intelligence' },
-  'roompulse':       { title: 'AdminPulse',          subtitle: 'Admin Requests & Facilities' },
+  'helpdesk':        { title: 'Help Desk',           subtitle: 'Admin Requests & IT Tickets' },
   'apis-tree':       { title: 'APIS Tree',           subtitle: 'Organisation Structure' },
   'policies':        { title: 'Policies',            subtitle: 'Policies & Guidelines' },
   'apis-wall':       { title: 'APIS Wall',            subtitle: 'Moments & Memories' },
@@ -194,8 +194,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
         <IntranetHomePage onNavigate={navigate} allowedApps={session.user.allowed_apps} isSuperadmin={session.user.is_superadmin} />
       ) : view === 'extractor' ? (
         <DataExtractorPage />
-      ) : view === 'roompulse' ? (
-        <RoomPulsePage />
+      ) : view === 'helpdesk' ? (
+        <HelpDeskPage />
       ) : view === 'salesiq' ? (
         <SalesIQPage />
       ) : view === 'tada' ? (

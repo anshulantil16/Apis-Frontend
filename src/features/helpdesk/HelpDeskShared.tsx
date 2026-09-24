@@ -1,4 +1,4 @@
-/* Shared primitives for RoomPulse — formatting, animated components, and the
+/* Shared primitives for Help Desk — formatting, animated components, and the
    "live radar" visual language (cyan/violet accents on a light control-room
    background, radar sweeps, pulsing live-status dots). Deliberately distinct
    from SalesIQ's warm honey theme — this is a live-ops tool, not a
@@ -179,7 +179,7 @@ export const PURPOSE_COLOUR: Record<string, string> = {
 
 /* ── resource/item request badges — everything Admin covers that isn't IT
    (that lives on the ticket side — see TICKET_CATEGORY_LABEL in
-   RoomPulseTickets.tsx). Keys mirror ResourceRequest.CATEGORY_CHOICES. ── */
+   HelpDeskTickets.tsx). Keys mirror ResourceRequest.CATEGORY_CHOICES. ── */
 export const CATEGORY_LABEL: Record<string, string> = {
   stationery_office_supplies: 'Stationery & Office Supplies',
   housekeeping: 'Housekeeping',

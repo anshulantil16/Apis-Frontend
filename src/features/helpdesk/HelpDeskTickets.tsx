@@ -1,5 +1,5 @@
 /* Support-ticket data model — shared between the "IT Tickets" tab of the
-   Support Desk popup (see RoomPulsePage.tsx's SupportDeskModal) and the
+   Support Desk popup (see HelpDeskPage.tsx's SupportDeskModal) and the
    My Requests / Approvals views. Backed by the real /api/roompulse/tickets/
    endpoints (see Apis-Backend/roompulse/views/tickets.py) — reviewed by the
    IT Support role rather than Admin, same split as Admin vs IT Support in

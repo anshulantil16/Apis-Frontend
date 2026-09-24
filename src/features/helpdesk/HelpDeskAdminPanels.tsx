@@ -1,4 +1,4 @@
-/* Approvals, Calendar and Super-Admin management panels for AdminPulse. */
+/* Approvals, Calendar and Super-Admin management panels for HelpDesk. */
 import { useState, useEffect, useCallback } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import {
@@ -10,8 +10,8 @@ import {
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
-  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './RoomPulseShared';
-import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, fmtTicketWhen } from './RoomPulseTickets';
+  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './HelpDeskShared';
+import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, fmtTicketWhen } from './HelpDeskTickets';
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
   "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";

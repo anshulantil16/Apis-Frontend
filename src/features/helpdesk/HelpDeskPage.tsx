@@ -7,14 +7,14 @@ import {
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
   ROLE_LABEL, Reveal, Panel, Skel, Empty, StatusPill, PURPOSE_LABEL, PURPOSE_COLOUR,
-  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './RoomPulseShared';
-import { RoomPulseLogin } from './RoomPulseLogin';
-import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './RoomPulseAdminPanels';
+  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './HelpDeskShared';
+import { HelpDeskLogin } from './HelpDeskLogin';
+import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './HelpDeskAdminPanels';
 import {
   type SupportTicket, type Priority, type TicketEvent,
   TICKET_CATEGORY_LABEL, TICKET_RELATED_TO_OPTIONS, TICKET_PRIORITY_META,
   ticketPriorityMeta, fmtTicketWhen,
-} from './RoomPulseTickets';
+} from './HelpDeskTickets';
 
 type Tab = 'rooms' | 'mine' | 'approvals' | 'calendar' | 'manage';
 
@@ -678,7 +678,7 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
         const accent = isRoom ? PURPOSE_COLOUR[row.purpose] : isTicket ? '#f59e0b' : CATEGORY_COLOUR[row.category];
         // Tickets share the same pending/approved/rejected badge set as
         // every other request type here, plus in_progress/closed of their
-        // own — see REQUEST_STATUS_BADGE in RoomPulseShared.tsx. Only
+        // own — see REQUEST_STATUS_BADGE in HelpDeskShared.tsx. Only
         // cancellable while still pending (once IT Support triages it,
         // only they drive it forward — same rule the backend enforces).
         const cancellable = isTicket ? row.status === 'pending' : (row.status === 'pending' || row.status === 'approved');
@@ -751,7 +751,7 @@ function TicketTrail({ history }: { history: TicketEvent[] }) {
 }
 
 /* ════════════════════════════════════════════════════════════════════════ */
-export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
+export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
   const [session, setSession] = useState<Session | null>(() => loadSession());
   const [tab, setTab] = useState<Tab>('rooms');
   const [rooms, setRooms] = useState<any[]>([]);
@@ -795,7 +795,7 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
 
   if (!session) {
     return (
-      <RoomPulseLogin
+      <HelpDeskLogin
         onSuccess={s => { const full = { ...s, role: s.role as any }; saveSession(full); setSession({ ...full, ts: Date.now() }); }}
       />
     );
@@ -934,4 +934,4 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
   );
 }
 
-export default RoomPulsePage;
+export default HelpDeskPage;

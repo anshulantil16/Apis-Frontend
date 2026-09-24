@@ -104,18 +104,18 @@ export const INSPIRATION_QUOTES: InspirationQuote[] = [
 export const dailyQuote = (): InspirationQuote => {
   const d = new Date();
   const dayNumber = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-  return INSPIRATION_QUOTES[dayNumber % INSPIRATION_QUOTES.length];
+  return INSPIRATION_QUOTES[dayNumber % INSPIRATION_QUOTES.length]; 
 };
 
 export type QuickAccessId =
   | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms'
-  | 'offer-letters' | 'roompulse' | 'salesiq' | 'tada';
+  | 'offer-letters' | 'helpdesk' | 'salesiq' | 'tada';
 
 /* Business-function grouping shown as filter tabs on the "Your Tools" grid.
    Purely a UI grouping — has no bearing on access control. */
 export const TOOL_CATEGORIES = ['All', 'HR', 'Finance', 'Operations', 'Sales', 'Travel'] as const;
 export type ToolCategoryFilter = typeof TOOL_CATEGORIES[number];
-export type ToolCategory = Exclude<ToolCategoryFilter, 'All'>;
+export type ToolCategory = Exclude<ToolCategoryFilter, 'All'>;  
 
 export interface QuickAccessItem {
   id: QuickAccessId;
@@ -137,7 +137,7 @@ export const QUICK_ACCESS: QuickAccessItem[] = [
   { id: 'eom', label: 'EOM Hub', desc: 'Employee of the Month nominations', category: 'Finance', icon: Sparkles, gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.35)', accent: 'text-emerald-600', soft: 'bg-emerald-50' },
   { id: 'pms', label: 'PMS Simulator', desc: 'Performance & salary revision simulator', category: 'HR', icon: BarChart3, gradient: 'from-violet-500 to-fuchsia-600', glow: 'rgba(168,85,247,.35)', accent: 'text-fuchsia-600', soft: 'bg-fuchsia-50' },
   { id: 'offer-letters', label: 'Letters Generator', desc: 'Appraisal & warning letter pipeline', category: 'HR', icon: FileSpreadsheet, gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.35)', accent: 'text-rose-600', soft: 'bg-rose-50' },
-  { id: 'roompulse', label: 'AdminPulse', desc: 'Room bookings & admin item requests', category: 'Operations', icon: Radar, gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.35)', accent: 'text-cyan-600', soft: 'bg-cyan-50' },
+  { id: 'helpdesk', label: 'Help Desk', desc: 'Room bookings, admin requests & IT tickets', category: 'Operations', icon: Radar, gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.35)', accent: 'text-cyan-600', soft: 'bg-cyan-50' },
   { id: 'salesiq', label: 'SalesIQ', desc: 'Sales intelligence & forecasting', category: 'Sales', icon: Zap, gradient: 'from-indigo-400 to-violet-600', glow: 'rgba(99,102,241,.35)', accent: 'text-indigo-600', soft: 'bg-indigo-50' },
   { id: 'tada', label: 'TA/DA Portal', desc: 'Travel & daily allowance claims', category: 'Travel', icon: Plane, gradient: 'from-sky-400 to-cyan-600', glow: 'rgba(14,165,233,.35)', accent: 'text-sky-600', soft: 'bg-sky-50' },
 ];
@@ -188,13 +188,17 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Support Tickets', icon: Building2, accent: 'text-cyan-300', hoverAccent: 'hover:text-cyan-300', dot: 'bg-cyan-400', items: [
-      { id: 'roompulse', label: 'Help Desk' },
+    label: 'Facilities & Support', icon: Building2, accent: 'text-cyan-300', hoverAccent: 'hover:text-cyan-300', dot: 'bg-cyan-400', items: [
+      { id: 'helpdesk', label: 'Help Desk' },
     ],
   },
   {
-    label: 'Sales & Travel', icon: Zap, accent: 'text-indigo-300', hoverAccent: 'hover:text-indigo-300', dot: 'bg-indigo-400', items: [
+    label: 'Sales', icon: Zap, accent: 'text-indigo-300', hoverAccent: 'hover:text-indigo-300', dot: 'bg-indigo-400', items: [
       { id: 'salesiq', label: 'SalesIQ' },
+    ],
+  },
+  {
+    label: 'Travel', icon: Plane, accent: 'text-sky-300', hoverAccent: 'hover:text-sky-300', dot: 'bg-sky-400', items: [
       { id: 'tada', label: 'TA/DA Portal' },
     ],
   },

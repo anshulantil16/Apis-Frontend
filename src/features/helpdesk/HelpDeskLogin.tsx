@@ -3,7 +3,7 @@ import {
   LayoutGrid, Mail, ShieldCheck, ArrowRight, Loader, AlertTriangle, RotateCcw,
   Headphones, Ticket, Plus,
 } from 'lucide-react';
-import { API, RP_STYLES, rpFetch} from './RoomPulseShared';
+import { API, RP_STYLES, rpFetch} from './HelpDeskShared';
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 /* ── the "raise a ticket" stub — AdminPulse's visual signature, standing in
@@ -55,7 +55,7 @@ function Particles() {
   );
 }
 
-export function RoomPulseLogin({ onSuccess }: {
+export function HelpDeskLogin({ onSuccess }: {
   onSuccess: (s: { email: string; name: string; role: string; token: string }) => void;
 }) {
   const [step, setStep] = useState<'email' | 'otp'>('email');
@@ -304,4 +304,4 @@ export function RoomPulseLogin({ onSuccess }: {
   );
 }
 
-export default RoomPulseLogin;
+export default HelpDeskLogin;
