@@ -33,6 +33,21 @@ compile. Use `tsc -b`, or just `npm run build:qa`, which runs it. A push that
 fails `tsc -b` cannot be deployed at all — the server keeps serving the old
 bundle while appearing to have deployed.
 
+## The dashboard home page
+
+`IntranetHomePage.tsx` renders it; `IntranetHomeShared.tsx` holds the data
+hooks and the static arrays. Two things there are easy to confuse:
+
+- `WHATS_NEW` is a hard-coded array about **this intranet's own tools**. It
+  ships with a build.
+- `useNews()` / Daily News is **company and industry news**, written in Admin
+  Console › Dashboard Content and stored in `noticeboard.NewsItem`. The strip
+  sits under Your Tools and hides itself entirely when nothing is published,
+  rather than showing an empty frame.
+
+Every "View all" on this page opens a popup, not a route. Keep it that way:
+a popup has no screen to find a way back from.
+
 ## Help Desk (`src/features/helpdesk/`)
 
 **The product is called Help Desk.** It was AdminPulse, and before that

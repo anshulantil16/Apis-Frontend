@@ -4,12 +4,14 @@ import {
   ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw, Clock,
+  Newspaper, ExternalLink,
 } from 'lucide-react';
 import type { StateHolidayGroup } from './IntranetHomeShared';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, useVacancies, summarizeVacancies,
   OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, QUICK_PORTALS, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
   useCelebrations, useTicker, useAnnouncements, useHolidayZones,
+  useNews, newsAge, newsTagStyle, type NewsArticle,
   getRecentToolsWithTime, formatRelativeTime,
   type VacancyListing,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
@@ -738,6 +740,192 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
 /* "View all" popup for the Announcements card — same pattern as
    NewJoinersPopup/VacanciesPopup, with each row's icon tile carrying the
    announcement's own icon instead of initials. */
+/* ── Daily News ─────────────────────────────────────────────
+   Industry and company stories, curated in Admin Console › Dashboard Content.
+
+   Two decisions worth keeping: a story with no picture gets a tinted panel
+   with its category on it rather than a grey box or a stretched placeholder,
+   because most stories will not have one; and every card shows its age, not
+   its date, so a strip that has stopped moving says so in its own words
+   instead of quietly sitting there under "latest updates". ──────────── */
+function NewsThumb({ article, className = '' }: { article: NewsArticle; className?: string }) {
+  const [broken, setBroken] = useState(false);
+  // A linked image lives on somebody else's server and can vanish or start
+  // refusing us at any time, so the fallback is a real state, not a nicety.
+  if (!article.image || broken) {
+    return (
+      <div className={`flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100 ${className}`}>
+        <Newspaper className="w-5 h-5 text-amber-400/70" />
+      </div>
+    );
+  }
+  return (
+    <img src={article.image} alt="" loading="lazy" onError={() => setBroken(true)}
+      className={`object-cover ${className}`} />
+  );
+}
+
+function NewsCard({ article }: { article: NewsArticle }) {
+  const body = (
+    <>
+      <NewsThumb article={article} className="w-full h-24 rounded-lg mb-2.5 shrink-0" />
+      <p className="text-[12.5px] font-black text-slate-900 leading-snug line-clamp-2">{article.title}</p>
+      <p className="text-[11.5px] text-slate-400 leading-relaxed mt-1 line-clamp-3 flex-1">{article.summary}</p>
+      <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+          <Clock className="w-3 h-3" />{newsAge(article.publishedOn)}
+        </span>
+        {article.sourceName && (
+          <span className="text-[10px] text-slate-300 truncate max-w-[90px]">{article.sourceName}</span>
+        )}
+        <span className={`ml-auto px-2 py-0.5 rounded-full text-[9.5px] font-black ring-1 ${newsTagStyle(article.category)}`}>
+          {article.categoryLabel}
+        </span>
+      </div>
+    </>
+  );
+
+  const shell = 'ih-inview group relative flex flex-col text-left rounded-xl bg-white border ' +
+                'border-slate-200 p-3 shadow-sm hover:border-amber-300 hover:shadow-md transition-all';
+
+  // Only a story that actually links somewhere becomes a link; the rest stay
+  // plain divs so nothing offers a click that does nothing.
+  if (!article.sourceUrl) return <div className={shell}>{body}</div>;
+  return (
+    <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className={shell}>
+      {body}
+      <ExternalLink className="w-3 h-3 text-slate-300 absolute top-3 right-3 opacity-0
+                               group-hover:opacity-100 transition-opacity" />
+    </a>
+  );
+}
+
+function DailyNewsSection({ onViewAll }: { onViewAll: () => void }) {
+  const { news, loading } = useNews('strip');
+  const top = news.filter(n => n.moderationStatus === 'approved').slice(0, 4);
+
+  // Nothing published yet: the section stays out of the page entirely rather
+  // than sitting there as an empty frame under a heading.
+  if (!loading && top.length === 0) return null;
+
+  return (
+    <section id="daily-news" className="scroll-mt-20">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500
+                           flex items-center justify-center shadow-md shrink-0">
+            <Newspaper className="w-4.5 h-4.5 text-white" />
+          </span>
+          <div>
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Daily News</h2>
+            <p className="text-[12px] text-slate-400 mt-0.5">Latest updates on APIS products &amp; the industry</p>
+          </div>
+        </div>
+        <button onClick={onViewAll}
+          className="inline-flex items-center gap-1 text-[11.5px] font-black text-amber-600
+                     hover:text-amber-700 transition-colors">
+          View all <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {loading
+          ? Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="rounded-xl bg-white border border-slate-200 p-3 shadow-sm">
+                <div className="w-full h-24 rounded-lg bg-slate-100 animate-pulse mb-2.5" />
+                <div className="h-3 rounded bg-slate-100 animate-pulse" />
+                <div className="h-3 rounded bg-slate-100 animate-pulse mt-1.5 w-2/3" />
+              </div>
+            ))
+          : top.map(n => <NewsCard key={n.id} article={n} />)}
+      </div>
+    </section>
+  );
+}
+
+/* "View all" — a popup rather than a page, matching every other "View all"
+   on this dashboard, which also means there is no screen to find a way back
+   from. */
+function DailyNewsPopup({ onClose }: { onClose: () => void }) {
+  const { news, loading } = useNews('all');
+  const [cat, setCat] = useState('All');
+
+  const live = news.filter(n => n.moderationStatus === 'approved');
+  const categories = ['All', ...Array.from(new Set(live.map(n => n.categoryLabel)))];
+  const shown = cat === 'All' ? live : live.filter(n => n.categoryLabel === cat);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        className="ih-palette-in w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        <div className="sticky top-0 z-10 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-base font-black text-slate-900 flex items-center gap-2">
+                <Newspaper className="w-4.5 h-4.5 text-amber-500" />Daily News
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {loading ? 'Loading…'
+                  : live.length ? `${live.length} ${live.length === 1 ? 'story' : 'stories'}`
+                  : 'Nothing published yet'}
+              </p>
+            </div>
+            <button onClick={onClose} title="Close"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          {categories.length > 2 && (
+            <div className="flex items-center gap-2 flex-wrap mt-3">
+              {categories.map(c => (
+                <button key={c} onClick={() => setCat(c)}
+                  className={`px-3 py-1 rounded-full text-[10.5px] font-black transition-all ${
+                    cat === c ? 'bg-amber-500 text-white shadow-sm'
+                      : 'bg-white border border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600'}`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="p-6">
+          {!loading && shown.length === 0 && (
+            <p className="text-center text-sm text-slate-400 py-10">
+              No stories here yet. These are posted from Admin Console › Dashboard Content.
+            </p>
+          )}
+          <div className="space-y-2">
+            {shown.map(n => {
+              const inner = (
+                <>
+                  <NewsThumb article={n} className="w-20 h-16 rounded-lg shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-800 leading-snug">{n.title}</p>
+                    <p className="text-[12px] text-slate-400 leading-snug mt-0.5 line-clamp-2">{n.summary}</p>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="text-[11px] font-bold text-slate-300">{newsAge(n.publishedOn)}</span>
+                      {n.sourceName && <span className="text-[11px] text-slate-300">· {n.sourceName}</span>}
+                      <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-black ring-1 ${newsTagStyle(n.category)}`}>
+                        {n.categoryLabel}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              );
+              const cls = 'flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors';
+              return n.sourceUrl
+                ? <a key={n.id} href={n.sourceUrl} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
+                : <div key={n.id} className={cls}>{inner}</div>;
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
   const { announcements, loading } = useAnnouncements();
   return (
@@ -925,7 +1113,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
   const [category, setCategory] = useState<ToolCategoryFilter>('All');
   const [dense, setDense] = useState(true);
   const [openProduct, setOpenProduct] = useState<OurProduct | null>(null);
-  const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | 'announcements' | 'celebrations' | null>(null);
+  const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | 'announcements' | 'celebrations' | 'news' | null>(null);
   const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
   const filteredTools = category === 'All' ? VISIBLE_TOOLS : VISIBLE_TOOLS.filter(t => t.category === category);
 
@@ -1360,6 +1548,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
             {openListPopup === 'joiners' && <NewJoinersPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} isSuperadmin={isSuperadmin} />}
             {openListPopup === 'announcements' && <AnnouncementsPopup onClose={() => setOpenListPopup(null)} />}
+            {openListPopup === 'news' && <DailyNewsPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'celebrations' && <CelebrationsPopup initialTab={celebrationTab} onClose={() => setOpenListPopup(null)} />}
 
             {/* Your Tools — filterable launcher grid, the intranet's app hub */}
@@ -1413,6 +1602,11 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 <p className="text-center text-[12px] text-slate-400 py-8">No tools in this category yet.</p>
               )}
             </section>
+
+            {/* Daily News — sits under the tools because it is something to
+                read, not something to do: the launcher is what people come
+                here for, this is what keeps them a moment longer. */}
+            <DailyNewsSection onViewAll={() => setOpenListPopup('news')} />
 
             {/* Our Journey / Milestones — same real COMPANY_MILESTONES data
                 and auto-advance/manual-nav behaviour as before (milestoneIndex

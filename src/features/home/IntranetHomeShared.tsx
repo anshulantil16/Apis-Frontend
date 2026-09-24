@@ -577,6 +577,70 @@ export const OUR_PRODUCTS: OurProduct[] = [
     category: 'Mouth Freshener' },
 ];
 
+/* ── Daily News ─────────────────────────────────────────────
+   Stories about the world APIS sells into — APIs, food APIs, nutraceuticals,
+   honey — and about the company itself, written in Admin Console › Dashboard
+   Content. Not to be confused with WHATS_NEW below, which is news about this
+   intranet's own tools and ships with a build. ───────────────────── */
+export interface NewsArticle {
+  id: number; title: string; summary: string;
+  category: string; categoryLabel: string;
+  sourceName: string; sourceUrl: string;
+  image: string;
+  publishedOn: string; expiresOn: string | null; pinned: boolean;
+  createdAt: string | null;
+  moderationStatus: ModerationStatus; submittedBy: string; isMine: boolean;
+}
+
+/* The colour a story's tag wears. Keyed off the category the backend sends,
+   so a category added there shows up in a neutral slate rather than crashing
+   on a missing lookup. */
+export const NEWS_TAG_STYLE: Record<string, string> = {
+  company:        'text-amber-700 bg-amber-50 ring-amber-200',
+  apis:           'text-cyan-700 bg-cyan-50 ring-cyan-200',
+  food_apis:      'text-emerald-700 bg-emerald-50 ring-emerald-200',
+  nutraceuticals: 'text-violet-700 bg-violet-50 ring-violet-200',
+  industry:       'text-blue-700 bg-blue-50 ring-blue-200',
+  products:       'text-rose-700 bg-rose-50 ring-rose-200',
+};
+export const newsTagStyle = (c: string) =>
+  NEWS_TAG_STYLE[c] ?? 'text-slate-600 bg-slate-100 ring-slate-200';
+
+/* How long ago, in the words the strip uses. A date alone does not tell you
+   the feed has stopped moving; "3 weeks ago" does, which is the whole reason
+   the age is shown rather than the date. */
+export function newsAge(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const days = Math.floor((Date.now() - then) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return 'Last week';
+  if (days < 60) return `${Math.floor(days / 7)} weeks ago`;
+  return `${Math.floor(days / 30)} months ago`;
+}
+
+export function useNews(scope: 'strip' | 'all' = 'strip') {
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const q = scope === 'all' ? '?scope=all' : '';
+      const r = await apiFetch(`${NOTICEBOARD_API}/news/${q}`);
+      setNews(r.ok ? await r.json() : []);
+    } catch {
+      /* An empty strip is honest; a broken dashboard is not. */
+    } finally {
+      setLoading(false);
+    }
+  }, [scope]);
+
+  useEffect(() => { load(); }, [load]);
+  return { news, loading, reload: load };
+}
+
 export interface NewsItem { title: string; body: string; tag: string; tagColour: string; bar: string; dot: string; }
 
 export const WHATS_NEW: NewsItem[] = [
