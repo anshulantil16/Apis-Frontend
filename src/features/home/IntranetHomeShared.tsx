@@ -603,20 +603,23 @@ export const NEWS_TAG_STYLE: Record<string, string> = {
   industry:       'text-blue-700 bg-blue-50 ring-blue-200',
   products:       'text-rose-700 bg-rose-50 ring-rose-200',
 };
-/* The tile a story wears when it has no picture, which is most of them:
-   Google News carries no images at all. Four identical grey boxes read as four
-   broken images, so the tile is tinted by category instead -- the row then
-   looks composed rather than failed, and the colour repeats the tag. */
-export const NEWS_TILE: Record<string, { from: string; ring: string }> = {
-  company:        { from: 'from-amber-100 to-orange-200',   ring: 'text-amber-500/60' },
-  apis:           { from: 'from-cyan-100 to-sky-200',       ring: 'text-cyan-500/60' },
-  food_apis:      { from: 'from-emerald-100 to-teal-200',   ring: 'text-emerald-500/60' },
-  nutraceuticals: { from: 'from-violet-100 to-purple-200',  ring: 'text-violet-500/60' },
-  industry:       { from: 'from-blue-100 to-indigo-200',    ring: 'text-blue-500/60' },
-  products:       { from: 'from-rose-100 to-pink-200',      ring: 'text-rose-500/60' },
+/* Everything a category needs to look like a deliberate choice rather than a
+   default: the wash behind the card header, the mark's colour, and the glow
+   the card lights up with on hover. The glow is a raw rgba because it is fed
+   to --ih-neon, the same custom property the tool cards use, so News hovers
+   like the rest of the dashboard instead of inventing its own behaviour. */
+export interface NewsLook { wash: string; mark: string; glow: string; }
+
+export const NEWS_TILE: Record<string, NewsLook> = {
+  company:        { wash: 'from-amber-100 via-amber-50 to-white',    mark: 'text-amber-600',   glow: 'rgba(245,158,11,.40)' },
+  apis:           { wash: 'from-cyan-100 via-cyan-50 to-white',      mark: 'text-cyan-600',    glow: 'rgba(6,182,212,.40)' },
+  food_apis:      { wash: 'from-emerald-100 via-emerald-50 to-white', mark: 'text-emerald-600', glow: 'rgba(16,185,129,.40)' },
+  nutraceuticals: { wash: 'from-violet-100 via-violet-50 to-white',  mark: 'text-violet-600',  glow: 'rgba(139,92,246,.40)' },
+  industry:       { wash: 'from-blue-100 via-blue-50 to-white',      mark: 'text-blue-600',    glow: 'rgba(59,130,246,.40)' },
+  products:       { wash: 'from-rose-100 via-rose-50 to-white',      mark: 'text-rose-600',    glow: 'rgba(244,63,94,.40)' },
 };
-export const newsTile = (c: string) =>
-  NEWS_TILE[c] ?? { from: 'from-slate-100 to-slate-200', ring: 'text-slate-400/60' };
+export const newsTile = (c: string): NewsLook =>
+  NEWS_TILE[c] ?? { wash: 'from-slate-100 via-slate-50 to-white', mark: 'text-slate-500', glow: 'rgba(100,116,139,.35)' };
 
 export const newsTagStyle = (c: string) =>
   NEWS_TAG_STYLE[c] ?? 'text-slate-600 bg-slate-100 ring-slate-200';

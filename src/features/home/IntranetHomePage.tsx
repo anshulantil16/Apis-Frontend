@@ -755,94 +755,84 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
    because most stories will not have one; and every card shows its age, not
    its date, so a strip that has stopped moving says so in its own words
    instead of quietly sitting there under "latest updates". ──────────── */
-function NewsThumb({ article, className = '', icon = 'w-7 h-7' }: {
-  article: NewsArticle; className?: string; icon?: string;
-}) {
-  const [broken, setBroken] = useState(false);
-  const tile = newsTile(article.category);
-  const Glyph = NEWS_ICON[article.category] ?? Newspaper;
+/* One card, two placements: fixed width in the sliding strip, full width in
+   the View all grid. Keeping a single design means the popup is recognisably
+   the same feature rather than a second, plainer list of the same stories.
 
-  if (!article.image || broken) {
-    return (
-      <div className={`flex items-center justify-center bg-gradient-to-br ${tile.from} ${className}`}>
-        <Glyph className={`${icon} ${tile.ring}`} />
-      </div>
-    );
-  }
-  return (
-    <img src={article.image} alt="" loading="lazy" onError={() => setBroken(true)}
-      className={`object-cover ${className}`} />
-  );
-}
-
-/* A story almost never comes with a picture — Google News carries none at all
-   — so the card is built for that case rather than apologising for it. There
-   is no image well standing empty: the headline is the biggest thing on the
-   card, a coloured rail and a small mark carry the category, and a thumbnail
-   appears only when there is genuinely one to show. */
-function NewsCard({ article }: { article: NewsArticle }) {
+   The silhouette is the same whether or not a story has a picture, which most
+   do not — Google News carries none. With one, the header is the photograph;
+   without, it is a wash in the category's colour carrying its mark. Neither
+   reads as the other's fallback. */
+function NewsCard({ article, wide = false }: { article: NewsArticle; wide?: boolean }) {
   const [broken, setBroken] = useState(false);
-  const tile = newsTile(article.category);
+  const look = newsTile(article.category);
   const Glyph = NEWS_ICON[article.category] ?? Newspaper;
   const hasImage = !!article.image && !broken;
 
   const body = (
     <>
-      {/* The rail is the only decoration, and it encodes the category. */}
-      <span className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl bg-gradient-to-b ${tile.from}`} />
-
-      <div className="flex items-start gap-2.5">
+      <div className="relative h-[68px] shrink-0 overflow-hidden">
         {hasImage ? (
-          <img src={article.image} alt="" loading="lazy" onError={() => setBroken(true)}
-            className="w-12 h-12 rounded-lg object-cover shrink-0" />
+          <>
+            <img src={article.image} alt="" loading="lazy" onError={() => setBroken(true)}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <span className="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent" />
+          </>
         ) : (
-          <span className={`w-8 h-8 rounded-lg bg-gradient-to-br ${tile.from}
-                            flex items-center justify-center shrink-0`}>
-            <Glyph className={`w-4 h-4 ${tile.ring}`} />
-          </span>
+          <>
+            <span className={`absolute inset-0 bg-gradient-to-br ${look.wash}`} />
+            {/* An oversized, clipped mark reads as texture rather than as a
+                picture that failed to load. */}
+            <Glyph className={`absolute -right-3 -top-2 w-20 h-20 ${look.mark} opacity-[0.13]`} />
+            <Glyph className={`absolute left-3.5 top-3.5 w-5 h-5 ${look.mark} opacity-80`} />
+          </>
         )}
-        <span className="min-w-0 flex-1">
-          <span className={`inline-block px-2 py-0.5 rounded-full text-[9.5px] font-black ring-1 ${newsTagStyle(article.category)}`}>
-            {article.categoryLabel}
-          </span>
-          <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mt-1">
-            <Clock className="w-3 h-3 shrink-0" />{newsAge(article.publishedOn)}
-          </span>
+        <span className={`absolute left-3.5 bottom-2 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm
+                          text-[9.5px] font-black ring-1 ${newsTagStyle(article.category)}`}>
+          {article.categoryLabel}
         </span>
       </div>
 
-      {/* The headline is the card. */}
-      <p className="text-[13.5px] font-black text-slate-900 leading-snug mt-2.5 line-clamp-3
-                    group-hover:text-amber-700 transition-colors">
-        {article.title}
-      </p>
-
-      {/* Only when it says something the headline did not — the fetcher drops
-          the ones that merely repeat it. */}
-      {article.summary && (
-        <p className="text-[11.5px] text-slate-400 leading-relaxed mt-1.5 line-clamp-2">
-          {article.summary}
+      <div className="flex flex-col flex-1 px-3.5 pt-2.5 pb-3">
+        <p className={`font-black text-slate-900 leading-snug group-hover:text-amber-700
+                       transition-colors ${wide ? 'text-[14px] line-clamp-2' : 'text-[13px] line-clamp-3'}`}>
+          {article.title}
         </p>
-      )}
 
-      {/* No hover-only arrow. The whole card is the link, an icon that appears
-          only on hover cannot be seen on a touch screen at all, and it was one
-          more thing in a card whose job is to be read. */}
-      <span className="block mt-auto pt-2.5 text-[10.5px] text-slate-400 font-bold truncate">
-        {article.sourceName || 'APIS India'}
-      </span>
+        {/* Only when it says something the headline did not — the fetcher
+            drops the ones that merely repeat it. */}
+        {article.summary && (
+          <p className="text-[11.5px] text-slate-400 leading-relaxed mt-1.5 line-clamp-2">
+            {article.summary}
+          </p>
+        )}
+
+        <div className="flex items-center gap-1.5 mt-auto pt-2.5 text-[10.5px] font-bold text-slate-400">
+          <Clock className="w-3 h-3 shrink-0" />
+          <span className="shrink-0">{newsAge(article.publishedOn)}</span>
+          {article.sourceName && (
+            <>
+              <span className="text-slate-300">&middot;</span>
+              <span className="truncate min-w-0">{article.sourceName}</span>
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
 
-  const shell = 'group relative flex flex-col text-left rounded-xl bg-white border border-slate-200 ' +
-                'pl-4 pr-3.5 py-3 shadow-sm hover:border-amber-300 hover:shadow-md ' +
-                'transition-all w-[260px] sm:w-[280px] shrink-0 overflow-hidden';
+  /* ih-lift and ih-neon are the dashboard's own hover language, borrowed from
+     the tool cards so this section behaves like the rest of the page. The glow
+     is the category's, so the colour means something. */
+  const shell = 'ih-lift ih-neon ih-sheen group relative flex flex-col text-left rounded-2xl bg-white ' +
+                'border border-slate-200/80 shadow-sm overflow-hidden ' +
+                (wide ? 'w-full' : 'w-[252px] sm:w-[268px] shrink-0');
+  const style = { ['--ih-neon' as string]: look.glow, ['--ih-lift' as string]: look.glow } as any;
 
-  if (!article.sourceUrl) return <div className={shell}>{body}</div>;
+  if (!article.sourceUrl) return <div className={shell} style={style}>{body}</div>;
   return (
-    <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className={shell}>
-      {body}
-    </a>
+    <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer"
+      className={shell} style={style}>{body}</a>
   );
 }
 
@@ -904,8 +894,11 @@ function DailyNewsSection({ onViewAll }: { onViewAll: () => void }) {
             '[mask-image:linear-gradient(to_right,transparent,black_3%,black_97%,transparent)]'
           : ''}>
           <div className={slides
-            ? 'ih-ticker flex items-stretch gap-4 w-max py-1'
-            : 'flex items-stretch gap-4 flex-wrap py-1'}
+            /* py-3, not py-1: the track clips (overflow-hidden, for the
+               loop) and the cards lift 4px on hover with a soft shadow under
+               them. Too little room and the hover state is sheared off. */
+            ? 'ih-ticker flex items-stretch gap-4 w-max py-3'
+            : 'flex items-stretch gap-4 flex-wrap py-3'}
             style={slides ? { animationDuration: `${Math.max(28, live.length * 9)}s` } : undefined}>
             {lane.map((n, i) => <NewsCard key={`${n.id}-${i}`} article={n} />)}
           </div>
@@ -927,18 +920,22 @@ function DailyNewsPopup({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
-        className="ih-palette-in w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        className="ih-palette-in w-full max-w-5xl max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
         <div className="sticky top-0 z-10 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-base font-black text-slate-900 flex items-center gap-2">
-                <Newspaper className="w-4.5 h-4.5 text-amber-500" />Daily News
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500
+                               flex items-center justify-center shadow-md shrink-0">
+                <Newspaper className="w-4 h-4 text-white" />
+              </span>
+              <div>
+              <p className="text-base font-black text-slate-900 leading-none">Daily News</p>
+              <p className="text-[11px] text-slate-400 mt-1">
                 {loading ? 'Loading…'
                   : live.length ? `${live.length} ${live.length === 1 ? 'story' : 'stories'}`
                   : 'Nothing published yet'}
               </p>
+              </div>
             </div>
             <button onClick={onClose} title="Close"
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
@@ -959,55 +956,25 @@ function DailyNewsPopup({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div className="px-4 py-3 sm:px-5">
+        <div className="p-5 sm:p-6">
           {!loading && shown.length === 0 && (
-            <p className="text-center text-sm text-slate-400 py-10">
-              No stories here yet. These arrive from the feeds set up in
-              Admin Console &rsaquo; Dashboard Content.
-            </p>
+            <div className="text-center py-12">
+              <Newspaper className="w-8 h-8 text-slate-200 mx-auto" />
+              <p className="text-sm text-slate-400 font-semibold mt-3">
+                Nothing here yet.
+              </p>
+              <p className="text-[12px] text-slate-400 mt-1">
+                Stories arrive from the feeds set up in Admin Console &rsaquo; Dashboard Content.
+              </p>
+            </div>
           )}
 
-          {/* A reading list: headline first, everything else quiet underneath.
-              No picture well -- most stories have no picture, and a column of
-              identical tinted squares was the loudest thing on the screen
-              while carrying no information at all. */}
-          <ul className="divide-y divide-slate-100">
-            {shown.map(n => {
-              const inner = (
-                <>
-                  <NewsThumb article={n} icon="w-4 h-4"
-                    className="w-9 h-9 rounded-lg shrink-0 mt-0.5" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-bold text-slate-800 leading-snug
-                                     group-hover:text-amber-700 transition-colors">
-                      {n.title}
-                    </span>
-                    {n.summary && (
-                      <span className="block text-[12px] text-slate-400 leading-relaxed mt-1 line-clamp-2">
-                        {n.summary}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-400 font-bold flex-wrap">
-                      <span>{newsAge(n.publishedOn)}</span>
-                      {n.sourceName && <><span className="text-slate-300">&middot;</span><span className="truncate">{n.sourceName}</span></>}
-                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ring-1 ${newsTagStyle(n.category)}`}>
-                        {n.categoryLabel}
-                      </span>
-                    </span>
-                  </span>
-                </>
-              );
-              const cls = 'group flex items-start gap-3 py-3 px-2 -mx-2 rounded-xl ' +
-                          'hover:bg-amber-50/50 transition-colors';
-              return (
-                <li key={n.id}>
-                  {n.sourceUrl
-                    ? <a href={n.sourceUrl} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
-                    : <div className={cls}>{inner}</div>}
-                </li>
-              );
-            })}
-          </ul>
+          {/* The same card as the strip, at full width. One design in both
+              places, so this reads as more of the same feature rather than a
+              second, plainer list of the same stories. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {shown.map(n => <NewsCard key={n.id} article={n} wide />)}
+          </div>
         </div>
       </div>
     </div>
