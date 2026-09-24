@@ -1235,10 +1235,50 @@ function TeamManage({ session }: { session: Session }) {
   const [admins, setAdmins] = useState<any[]>([]);
   const [newAdmin, setNewAdmin] = useState('');
   const [newScope, setNewScope] = useState<'admin' | 'it_support'>('admin');
-  const [employees, setEmployees] = useState<{ count: number }>({ count: 0 });
+  const [employees, setEmployees] = useState<any>({ count: 0 });
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadMsg, setUploadMsg] = useState('');
   const [err, setErr] = useState('');
+  // The master comes from the company directory now, not a spreadsheet.
+  const [dir, setDir] = useState<any>(null);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [person, setPerson] = useState({ email: '', name: '', employee_code: '',
+                                         department: '', designation: '' });
+
+  const loadDirectory = useCallback(async () => {
+    const r = await rpFetch(`${API}/employees/sync/`);
+    if (r.ok) setDir(await r.json());
+  }, []);
+
+  const syncDirectory = async () => {
+    setSyncBusy(true); setSyncMsg(''); setErr('');
+    try {
+      const r = await rpFetch(`${API}/employees/sync/`, { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Sync failed.');
+      setSyncMsg(d.message);
+      loadEmployees(); loadDirectory();
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Sync failed.');
+    } finally { setSyncBusy(false); }
+  };
+
+  const addPerson = async (e: React.FormEvent) => {
+    e.preventDefault(); setErr(''); setSyncMsg('');
+    try {
+      const r = await rpFetch(`${API}/employees/add/`, {
+        method: 'POST', body: JSON.stringify(person),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not add them.');
+      setSyncMsg(d.message);
+      setPerson({ email: '', name: '', employee_code: '', department: '', designation: '' });
+      setAddOpen(false);
+      loadEmployees(); loadDirectory();
+    } catch (e2) { setErr(e2 instanceof Error ? e2.message : 'Could not add them.'); }
+  };
 
   const loadAdmins = useCallback(async () => {
     const r = await rpFetch(`${API}/admins/?email=${encodeURIComponent(session.email)}`);
@@ -1248,7 +1288,8 @@ function TeamManage({ session }: { session: Session }) {
     const r = await rpFetch(`${API}/employees/?limit=1`);
     setEmployees(await r.json());
   }, []);
-  useEffect(() => { loadAdmins(); loadEmployees(); }, [loadAdmins, loadEmployees]);
+  useEffect(() => { loadAdmins(); loadEmployees(); loadDirectory(); },
+    [loadAdmins, loadEmployees, loadDirectory]);
 
   const addAdmin = async (e: React.FormEvent) => {
     e.preventDefault(); setErr('');
@@ -1290,7 +1331,7 @@ function TeamManage({ session }: { session: Session }) {
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
       <Panel title="Admins & IT Support" icon={Shield} subtitle={`${admins.length} on the roster — Super Admin is fixed`}>
         <form onSubmit={addAdmin} className="flex gap-2 mb-4">
-          <input value={newAdmin} onChange={e => setNewAdmin(e.target.value)} placeholder="name@apisindia.com"
+          <input value={newAdmin} onChange={e => setNewAdmin(e.target.value)} placeholder="Their email address"
             className={`flex-1 ${inputCls}`} />
           <select value={newScope} onChange={e => setNewScope(e.target.value as 'admin' | 'it_support')}
             className={`${inputCls} w-auto`}>
@@ -1326,7 +1367,80 @@ function TeamManage({ session }: { session: Session }) {
         </div>
       </Panel>
 
-      <Panel title="Employee Directory" icon={FileSpreadsheet} subtitle={`${employees.count || 0} on record`}>
+      <Panel title="Employee Directory" icon={FileSpreadsheet}
+        subtitle={`${employees.count || 0} on record` +
+          (employees.added_here ? ` · ${employees.added_here} added here` : '')}>
+
+        {/* The master is the company directory, kept in step with HRMS.
+            Re-uploading a sheet every time somebody joined or left was work
+            for no reason, and the two copies disagreed as soon as either
+            changed. */}
+        <div className="rounded-2xl border border-cyan-200 bg-cyan-50/60 p-4 mb-3">
+          <p className="text-[12px] font-black text-slate-700">From the company directory</p>
+          <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+            {dir
+              ? <>{dir.available} people on the company directory
+                  {dir.no_email ? `, ${dir.no_email} of them without an email address and so not importable` : ''}.
+                  {dir.here_from_directory
+                    ? ` ${dir.here_from_directory} are here already.`
+                    : ' None are here yet.'}
+                  {dir.last_synced_at ? ` Last synced ${fmtDate(dir.last_synced_at.slice(0, 10))}.` : ''}</>
+              : 'Checking…'}
+          </p>
+          <button onClick={syncDirectory} disabled={syncBusy}
+            className="rp-sheen w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+                       bg-cyan-600 text-white text-[12px] font-black hover:bg-cyan-700
+                       disabled:opacity-50 transition-colors">
+            <RefreshCw className={`w-4 h-4 ${syncBusy ? 'animate-spin' : ''}`} />
+            {syncBusy ? 'Syncing…' : 'Sync from the directory'}
+          </button>
+          <p className="text-[10px] text-slate-400 mt-2">
+            Safe to run whenever. It refreshes everyone who came from the directory, marks anyone
+            who has left as inactive, and never touches somebody you added by hand.
+          </p>
+        </div>
+
+        {syncMsg && (
+          <div className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 mb-3">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+            <p className="text-[12px] text-emerald-700 font-bold">{syncMsg}</p>
+          </div>
+        )}
+
+        {/* Somebody who is not in HRMS at all — a contractor, a joiner not on
+            the system yet. A sync can never bring these people, which is why
+            it must never remove them either. */}
+        <button onClick={() => { setAddOpen(o => !o); setErr(''); }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-3 rounded-xl
+                     border border-slate-200 text-slate-600 text-[12px] font-black hover:bg-slate-50
+                     transition-colors">
+          <UserPlus className={`w-4 h-4 transition-transform ${addOpen ? 'rotate-45' : ''}`} />
+          {addOpen ? 'Cancel' : 'Add someone not in the directory'}
+        </button>
+
+        {addOpen && (
+          <form onSubmit={addPerson} className="space-y-2 mb-4 rounded-2xl border border-slate-200 p-3">
+            <input required value={person.email} placeholder="Email — this is how they sign in"
+              onChange={e => setPerson(p2 => ({ ...p2, email: e.target.value }))} className={inputCls} />
+            <input required value={person.name} placeholder="Full name"
+              onChange={e => setPerson(p2 => ({ ...p2, name: e.target.value }))} className={inputCls} />
+            <div className="grid grid-cols-2 gap-2">
+              <input value={person.department} placeholder="Department"
+                onChange={e => setPerson(p2 => ({ ...p2, department: e.target.value }))} className={inputCls} />
+              <input value={person.designation} placeholder="Designation"
+                onChange={e => setPerson(p2 => ({ ...p2, designation: e.target.value }))} className={inputCls} />
+            </div>
+            <button type="submit"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[12px] font-black
+                         hover:bg-slate-800 transition-colors">
+              Add them
+            </button>
+          </form>
+        )}
+
+        <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
+          Or upload a sheet
+        </p>
         <button onClick={downloadTemplate}
           className="rp-sheen w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-3 rounded-xl
                      border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50
