@@ -762,9 +762,6 @@ function NewsThumb({ article, className = '', icon = 'w-7 h-7' }: {
   const tile = newsTile(article.category);
   const Glyph = NEWS_ICON[article.category] ?? Newspaper;
 
-  // A linked image lives on somebody else's server and can vanish or start
-  // refusing us at any time, so the fallback is a real state, not a nicety.
-  // It is also the common case: Google News carries no images at all.
   if (!article.image || broken) {
     return (
       <div className={`flex items-center justify-center bg-gradient-to-br ${tile.from} ${className}`}>
@@ -778,38 +775,73 @@ function NewsThumb({ article, className = '', icon = 'w-7 h-7' }: {
   );
 }
 
+/* A story almost never comes with a picture — Google News carries none at all
+   — so the card is built for that case rather than apologising for it. There
+   is no image well standing empty: the headline is the biggest thing on the
+   card, a coloured rail and a small mark carry the category, and a thumbnail
+   appears only when there is genuinely one to show. */
 function NewsCard({ article }: { article: NewsArticle }) {
+  const [broken, setBroken] = useState(false);
+  const tile = newsTile(article.category);
+  const Glyph = NEWS_ICON[article.category] ?? Newspaper;
+  const hasImage = !!article.image && !broken;
+
   const body = (
     <>
-      <NewsThumb article={article} className="w-full h-28 rounded-lg mb-2.5 shrink-0" />
-      <p className="text-[12.5px] font-black text-slate-900 leading-snug line-clamp-2">{article.title}</p>
-      <p className="text-[11.5px] text-slate-400 leading-relaxed mt-1 line-clamp-2 flex-1">{article.summary}</p>
-      <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 shrink-0">
-          <Clock className="w-3 h-3" />{newsAge(article.publishedOn)}
-        </span>
-        {article.sourceName && (
-          <span className="text-[10px] text-slate-300 truncate min-w-0">{article.sourceName}</span>
+      {/* The rail is the only decoration, and it encodes the category. */}
+      <span className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl bg-gradient-to-b ${tile.from}`} />
+
+      <div className="flex items-start gap-2.5">
+        {hasImage ? (
+          <img src={article.image} alt="" loading="lazy" onError={() => setBroken(true)}
+            className="w-12 h-12 rounded-lg object-cover shrink-0" />
+        ) : (
+          <span className={`w-8 h-8 rounded-lg bg-gradient-to-br ${tile.from}
+                            flex items-center justify-center shrink-0`}>
+            <Glyph className={`w-4 h-4 ${tile.ring}`} />
+          </span>
         )}
-        <span className={`ml-auto shrink-0 px-2 py-0.5 rounded-full text-[9.5px] font-black ring-1 ${newsTagStyle(article.category)}`}>
-          {article.categoryLabel}
+        <span className="min-w-0 flex-1">
+          <span className={`inline-block px-2 py-0.5 rounded-full text-[9.5px] font-black ring-1 ${newsTagStyle(article.category)}`}>
+            {article.categoryLabel}
+          </span>
+          <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mt-1">
+            <Clock className="w-3 h-3 shrink-0" />{newsAge(article.publishedOn)}
+          </span>
         </span>
       </div>
+
+      {/* The headline is the card. */}
+      <p className="text-[13.5px] font-black text-slate-900 leading-snug mt-2.5 line-clamp-3
+                    group-hover:text-amber-700 transition-colors">
+        {article.title}
+      </p>
+
+      {/* Only when it says something the headline did not — the fetcher drops
+          the ones that merely repeat it. */}
+      {article.summary && (
+        <p className="text-[11.5px] text-slate-400 leading-relaxed mt-1.5 line-clamp-2">
+          {article.summary}
+        </p>
+      )}
+
+      <span className="flex items-center gap-1.5 mt-auto pt-2.5 text-[10.5px] text-slate-400 font-bold">
+        <span className="truncate min-w-0">{article.sourceName || 'APIS India'}</span>
+        {article.sourceUrl && (
+          <ExternalLink className="w-3 h-3 shrink-0 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+        )}
+      </span>
     </>
   );
 
   const shell = 'group relative flex flex-col text-left rounded-xl bg-white border border-slate-200 ' +
-                'p-3 shadow-sm hover:border-amber-300 hover:shadow-md transition-all ' +
-                'w-[270px] sm:w-[290px] shrink-0 h-full';
+                'pl-4 pr-3.5 py-3 shadow-sm hover:border-amber-300 hover:shadow-md ' +
+                'transition-all w-[260px] sm:w-[280px] shrink-0 overflow-hidden';
 
-  // Only a story that actually links somewhere becomes a link; the rest stay
-  // plain divs so nothing offers a click that does nothing.
   if (!article.sourceUrl) return <div className={shell}>{body}</div>;
   return (
     <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className={shell}>
       {body}
-      <ExternalLink className="w-3 h-3 text-slate-300 absolute top-3 right-3 opacity-0
-                               group-hover:opacity-100 transition-opacity" />
     </a>
   );
 }
@@ -825,8 +857,13 @@ function DailyNewsSection({ onViewAll }: { onViewAll: () => void }) {
   /* Duplicated back-to-back so ihTicker's translateX(-50%) loops with no
      visible seam -- the same technique as the product strip in the hero. The
      track pauses on hover, which here is not a nicety: every card is a link,
-     and a link you have to chase is a link nobody follows. */
-  const lane = [...live, ...live];
+     and a link you have to chase is a link nobody follows.
+
+     Below four stories the doubled track is narrower than the container, so
+     translateX(-50%) would drag a visible gap across the row. Too few to
+     scroll is also too few to need scrolling, so those just sit in a grid. */
+  const slides = live.length >= 4;
+  const lane = slides ? [...live, ...live] : live;
 
   return (
     <section id="daily-news" className="scroll-mt-20">
@@ -852,8 +889,9 @@ function DailyNewsSection({ onViewAll }: { onViewAll: () => void }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="rounded-xl bg-white border border-slate-200 p-3 shadow-sm">
-              <div className="w-full h-28 rounded-lg bg-slate-100 animate-pulse mb-2.5" />
-              <div className="h-3 rounded bg-slate-100 animate-pulse" />
+              <div className="w-8 h-8 rounded-lg bg-slate-100 animate-pulse" />
+              <div className="h-3 rounded bg-slate-100 animate-pulse mt-3" />
+              <div className="h-3 rounded bg-slate-100 animate-pulse mt-1.5" />
               <div className="h-3 rounded bg-slate-100 animate-pulse mt-1.5 w-2/3" />
             </div>
           ))}
@@ -861,10 +899,14 @@ function DailyNewsSection({ onViewAll }: { onViewAll: () => void }) {
       ) : (
         /* Faded at both edges so cards enter and leave rather than being cut
            off mid-word at the container border. */
-        <div className="ih-ticker-track relative overflow-hidden
-                        [mask-image:linear-gradient(to_right,transparent,black_3%,black_97%,transparent)]">
-          <div className="ih-ticker flex items-stretch gap-4 w-max py-1"
-            style={{ animationDuration: `${Math.max(28, live.length * 9)}s` }}>
+        <div className={slides
+          ? 'ih-ticker-track relative overflow-hidden ' +
+            '[mask-image:linear-gradient(to_right,transparent,black_3%,black_97%,transparent)]'
+          : ''}>
+          <div className={slides
+            ? 'ih-ticker flex items-stretch gap-4 w-max py-1'
+            : 'flex items-stretch gap-4 flex-wrap py-1'}
+            style={slides ? { animationDuration: `${Math.max(28, live.length * 9)}s` } : undefined}>
             {lane.map((n, i) => <NewsCard key={`${n.id}-${i}`} article={n} />)}
           </div>
         </div>
