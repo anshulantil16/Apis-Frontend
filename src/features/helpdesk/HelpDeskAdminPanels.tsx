@@ -1668,7 +1668,7 @@ function TeamManage({ session }: { session: Session }) {
     const res = await rpFetch(`${API}/employees/template/`);
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'AdminPulse_Employee_Template.xlsx';
+    const a = document.createElement('a'); a.href = url; a.download = 'HelpDesk_Employee_Template.xlsx';
     document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a);
   };
   const upload = async (file: File) => {
@@ -1920,7 +1920,7 @@ function AnalyticsPanel({ session }: { session: Session }) {
       )}
       {!allTime && (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[12px] text-slate-500">
-          No bookings, tickets or item requests have been raised yet. This page fills in as people use AdminPulse.
+          No bookings, tickets or item requests have been raised yet. This page fills in as people use the Help Desk.
         </div>
       )}
 

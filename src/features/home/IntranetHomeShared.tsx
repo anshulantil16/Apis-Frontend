@@ -580,10 +580,10 @@ export const OUR_PRODUCTS: OurProduct[] = [
 export interface NewsItem { title: string; body: string; tag: string; tagColour: string; bar: string; dot: string; }
 
 export const WHATS_NEW: NewsItem[] = [
-  { title: 'AdminPulse now handles item requests', body: 'Stationery, IT equipment, furniture and more — not just room bookings — with its own approval → fulfilment queue.', tag: 'AdminPulse', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
+  { title: 'Help Desk now handles item requests', body: 'Stationery, IT equipment, furniture and more — not just room bookings — with its own approval → fulfilment queue.', tag: 'Help Desk', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
   { title: 'PMS Simulator: Current CTC is now editable', body: 'You can now edit an employee’s Current CTC after the master upload, without re-uploading the whole sheet.', tag: 'PMS', tagColour: 'text-violet-600 bg-violet-50 ring-violet-200', bar: 'from-violet-400 to-fuchsia-500', dot: 'bg-violet-500' },
   { title: 'Warning Letters launched', body: 'A full disciplinary letter pipeline — upload, generate, track history — now lives inside Letters Generator.', tag: 'Letters Generator', tagColour: 'text-rose-600 bg-rose-50 ring-rose-200', bar: 'from-rose-400 to-pink-500', dot: 'bg-rose-500' },
-  { title: 'AdminPulse visual refresh', body: 'Glow rings, animated borders and live particles across the whole booking & requests experience.', tag: 'AdminPulse', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
+  { title: 'Help Desk visual refresh', body: 'Glow rings, animated borders and live particles across the whole booking & requests experience.', tag: 'Help Desk', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
 ];
 
 /* Real, publicly-reported APIS India Limited figures — the company is

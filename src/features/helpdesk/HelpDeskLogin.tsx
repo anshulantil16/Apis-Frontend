@@ -168,7 +168,7 @@ export function HelpDeskLogin({ onSuccess }: {
                   <LayoutGrid className="w-7 h-7 text-white" />
                 </span>
                 <div>
-                  <p className="text-slate-900 font-black text-xl tracking-tight leading-none">AdminPulse</p>
+                  <p className="text-slate-900 font-black text-xl tracking-tight leading-none">Help Desk</p>
                   <p className="text-[10px] font-black uppercase tracking-[0.28em] text-amber-700/70 mt-1.5">
                     APIS India Limited
                   </p>
@@ -189,7 +189,7 @@ export function HelpDeskLogin({ onSuccess }: {
             <div className="w-full max-w-md relative">
               <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
                 <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg"><LayoutGrid className="w-6 h-6 text-white" /></div>
-                <div><h1 className="font-black text-slate-900 text-lg">AdminPulse</h1><p className="text-slate-500 text-xs">Admin Requests &amp; Facilities</p></div>
+                <div><h1 className="font-black text-slate-900 text-lg">Help Desk</h1><p className="text-slate-500 text-xs">Admin Requests &amp; IT Tickets</p></div>
               </div>
 
               <div className="absolute top-0 right-0 flex items-center gap-1.5">
