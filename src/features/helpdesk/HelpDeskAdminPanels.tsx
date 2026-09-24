@@ -436,8 +436,39 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
    walked over and asked. Counted only what came through the queue, the
    monthly figure measured how often people used the ticket form rather than
    how much work was done. ───────────────────────────────────────────────── */
+/* What an Admin does all day is not what IT does all day. Offered only IT's
+   categories, an admin logging "got the pantry tap fixed" had nothing honest
+   to pick, and the server filed it under "Other" without saying so -- which
+   made "Other" the biggest slice of their own monthly report. Each role logs
+   against its own work; Super Admin covers both and gets them in two labelled
+   groups. Keys match roompulse.models: TICKET_CATEGORY_LABEL is the IT list,
+   CATEGORY_LABEL the admin one. */
+const WORK_COPY = {
+  admin: {
+    idle: 'Chased a vendor, arranged a cab, got the pantry tap fixed, sorted an ID card — ' +
+          'record it here and it counts in the monthly report like any request.',
+    subject: 'Got the 2nd-floor AC serviced',
+    description: 'Vendor came at 11. Gas refilled and filters cleaned.',
+  },
+  it: {
+    idle: 'Restarted a server, rebuilt a laptop, fixed a printer someone mentioned in passing — ' +
+          'record it here and it counts in the monthly report like any ticket.',
+    subject: 'Restarted the mail server',
+    description: 'Queue was stuck. Restarted the service and cleared the backlog.',
+  },
+  both: {
+    idle: 'A job nobody raised a ticket or a request for — record it here and it counts ' +
+          'in the monthly report like any other.',
+    subject: 'Restarted the mail server',
+    description: 'Queue was stuck. Restarted the service and cleared the backlog.',
+  },
+};
+
 function LogWorkSection({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const today = isoLocal(new Date());
+  const side = session.role === 'admin' ? 'admin'
+             : session.role === 'it_support' ? 'it' : 'both';
+  const copy = WORK_COPY[side];
   const blank = {
     subject: '', description: '', category: 'other', priority: 'medium',
     logged_for: '', performed_on: today, time_spent_minutes: '', status: 'closed',
@@ -476,7 +507,9 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
 
   return (
     <Panel title="Log work you did" icon={ClipboardList}
-      subtitle="For jobs nobody raised a ticket for — so the month's count is the real one"
+      subtitle={side === 'admin'
+        ? "For jobs nobody raised a request for — so the month's count is the real one"
+        : "For jobs nobody raised a ticket for — so the month's count is the real one"}
       right={
         <button onClick={() => { setOpen(o => !o); setErr(''); setDone(''); }}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600 text-white
@@ -492,10 +525,7 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
         </div>
       )}
       {!open ? (
-        <p className="text-[12px] text-slate-400">
-          Restarted a server, rebuilt a laptop, fixed a printer someone mentioned in passing —
-          record it here and it counts in the monthly report like any ticket.
-        </p>
+        <p className="text-[12px] text-slate-400">{copy.idle}</p>
       ) : (
         <div className="space-y-3">
           {err && (
@@ -509,23 +539,39 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
             <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">What was the job?</label>
             <input className={inputCls} value={form.subject} maxLength={200}
               onChange={e => set('subject', e.target.value)}
-              placeholder="Restarted the mail server" />
+              placeholder={copy.subject} />
           </div>
 
           <div>
             <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">What did you do?</label>
             <textarea className={inputCls + ' min-h-[70px]'} value={form.description}
               onChange={e => set('description', e.target.value)}
-              placeholder="Queue was stuck. Restarted the service and cleared the backlog." />
+              placeholder={copy.description} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Category</label>
               <select className={inputCls} value={form.category} onChange={e => set('category', e.target.value)}>
-                {Object.entries(TICKET_CATEGORY_LABEL).map(([v, l]) => (
+                {side === 'it' && Object.entries(TICKET_CATEGORY_LABEL).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
                 ))}
+                {side === 'admin' && Object.entries(CATEGORY_LABEL).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+                {side === 'both' && (
+                  <>
+                    <optgroup label="IT">
+                      {Object.entries(TICKET_CATEGORY_LABEL).filter(([v]) => v !== 'other')
+                        .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </optgroup>
+                    <optgroup label="Admin">
+                      {Object.entries(CATEGORY_LABEL).filter(([v]) => v !== 'other')
+                        .map(([v, l]) => <option key={`a-${v}`} value={v}>{l}</option>)}
+                    </optgroup>
+                    <option value="other">Other</option>
+                  </>
+                )}
               </select>
             </div>
             <div>
@@ -662,7 +708,7 @@ function WorkReportSection() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { l: 'Jobs done', v: data.total },
-              { l: 'From tickets', v: data.from_tickets },
+              { l: 'From the queues', v: data.from_tickets },
               { l: 'Logged directly', v: data.logged_directly },
               { l: 'Time recorded', v: data.minutes_recorded ? hours(data.minutes_recorded) : '—' },
               { l: 'Outside office hours', v: data.after_hours_minutes ? hours(data.after_hours_minutes) : '—' },
@@ -673,6 +719,21 @@ function WorkReportSection() {
               </div>
             ))}
           </div>
+
+          {/* "From the queues" is three different jobs in one number —
+              IT closing tickets, Admin handing items over, Admin approving
+              rooms. An Admin looking for their own month needs to see which. */}
+          {data.from_queue && data.from_tickets > 0 && (
+            <p className="text-[11px] text-slate-400">
+              Through the queues:{' '}
+              {[[data.from_queue.tickets, 'IT ticket'],
+                [data.from_queue.item_requests, 'item request'],
+                [data.from_queue.room_bookings, 'room booking']]
+                .filter(([n]) => n as number > 0)
+                .map(([n, w]) => `${n} ${w}${(n as number) === 1 ? '' : 's'}`)
+                .join(' · ')}
+            </p>
+          )}
 
           {!data.total ? (
             <Empty msg="Nothing recorded for this month yet" icon={History} />
@@ -689,7 +750,7 @@ function WorkReportSection() {
                         <div className="min-w-0">
                           <p className="text-[12px] font-black text-slate-700 truncate">{p.name}</p>
                           <p className="text-[10px] text-slate-400">
-                            {p.closed} from tickets · {p.logged} logged
+                            {p.closed} from the queues · {p.logged} logged
                             {p.minutes ? ` · ${hours(p.minutes)}` : ''}
                             {p.after_hours_minutes
                               ? <span className="text-violet-500 font-bold">
@@ -715,8 +776,12 @@ function WorkReportSection() {
                             <div key={it.id} className="flex items-start gap-2 text-[11px]">
                               <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0
                                 ${it.origin === 'logged' ? 'bg-violet-100 text-violet-700'
+                                  : it.source === 'item' ? 'bg-amber-100 text-amber-700'
+                                  : it.source === 'room' ? 'bg-emerald-100 text-emerald-700'
                                                          : 'bg-cyan-100 text-cyan-700'}`}>
-                                {it.origin === 'logged' ? 'Logged' : 'Ticket'}
+                                {it.origin === 'logged' ? 'Logged'
+                                  : it.source === 'item' ? 'Item'
+                                  : it.source === 'room' ? 'Room' : 'Ticket'}
                               </span>
                               <span className="text-slate-400 tabular-nums shrink-0 w-16">
                                 {it.date ? fmtDate(it.date) : ''}
