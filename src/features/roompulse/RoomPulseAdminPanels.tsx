@@ -13,6 +13,9 @@ import {
   REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './RoomPulseShared';
 import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, ticketStatusMeta, fmtTicketWhen } from './RoomPulseTickets';
 
+// What the server treats as the normal working day — see roompulse/worktime.py.
+const OFFICE_HOURS = '09:30–18:30';
+
 const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm " +
   "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
 
@@ -244,12 +247,28 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // What a close carries besides the status: how long it took, and when. Half
+  // the month's work would otherwise have no time against it, and the two
+  // kinds of work could not be compared.
+  const [timing, setTiming] = useState<Record<number, { m: string; from: string; to: string }>>({});
+  const setTime = (id: number, k: 'm' | 'from' | 'to', v: string) =>
+    setTiming(t => {
+      const prev = t[id] ?? { m: '', from: '', to: '' };
+      return { ...t, [id]: { ...prev, [k]: v } };
+    });
+
   const act = async (id: number, action: 'approve' | 'reject' | 'start' | 'close') => {
     setBusyId(id); setErr('');
+    const tm = timing[id];
     try {
       const r = await rpFetch(`${API}/tickets/${id}/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, email: session.email, remarks: remarks[id] || '' }),
+        body: JSON.stringify({
+          action, email: session.email, remarks: remarks[id] || '',
+          ...(action === 'close' && tm
+            ? { time_spent_minutes: tm.m || null, worked_from: tm.from, worked_to: tm.to }
+            : {}),
+        }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Action failed');
@@ -370,11 +389,28 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                       <PlayCircle className="w-3.5 h-3.5" />Start Progress
                     </button>
                   ) : (
-                    <button onClick={() => act(t.id, 'close')} disabled={busyId === t.id}
-                      className="rp-sheen flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 text-white
-                                 text-[12px] font-black hover:bg-cyan-700 hover:-translate-y-0.5 transition-all disabled:opacity-50 flex-shrink-0">
-                      <CheckCircle2 className="w-3.5 h-3.5" />Close Ticket
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {/* Both optional. A time nobody has is worse than none —
+                          it would be a guess sitting in a report. */}
+                      <input type="time" title="Worked from"
+                        value={timing[t.id]?.from || ''}
+                        onChange={e => setTime(t.id, 'from', e.target.value)}
+                        className="w-[88px] px-1.5 py-1.5 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-600" />
+                      <span className="text-[11px] text-slate-300">to</span>
+                      <input type="time" title="Worked to"
+                        value={timing[t.id]?.to || ''}
+                        onChange={e => setTime(t.id, 'to', e.target.value)}
+                        className="w-[88px] px-1.5 py-1.5 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-600" />
+                      <input type="number" min={0} placeholder="min" title="Minutes spent"
+                        value={timing[t.id]?.m || ''}
+                        onChange={e => setTime(t.id, 'm', e.target.value)}
+                        className="w-[64px] px-1.5 py-1.5 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-600" />
+                      <button onClick={() => act(t.id, 'close')} disabled={busyId === t.id}
+                        className="rp-sheen flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-600 text-white
+                                   text-[12px] font-black hover:bg-cyan-700 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                        <CheckCircle2 className="w-3.5 h-3.5" />Close
+                      </button>
+                    </div>
                   )}
                 </div>
               </Reveal>
@@ -399,6 +435,7 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
   const blank = {
     subject: '', description: '', category: 'other', priority: 'medium',
     logged_for: '', performed_on: today, time_spent_minutes: '', status: 'closed',
+    worked_from: '', worked_to: '',
   };
   const [form, setForm] = useState<Record<string, string>>(blank);
   const [open, setOpen] = useState(false);
@@ -493,16 +530,21 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Day it was done</label>
               <input type="date" className={inputCls} value={form.performed_on} max={today}
                 onChange={e => set('performed_on', e.target.value)} />
             </div>
             <div>
-              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Minutes spent</label>
-              <input type="number" min={0} className={inputCls} value={form.time_spent_minutes}
-                onChange={e => set('time_spent_minutes', e.target.value)} placeholder="Optional" />
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Worked from</label>
+              <input type="time" className={inputCls} value={form.worked_from}
+                onChange={e => set('worked_from', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Until</label>
+              <input type="time" className={inputCls} value={form.worked_to}
+                onChange={e => set('worked_to', e.target.value)} />
             </div>
             <div>
               <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">State</label>
@@ -513,9 +555,19 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
             </div>
           </div>
 
+          <div>
+            <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">
+              Minutes spent <span className="text-slate-300 normal-case font-bold">— only if the hours above don't say it</span>
+            </label>
+            <input type="number" min={0} className={inputCls} value={form.time_spent_minutes}
+              onChange={e => set('time_spent_minutes', e.target.value)}
+              placeholder="Worked out from the times above if you leave this blank" />
+          </div>
+
           <p className="text-[11px] text-slate-400">
             Write it up whenever suits — the date above is the day the work happened, which is the
-            month it will count in.
+            month it will count in. Giving the hours is what lets a late night show as one: work
+            outside {OFFICE_HOURS}, or at any time on a Saturday or Sunday, is counted separately.
           </p>
 
           <button onClick={submit} disabled={busy}
@@ -601,12 +653,13 @@ function WorkReportSection() {
       {!err && !data && <Skel className="h-40" />}
       {data && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { l: 'Jobs done', v: data.total },
               { l: 'From tickets', v: data.from_tickets },
               { l: 'Logged directly', v: data.logged_directly },
               { l: 'Time recorded', v: data.minutes_recorded ? hours(data.minutes_recorded) : '—' },
+              { l: 'Outside office hours', v: data.after_hours_minutes ? hours(data.after_hours_minutes) : '—' },
             ].map(s => (
               <div key={s.l} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                 <p className="text-xl font-black text-slate-900 tabular-nums">{s.v}</p>
@@ -632,6 +685,11 @@ function WorkReportSection() {
                           <p className="text-[10px] text-slate-400">
                             {p.closed} from tickets · {p.logged} logged
                             {p.minutes ? ` · ${hours(p.minutes)}` : ''}
+                            {p.after_hours_minutes
+                              ? <span className="text-violet-500 font-bold">
+                                  {' · '}{hours(p.after_hours_minutes)} outside hours
+                                </span>
+                              : ''}
                           </p>
                         </div>
                         <span className="flex items-center gap-2 shrink-0">
@@ -661,8 +719,15 @@ function WorkReportSection() {
                                 <span className="font-bold text-slate-700">{it.subject}</span>
                                 <span className="text-slate-400">
                                   {it.for ? ` · for ${it.for}` : ''} · {it.category}
+                                  {it.worked_from ? ` · ${it.worked_from}–${it.worked_to}` : ''}
                                   {it.minutes ? ` · ${hours(it.minutes)}` : ''}
                                 </span>
+                                {it.after_hours_minutes ? (
+                                  <span className="ml-1 px-1 py-0.5 rounded bg-violet-100 text-violet-700
+                                                   text-[9px] font-black uppercase">
+                                    {hours(it.after_hours_minutes)} late
+                                  </span>
+                                ) : null}
                               </span>
                             </div>
                           ))}
@@ -695,7 +760,9 @@ function WorkReportSection() {
 
           <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-100">
             Counted by the day the work was done, not the day the ticket arrived — a ticket raised
-            last month and finished this one belongs to this month.
+            last month and finished this one belongs to this month. Outside hours means before or
+            after {data.office_hours || OFFICE_HOURS}, or any time on a Saturday or Sunday, worked
+            out from the hours recorded on each job.
             {data.still_open > 0 && ` ${data.still_open} still open right now.`}
           </p>
         </div>
