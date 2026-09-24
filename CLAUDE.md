@@ -33,9 +33,16 @@ compile. Use `tsc -b`, or just `npm run build:qa`, which runs it. A push that
 fails `tsc -b` cannot be deployed at all — the server keeps serving the old
 bundle while appearing to have deployed.
 
-## AdminPulse (`src/features/roompulse/`)
+## Help Desk (`src/features/helpdesk/`)
 
-**Every call goes through `rpFetch`** from `RoomPulseShared.tsx`. Never call
+**The product is called Help Desk.** It was AdminPulse, and before that
+RoomPulse. Every string a user reads says Help Desk. Three internal names
+deliberately still say otherwise, because each is paired with a backend
+identifier that cannot move without rewriting live tables: the API base
+`/api/roompulse`, the `roompulse_session` storage key, and the
+`X-AdminPulse-Session` header. Do not "fix" those to match the brand.
+
+**Every call goes through `rpFetch`** from `HelpDeskShared.tsx`. Never call
 `fetch` directly.
 
 `rpFetch` attaches the session token minted at sign-in
