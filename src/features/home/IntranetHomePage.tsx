@@ -11,7 +11,7 @@ import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, useVacancies, summarizeVacancies,
   OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, QUICK_PORTALS, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
   useCelebrations, useTicker, useAnnouncements, useHolidayZones,
-  useNews, newsAge, newsTagStyle, type NewsArticle,
+  useNews, newsAge, newsTagStyle, newsTile, type NewsArticle,
   getRecentToolsWithTime, formatRelativeTime,
   type VacancyListing,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
@@ -40,6 +40,13 @@ const LEADERSHIP_SLIDES: LeadershipSlide[] = [
 // milestone, product launch, facility/award, and "coming soon". Cycles via
 // `% MILESTONE_ICONS.length` if the data list ever grows past five.
 const MILESTONE_ICONS = [Building2, TrendingUp, Package, Trophy, Rocket];
+
+/* One mark per news category, so a story with no picture still gets a tile
+   that says something about it rather than the same newspaper four times. */
+const NEWS_ICON: Record<string, typeof Building2> = {
+  company: Building2, apis: Sparkles, food_apis: Package,
+  nutraceuticals: Heart, industry: TrendingUp, products: Tag,
+};
 
 /* Deterministic PRNG (mulberry32) seeded from today's date — same "random"
    order for everyone all day, a different order tomorrow. Not real
@@ -748,14 +755,20 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
    because most stories will not have one; and every card shows its age, not
    its date, so a strip that has stopped moving says so in its own words
    instead of quietly sitting there under "latest updates". ──────────── */
-function NewsThumb({ article, className = '' }: { article: NewsArticle; className?: string }) {
+function NewsThumb({ article, className = '', icon = 'w-7 h-7' }: {
+  article: NewsArticle; className?: string; icon?: string;
+}) {
   const [broken, setBroken] = useState(false);
+  const tile = newsTile(article.category);
+  const Glyph = NEWS_ICON[article.category] ?? Newspaper;
+
   // A linked image lives on somebody else's server and can vanish or start
   // refusing us at any time, so the fallback is a real state, not a nicety.
+  // It is also the common case: Google News carries no images at all.
   if (!article.image || broken) {
     return (
-      <div className={`flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100 ${className}`}>
-        <Newspaper className="w-5 h-5 text-amber-400/70" />
+      <div className={`flex items-center justify-center bg-gradient-to-br ${tile.from} ${className}`}>
+        <Glyph className={`${icon} ${tile.ring}`} />
       </div>
     );
   }
@@ -768,25 +781,26 @@ function NewsThumb({ article, className = '' }: { article: NewsArticle; classNam
 function NewsCard({ article }: { article: NewsArticle }) {
   const body = (
     <>
-      <NewsThumb article={article} className="w-full h-24 rounded-lg mb-2.5 shrink-0" />
+      <NewsThumb article={article} className="w-full h-28 rounded-lg mb-2.5 shrink-0" />
       <p className="text-[12.5px] font-black text-slate-900 leading-snug line-clamp-2">{article.title}</p>
-      <p className="text-[11.5px] text-slate-400 leading-relaxed mt-1 line-clamp-3 flex-1">{article.summary}</p>
+      <p className="text-[11.5px] text-slate-400 leading-relaxed mt-1 line-clamp-2 flex-1">{article.summary}</p>
       <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 shrink-0">
           <Clock className="w-3 h-3" />{newsAge(article.publishedOn)}
         </span>
         {article.sourceName && (
-          <span className="text-[10px] text-slate-300 truncate max-w-[90px]">{article.sourceName}</span>
+          <span className="text-[10px] text-slate-300 truncate min-w-0">{article.sourceName}</span>
         )}
-        <span className={`ml-auto px-2 py-0.5 rounded-full text-[9.5px] font-black ring-1 ${newsTagStyle(article.category)}`}>
+        <span className={`ml-auto shrink-0 px-2 py-0.5 rounded-full text-[9.5px] font-black ring-1 ${newsTagStyle(article.category)}`}>
           {article.categoryLabel}
         </span>
       </div>
     </>
   );
 
-  const shell = 'ih-inview group relative flex flex-col text-left rounded-xl bg-white border ' +
-                'border-slate-200 p-3 shadow-sm hover:border-amber-300 hover:shadow-md transition-all';
+  const shell = 'group relative flex flex-col text-left rounded-xl bg-white border border-slate-200 ' +
+                'p-3 shadow-sm hover:border-amber-300 hover:shadow-md transition-all ' +
+                'w-[270px] sm:w-[290px] shrink-0 h-full';
 
   // Only a story that actually links somewhere becomes a link; the rest stay
   // plain divs so nothing offers a click that does nothing.
@@ -802,11 +816,17 @@ function NewsCard({ article }: { article: NewsArticle }) {
 
 function DailyNewsSection({ onViewAll }: { onViewAll: () => void }) {
   const { news, loading } = useNews('strip');
-  const top = news.filter(n => n.moderationStatus === 'approved').slice(0, 4);
+  const live = news.filter(n => n.moderationStatus === 'approved');
 
   // Nothing published yet: the section stays out of the page entirely rather
   // than sitting there as an empty frame under a heading.
-  if (!loading && top.length === 0) return null;
+  if (!loading && live.length === 0) return null;
+
+  /* Duplicated back-to-back so ihTicker's translateX(-50%) loops with no
+     visible seam -- the same technique as the product strip in the hero. The
+     track pauses on hover, which here is not a nicety: every card is a link,
+     and a link you have to chase is a link nobody follows. */
+  const lane = [...live, ...live];
 
   return (
     <section id="daily-news" className="scroll-mt-20">
@@ -828,24 +848,31 @@ function DailyNewsSection({ onViewAll }: { onViewAll: () => void }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading
-          ? Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="rounded-xl bg-white border border-slate-200 p-3 shadow-sm">
-                <div className="w-full h-24 rounded-lg bg-slate-100 animate-pulse mb-2.5" />
-                <div className="h-3 rounded bg-slate-100 animate-pulse" />
-                <div className="h-3 rounded bg-slate-100 animate-pulse mt-1.5 w-2/3" />
-              </div>
-            ))
-          : top.map(n => <NewsCard key={n.id} article={n} />)}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="rounded-xl bg-white border border-slate-200 p-3 shadow-sm">
+              <div className="w-full h-28 rounded-lg bg-slate-100 animate-pulse mb-2.5" />
+              <div className="h-3 rounded bg-slate-100 animate-pulse" />
+              <div className="h-3 rounded bg-slate-100 animate-pulse mt-1.5 w-2/3" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Faded at both edges so cards enter and leave rather than being cut
+           off mid-word at the container border. */
+        <div className="ih-ticker-track relative overflow-hidden
+                        [mask-image:linear-gradient(to_right,transparent,black_3%,black_97%,transparent)]">
+          <div className="ih-ticker flex items-stretch gap-4 w-max py-1"
+            style={{ animationDuration: `${Math.max(28, live.length * 9)}s` }}>
+            {lane.map((n, i) => <NewsCard key={`${n.id}-${i}`} article={n} />)}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
 
-/* "View all" — a popup rather than a page, matching every other "View all"
-   on this dashboard, which also means there is no screen to find a way back
-   from. */
 function DailyNewsPopup({ onClose }: { onClose: () => void }) {
   const { news, loading } = useNews('all');
   const [cat, setCat] = useState('All');
@@ -900,7 +927,7 @@ function DailyNewsPopup({ onClose }: { onClose: () => void }) {
             {shown.map(n => {
               const inner = (
                 <>
-                  <NewsThumb article={n} className="w-20 h-16 rounded-lg shrink-0" />
+                  <NewsThumb article={n} className="w-20 h-16 rounded-lg shrink-0" icon="w-4 h-4" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-slate-800 leading-snug">{n.title}</p>
                     <p className="text-[12px] text-slate-400 leading-snug mt-0.5 line-clamp-2">{n.summary}</p>

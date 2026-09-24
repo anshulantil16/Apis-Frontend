@@ -603,6 +603,21 @@ export const NEWS_TAG_STYLE: Record<string, string> = {
   industry:       'text-blue-700 bg-blue-50 ring-blue-200',
   products:       'text-rose-700 bg-rose-50 ring-rose-200',
 };
+/* The tile a story wears when it has no picture, which is most of them:
+   Google News carries no images at all. Four identical grey boxes read as four
+   broken images, so the tile is tinted by category instead -- the row then
+   looks composed rather than failed, and the colour repeats the tag. */
+export const NEWS_TILE: Record<string, { from: string; ring: string }> = {
+  company:        { from: 'from-amber-100 to-orange-200',   ring: 'text-amber-500/60' },
+  apis:           { from: 'from-cyan-100 to-sky-200',       ring: 'text-cyan-500/60' },
+  food_apis:      { from: 'from-emerald-100 to-teal-200',   ring: 'text-emerald-500/60' },
+  nutraceuticals: { from: 'from-violet-100 to-purple-200',  ring: 'text-violet-500/60' },
+  industry:       { from: 'from-blue-100 to-indigo-200',    ring: 'text-blue-500/60' },
+  products:       { from: 'from-rose-100 to-pink-200',      ring: 'text-rose-500/60' },
+};
+export const newsTile = (c: string) =>
+  NEWS_TILE[c] ?? { from: 'from-slate-100 to-slate-200', ring: 'text-slate-400/60' };
+
 export const newsTagStyle = (c: string) =>
   NEWS_TAG_STYLE[c] ?? 'text-slate-600 bg-slate-100 ring-slate-200';
 
