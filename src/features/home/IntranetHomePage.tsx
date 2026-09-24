@@ -4,7 +4,7 @@ import {
   ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw, Clock,
-  Newspaper, ExternalLink,
+  Newspaper,
 } from 'lucide-react';
 import type { StateHolidayGroup } from './IntranetHomeShared';
 import {
@@ -825,11 +825,11 @@ function NewsCard({ article }: { article: NewsArticle }) {
         </p>
       )}
 
-      <span className="flex items-center gap-1.5 mt-auto pt-2.5 text-[10.5px] text-slate-400 font-bold">
-        <span className="truncate min-w-0">{article.sourceName || 'APIS India'}</span>
-        {article.sourceUrl && (
-          <ExternalLink className="w-3 h-3 shrink-0 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-        )}
+      {/* No hover-only arrow. The whole card is the link, an icon that appears
+          only on hover cannot be seen on a touch screen at all, and it was one
+          more thing in a card whose job is to be read. */}
+      <span className="block mt-auto pt-2.5 text-[10.5px] text-slate-400 font-bold truncate">
+        {article.sourceName || 'APIS India'}
       </span>
     </>
   );
@@ -959,36 +959,55 @@ function DailyNewsPopup({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div className="p-6">
+        <div className="px-4 py-3 sm:px-5">
           {!loading && shown.length === 0 && (
             <p className="text-center text-sm text-slate-400 py-10">
-              No stories here yet. These are posted from Admin Console › Dashboard Content.
+              No stories here yet. These arrive from the feeds set up in
+              Admin Console &rsaquo; Dashboard Content.
             </p>
           )}
-          <div className="space-y-2">
+
+          {/* A reading list: headline first, everything else quiet underneath.
+              No picture well -- most stories have no picture, and a column of
+              identical tinted squares was the loudest thing on the screen
+              while carrying no information at all. */}
+          <ul className="divide-y divide-slate-100">
             {shown.map(n => {
               const inner = (
                 <>
-                  <NewsThumb article={n} className="w-20 h-16 rounded-lg shrink-0" icon="w-4 h-4" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-800 leading-snug">{n.title}</p>
-                    <p className="text-[12px] text-slate-400 leading-snug mt-0.5 line-clamp-2">{n.summary}</p>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="text-[11px] font-bold text-slate-300">{newsAge(n.publishedOn)}</span>
-                      {n.sourceName && <span className="text-[11px] text-slate-300">· {n.sourceName}</span>}
-                      <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-black ring-1 ${newsTagStyle(n.category)}`}>
+                  <NewsThumb article={n} icon="w-4 h-4"
+                    className="w-9 h-9 rounded-lg shrink-0 mt-0.5" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13.5px] font-bold text-slate-800 leading-snug
+                                     group-hover:text-amber-700 transition-colors">
+                      {n.title}
+                    </span>
+                    {n.summary && (
+                      <span className="block text-[12px] text-slate-400 leading-relaxed mt-1 line-clamp-2">
+                        {n.summary}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-400 font-bold flex-wrap">
+                      <span>{newsAge(n.publishedOn)}</span>
+                      {n.sourceName && <><span className="text-slate-300">&middot;</span><span className="truncate">{n.sourceName}</span></>}
+                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ring-1 ${newsTagStyle(n.category)}`}>
                         {n.categoryLabel}
                       </span>
-                    </div>
-                  </div>
+                    </span>
+                  </span>
                 </>
               );
-              const cls = 'flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors';
-              return n.sourceUrl
-                ? <a key={n.id} href={n.sourceUrl} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
-                : <div key={n.id} className={cls}>{inner}</div>;
+              const cls = 'group flex items-start gap-3 py-3 px-2 -mx-2 rounded-xl ' +
+                          'hover:bg-amber-50/50 transition-colors';
+              return (
+                <li key={n.id}>
+                  {n.sourceUrl
+                    ? <a href={n.sourceUrl} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
+                    : <div className={cls}>{inner}</div>}
+                </li>
+              );
             })}
-          </div>
+          </ul>
         </div>
       </div>
     </div>
