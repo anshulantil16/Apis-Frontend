@@ -28,6 +28,9 @@ const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200
 export function ApprovalsPanel({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const showAdminQueue = session.role === 'admin' || session.role === 'super_admin';
   const showTicketQueue = session.role === 'it_support' || session.role === 'super_admin';
+  // Bumped when a job is logged, so the list and the report below it show it
+  // at once rather than on the next visit to the tab.
+  const [logTick, setLogTick] = useState(0);
   return (
     <div className="space-y-5">
       {showAdminQueue && <AdminApprovalsSection session={session} onChanged={onChanged} />}
@@ -38,8 +41,14 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
           report is meant to cover both. The server has always allowed it --
           see require_role in views/work_report.py and the 'logged' branch in
           views/tickets.py -- so this was the only thing hiding it. */}
-      {(showTicketQueue || showAdminQueue) && <LogWorkSection session={session} onChanged={onChanged} />}
-      {(showTicketQueue || showAdminQueue) && <WorkReportSection />}
+      {(showTicketQueue || showAdminQueue) && (
+        <LogWorkSection session={session}
+          onChanged={() => { setLogTick(t => t + 1); onChanged(); }} />
+      )}
+      {/* Directly under the form, because the complaint that led to it was
+          "we add there but nothing comes anywhere". */}
+      {(showTicketQueue || showAdminQueue) && <LoggedWorkSection session={session} refresh={logTick} />}
+      {(showTicketQueue || showAdminQueue) && <WorkReportSection refresh={logTick} />}
       {showTicketQueue && <ItTicketHistorySection />}
     </div>
   );
@@ -464,13 +473,29 @@ const WORK_COPY = {
   },
 };
 
+/* Minutes between two HH:MM times, rolling past midnight -- a job that ran
+   from 23:00 to 00:30 took ninety minutes, not minus one thousand three
+   hundred and fifty. Mirrors worktime.duration_minutes on the server. */
+function spanMinutes(from: string, to: string): number | null {
+  const m = (t: string) => {
+    const [h, mm] = t.split(':').map(Number);
+    return Number.isFinite(h) && Number.isFinite(mm) ? h * 60 + mm : null;
+  };
+  const a = m(from), b = m(to);
+  if (a === null || b === null) return null;
+  const span = b >= a ? b - a : b + 24 * 60 - a;
+  return span || null;
+}
+
 function LogWorkSection({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const today = isoLocal(new Date());
   const side = session.role === 'admin' ? 'admin'
              : session.role === 'it_support' ? 'it' : 'both';
   const copy = WORK_COPY[side];
+  // No category pre-picked. It used to open on "Other", which is a valid
+  // answer nobody means -- and the report is grouped by this field.
   const blank = {
-    subject: '', description: '', category: 'other', priority: 'medium',
+    subject: '', description: '', category: '', priority: 'medium',
     logged_for: '', performed_on: today, time_spent_minutes: '', status: 'closed',
     worked_from: '', worked_to: '',
   };
@@ -480,11 +505,37 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
   const [err, setErr] = useState('');
   const [done, setDone] = useState('');
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string) => setForm(f => {
+    const next = { ...f, [k]: v };
+    // Typing the hours fills the minutes in, so a required field is not
+    // busywork -- but it stays editable: a job with a break in the middle is
+    // honestly two hours of work inside a four-hour window, and only the
+    // person who did it knows that.
+    if (k === 'worked_from' || k === 'worked_to') {
+      const mins = spanMinutes(next.worked_from, next.worked_to);
+      if (mins !== null) next.time_spent_minutes = String(mins);
+    }
+    return next;
+  });
+
+  // Every field is required. A record with the hours or the "who for" left
+  // blank counts as one job in the monthly report and answers nothing else,
+  // which is most of what the report is for. Checked here so the answer is
+  // immediate, and again on the server, which is where it is decided.
+  const MISSING: [keyof typeof blank, string][] = [
+    ['subject', 'Say what the job was.'],
+    ['description', 'Add a line about what you did.'],
+    ['category', 'Pick the category this job belongs to.'],
+    ['logged_for', 'Say who or what it was for.'],
+    ['performed_on', 'Give the day it was done.'],
+    ['worked_from', 'Give the time you started.'],
+    ['worked_to', 'Give the time you finished.'],
+    ['time_spent_minutes', 'How long did it take?'],
+  ];
 
   const submit = async () => {
-    if (!form.subject.trim()) { setErr('Say what the job was.'); return; }
-    if (!form.description.trim()) { setErr('Add a line about what you did.'); return; }
+    const gap = MISSING.find(([k]) => !String(form[k] ?? '').trim());
+    if (gap) { setErr(gap[1]); return; }
     setBusy(true); setErr(''); setDone('');
     try {
       const r = await rpFetch(`${API}/tickets/`, {
@@ -553,6 +604,7 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
             <div>
               <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Category</label>
               <select className={inputCls} value={form.category} onChange={e => set('category', e.target.value)}>
+                <option value="" disabled>Choose one…</option>
                 {side === 'it' && Object.entries(TICKET_CATEGORY_LABEL).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
                 ))}
@@ -609,11 +661,11 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
 
           <div>
             <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">
-              Minutes spent <span className="text-slate-300 normal-case font-bold">— only if the hours above don't say it</span>
+              Minutes spent <span className="text-slate-300 normal-case font-bold">— filled in from the hours; change it if a break means it took less</span>
             </label>
             <input type="number" min={0} className={inputCls} value={form.time_spent_minutes}
               onChange={e => set('time_spent_minutes', e.target.value)}
-              placeholder="Worked out from the times above if you leave this blank" />
+              placeholder="Worked out from the times above" />
           </div>
 
           <p className="text-[11px] text-slate-400">
@@ -633,8 +685,127 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
   );
 }
 
+/* ── What has actually been logged ─────────────────────────────
+   A job an admin logged was saved, counted, and then appeared on no screen
+   they could open -- the ticket list treated them as an employee and then
+   excluded the work log outright. Saving something and seeing it nowhere
+   afterwards is indistinguishable from it not saving, which is what got
+   reported. Both roles get this list, immediately below the form that fills
+   it, and it reloads the moment something is logged. ─────────────── */
+function LoggedWorkSection({ session, refresh }: { session: Session; refresh: number }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
+  const [mineOnly, setMineOnly] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true); setErr('');
+    try {
+      const r = await rpFetch(`${API}/tickets/?origin=logged&limit=200`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not load what has been logged.');
+      setRows(d.results || []);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not reach the server.');
+    } finally { setLoading(false); }
+  }, []);
+  // `refresh` is bumped by the form above on a successful save.
+  useEffect(() => { load(); }, [load, refresh]);
+
+  const today = isoLocal(new Date());
+  const month = today.slice(0, 7);
+  const me = (session.email || '').toLowerCase();
+  const isMine = (r: any) => (r.performed_by_email || '').toLowerCase() === me;
+
+  const shown = (mineOnly ? rows.filter(isMine) : rows).slice(0, 20);
+  const thisMonth = rows.filter(r => (r.performed_on || '').startsWith(month));
+  const minutes = thisMonth.reduce((n, r) => n + (r.time_spent_minutes || 0), 0);
+  const hours = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
+
+  const TILES = [
+    { label: 'Logged Today', value: rows.filter(r => r.performed_on === today).length,
+      icon: ClipboardList, cls: 'text-violet-600' },
+    { label: 'This Month', value: thisMonth.length, icon: History, cls: 'text-cyan-600' },
+    { label: 'Time This Month', value: minutes ? hours(minutes) : '—', icon: Timer, cls: 'text-sky-600' },
+    { label: 'Still Running', value: rows.filter(r => r.status === 'in_progress').length,
+      icon: PlayCircle, cls: 'text-amber-600' },
+  ];
+
+  return (
+    <Panel title="Work logged" icon={ClipboardList}
+      subtitle="Jobs recorded directly — newest first, and counted in the monthly report"
+      right={
+        <div className="flex items-center gap-2">
+          <button onClick={() => setMineOnly(m => !m)}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-colors border
+              ${mineOnly ? 'bg-slate-900 text-white border-slate-900'
+                         : 'text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+            Only mine
+          </button>
+          <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      }>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        {TILES.map(t => {
+          const Icon = t.icon;
+          return (
+            <div key={t.label} className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+              <Icon className={`w-4 h-4 mb-1.5 ${t.cls}`} />
+              <p className="text-xl font-black text-slate-900 tabular-nums">{loading ? '—' : t.value}</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400 mt-0.5">{t.label}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {err && <p className="text-[12px] text-rose-600 font-semibold py-3 text-center">{err}</p>}
+      {loading ? (
+        <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
+      ) : !shown.length ? (
+        <Empty msg={mineOnly ? 'You have not logged anything yet' : 'Nothing logged yet'}
+          icon={ClipboardList} />
+      ) : (
+        <div className="space-y-2">
+          {shown.map((r, i) => (
+            <Reveal key={r.id} delay={i * 25}>
+              <div className="flex items-start gap-3 rounded-xl bg-white border border-slate-200 p-3">
+                <span className="text-[10px] font-black text-slate-400 tabular-nums shrink-0 w-14 pt-0.5">
+                  {r.performed_on ? fmtDate(r.performed_on) : ''}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-bold text-slate-800 truncate">{r.subject}</p>
+                  <p className="text-[10.5px] text-slate-400 truncate">
+                    {r.performed_by_name || r.performed_by_email}
+                    {r.logged_for ? ` · for ${r.logged_for}` : ''}
+                    {' · '}{r.category_label}
+                    {r.worked_from ? ` · ${r.worked_from}–${r.worked_to}` : ''}
+                    {r.time_spent_minutes ? ` · ${hours(r.time_spent_minutes)}` : ''}
+                  </p>
+                </div>
+                {r.after_hours_minutes > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700
+                                   text-[9px] font-black uppercase shrink-0">
+                    {hours(r.after_hours_minutes)} late
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 shrink-0
+                  ${r.status === 'closed' ? 'bg-emerald-50 text-emerald-600 ring-emerald-200'
+                                          : 'bg-sky-50 text-sky-600 ring-sky-200'}`}>
+                  {r.status === 'closed' ? 'Done' : 'Running'}
+                </span>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /* ── The month's work: tickets closed AND jobs logged ─────────────────── */
-function WorkReportSection() {
+function WorkReportSection({ refresh }: { refresh: number }) {
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -683,7 +854,7 @@ function WorkReportSection() {
       })
       .catch(() => { if (live) setErr('Could not reach the server.'); });
     return () => { live = false; };
-  }, [month]);
+  }, [month, refresh]);
 
   const hours = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
 
