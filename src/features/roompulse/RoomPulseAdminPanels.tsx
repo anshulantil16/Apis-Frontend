@@ -537,10 +537,39 @@ function WorkReportSection() {
   });
   const [data, setData] = useState<any>(null);
   const [err, setErr] = useState('');
+  // A total invites the question "made up of what?" straight back, so the
+  // answer is one click away rather than a separate screen.
+  const [openPerson, setOpenPerson] = useState('');
+  const [items, setItems] = useState<any[]>([]);
+  const [itemsBusy, setItemsBusy] = useState(false);
+
+  const showPerson = async (email: string) => {
+    if (openPerson === email) { setOpenPerson(''); setItems([]); return; }
+    setOpenPerson(email); setItems([]); setItemsBusy(true);
+    try {
+      const r = await rpFetch(`${API}/work-report/?month=${month}&person=${encodeURIComponent(email)}`);
+      const d = await r.json();
+      if (r.ok) setItems(d.items || []);
+    } finally { setItemsBusy(false); }
+  };
+
+  const download = () => {
+    // Straight to the browser: the session cookie is not what authorises
+    // this, so it goes through rpFetch and is handed over as a blob.
+    rpFetch(`${API}/work-report/export/?month=${month}`).then(async r => {
+      if (!r.ok) { setErr('Could not build the file.'); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `work-done-${month}.xlsx`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    });
+  };
 
   useEffect(() => {
     let live = true;
-    setData(null); setErr('');
+    setData(null); setErr(''); setOpenPerson(''); setItems([]);
     rpFetch(`${API}/work-report/?month=${month}`)
       .then(async r => {
         const body = await r.json().catch(() => ({}));
@@ -558,8 +587,15 @@ function WorkReportSection() {
     <Panel title="Work this month" icon={History}
       subtitle={data ? `${data.label} · tickets closed and jobs logged` : 'Loading…'}
       right={
-        <input type="month" value={month} onChange={e => setMonth(e.target.value)}
-          className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-bold text-slate-600" />
+        <div className="flex items-center gap-2">
+          <input type="month" value={month} onChange={e => setMonth(e.target.value)}
+            className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-bold text-slate-600" />
+          <button onClick={download} title="Download this month as a spreadsheet"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
+                       text-[12px] font-black text-slate-600 hover:bg-slate-50 transition-colors">
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+        </div>
       }>
       {err && <p className="text-[12px] text-rose-600 font-semibold py-4 text-center">{err}</p>}
       {!err && !data && <Skel className="h-40" />}
@@ -587,16 +623,51 @@ function WorkReportSection() {
                 <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">By person</p>
                 <div className="space-y-1.5">
                   {data.people.map((p: any) => (
-                    <div key={p.email}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2">
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-black text-slate-700 truncate">{p.name}</p>
-                        <p className="text-[10px] text-slate-400">
-                          {p.closed} from tickets · {p.logged} logged
-                          {p.minutes ? ` · ${hours(p.minutes)}` : ''}
-                        </p>
-                      </div>
-                      <span className="text-base font-black text-slate-900 tabular-nums shrink-0">{p.total}</span>
+                    <div key={p.email} className="rounded-xl border border-slate-200 overflow-hidden">
+                      <button onClick={() => showPerson(p.email)}
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left
+                                   hover:bg-slate-50 transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-black text-slate-700 truncate">{p.name}</p>
+                          <p className="text-[10px] text-slate-400">
+                            {p.closed} from tickets · {p.logged} logged
+                            {p.minutes ? ` · ${hours(p.minutes)}` : ''}
+                          </p>
+                        </div>
+                        <span className="flex items-center gap-2 shrink-0">
+                          <span className="text-base font-black text-slate-900 tabular-nums">{p.total}</span>
+                          <ChevronRight className={`w-3.5 h-3.5 text-slate-300 transition-transform
+                            ${openPerson === p.email ? 'rotate-90' : ''}`} />
+                        </span>
+                      </button>
+
+                      {openPerson === p.email && (
+                        <div className="border-t border-slate-100 bg-slate-50/60 px-3 py-2 space-y-1.5">
+                          {itemsBusy && <Skel className="h-10" />}
+                          {!itemsBusy && !items.length && (
+                            <p className="text-[11px] text-slate-400 py-1">Nothing recorded.</p>
+                          )}
+                          {items.map(it => (
+                            <div key={it.id} className="flex items-start gap-2 text-[11px]">
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0
+                                ${it.origin === 'logged' ? 'bg-violet-100 text-violet-700'
+                                                         : 'bg-cyan-100 text-cyan-700'}`}>
+                                {it.origin === 'logged' ? 'Logged' : 'Ticket'}
+                              </span>
+                              <span className="text-slate-400 tabular-nums shrink-0 w-16">
+                                {it.date ? fmtDate(it.date) : ''}
+                              </span>
+                              <span className="flex-1 min-w-0">
+                                <span className="font-bold text-slate-700">{it.subject}</span>
+                                <span className="text-slate-400">
+                                  {it.for ? ` · for ${it.for}` : ''} · {it.category}
+                                  {it.minutes ? ` · ${hours(it.minutes)}` : ''}
+                                </span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
