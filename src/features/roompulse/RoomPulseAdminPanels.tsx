@@ -5,7 +5,7 @@ import {
   CheckCircle2, XCircle, Clock, AlertTriangle, Users, Building2, Shield,
   UploadCloud, Download, Trash2, Plus, RefreshCw, TrendingUp, Timer,
   ChevronLeft, ChevronRight, FileSpreadsheet, UserPlus, Percent, BarChart3,
-  PackageCheck, Truck, Headphones, PlayCircle, History, Inbox, Paperclip,
+  PackageCheck, Truck, Headphones, PlayCircle, History, Inbox, Paperclip, ClipboardList,
 } from 'lucide-react';
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
@@ -29,6 +29,8 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
       {showAdminQueue && <AdminApprovalsSection session={session} onChanged={onChanged} />}
       {showAdminQueue && <AdminTicketHistorySection />}
       {showTicketQueue && <TicketApprovalsSection session={session} onChanged={onChanged} />}
+      {showTicketQueue && <LogWorkSection session={session} onChanged={onChanged} />}
+      {showTicketQueue && <WorkReportSection />}
       {showTicketQueue && <ItTicketHistorySection />}
     </div>
   );
@@ -386,6 +388,251 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
 
 /* ── IT Ticket History — daily volume/throughput summary + a recent-tickets
    log, at the bottom of the IT Support queue only. ───────────────────────── */
+/* ── Logging work nobody raised a ticket for ──────────────────────────────
+   A large part of what IT and Admin do never becomes a ticket: a server
+   restarted, a laptop rebuilt for a joiner, a printer fixed because somebody
+   walked over and asked. Counted only what came through the queue, the
+   monthly figure measured how often people used the ticket form rather than
+   how much work was done. ───────────────────────────────────────────────── */
+function LogWorkSection({ session, onChanged }: { session: Session; onChanged: () => void }) {
+  const today = isoLocal(new Date());
+  const blank = {
+    subject: '', description: '', category: 'other', priority: 'medium',
+    logged_for: '', performed_on: today, time_spent_minutes: '', status: 'closed',
+  };
+  const [form, setForm] = useState<Record<string, string>>(blank);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState('');
+
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async () => {
+    if (!form.subject.trim()) { setErr('Say what the job was.'); return; }
+    if (!form.description.trim()) { setErr('Add a line about what you did.'); return; }
+    setBusy(true); setErr(''); setDone('');
+    try {
+      const r = await rpFetch(`${API}/tickets/`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form, origin: 'logged',
+          performed_by_name: session.name,
+          time_spent_minutes: form.time_spent_minutes || null,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not log that.');
+      setDone(d.message || 'Logged.');
+      setForm({ ...blank, performed_on: form.performed_on });   // keep the date, likely the same day
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not log that.');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Panel title="Log work you did" icon={ClipboardList}
+      subtitle="For jobs nobody raised a ticket for — so the month's count is the real one"
+      right={
+        <button onClick={() => { setOpen(o => !o); setErr(''); setDone(''); }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600 text-white
+                     text-[12px] font-black hover:bg-cyan-700 transition-colors">
+          <Plus className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-45' : ''}`} />
+          {open ? 'Close' : 'Log a job'}
+        </button>
+      }>
+      {done && (
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 mb-3">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <p className="text-[12px] text-emerald-700 font-bold">{done}</p>
+        </div>
+      )}
+      {!open ? (
+        <p className="text-[12px] text-slate-400">
+          Restarted a server, rebuilt a laptop, fixed a printer someone mentioned in passing —
+          record it here and it counts in the monthly report like any ticket.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {err && (
+            <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
+              <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-rose-700">{err}</p>
+            </div>
+          )}
+
+          <div>
+            <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">What was the job?</label>
+            <input className={inputCls} value={form.subject} maxLength={200}
+              onChange={e => set('subject', e.target.value)}
+              placeholder="Restarted the mail server" />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">What did you do?</label>
+            <textarea className={inputCls + ' min-h-[70px]'} value={form.description}
+              onChange={e => set('description', e.target.value)}
+              placeholder="Queue was stuck. Restarted the service and cleared the backlog." />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Category</label>
+              <select className={inputCls} value={form.category} onChange={e => set('category', e.target.value)}>
+                {Object.entries(TICKET_CATEGORY_LABEL).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Who was it for?</label>
+              <input className={inputCls} value={form.logged_for} maxLength={200}
+                onChange={e => set('logged_for', e.target.value)}
+                placeholder="A person, a department, or the whole office" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Day it was done</label>
+              <input type="date" className={inputCls} value={form.performed_on} max={today}
+                onChange={e => set('performed_on', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Minutes spent</label>
+              <input type="number" min={0} className={inputCls} value={form.time_spent_minutes}
+                onChange={e => set('time_spent_minutes', e.target.value)} placeholder="Optional" />
+            </div>
+            <div>
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">State</label>
+              <select className={inputCls} value={form.status} onChange={e => set('status', e.target.value)}>
+                <option value="closed">Finished</option>
+                <option value="in_progress">Still working on it</option>
+              </select>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-400">
+            Write it up whenever suits — the date above is the day the work happened, which is the
+            month it will count in.
+          </p>
+
+          <button onClick={submit} disabled={busy}
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[12px] font-black
+                       hover:bg-slate-800 disabled:opacity-50 transition-colors">
+            {busy ? 'Saving…' : 'Record this job'}
+          </button>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+/* ── The month's work: tickets closed AND jobs logged ─────────────────── */
+function WorkReportSection() {
+  const [month, setMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    let live = true;
+    setData(null); setErr('');
+    rpFetch(`${API}/work-report/?month=${month}`)
+      .then(async r => {
+        const body = await r.json().catch(() => ({}));
+        if (!live) return;
+        if (!r.ok) setErr(body.error || 'Could not load the report.');
+        else setData(body);
+      })
+      .catch(() => { if (live) setErr('Could not reach the server.'); });
+    return () => { live = false; };
+  }, [month]);
+
+  const hours = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
+
+  return (
+    <Panel title="Work this month" icon={History}
+      subtitle={data ? `${data.label} · tickets closed and jobs logged` : 'Loading…'}
+      right={
+        <input type="month" value={month} onChange={e => setMonth(e.target.value)}
+          className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-bold text-slate-600" />
+      }>
+      {err && <p className="text-[12px] text-rose-600 font-semibold py-4 text-center">{err}</p>}
+      {!err && !data && <Skel className="h-40" />}
+      {data && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { l: 'Jobs done', v: data.total },
+              { l: 'From tickets', v: data.from_tickets },
+              { l: 'Logged directly', v: data.logged_directly },
+              { l: 'Time recorded', v: data.minutes_recorded ? hours(data.minutes_recorded) : '—' },
+            ].map(s => (
+              <div key={s.l} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xl font-black text-slate-900 tabular-nums">{s.v}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{s.l}</p>
+              </div>
+            ))}
+          </div>
+
+          {!data.total ? (
+            <Empty msg="Nothing recorded for this month yet" icon={History} />
+          ) : (
+            <>
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">By person</p>
+                <div className="space-y-1.5">
+                  {data.people.map((p: any) => (
+                    <div key={p.email}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-black text-slate-700 truncate">{p.name}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {p.closed} from tickets · {p.logged} logged
+                          {p.minutes ? ` · ${hours(p.minutes)}` : ''}
+                        </p>
+                      </div>
+                      <span className="text-base font-black text-slate-900 tabular-nums shrink-0">{p.total}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">By category</p>
+                <div className="space-y-1.5">
+                  {data.by_category.map((c: any) => (
+                    <div key={c.category}>
+                      <div className="flex justify-between text-[12px] mb-1">
+                        <span className="font-bold text-slate-600">{c.label}</span>
+                        <span className="font-black text-slate-800">{c.count}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="rp-grow h-full rounded-full bg-cyan-500"
+                          style={{ width: `${(c.count / (data.by_category[0]?.count || 1)) * 100}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+            Counted by the day the work was done, not the day the ticket arrived — a ticket raised
+            last month and finished this one belongs to this month.
+            {data.still_open > 0 && ` ${data.still_open} still open right now.`}
+          </p>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function ItTicketHistorySection() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -403,14 +650,23 @@ function ItTicketHistorySection() {
   const today = isoLocal(new Date());
   const isToday = (iso: string) => isoLocal(new Date(iso)) === today;
 
-  const receivedToday = tickets.filter(t => isToday(t.created_at)).length;
-  const solvedToday = tickets.filter(t => t.status === 'closed' && isToday(t.updated_at)).length;
+  // "Received" means somebody asked. A job the team logged themselves was
+  // never received, so counting it here would inflate incoming volume with
+  // the team's own work.
+  const receivedToday = tickets.filter(t => t.origin !== 'logged' && isToday(t.created_at)).length;
+  // Done today means the work happened today -- `performed_on`, not the row's
+  // updated_at, which is today for a job written up this morning that was
+  // actually done last Friday.
+  const solvedToday = tickets.filter(t => t.status === 'closed'
+    && (t.performed_on ? t.performed_on === today : isToday(t.updated_at))).length;
+  const loggedToday = tickets.filter(t => t.origin === 'logged' && t.performed_on === today).length;
   const pending = tickets.filter(t => t.status === 'pending').length;
   const inProgress = tickets.filter(t => t.status === 'in_progress').length;
 
   const STAT_TILES = [
-    { label: 'Received Today', value: receivedToday, icon: Inbox, cls: 'text-cyan-600' },
-    { label: 'Solved Today', value: solvedToday, icon: CheckCircle2, cls: 'text-emerald-600' },
+    { label: 'Raised Today', value: receivedToday, icon: Inbox, cls: 'text-cyan-600' },
+    { label: 'Done Today', value: solvedToday, icon: CheckCircle2, cls: 'text-emerald-600' },
+    { label: 'Logged Today', value: loggedToday, icon: ClipboardList, cls: 'text-violet-600' },
     { label: 'In Progress', value: inProgress, icon: PlayCircle, cls: 'text-sky-600' },
     { label: 'Pending', value: pending, icon: Clock, cls: 'text-amber-600' },
   ];
@@ -424,7 +680,7 @@ function ItTicketHistorySection() {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       }>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
         {STAT_TILES.map(s => {
           const Icon = s.icon;
           return (
@@ -454,10 +710,23 @@ function ItTicketHistorySection() {
                     : 'bg-amber-50 text-amber-600 ring-amber-200'}`}>
                   {t.status_label}
                 </span>
+                {/* Work the team logged itself reads very differently from a
+                    ticket somebody raised — same row, but say which. */}
+                {t.origin === 'logged' && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1
+                                   bg-violet-50 text-violet-600 ring-violet-200 flex-shrink-0">
+                    Logged
+                  </span>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[12px] font-bold text-slate-800 truncate">{t.subject}</p>
                   <p className="text-[10.5px] text-slate-400 truncate">
-                    {t.requested_by_name} · {TICKET_CATEGORY_LABEL[t.category] || t.category} · {fmtTicketWhen(t.created_at)}
+                    {t.origin === 'logged'
+                      ? <>{t.performed_by_name || t.requested_by_name}
+                          {t.logged_for ? ` · for ${t.logged_for}` : ''}</>
+                      : t.requested_by_name}
+                    {' · '}{TICKET_CATEGORY_LABEL[t.category] || t.category}
+                    {' · '}{fmtTicketWhen(t.created_at)}
                   </p>
                 </div>
               </div>
@@ -1051,7 +1320,7 @@ function AnalyticsPanel({ session }: { session: Session }) {
           { l: 'Item Requests', v: data.resource_requests?.total ?? 0, icon: PackageCheck, raw: true,
             sub: `${data.resource_requests?.pending ?? 0} pending` },
           { l: 'Tickets Raised', v: tickets.total ?? 0, icon: Headphones, raw: true,
-            sub: `${tickets.open ?? 0} still open` },
+            sub: `${tickets.open ?? 0} open · ${tickets.logged_directly ?? 0} logged` },
           { l: 'Avg. Fix Time', v: tickets.avg_resolution_minutes, suffix: 'm', icon: History },
         ].map((s: any, i) => {
           const Icon = s.icon;

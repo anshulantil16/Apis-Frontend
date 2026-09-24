@@ -59,6 +59,11 @@ A panel that fetches must check `res.ok` before setting state. A non-OK body
 is `{error}`, and feeding it to the renderer is how a 403 became a dashboard
 full of dashes instead of a message.
 
+A ticket row carries `origin`: `requested` or `logged`. Logged rows are work
+the team did with no ticket behind it, so anything counting "received" or
+"raised" must exclude them, and anything dated must read `performed_on` rather
+than `created_at` / `updated_at` — a job done Friday may be written up Monday.
+
 A ticket's `history` is its audit trail — shown by `TicketTrail` in My
 Requests. The ticket row itself only carries the most recent review.
 
