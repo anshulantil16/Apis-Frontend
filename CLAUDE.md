@@ -44,13 +44,45 @@ login screen. The server takes identity from that header alone — sending
 `email: session.email` in a body does nothing now, and used to be the whole
 of the security model.
 
+The room grid is live: it re-fetches every 30s and the server derives each
+room's status from the clock, so a meeting frees its room on its own. Admin
+and Super Admin also get a "Free this room now" control on an occupied card —
+finished early (`action: 'release'`) or cancelled (`action: 'cancel'`), which
+are two different records, not two words for the same thing.
+
 Vocabularies the server owns (ticket status, priority) are read through
 `ticketStatusMeta()` / `ticketPriorityMeta()`, which fall back to rendering
 the raw value rather than reading `.label` off `undefined`. Both lists have
 grown once already.
 
+A panel that fetches must check `res.ok` before setting state. A non-OK body
+is `{error}`, and feeding it to the renderer is how a 403 became a dashboard
+full of dashes instead of a message.
+
+A ticket row carries `origin`: `requested` or `logged`. Logged rows are work
+the team did with no ticket behind it, so anything counting "received" or
+"raised" must exclude them, and anything dated must read `performed_on` rather
+than `created_at` / `updated_at` — a job done Friday may be written up Monday.
+
 A ticket's `history` is its audit trail — shown by `TicketTrail` in My
 Requests. The ticket row itself only carries the most recent review.
+
+## Goal Setting (`src/features/goalsetting/`)
+
+Calls go through `call()` in `api.ts`, which attaches the session token minted
+at sign-in (`X-GoalSetting-Session`). The two file downloads use `fetch`
+directly and carry the header themselves — anything new that does the same
+must too.
+
+A sheet comes back with `your_role`: what the signed-in person is **to that
+sheet**, decided by the server from the org chart. Obey it rather than
+`me.user_type`. On your own sheet you are the employee, even if you are an HOD
+— reading the role off user_type is what stopped managers and HODs filling in
+their own goals.
+
+Who is a reviewer is decided by `reports_count` / `hod_reports_count` — who
+actually reports to them — not by user_type, so a manager typed into the
+upload sheet as "Employee" still gets their team.
 
 ## SalesIQ (`src/features/salesiq/`)
 
