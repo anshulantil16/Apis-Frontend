@@ -11,7 +11,7 @@ import {
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
-  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './HelpDeskShared';
+  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, fileHref} from './HelpDeskShared';
 import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, ticketStatusMeta, fmtTicketWhen } from './HelpDeskTickets';
 
 // What the server treats as the normal working day — see roompulse/worktime.py.
@@ -33,8 +33,13 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
       {showAdminQueue && <AdminApprovalsSection session={session} onChanged={onChanged} />}
       {showAdminQueue && <AdminTicketHistorySection />}
       {showTicketQueue && <TicketApprovalsSection session={session} onChanged={onChanged} />}
-      {showTicketQueue && <LogWorkSection session={session} onChanged={onChanged} />}
-      {showTicketQueue && <WorkReportSection />}
+      {/* Logging work and the report it feeds are for Admin as much as IT:
+          an admin does jobs nobody raised a ticket for too, and the monthly
+          report is meant to cover both. The server has always allowed it --
+          see require_role in views/work_report.py and the 'logged' branch in
+          views/tickets.py -- so this was the only thing hiding it. */}
+      {(showTicketQueue || showAdminQueue) && <LogWorkSection session={session} onChanged={onChanged} />}
+      {(showTicketQueue || showAdminQueue) && <WorkReportSection />}
       {showTicketQueue && <ItTicketHistorySection />}
     </div>
   );
@@ -328,7 +333,7 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                         <div className="flex items-center gap-1.5 flex-wrap mt-2">
                           <Paperclip className="w-3 h-3 text-slate-400 flex-shrink-0" />
                           {t.attachments.map((a: { id: number; name: string; url: string }) => (
-                            <a key={a.id} href={a.url} target="_blank" rel="noreferrer"
+                            <a key={a.id} href={fileHref(a.url)} target="_blank" rel="noreferrer"
                               className="px-1.5 py-0.5 rounded bg-white border border-slate-200
                                         text-[10px] font-bold text-cyan-700 hover:bg-cyan-50 hover:border-cyan-300
                                         underline decoration-dotted transition-colors">

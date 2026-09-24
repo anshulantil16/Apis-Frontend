@@ -148,11 +148,33 @@ function RoomCard({ room, delay, onBook, canManage, onFreed }: {
             Next: {room.next_booking.start_time} · {room.next_booking.requested_by_name}
           </p>
         )}
-        {room.status === 'free' && !room.next_booking && (
+        {room.status === 'free' && !room.next_booking && !room.pending?.length && (
           <p className="relative text-[11px] text-emerald-600/70 mb-3 flex items-center gap-1.5">
             <span className="w-1 h-1 rounded-full bg-emerald-400 rp-pulse-glow" />
             Nothing booked today
           </p>
+        )}
+
+        {/* Requests nobody has approved yet. Without these the card said
+            "Nothing booked today" straight after somebody had booked it and
+            been told it went for approval — so they could not tell their
+            request existed, and the next person asked for the same slot. */}
+        {room.pending?.length > 0 && (
+          <div className="relative rounded-xl bg-amber-50 border border-amber-200 p-2.5 mb-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700/80">
+              Awaiting approval
+            </p>
+            {room.pending.slice(0, 2).map((p: any) => (
+              <p key={p.id} className="text-[11px] font-bold text-amber-800 mt-1">
+                {p.start_time}–{p.end_time} · {p.requested_by_name}
+              </p>
+            ))}
+            {room.pending.length > 2 && (
+              <p className="text-[10px] text-amber-600 mt-1">
+                +{room.pending.length - 2} more waiting
+              </p>
+            )}
+          </div>
         )}
 
         <button onClick={onBook}
@@ -849,10 +871,15 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
   // screen after login/logout, fixed only by a full reload" symptom. Hooks
   // must never move relative to a conditional return; only their computed
   // VALUE may depend on session-dependent state like `rooms`.
+  // room_status answers with three states, not two: free, upcoming and
+  // occupied. Counting only two of them meant a room whose meeting was about
+  // to start appeared in neither tally -- three rooms showing "2 free, 0
+  // occupied", with the third listed nowhere.
   const stats = useMemo(() => {
     const occ = rooms.filter(r => r.status === 'occupied').length;
+    const soon = rooms.filter(r => r.status === 'upcoming').length;
     const free = rooms.filter(r => r.status === 'free').length;
-    return { total: rooms.length, occ, free };
+    return { total: rooms.length, occ, soon, free };
   }, [rooms]);
 
   if (!session) {
@@ -899,6 +926,15 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
                 <p key={stats.free} className="rp-pop-in text-sm font-black text-emerald-600 tabular-nums">{stats.free}</p>
                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Free</p>
               </div>
+              {/* Shown only when there is one, so the usual case stays two
+                  numbers rather than three, but the counts always add up to
+                  the number of rooms on screen. */}
+              {stats.soon > 0 && (
+                <div className="text-center">
+                  <p key={stats.soon} className="rp-pop-in text-sm font-black text-amber-600 tabular-nums">{stats.soon}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Soon</p>
+                </div>
+              )}
               <div className="text-center">
                 <p key={stats.occ} className="rp-pop-in text-sm font-black text-rose-600 tabular-nums">{stats.occ}</p>
                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Occupied</p>

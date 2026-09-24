@@ -9,6 +9,15 @@ import { Users2 } from 'lucide-react';
 export const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const API = `${_API_BASE}/api/roompulse`;
 
+/* Ticket attachments come back as a root-relative, signed path
+   (/api/roompulse/attachments/<token>/), not an absolute URL: the server
+   cannot reliably know its own public address from behind the proxy, and the
+   absolute one it used to guess pointed somewhere the browser could not
+   reach. The frontend does know, so it joins the two here. Absolute URLs are
+   still accepted so an older response does not break. */
+export const fileHref = (url: string) =>
+  !url ? '' : /^https?:\/\//i.test(url) ? url : `${_API_BASE}${url}`;
+
 export const SESSION_KEY = 'roompulse_session';
 export type Role = 'employee' | 'admin' | 'it_support' | 'super_admin';
 export interface Session { email: string; name: string; role: Role; token: string; ts: number; }
