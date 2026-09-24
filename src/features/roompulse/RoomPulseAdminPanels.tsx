@@ -6,6 +6,7 @@ import {
   UploadCloud, Download, Trash2, Plus, RefreshCw, TrendingUp, Timer,
   ChevronLeft, ChevronRight, FileSpreadsheet, UserPlus, Percent, BarChart3,
   PackageCheck, Truck, Headphones, PlayCircle, History, Inbox, Paperclip, ClipboardList,
+  Search, Gauge,
 } from 'lucide-react';
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
@@ -1040,15 +1041,186 @@ export function CalendarPanel({ rooms }: { rooms: any[] }) {
   );
 }
 
+/* ── The Super Admin's one screen ─────────────────────────────────────────
+   All of this was visible somewhere already, across five tabs. That is fine
+   for doing a job and useless for noticing one: a ticket nobody has touched
+   in nine days does not announce itself from the bottom of a queue. ────── */
+function OverviewPanel({ onGoTo }: { onGoTo: (tab: string) => void }) {
+  const [d, setD] = useState<any>(null);
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    setErr('');
+    try {
+      const r = await rpFetch(`${API}/overview/`);
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) setErr(body.error || 'Could not load the overview.');
+      else setD(body);
+    } catch { setErr('Could not reach the server.'); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (err) return (
+    <Panel title="Overview" icon={Gauge}>
+      <p className="text-[13px] text-rose-600 font-semibold py-6 text-center">{err}</p>
+    </Panel>
+  );
+  if (!d) return <Skel className="h-72" />;
+
+  const ago = (iso: string) => {
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
+    return `${Math.round(mins / 1440)}d ago`;
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Anything actually wrong goes first and says what to do about it. */}
+      {!!d.problems.length && (
+        <Panel title="Needs your attention" icon={AlertTriangle}>
+          <div className="space-y-2">
+            {d.problems.map((p: string, i: number) => (
+              <div key={i} className="flex items-start gap-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-[12px] text-amber-900 font-semibold">{p}</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { l: 'Waiting on someone', v: d.waiting_total, tone: d.waiting_total ? 'text-amber-600' : 'text-slate-900' },
+          { l: `Over ${d.stale_after_days} days old`, v: d.stale_total, tone: d.stale_total ? 'text-rose-600' : 'text-slate-900' },
+          { l: 'Rooms in use', v: `${d.rooms_in_use}/${d.rooms_total}` },
+          { l: 'Raised today', v: d.today.tickets_raised },
+          { l: 'Done today', v: d.today.jobs_done },
+        ].map(s => (
+          <div key={s.l} className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4">
+            <p className={`text-2xl font-black tabular-nums ${s.tone || 'text-slate-900'}`}>{s.v}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{s.l}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <Panel title="Queues" icon={Inbox} subtitle="With how long the oldest has been waiting">
+          <div className="space-y-2">
+            {d.waiting.map((w: any) => (
+              <button key={w.what} onClick={() => onGoTo(w.where)}
+                className="w-full flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5
+                           text-left hover:border-cyan-300 hover:bg-cyan-50/40 transition-colors">
+                <span className={`text-lg font-black tabular-nums w-8 shrink-0
+                  ${w.stale ? 'text-rose-600' : w.count ? 'text-slate-900' : 'text-slate-300'}`}>
+                  {w.count}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12px] font-bold text-slate-700">{w.what}</span>
+                  <span className="block text-[10.5px] text-slate-400">
+                    {w.count
+                      ? <>oldest {w.oldest_days === 0 ? 'today' : `${w.oldest_days}d old`}
+                          {w.stale ? <span className="text-rose-500 font-bold"> · {w.stale} overdue</span> : null}</>
+                      : 'nothing waiting'}
+                  </span>
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+              </button>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="Rooms right now" icon={Building2} subtitle={`${d.rooms_in_use} of ${d.rooms_total} in use`}>
+          {!d.rooms.length ? (
+            <Empty msg="No rooms set up yet" icon={Building2} />
+          ) : (
+            <div className="space-y-1.5">
+              {d.rooms.map((r: any) => (
+                <div key={r.id} className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    r.status === 'occupied' ? 'bg-rose-500'
+                    : r.status === 'upcoming' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] font-bold text-slate-700 truncate">{r.name}</span>
+                    <span className="block text-[10.5px] text-slate-400 truncate">
+                      {r.status === 'occupied'
+                        ? `Busy until ${r.until}${r.who ? ` · ${r.who}` : ''}`
+                        : r.next ? `Free · next at ${r.next}` : 'Free all day'}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <Panel title="People" icon={Users}
+          subtitle={d.people.last_synced_at
+            ? `Directory last synced ${fmtDate(d.people.last_synced_at.slice(0, 10))}`
+            : 'Directory never synced'}>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { l: 'On the list', v: d.people.total },
+              { l: 'Admins', v: d.people.admins },
+              { l: 'IT Support', v: d.people.it_support },
+              { l: 'Added by hand', v: d.people.added_here },
+            ].map(s => (
+              <div key={s.l} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xl font-black text-slate-900 tabular-nums">{s.v}</p>
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400 mt-0.5">{s.l}</p>
+              </div>
+            ))}
+          </div>
+          {d.people.inactive > 0 && (
+            <p className="text-[11px] text-slate-400 mt-3">
+              {d.people.inactive} marked as left — kept because their name is on past requests.
+            </p>
+          )}
+        </Panel>
+
+        <Panel title="Lately" icon={History} subtitle="Every move on a ticket, newest first">
+          {!d.recent.length ? (
+            <Empty msg="Nothing has happened yet" icon={History} />
+          ) : (
+            <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
+              {d.recent.map((e: any, i: number) => (
+                <div key={i} className="flex items-start gap-2 text-[11px] border-b border-slate-50 pb-1.5">
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0
+                    ${e.kind === 'Work logged' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {e.action}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="font-bold text-slate-700">{e.subject}</span>
+                    <span className="text-slate-400"> · {e.who}</span>
+                  </span>
+                  <span className="text-slate-300 shrink-0">{ago(e.at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
 /* ── Super Admin: Rooms / Team / Analytics ───────────────────────────────── */
 const SUB_TABS = [
+  { id: 'overview', label: 'Overview', icon: Gauge },
   { id: 'rooms', label: 'Rooms', icon: Building2 },
   { id: 'team', label: 'Team', icon: Users },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ] as const;
 
-export function SuperAdminPanel({ session, onRoomsChanged }: { session: Session; onRoomsChanged: () => void }) {
-  const [sub, setSub] = useState<typeof SUB_TABS[number]['id']>('rooms');
+export function SuperAdminPanel({ session, onRoomsChanged, onGoToTab }: {
+  session: Session; onRoomsChanged: () => void; onGoToTab?: (tab: string) => void;
+}) {
+  // Opens on the overview: the point of this seat is noticing, and noticing
+  // does not happen inside a tab you have to remember to open.
+  const [sub, setSub] = useState<typeof SUB_TABS[number]['id']>('overview');
   return (
     <div className="space-y-5">
       <Reveal>
@@ -1066,6 +1238,7 @@ export function SuperAdminPanel({ session, onRoomsChanged }: { session: Session;
           })}
         </div>
       </Reveal>
+      {sub === 'overview' && <OverviewPanel onGoTo={t => onGoToTab?.(t)} />}
       {sub === 'rooms' && <RoomsManage session={session} onChanged={onRoomsChanged} />}
       {sub === 'team' && <TeamManage session={session} />}
       {sub === 'analytics' && <AnalyticsPanel session={session} />}
@@ -1231,6 +1404,189 @@ const SCOPE_BADGE: Record<string, string> = {
   it_support: 'bg-amber-50 text-amber-700 ring-amber-200',
 };
 
+/* ── Who handles what ─────────────────────────────────────────────────────
+   Assigning the Admin and IT Support roles used to mean typing an email
+   address from memory into a box, with no way to see the 665 people on the
+   list or check you had the right one. It is a decision about a person, so
+   it starts by finding the person. ─────────────────────────────────────── */
+const ROLE_META: Record<string, { label: string; cls: string }> = {
+  employee:   { label: 'Employee',   cls: 'bg-slate-100 text-slate-500 ring-slate-200' },
+  admin:      { label: 'Admin',      cls: 'bg-violet-50 text-violet-700 ring-violet-200' },
+  it_support: { label: 'IT Support', cls: 'bg-amber-50 text-amber-700 ring-amber-200' },
+};
+
+function PeopleDirectory({ onRolesChanged }: { onRolesChanged: () => void }) {
+  const [q, setQ] = useState('');
+  const [rows, setRows] = useState<any[]>([]);
+  const [meta, setMeta] = useState<any>({ count: 0 });
+  const [loading, setLoading] = useState(true);
+  const [only, setOnly] = useState<'all' | 'staff' | 'manual'>('all');
+  const [busyEmail, setBusyEmail] = useState('');
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: '200', active: '1' });
+      if (q.trim()) params.set('search', q.trim());
+      if (only === 'manual') params.set('source', 'manual');
+      const r = await rpFetch(`${API}/employees/?${params}`);
+      if (r.ok) {
+        const d = await r.json();
+        setRows(d.results || []);
+        setMeta(d);
+      }
+    } finally { setLoading(false); }
+  }, [q, only]);
+
+  // Typing shouldn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(load, 250);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  const setRole = async (person: any, scope: 'employee' | 'admin' | 'it_support') => {
+    setBusyEmail(person.email); setErr(''); setMsg('');
+    try {
+      const r = await rpFetch(`${API}/admins/role/`, {
+        method: 'POST',
+        body: JSON.stringify({ email: person.email, scope, name: person.name }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not change that.');
+      setMsg(d.message);
+      setRows(rs => rs.map(x => (x.email === person.email ? { ...x, role: scope } : x)));
+      onRolesChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not change that.');
+    } finally { setBusyEmail(''); }
+  };
+
+  const removePerson = async (person: any) => {
+    setBusyEmail(person.email); setErr(''); setMsg('');
+    try {
+      const r = await rpFetch(`${API}/employees/${person.id}/`, { method: 'DELETE' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not remove them.');
+      setMsg(d.message);
+      load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not remove them.');
+    } finally { setBusyEmail(''); }
+  };
+
+  const shown = only === 'staff' ? rows.filter(r => r.role !== 'employee') : rows;
+
+  return (
+    <Panel title="People" icon={Users}
+      subtitle={`${meta.count || 0} on the list — search for someone to give them Admin or IT Support`}
+      right={
+        <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      }>
+
+      <div className="flex flex-col sm:flex-row gap-2 mb-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-300 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input value={q} onChange={e => setQ(e.target.value)} autoComplete="off"
+            placeholder="Search by name, email, department or employee code"
+            className={`${inputCls} pl-9`} />
+        </div>
+        <div className="flex gap-1">
+          {([['all', 'Everyone'], ['staff', 'Admin & IT'], ['manual', 'Added here']] as const).map(
+            ([k, label]) => (
+              <button key={k} onClick={() => setOnly(k)}
+                className={`px-3 py-2 rounded-xl text-[11px] font-black whitespace-nowrap transition-colors ${
+                  only === k ? 'bg-slate-900 text-white'
+                             : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                {label}
+              </button>
+            ))}
+        </div>
+      </div>
+
+      {msg && (
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 mb-3">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <p className="text-[12px] text-emerald-700 font-bold">{msg}</p>
+        </div>
+      )}
+      {err && (
+        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-2.5 mb-3">
+          <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
+          <p className="text-[12px] text-rose-700">{err}</p>
+        </div>
+      )}
+
+      {loading && !rows.length ? (
+        <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skel key={i} className="h-14" />)}</div>
+      ) : !shown.length ? (
+        <Empty msg={q ? `Nobody matching "${q}"` : 'Nobody on the list yet — sync the directory'} icon={Users} />
+      ) : (
+        <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
+          {shown.map(p => {
+            const meta2 = ROLE_META[p.role] || ROLE_META.employee;
+            const busy = busyEmail === p.email;
+            return (
+              <div key={p.id}
+                className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 hover:border-slate-300 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[12.5px] font-black text-slate-800 truncate">{p.name}</p>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ring-1 ${meta2.cls}`}>
+                      {meta2.label}
+                    </span>
+                    {p.source === 'manual' && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase ring-1
+                                       bg-cyan-50 text-cyan-700 ring-cyan-200">
+                        Added here
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10.5px] text-slate-400 truncate">
+                    {p.email}
+                    {p.department ? ` · ${p.department}` : ''}
+                    {p.designation ? ` · ${p.designation}` : ''}
+                  </p>
+                </div>
+
+                {/* The whole decision in one control: what does this person
+                    handle? The server does the add, the change and the
+                    removal behind it. */}
+                <select disabled={busy} value={p.role}
+                  onChange={e => setRole(p, e.target.value as any)}
+                  className="shrink-0 px-2 py-1.5 rounded-lg border border-slate-200 bg-white
+                             text-[11px] font-bold text-slate-600 disabled:opacity-50">
+                  <option value="employee">Employee</option>
+                  <option value="admin">Admin — room & item requests</option>
+                  <option value="it_support">IT Support — tickets</option>
+                </select>
+
+                {p.source === 'manual' && (
+                  <button disabled={busy} onClick={() => removePerson(p)}
+                    title="Remove — only people added here can be removed"
+                    className="shrink-0 p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50
+                               disabled:opacity-40 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-[11px] text-slate-400 mt-3 leading-relaxed">
+        <b className="text-slate-500">Admin</b> reviews room bookings and item requests.{' '}
+        <b className="text-slate-500">IT Support</b> reviews IT tickets and can log work done.
+        Both can be held by several people. The Super Admin is fixed and sees everything.
+      </p>
+    </Panel>
+  );
+}
+
 function TeamManage({ session }: { session: Session }) {
   const [admins, setAdmins] = useState<any[]>([]);
   const [newAdmin, setNewAdmin] = useState('');
@@ -1328,7 +1684,12 @@ function TeamManage({ session }: { session: Session }) {
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+    <div className="space-y-5">
+      {/* Finding the person comes first: this is a decision ABOUT somebody,
+          and it used to be made by typing an address from memory. */}
+      <PeopleDirectory onRolesChanged={loadAdmins} />
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
       <Panel title="Admins & IT Support" icon={Shield} subtitle={`${admins.length} on the roster — Super Admin is fixed`}>
         <form onSubmit={addAdmin} className="flex gap-2 mb-4">
           <input value={newAdmin} onChange={e => setNewAdmin(e.target.value)} placeholder="Their email address"
@@ -1464,6 +1825,7 @@ function TeamManage({ session }: { session: Session }) {
         </p>
         {uploadMsg && <p className="text-[12px] text-cyan-700 mt-3">{uploadMsg}</p>}
       </Panel>
+      </div>
     </div>
   );
 }

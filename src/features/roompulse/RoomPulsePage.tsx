@@ -983,7 +983,10 @@ export function RoomPulsePage(_props: { onNavigateBack?: () => void } = {}) {
           <ApprovalsPanel session={session} onChanged={() => { setRefreshKey(k => k + 1); loadRooms(); }} />
         )}
         {tab === 'calendar' && isStaff && <CalendarPanel rooms={rooms} />}
-        {tab === 'manage' && isSuper && <SuperAdminPanel session={session} onRoomsChanged={loadRooms} />}
+        {tab === 'manage' && isSuper && (
+          <SuperAdminPanel session={session} onRoomsChanged={loadRooms}
+            onGoToTab={t => setTab(t as Tab)} />
+        )}
       </div>
 
       {showBooking && (
