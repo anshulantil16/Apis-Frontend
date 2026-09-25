@@ -871,6 +871,26 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
     } finally { setLoading(false); }
   }, []);
 
+  // The name in the header comes from the browser's copy of the session,
+  // saved when this person signed in. A session minted before names were
+  // resolved properly keeps the old one until they happen to sign out --
+  // which could be weeks -- so ask the server who this is and correct it.
+  // Also picks up a name changed in HRMS since.
+  useEffect(() => {
+    if (!session) return;
+    let live = true;
+    rpFetch(`${API}/me/`).then(r => r.json()).then(d => {
+      if (!live || !d?.name || d.name === session.name) return;
+      const fixed = { ...session, name: d.name, role: (d.role || session.role) as any };
+      saveSession(fixed);
+      setSession({ ...fixed, ts: Date.now() });
+    }).catch(() => {});
+    return () => { live = false; };
+    // Only when the signed-in address changes: this corrects the name, so
+    // depending on the name would re-run it against its own result.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.email]);
+
   useEffect(() => {
     if (!session) return;
     loadRooms();
