@@ -16,6 +16,7 @@ import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
   HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images,
   CheckCircle2, Clock, AlertTriangle,
+  Users, Landmark, MapPin, Mail, Phone, CalendarClock, Gift,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, dailyQuote, type QuickAccessId,
@@ -73,11 +74,14 @@ const PARENT_OF: Partial<Record<ShellView, QuickAccessId>> = {
   'offer-approvals': 'offer-letters',
 };
 
-/* ── My Profile ───────────────────────────────────────────────────────────
+/* ── My Profile ──────────────────────────────────────────
    Your own record, as the company holds it. Read-only on purpose: this is
-   HRMS's data, and a field edited here would be overwritten by the next
-   sync while looking like it had saved. The footer says who to ask instead.
-   ─────────────────────────────────────────────────────────────────────── */
+   HR's data, and a field edited here would be overwritten by the next sync
+   while looking like it had saved. The footer says who to ask instead.
+
+   Grouped rather than listed — where you sit, how to reach you, and the
+   dates are three different questions, and nine rows in one column makes the
+   reader do that sorting themselves. ───────────────────────── */
 function MyProfileCard({ onClose }: { onClose: () => void }) {
   const [p, setP] = useState<any>(null);
   const [err, setErr] = useState('');
@@ -91,81 +95,142 @@ function MyProfileCard({ onClose }: { onClose: () => void }) {
     return () => { live = false; };
   }, []);
 
+  // Escape closes it, like every other layer on this page.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const initials = (p?.name || '?').trim().split(/\s+/).slice(0, 2)
     .map((w: string) => w[0]).join('').toUpperCase();
 
-  const rows: [string, string][] = p ? [
-    ['Employee code', p.employee_code],
-    ['Department', p.department],
-    ['Category', p.category],
-    ['Location', p.location],
-    ['Reports to', p.manager],
-    ['Work number', p.office_mobile],
-    ['Email', p.email],
-    ['Joined', p.date_of_joining],
-    ['With APIS', p.served],
-    ['Birthday', p.birthday],
-  ].filter(([, v]) => !!v) as [string, string][] : [];
+  const groups: { title: string; rows: [any, string, string][] }[] = p ? [
+    {
+      title: 'Where you sit',
+      rows: ([
+        [Users, 'Department', p.department],
+        [Landmark, 'Category', p.category],
+        [MapPin, 'Location', p.location],
+        [Network, 'Reports to', p.manager],
+      ] as [any, string, string][]).filter(r => !!r[2]),
+    },
+    {
+      title: 'How to reach you',
+      rows: ([
+        [Mail, 'Email', p.email],
+        [Phone, 'Work number', p.office_mobile],
+      ] as [any, string, string][]).filter(r => !!r[2]),
+    },
+    {
+      title: 'Dates',
+      rows: ([
+        [CalendarClock, 'Joined', p.date_of_joining],
+        [Gift, 'Birthday', p.birthday],
+      ] as [any, string, string][]).filter(r => !!r[2]),
+    },
+  ].filter(g => g.rows.length) : [];
 
   return (
-    <div className="ih-fade fixed inset-0 z-[60] flex items-start justify-center p-4 pt-24
-                    bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="ih-pop-in w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
+    <div className="ih-fade fixed inset-0 z-[60] flex items-start justify-center p-4 pt-20
+                    bg-slate-900/50 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+      <div className="ih-pop-in w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-hidden my-auto"
         onClick={e => e.stopPropagation()}>
-        {/* The same amber the sidebar is branded with, so this reads as part
-            of the intranet rather than a system dialog. */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 px-5 py-5">
-          <div aria-hidden className="ih-aurora pointer-events-none absolute -top-16 -right-8 w-44 h-44
-                                      rounded-full bg-amber-200/35 blur-2xl" />
-          <div className="relative flex items-center gap-3.5">
-            <div className="w-14 h-14 rounded-2xl bg-white/90 ring-1 ring-white/70 shadow-lg
-                            grid place-items-center text-lg font-black text-amber-700 flex-shrink-0">
+
+        {/* The sidebar's own surface, honeycomb and all, so this reads as
+            part of the intranet rather than a system dialog. */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 px-6 pt-6 pb-7">
+          <div aria-hidden className="ih-aurora pointer-events-none absolute -top-20 -right-10 w-56 h-56
+                                      rounded-full bg-amber-200/40 blur-2xl" />
+          <svg aria-hidden className="pointer-events-none absolute inset-0 w-full h-full opacity-[0.12]">
+            <defs>
+              <pattern id="ih-comb-profile" width="28" height="24" patternUnits="userSpaceOnUse">
+                <path d="M0 12 L7 0 L21 0 L28 12 L21 24 L7 24 Z" fill="none" stroke="#fff" strokeWidth="1" />
+                <path d="M-14 24 L-7 12 L7 12 L14 24 L7 36 L-7 36 Z" fill="none" stroke="#fff" strokeWidth="1" />
+                <path d="M14 24 L21 12 L35 12 L42 24 L35 36 L21 36 Z" fill="none" stroke="#fff" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#ih-comb-profile)" />
+          </svg>
+
+          <button onClick={onClose} title="Close"
+            className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-white/25 hover:bg-white/40
+                       ring-1 ring-white/30 text-white grid place-items-center transition-all">
+            <X className="w-4 h-4" />
+          </button>
+
+          <div className="relative flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-white ring-2 ring-white/60 shadow-xl shadow-orange-900/25
+                            grid place-items-center text-xl font-black text-amber-600 flex-shrink-0">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="text-[19px] leading-tight font-black text-[#2b2005] truncate">
-                {p?.name || 'Loading\u2026'}
+              <p className="text-[21px] leading-tight font-black text-[#2b2005] truncate">
+                {p?.name || 'Loading…'}
               </p>
-              <p className="text-[12px] font-bold text-amber-50/95 truncate">
-                {p?.designation || ''}
-              </p>
+              {p?.designation && (
+                <p className="text-[12.5px] font-black uppercase tracking-wide text-amber-50 truncate mt-0.5">
+                  {p.designation}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {p?.employee_code && (
+                  <span className="px-2 py-0.5 rounded-md bg-[#2b2005]/20 text-[10.5px] font-black
+                                   uppercase tracking-wide text-[#2b2005]">
+                    {p.employee_code}
+                  </span>
+                )}
+                {/* The one line on this card anybody would say out loud. */}
+                {p?.served && (
+                  <span className="px-2 py-0.5 rounded-md bg-white/90 text-[10.5px] font-black
+                                   text-amber-700 shadow-sm">
+                    {p.served} with APIS
+                  </span>
+                )}
+                {p?.is_superadmin && (
+                  <span className="px-2 py-0.5 rounded-md bg-white/90 text-[10.5px] font-black text-violet-600 shadow-sm">
+                    Super Admin
+                  </span>
+                )}
+              </div>
             </div>
-            <button onClick={onClose}
-              className="ml-auto w-7 h-7 rounded-lg bg-white/25 hover:bg-white/40 ring-1 ring-white/30
-                         text-white grid place-items-center flex-shrink-0 transition-all">
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
-        <div className="p-5">
-          {err && <p className="text-[12.5px] text-rose-600 font-semibold text-center py-4">{err}</p>}
+        <div className="p-6">
+          {err && <p className="text-[12.5px] text-rose-600 font-semibold text-center py-6">{err}</p>}
           {!err && !p && (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="ih-skeleton h-8 rounded-lg" />
+            <div className="space-y-2.5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="ih-skeleton h-9 rounded-xl" />
               ))}
             </div>
           )}
-          {p && (
-            <dl className="divide-y divide-slate-100">
-              {rows.map(([k, v]) => (
-                <div key={k} className="flex items-baseline gap-4 py-2.5">
-                  <dt className="text-[11px] font-black uppercase tracking-wide text-slate-400 w-32 flex-shrink-0">
-                    {k}
-                  </dt>
-                  <dd className="text-[13px] font-bold text-slate-700 min-w-0 break-words">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-          {p && (
-            <p className="text-[11px] text-slate-400 mt-4 leading-relaxed">
-              This comes from the company\u2019s HR records, so it cannot be edited here \u2014
-              anything wrong is worth telling HR, and it will correct itself on the
-              next sync{p.last_synced_at ? `. Last updated ${p.last_synced_at}` : ''}.
-            </p>
-          )}
+
+          {p && groups.map(g => (
+            <div key={g.title} className="mb-5 last:mb-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-300 mb-2">
+                {g.title}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {g.rows.map(([Icon, label, value]) => (
+                  <div key={label}
+                    className="rounded-xl bg-slate-50/80 ring-1 ring-slate-100 px-3 py-2.5 min-w-0">
+                    <span className="flex items-center gap-1.5 text-[10px] font-black uppercase
+                                     tracking-wide text-slate-400">
+                      <Icon className="w-3 h-3" /> {label}
+                    </span>
+                    <p className="text-[13px] font-bold text-slate-700 mt-0.5 break-words">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* No footer note. The card is plainly a read-only record of
+              somebody's own details; a paragraph explaining that it comes
+              from HR and cannot be edited was answering a question nobody
+              had asked, at the bottom of every visit. */}
         </div>
       </div>
     </div>
