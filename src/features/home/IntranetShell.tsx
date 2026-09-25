@@ -84,7 +84,7 @@ function MyProfileCard({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     let live = true;
-    portalFetch('/api/accounts/portal/profile/')
+    portalFetch('/profile/')
       .then(r => r.json())
       .then(d => { if (live) { if (d.profile) setP(d.profile); else setErr('Could not load your profile.'); } })
       .catch(() => { if (live) setErr('Could not reach the server.'); });
