@@ -9,6 +9,15 @@ import { Users2 } from 'lucide-react';
 export const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const API = `${_API_BASE}/api/roompulse`;
 
+/* Ticket attachments come back as a root-relative, signed path
+   (/api/roompulse/attachments/<token>/), not an absolute URL: the server
+   cannot reliably know its own public address from behind the proxy, and the
+   absolute one it used to guess pointed somewhere the browser could not
+   reach. The frontend does know, so it joins the two here. Absolute URLs are
+   still accepted so an older response does not break. */
+export const fileHref = (url: string) =>
+  !url ? '' : /^https?:\/\//i.test(url) ? url : `${_API_BASE}${url}`;
+
 export const SESSION_KEY = 'roompulse_session';
 export type Role = 'employee' | 'admin' | 'it_support' | 'super_admin';
 export interface Session { email: string; name: string; role: Role; token: string; ts: number; }
@@ -243,6 +252,10 @@ export const REQUEST_STATUS_BADGE: Record<string, string> = {
   closed: 'bg-emerald-50 text-emerald-600 ring-emerald-200',
   rejected: 'bg-rose-50 text-rose-600 ring-rose-200',
   cancelled: 'bg-slate-50 text-slate-400 ring-slate-200',
+  // Nobody turned it down -- the slot came and went unanswered. Grey like
+  // cancelled rather than red like rejected, because no one decided
+  // anything, and that difference is the whole point of the state.
+  expired: 'bg-slate-100 text-slate-500 ring-slate-300',
 };
 
 export const fmtTime = (t: string) => t; // already HH:MM from the API
@@ -257,6 +270,64 @@ export const isoLocal = (d: Date) =>
 
 /* Shared page-scoped keyframes — one <style> block, imported by every screen
    in this feature so the whole app doesn't carry unused animation CSS. */
+
+/* ── Who should handle this? ──────────────────────────────────────
+   Two or three people share each desk, so every request names one of them
+   and lands on that person's screen alone. The list is the roster the super
+   admin keeps — /desk-staff/ is that roster reduced to a name and an
+   address, which is all a dropdown needs.
+
+   Required, so it opens unset rather than on whoever happens to be first:
+   a pre-picked name is a name nobody chose. ────────────────────── */
+export type DeskPerson = { email: string; name: string };
+
+export function useDeskStaff(desk: 'it' | 'admin') {
+  const [people, setPeople] = useState<DeskPerson[]>([]);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    let live = true;
+    rpFetch(`${API}/desk-staff/?desk=${desk}`)
+      .then(r => r.json())
+      .then(d => { if (live) setPeople(d.results || []); })
+      .catch(() => { if (live) setErr('Could not load the list.'); });
+    return () => { live = false; };
+  }, [desk]);
+  return { people, err };
+}
+
+export function AssigneePicker({ desk, value, onChange, label, labelCls, inputCls }: {
+  desk: 'it' | 'admin';
+  value: string;
+  onChange: (email: string) => void;
+  label?: string;
+  // Each form has its own look; the picker borrows it rather than importing
+  // a third one into the middle of somebody else's layout.
+  labelCls?: string;
+  inputCls?: string;
+}) {
+  const { people, err } = useDeskStaff(desk);
+  const cls = inputCls
+    || "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm "
+     + "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
+  return (
+    <div>
+      <label className={labelCls || "text-[11px] font-black text-slate-500 uppercase tracking-wide"}>
+        {label || (desk === 'it' ? 'Who in IT should handle this?' : 'Which admin should handle this?')}
+      </label>
+      <select className={cls} value={value} onChange={e => onChange(e.target.value)} required>
+        <option value="" disabled>Choose a person…</option>
+        {people.map(p => <option key={p.email} value={p.email}>{p.name}</option>)}
+      </select>
+      {err && <p className="text-[11px] text-rose-600 mt-1">{err}</p>}
+      {!err && !people.length && (
+        <p className="text-[11px] text-amber-600 mt-1">
+          Nobody is set up on this desk yet — a Super Admin adds them under Manage.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export const RP_STYLES = `
   @keyframes rpReveal { from { opacity:0; transform: translateY(14px) scale(.985);} to {opacity:1;transform:none;} }
   .rp-reveal { animation: rpReveal .55s cubic-bezier(.2,.8,.2,1) both; }

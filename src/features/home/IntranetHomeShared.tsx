@@ -576,13 +576,95 @@ export const OUR_PRODUCTS: OurProduct[] = [
     category: 'Mouth Freshener' },
 ];
 
+/* ── Daily News ─────────────────────────────────────────────
+   Stories about the world APIS sells into — APIs, food APIs, nutraceuticals,
+   honey — and about the company itself, written in Admin Console › Dashboard
+   Content. Not to be confused with WHATS_NEW below, which is news about this
+   intranet's own tools and ships with a build. ───────────────────── */
+export interface NewsArticle {
+  id: number; title: string; summary: string;
+  category: string; categoryLabel: string;
+  sourceName: string; sourceUrl: string;
+  image: string;
+  publishedOn: string; expiresOn: string | null; pinned: boolean;
+  createdAt: string | null;
+  moderationStatus: ModerationStatus; submittedBy: string; isMine: boolean;
+}
+
+/* The colour a story's tag wears. Keyed off the category the backend sends,
+   so a category added there shows up in a neutral slate rather than crashing
+   on a missing lookup. */
+export const NEWS_TAG_STYLE: Record<string, string> = {
+  company:        'text-amber-700 bg-amber-50 ring-amber-200',
+  apis:           'text-cyan-700 bg-cyan-50 ring-cyan-200',
+  food_apis:      'text-emerald-700 bg-emerald-50 ring-emerald-200',
+  nutraceuticals: 'text-violet-700 bg-violet-50 ring-violet-200',
+  industry:       'text-blue-700 bg-blue-50 ring-blue-200',
+  products:       'text-rose-700 bg-rose-50 ring-rose-200',
+};
+/* Everything a category needs to look like a deliberate choice rather than a
+   default: the wash behind the card header, the mark's colour, and the glow
+   the card lights up with on hover. The glow is a raw rgba because it is fed
+   to --ih-neon, the same custom property the tool cards use, so News hovers
+   like the rest of the dashboard instead of inventing its own behaviour. */
+export interface NewsLook { wash: string; mark: string; glow: string; }
+
+export const NEWS_TILE: Record<string, NewsLook> = {
+  company:        { wash: 'from-amber-100 via-amber-50 to-white',    mark: 'text-amber-600',   glow: 'rgba(245,158,11,.40)' },
+  apis:           { wash: 'from-cyan-100 via-cyan-50 to-white',      mark: 'text-cyan-600',    glow: 'rgba(6,182,212,.40)' },
+  food_apis:      { wash: 'from-emerald-100 via-emerald-50 to-white', mark: 'text-emerald-600', glow: 'rgba(16,185,129,.40)' },
+  nutraceuticals: { wash: 'from-violet-100 via-violet-50 to-white',  mark: 'text-violet-600',  glow: 'rgba(139,92,246,.40)' },
+  industry:       { wash: 'from-blue-100 via-blue-50 to-white',      mark: 'text-blue-600',    glow: 'rgba(59,130,246,.40)' },
+  products:       { wash: 'from-rose-100 via-rose-50 to-white',      mark: 'text-rose-600',    glow: 'rgba(244,63,94,.40)' },
+};
+export const newsTile = (c: string): NewsLook =>
+  NEWS_TILE[c] ?? { wash: 'from-slate-100 via-slate-50 to-white', mark: 'text-slate-500', glow: 'rgba(100,116,139,.35)' };
+
+export const newsTagStyle = (c: string) =>
+  NEWS_TAG_STYLE[c] ?? 'text-slate-600 bg-slate-100 ring-slate-200';
+
+/* How long ago, in the words the strip uses. A date alone does not tell you
+   the feed has stopped moving; "3 weeks ago" does, which is the whole reason
+   the age is shown rather than the date. */
+export function newsAge(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const days = Math.floor((Date.now() - then) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return 'Last week';
+  if (days < 60) return `${Math.floor(days / 7)} weeks ago`;
+  return `${Math.floor(days / 30)} months ago`;
+}
+
+export function useNews(scope: 'strip' | 'all' = 'strip') {
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const q = scope === 'all' ? '?scope=all' : '';
+      const r = await apiFetch(`${NOTICEBOARD_API}/news/${q}`);
+      setNews(r.ok ? await r.json() : []);
+    } catch {
+      /* An empty strip is honest; a broken dashboard is not. */
+    } finally {
+      setLoading(false);
+    }
+  }, [scope]);
+
+  useEffect(() => { load(); }, [load]);
+  return { news, loading, reload: load };
+}
+
 export interface NewsItem { title: string; body: string; tag: string; tagColour: string; bar: string; dot: string; }
 
 export const WHATS_NEW: NewsItem[] = [
-  { title: 'AdminPulse now handles item requests', body: 'Stationery, IT equipment, furniture and more — not just room bookings — with its own approval → fulfilment queue.', tag: 'AdminPulse', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
+  { title: 'Help Desk now handles item requests', body: 'Stationery, IT equipment, furniture and more — not just room bookings — with its own approval → fulfilment queue.', tag: 'Help Desk', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
   { title: 'PMS Simulator: Current CTC is now editable', body: 'You can now edit an employee’s Current CTC after the master upload, without re-uploading the whole sheet.', tag: 'PMS', tagColour: 'text-violet-600 bg-violet-50 ring-violet-200', bar: 'from-violet-400 to-fuchsia-500', dot: 'bg-violet-500' },
   { title: 'Warning Letters launched', body: 'A full disciplinary letter pipeline — upload, generate, track history — now lives inside Letters Generator.', tag: 'Letters Generator', tagColour: 'text-rose-600 bg-rose-50 ring-rose-200', bar: 'from-rose-400 to-pink-500', dot: 'bg-rose-500' },
-  { title: 'AdminPulse visual refresh', body: 'Glow rings, animated borders and live particles across the whole booking & requests experience.', tag: 'AdminPulse', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
+  { title: 'Help Desk visual refresh', body: 'Glow rings, animated borders and live particles across the whole booking & requests experience.', tag: 'Help Desk', tagColour: 'text-cyan-600 bg-cyan-50 ring-cyan-200', bar: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-500' },
 ];
 
 /* Real, publicly-reported APIS India Limited figures — the company is

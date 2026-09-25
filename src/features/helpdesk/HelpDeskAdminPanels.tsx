@@ -11,7 +11,7 @@ import {
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
-  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './HelpDeskShared';
+  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, fileHref} from './HelpDeskShared';
 import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, ticketStatusMeta, fmtTicketWhen } from './HelpDeskTickets';
 
 // What the server treats as the normal working day — see roompulse/worktime.py.
@@ -25,16 +25,77 @@ const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200
    reviews IT tickets; Super Admin gets both, matching "super admin has
    access to everything". Each queue's history stays with its own queue —
    Admin never sees IT Support's closed tickets and vice versa. ─────────── */
+/* ── What is on your desk ───────────────────────────────────────
+   This was its own tab for a day, and it was the same list as the queues
+   below it -- two screens showing one thing, which is somewhere else for it
+   to go wrong rather than somewhere else to look. It is a header now, over
+   the queues you actually act in.
+
+   "Unclaimed" is the number worth having: work raised before anyone was
+   being named belongs to nobody, so the whole desk sees it until somebody
+   takes it. ─────────────────────────────────────────────── */
+function OnYourDesk({ refresh }: { refresh: number }) {
+  const [d, setD] = useState<any>(null);
+  useEffect(() => {
+    let live = true;
+    rpFetch(`${API}/my-tasks/`).then(r => r.json())
+      .then(x => { if (live) setD(x); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [refresh]);
+  if (!d) return null;
+
+  const kinds = d.desk === 'admin'
+    ? [['Item requests', d.by_kind.item], ['Room bookings', d.by_kind.room]]
+    : [['IT tickets', d.by_kind.ticket]];
+
+  return (
+    <div className="flex flex-wrap items-center gap-2.5">
+      <span className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[12px] font-black">
+        {d.waiting} waiting on you
+      </span>
+      {kinds.map(([l, v]) => (
+        <span key={l as string}
+          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-[12px] font-bold text-slate-600">
+          {v as number} {l as string}
+        </span>
+      ))}
+      {d.unassigned > 0 && (
+        <span className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200
+                         text-[12px] font-black text-amber-700">
+          {d.unassigned} unclaimed — nobody was named on these
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function ApprovalsPanel({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const showAdminQueue = session.role === 'admin' || session.role === 'super_admin';
   const showTicketQueue = session.role === 'it_support' || session.role === 'super_admin';
+  // Bumped on any change from the queues below -- a job logged, a request
+  // approved, an item handed over -- so the counts at the top and the
+  // report at the bottom move with them rather than on the next visit.
+  const [logTick, setLogTick] = useState(0);
+  const bump = () => { setLogTick(t => t + 1); onChanged(); };
   return (
     <div className="space-y-5">
-      {showAdminQueue && <AdminApprovalsSection session={session} onChanged={onChanged} />}
-      {showAdminQueue && <AdminTicketHistorySection />}
-      {showTicketQueue && <TicketApprovalsSection session={session} onChanged={onChanged} />}
-      {showTicketQueue && <LogWorkSection session={session} onChanged={onChanged} />}
-      {showTicketQueue && <WorkReportSection />}
+      <OnYourDesk refresh={logTick} />
+      {showAdminQueue && <AdminApprovalsSection session={session} onChanged={bump} />}
+      {showAdminQueue && <AdminTicketHistorySection session={session} refresh={logTick} />}
+      {showTicketQueue && <TicketApprovalsSection session={session} onChanged={bump} />}
+      {/* Logging work and the report it feeds are for Admin as much as IT:
+          an admin does jobs nobody raised a ticket for too, and the monthly
+          report is meant to cover both. The server has always allowed it --
+          see require_role in views/work_report.py and the 'logged' branch in
+          views/tickets.py -- so this was the only thing hiding it. */}
+      {(showTicketQueue || showAdminQueue) && (
+        <LogWorkSection session={session} onChanged={bump} />
+      )}
+      {/* Directly under the form, because the complaint that led to it was
+          "we add there but nothing comes anywhere". */}
+      {(showTicketQueue || showAdminQueue) && <LoggedWorkSection session={session} refresh={logTick} />}
+      {(showTicketQueue || showAdminQueue) && <WorkReportSection session={session} refresh={logTick} />}
       {showTicketQueue && <ItTicketHistorySection />}
     </div>
   );
@@ -328,7 +389,7 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                         <div className="flex items-center gap-1.5 flex-wrap mt-2">
                           <Paperclip className="w-3 h-3 text-slate-400 flex-shrink-0" />
                           {t.attachments.map((a: { id: number; name: string; url: string }) => (
-                            <a key={a.id} href={a.url} target="_blank" rel="noreferrer"
+                            <a key={a.id} href={fileHref(a.url)} target="_blank" rel="noreferrer"
                               className="px-1.5 py-0.5 rounded bg-white border border-slate-200
                                         text-[10px] font-bold text-cyan-700 hover:bg-cyan-50 hover:border-cyan-300
                                         underline decoration-dotted transition-colors">
@@ -431,10 +492,57 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
    walked over and asked. Counted only what came through the queue, the
    monthly figure measured how often people used the ticket form rather than
    how much work was done. ───────────────────────────────────────────────── */
+/* What an Admin does all day is not what IT does all day. Offered only IT's
+   categories, an admin logging "got the pantry tap fixed" had nothing honest
+   to pick, and the server filed it under "Other" without saying so -- which
+   made "Other" the biggest slice of their own monthly report. Each role logs
+   against its own work; Super Admin covers both and gets them in two labelled
+   groups. Keys match roompulse.models: TICKET_CATEGORY_LABEL is the IT list,
+   CATEGORY_LABEL the admin one. */
+const WORK_COPY = {
+  admin: {
+    idle: 'Chased a vendor, arranged a cab, got the pantry tap fixed, sorted an ID card — ' +
+          'record it here and it counts in the monthly report like any request.',
+    subject: 'Got the 2nd-floor AC serviced',
+    description: 'Vendor came at 11. Gas refilled and filters cleaned.',
+  },
+  it: {
+    idle: 'Restarted a server, rebuilt a laptop, fixed a printer someone mentioned in passing — ' +
+          'record it here and it counts in the monthly report like any ticket.',
+    subject: 'Restarted the mail server',
+    description: 'Queue was stuck. Restarted the service and cleared the backlog.',
+  },
+  both: {
+    idle: 'A job nobody raised a ticket or a request for — record it here and it counts ' +
+          'in the monthly report like any other.',
+    subject: 'Restarted the mail server',
+    description: 'Queue was stuck. Restarted the service and cleared the backlog.',
+  },
+};
+
+/* Minutes between two HH:MM times, rolling past midnight -- a job that ran
+   from 23:00 to 00:30 took ninety minutes, not minus one thousand three
+   hundred and fifty. Mirrors worktime.duration_minutes on the server. */
+function spanMinutes(from: string, to: string): number | null {
+  const m = (t: string) => {
+    const [h, mm] = t.split(':').map(Number);
+    return Number.isFinite(h) && Number.isFinite(mm) ? h * 60 + mm : null;
+  };
+  const a = m(from), b = m(to);
+  if (a === null || b === null) return null;
+  const span = b >= a ? b - a : b + 24 * 60 - a;
+  return span || null;
+}
+
 function LogWorkSection({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const today = isoLocal(new Date());
+  const side = session.role === 'admin' ? 'admin'
+             : session.role === 'it_support' ? 'it' : 'both';
+  const copy = WORK_COPY[side];
+  // No category pre-picked. It used to open on "Other", which is a valid
+  // answer nobody means -- and the report is grouped by this field.
   const blank = {
-    subject: '', description: '', category: 'other', priority: 'medium',
+    subject: '', description: '', category: '', priority: 'medium',
     logged_for: '', performed_on: today, time_spent_minutes: '', status: 'closed',
     worked_from: '', worked_to: '',
   };
@@ -444,11 +552,37 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
   const [err, setErr] = useState('');
   const [done, setDone] = useState('');
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string) => setForm(f => {
+    const next = { ...f, [k]: v };
+    // Typing the hours fills the minutes in, so a required field is not
+    // busywork -- but it stays editable: a job with a break in the middle is
+    // honestly two hours of work inside a four-hour window, and only the
+    // person who did it knows that.
+    if (k === 'worked_from' || k === 'worked_to') {
+      const mins = spanMinutes(next.worked_from, next.worked_to);
+      if (mins !== null) next.time_spent_minutes = String(mins);
+    }
+    return next;
+  });
+
+  // Every field is required. A record with the hours or the "who for" left
+  // blank counts as one job in the monthly report and answers nothing else,
+  // which is most of what the report is for. Checked here so the answer is
+  // immediate, and again on the server, which is where it is decided.
+  const MISSING: [keyof typeof blank, string][] = [
+    ['subject', 'Say what the job was.'],
+    ['description', 'Add a line about what you did.'],
+    ['category', 'Pick the category this job belongs to.'],
+    ['logged_for', 'Say who or what it was for.'],
+    ['performed_on', 'Give the day it was done.'],
+    ['worked_from', 'Give the time you started.'],
+    ['worked_to', 'Give the time you finished.'],
+    ['time_spent_minutes', 'How long did it take?'],
+  ];
 
   const submit = async () => {
-    if (!form.subject.trim()) { setErr('Say what the job was.'); return; }
-    if (!form.description.trim()) { setErr('Add a line about what you did.'); return; }
+    const gap = MISSING.find(([k]) => !String(form[k] ?? '').trim());
+    if (gap) { setErr(gap[1]); return; }
     setBusy(true); setErr(''); setDone('');
     try {
       const r = await rpFetch(`${API}/tickets/`, {
@@ -471,7 +605,9 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
 
   return (
     <Panel title="Log work you did" icon={ClipboardList}
-      subtitle="For jobs nobody raised a ticket for — so the month's count is the real one"
+      subtitle={side === 'admin'
+        ? "For jobs nobody raised a request for — so the month's count is the real one"
+        : "For jobs nobody raised a ticket for — so the month's count is the real one"}
       right={
         <button onClick={() => { setOpen(o => !o); setErr(''); setDone(''); }}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600 text-white
@@ -487,10 +623,7 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
         </div>
       )}
       {!open ? (
-        <p className="text-[12px] text-slate-400">
-          Restarted a server, rebuilt a laptop, fixed a printer someone mentioned in passing —
-          record it here and it counts in the monthly report like any ticket.
-        </p>
+        <p className="text-[12px] text-slate-400">{copy.idle}</p>
       ) : (
         <div className="space-y-3">
           {err && (
@@ -504,23 +637,40 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
             <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">What was the job?</label>
             <input className={inputCls} value={form.subject} maxLength={200}
               onChange={e => set('subject', e.target.value)}
-              placeholder="Restarted the mail server" />
+              placeholder={copy.subject} />
           </div>
 
           <div>
             <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">What did you do?</label>
             <textarea className={inputCls + ' min-h-[70px]'} value={form.description}
               onChange={e => set('description', e.target.value)}
-              placeholder="Queue was stuck. Restarted the service and cleared the backlog." />
+              placeholder={copy.description} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">Category</label>
               <select className={inputCls} value={form.category} onChange={e => set('category', e.target.value)}>
-                {Object.entries(TICKET_CATEGORY_LABEL).map(([v, l]) => (
+                <option value="" disabled>Choose one…</option>
+                {side === 'it' && Object.entries(TICKET_CATEGORY_LABEL).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
                 ))}
+                {side === 'admin' && Object.entries(CATEGORY_LABEL).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+                {side === 'both' && (
+                  <>
+                    <optgroup label="IT">
+                      {Object.entries(TICKET_CATEGORY_LABEL).filter(([v]) => v !== 'other')
+                        .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </optgroup>
+                    <optgroup label="Admin">
+                      {Object.entries(CATEGORY_LABEL).filter(([v]) => v !== 'other')
+                        .map(([v, l]) => <option key={`a-${v}`} value={v}>{l}</option>)}
+                    </optgroup>
+                    <option value="other">Other</option>
+                  </>
+                )}
               </select>
             </div>
             <div>
@@ -558,11 +708,11 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
 
           <div>
             <label className="text-[11px] font-black text-slate-500 uppercase tracking-wide">
-              Minutes spent <span className="text-slate-300 normal-case font-bold">— only if the hours above don't say it</span>
+              Minutes spent <span className="text-slate-300 normal-case font-bold">— filled in from the hours; change it if a break means it took less</span>
             </label>
             <input type="number" min={0} className={inputCls} value={form.time_spent_minutes}
               onChange={e => set('time_spent_minutes', e.target.value)}
-              placeholder="Worked out from the times above if you leave this blank" />
+              placeholder="Worked out from the times above" />
           </div>
 
           <p className="text-[11px] text-slate-400">
@@ -582,8 +732,130 @@ function LogWorkSection({ session, onChanged }: { session: Session; onChanged: (
   );
 }
 
+/* ── What has actually been logged ─────────────────────────────
+   A job an admin logged was saved, counted, and then appeared on no screen
+   they could open -- the ticket list treated them as an employee and then
+   excluded the work log outright. Saving something and seeing it nowhere
+   afterwards is indistinguishable from it not saving, which is what got
+   reported. Both roles get this list, immediately below the form that fills
+   it, and it reloads the moment something is logged. ─────────────── */
+function LoggedWorkSection({ session, refresh }: { session: Session; refresh: number }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
+  // Your own log. Two or three people share a desk and each is measured on
+  // what they did, so a list mixing them answers nobody's question. The
+  // super admin oversees both desks and sees everyone's.
+  const isSuper = session.role === 'super_admin';
+  const deskQ = session.role === 'admin' ? '&desk=admin'
+              : session.role === 'it_support' ? '&desk=it' : '';
+  const mineQ = isSuper ? '' : `&performed_by=${encodeURIComponent(session.email)}`;
+
+  const load = useCallback(async () => {
+    setLoading(true); setErr('');
+    try {
+      const r = await rpFetch(`${API}/tickets/?origin=logged&limit=200${deskQ}${mineQ}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not load what has been logged.');
+      setRows(d.results || []);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not reach the server.');
+    } finally { setLoading(false); }
+  }, [deskQ, mineQ]);
+  // `refresh` is bumped by the form above on a successful save.
+  useEffect(() => { load(); }, [load, refresh]);
+
+  const today = isoLocal(new Date());
+  const month = today.slice(0, 7);
+  const shown = rows.slice(0, 20);
+  const thisMonth = rows.filter(r => (r.performed_on || '').startsWith(month));
+  const minutes = thisMonth.reduce((n, r) => n + (r.time_spent_minutes || 0), 0);
+  const hours = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
+
+  const TILES = [
+    { label: 'Logged Today', value: rows.filter(r => r.performed_on === today).length,
+      icon: ClipboardList, cls: 'text-violet-600' },
+    { label: 'This Month', value: thisMonth.length, icon: History, cls: 'text-cyan-600' },
+    { label: 'Time This Month', value: minutes ? hours(minutes) : '—', icon: Timer, cls: 'text-sky-600' },
+    { label: 'Still Running', value: rows.filter(r => r.status === 'in_progress').length,
+      icon: PlayCircle, cls: 'text-amber-600' },
+  ];
+
+  return (
+    <Panel title={isSuper ? 'Work logged' : 'Work you logged'} icon={ClipboardList}
+      subtitle="Jobs recorded directly — newest first, and counted in your monthly report"
+      right={
+        <div className="flex items-center gap-2">
+          <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      }>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        {TILES.map(t => {
+          const Icon = t.icon;
+          return (
+            <div key={t.label} className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+              <Icon className={`w-4 h-4 mb-1.5 ${t.cls}`} />
+              <p className="text-xl font-black text-slate-900 tabular-nums">{loading ? '—' : t.value}</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400 mt-0.5">{t.label}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {err && <p className="text-[12px] text-rose-600 font-semibold py-3 text-center">{err}</p>}
+      {loading ? (
+        <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
+      ) : !shown.length ? (
+        <Empty msg={isSuper ? 'Nothing logged yet' : 'You have not logged anything yet'}
+          icon={ClipboardList} />
+      ) : (
+        <div className="space-y-2">
+          {shown.map((r, i) => (
+            <Reveal key={r.id} delay={i * 25}>
+              <div className="flex items-start gap-3 rounded-xl bg-white border border-slate-200 p-3">
+                <span className="text-[10px] font-black text-slate-400 tabular-nums shrink-0 w-14 pt-0.5">
+                  {r.performed_on ? fmtDate(r.performed_on) : ''}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-bold text-slate-800 truncate">{r.subject}</p>
+                  <p className="text-[10.5px] text-slate-400 truncate">
+                    {r.performed_by_name || r.performed_by_email}
+                    {r.logged_for ? ` · for ${r.logged_for}` : ''}
+                    {' · '}{r.category_label}
+                    {r.worked_from ? ` · ${r.worked_from}–${r.worked_to}` : ''}
+                    {r.time_spent_minutes ? ` · ${hours(r.time_spent_minutes)}` : ''}
+                  </p>
+                </div>
+                {r.after_hours_minutes > 0 && (
+                  <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700
+                                   text-[9px] font-black uppercase shrink-0">
+                    {hours(r.after_hours_minutes)} late
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 shrink-0
+                  ${r.status === 'closed' ? 'bg-emerald-50 text-emerald-600 ring-emerald-200'
+                                          : 'bg-sky-50 text-sky-600 ring-sky-200'}`}>
+                  {r.status === 'closed' ? 'Done' : 'Running'}
+                </span>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /* ── The month's work: tickets closed AND jobs logged ─────────────────── */
-function WorkReportSection() {
+function WorkReportSection({ session, refresh }:
+                           { session: Session; refresh: number }) {
+  // IT and Admin are reported separately -- different people, different work.
+  // The server decides this from the role; only the super admin, who is
+  // neither, gets to choose, and defaults to both.
+  const [desk, setDesk] = useState<'' | 'it' | 'admin'>('');
+  const isSuper = session.role === 'super_admin';
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -600,7 +872,8 @@ function WorkReportSection() {
     if (openPerson === email) { setOpenPerson(''); setItems([]); return; }
     setOpenPerson(email); setItems([]); setItemsBusy(true);
     try {
-      const r = await rpFetch(`${API}/work-report/?month=${month}&person=${encodeURIComponent(email)}`);
+      const r = await rpFetch(`${API}/work-report/?month=${month}`
+        + `${desk ? `&desk=${desk}` : ''}&person=${encodeURIComponent(email)}`);
       const d = await r.json();
       if (r.ok) setItems(d.items || []);
     } finally { setItemsBusy(false); }
@@ -609,7 +882,7 @@ function WorkReportSection() {
   const download = () => {
     // Straight to the browser: the session cookie is not what authorises
     // this, so it goes through rpFetch and is handed over as a blob.
-    rpFetch(`${API}/work-report/export/?month=${month}`).then(async r => {
+    rpFetch(`${API}/work-report/export/?month=${month}${desk ? `&desk=${desk}` : ''}`).then(async r => {
       if (!r.ok) { setErr('Could not build the file.'); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
@@ -623,7 +896,7 @@ function WorkReportSection() {
   useEffect(() => {
     let live = true;
     setData(null); setErr(''); setOpenPerson(''); setItems([]);
-    rpFetch(`${API}/work-report/?month=${month}`)
+    rpFetch(`${API}/work-report/?month=${month}${desk ? `&desk=${desk}` : ''}`)
       .then(async r => {
         const body = await r.json().catch(() => ({}));
         if (!live) return;
@@ -632,15 +905,26 @@ function WorkReportSection() {
       })
       .catch(() => { if (live) setErr('Could not reach the server.'); });
     return () => { live = false; };
-  }, [month]);
+  }, [month, refresh, desk]);
 
   const hours = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
 
   return (
-    <Panel title="Work this month" icon={History}
-      subtitle={data ? `${data.label} · tickets closed and jobs logged` : 'Loading…'}
+    <Panel title={data?.scope === 'me' ? 'Your work this month' : 'Work this month'} icon={History}
+      subtitle={data ? `${data.desk_label} · ${data.label} · work done and jobs logged` : 'Loading…'}
       right={
         <div className="flex items-center gap-2">
+          {isSuper && (
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              {([['', 'Both'], ['it', 'IT'], ['admin', 'Admin']] as const).map(([v, l]) => (
+                <button key={v} onClick={() => setDesk(v)}
+                  className={`px-2.5 py-1.5 text-[11px] font-black transition-colors
+                    ${desk === v ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
           <input type="month" value={month} onChange={e => setMonth(e.target.value)}
             className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-bold text-slate-600" />
           <button onClick={download} title="Download this month as a spreadsheet"
@@ -657,7 +941,7 @@ function WorkReportSection() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { l: 'Jobs done', v: data.total },
-              { l: 'From tickets', v: data.from_tickets },
+              { l: 'From the queues', v: data.from_tickets },
               { l: 'Logged directly', v: data.logged_directly },
               { l: 'Time recorded', v: data.minutes_recorded ? hours(data.minutes_recorded) : '—' },
               { l: 'Outside office hours', v: data.after_hours_minutes ? hours(data.after_hours_minutes) : '—' },
@@ -669,11 +953,26 @@ function WorkReportSection() {
             ))}
           </div>
 
+          {/* "From the queues" is three different jobs in one number —
+              IT closing tickets, Admin handing items over, Admin approving
+              rooms. An Admin looking for their own month needs to see which. */}
+          {data.from_queue && data.from_tickets > 0 && (
+            <p className="text-[11px] text-slate-400">
+              Through the queues:{' '}
+              {[[data.from_queue.tickets, 'IT ticket'],
+                [data.from_queue.item_requests, 'item request'],
+                [data.from_queue.room_bookings, 'room booking']]
+                .filter(([n]) => n as number > 0)
+                .map(([n, w]) => `${n} ${w}${(n as number) === 1 ? '' : 's'}`)
+                .join(' · ')}
+            </p>
+          )}
+
           {!data.total ? (
             <Empty msg="Nothing recorded for this month yet" icon={History} />
           ) : (
             <>
-              <div>
+              <div className={data.scope === 'me' ? 'hidden' : ''}>
                 <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">By person</p>
                 <div className="space-y-1.5">
                   {data.people.map((p: any) => (
@@ -684,7 +983,7 @@ function WorkReportSection() {
                         <div className="min-w-0">
                           <p className="text-[12px] font-black text-slate-700 truncate">{p.name}</p>
                           <p className="text-[10px] text-slate-400">
-                            {p.closed} from tickets · {p.logged} logged
+                            {p.closed} from the queues · {p.logged} logged
                             {p.minutes ? ` · ${hours(p.minutes)}` : ''}
                             {p.after_hours_minutes
                               ? <span className="text-violet-500 font-bold">
@@ -710,8 +1009,12 @@ function WorkReportSection() {
                             <div key={it.id} className="flex items-start gap-2 text-[11px]">
                               <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0
                                 ${it.origin === 'logged' ? 'bg-violet-100 text-violet-700'
+                                  : it.source === 'item' ? 'bg-amber-100 text-amber-700'
+                                  : it.source === 'room' ? 'bg-emerald-100 text-emerald-700'
                                                          : 'bg-cyan-100 text-cyan-700'}`}>
-                                {it.origin === 'logged' ? 'Logged' : 'Ticket'}
+                                {it.origin === 'logged' ? 'Logged'
+                                  : it.source === 'item' ? 'Item'
+                                  : it.source === 'room' ? 'Room' : 'Ticket'}
                               </span>
                               <span className="text-slate-400 tabular-nums shrink-0 w-16">
                                 {it.date ? fmtDate(it.date) : ''}
@@ -779,7 +1082,9 @@ function ItTicketHistorySection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await rpFetch(`${API}/tickets/?limit=500`);
+      // desk=it: an admin's logged work is Admin's, and it was turning up
+      // here because everything logged lives in the one table.
+      const r = await rpFetch(`${API}/tickets/?limit=500&desk=it`);
       const d = await r.json();
       setTickets(d.results || []);
     } finally { setLoading(false); }
@@ -882,19 +1187,28 @@ function ItTicketHistorySection() {
    the Admin queue only. ResourceRequest already tracks `fulfilled_at`
    separately, so "Fulfilled Today" doesn't need an updated_at field the
    way the IT ticket version does. ────────────────────────────────────── */
-function AdminTicketHistorySection() {
+function AdminTicketHistorySection({ session, refresh }:
+                                   { session: Session; refresh: number }) {
   const [requests, setRequests] = useState<any[]>([]);
+  const [logged, setLogged] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await rpFetch(`${API}/resource-requests/?limit=500`);
-      const d = await r.json();
-      setRequests(d.results || []);
+      // Two halves of Admin's work: what people asked for, and what Admin
+      // did without being asked. Both belong on Admin's screen -- the second
+      // was landing on IT's.
+      const [rq, lg] = await Promise.all([
+        rpFetch(`${API}/resource-requests/?limit=500`).then(r => r.json()),
+        rpFetch(`${API}/tickets/?origin=logged&desk=admin&limit=500`
+          + `&performed_by=${encodeURIComponent(session.email)}`).then(r => r.json()),
+      ]);
+      setRequests(rq.results || []);
+      setLogged(lg.results || []);
     } finally { setLoading(false); }
-  }, []);
-  useEffect(() => { load(); }, [load]);
+  }, [session.email]);
+  useEffect(() => { load(); }, [load, refresh]);
 
   const today = isoLocal(new Date());
   const isToday = (iso: string) => isoLocal(new Date(iso)) === today;
@@ -903,24 +1217,35 @@ function AdminTicketHistorySection() {
   const fulfilledToday = requests.filter(r => r.status === 'fulfilled' && r.fulfilled_at && isToday(r.fulfilled_at)).length;
   const awaitingFulfilment = requests.filter(r => r.status === 'approved').length;
   const pending = requests.filter(r => r.status === 'pending').length;
+  const loggedToday = logged.filter(t => t.performed_on === today).length;
 
   const STAT_TILES = [
     { label: 'Received Today', value: receivedToday, icon: Inbox, cls: 'text-cyan-600' },
     { label: 'Fulfilled Today', value: fulfilledToday, icon: CheckCircle2, cls: 'text-emerald-600' },
+    { label: 'Logged Today', value: loggedToday, icon: ClipboardList, cls: 'text-violet-600' },
     { label: 'Awaiting Fulfilment', value: awaitingFulfilment, icon: PlayCircle, cls: 'text-sky-600' },
     { label: 'Pending', value: pending, icon: Clock, cls: 'text-amber-600' },
   ];
 
-  const recent = requests.slice(0, 15);
+  // One list, newest first, whichever half a row came from -- a request and
+  // a job Admin did are both Admin's day.
+  const when = (r: any) => (r.kind === 'logged'
+    ? (r.performed_on || r.created_at.slice(0, 10))
+    : r.created_at.slice(0, 10));
+  const recent = [...requests.map(r => ({ ...r, kind: 'request' })),
+                  ...logged.map(t => ({ ...t, kind: 'logged' }))]
+    .sort((a, b) => (when(a) < when(b) ? 1 : -1))
+    .slice(0, 15);
 
   return (
-    <Panel title="Admin Ticket History" icon={History} subtitle="Today's volume, throughput, and the most recent item requests"
+    <Panel title="Admin Ticket History" icon={History}
+      subtitle="Today's volume, and the most recent requests and logged jobs"
       right={
         <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       }>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
         {STAT_TILES.map(s => {
           const Icon = s.icon;
           return (
@@ -936,21 +1261,41 @@ function AdminTicketHistorySection() {
       {loading ? (
         <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
       ) : !recent.length ? (
-        <Empty msg="No item requests raised yet" icon={History} />
+        <Empty msg="Nothing raised or logged yet" icon={History} />
       ) : (
         <div className="space-y-2">
           {recent.map((r, i) => (
-            <Reveal key={r.id} delay={i * 30}>
+            <Reveal key={`${r.kind}-${r.id}`} delay={i * 30}>
               <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3">
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0 ${REQUEST_STATUS_BADGE[r.status]}`}>
-                  {r.status}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-bold text-slate-800 truncate">{r.item_name} × {r.quantity}</p>
-                  <p className="text-[10.5px] text-slate-400 truncate">
-                    {r.requested_by_name} · {r.category_label} · {fmtDate(r.created_at.slice(0, 10))}
-                  </p>
-                </div>
+                {r.kind === 'logged' ? (
+                  <>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1
+                                     bg-violet-50 text-violet-600 ring-violet-200 flex-shrink-0">
+                      Logged
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-slate-800 truncate">{r.subject}</p>
+                      <p className="text-[10.5px] text-slate-400 truncate">
+                        {r.performed_by_name || r.performed_by_email}
+                        {r.logged_for ? ` · for ${r.logged_for}` : ''}
+                        {' · '}{r.category_label}
+                        {r.performed_on ? ` · ${fmtDate(r.performed_on)}` : ''}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0 ${REQUEST_STATUS_BADGE[r.status]}`}>
+                      {r.status}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-slate-800 truncate">{r.item_name} × {r.quantity}</p>
+                      <p className="text-[10.5px] text-slate-400 truncate">
+                        {r.requested_by_name} · {r.category_label} · {fmtDate(r.created_at.slice(0, 10))}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </Reveal>
           ))}
@@ -1668,7 +2013,7 @@ function TeamManage({ session }: { session: Session }) {
     const res = await rpFetch(`${API}/employees/template/`);
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'AdminPulse_Employee_Template.xlsx';
+    const a = document.createElement('a'); a.href = url; a.download = 'HelpDesk_Employee_Template.xlsx';
     document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a);
   };
   const upload = async (file: File) => {
@@ -1920,7 +2265,7 @@ function AnalyticsPanel({ session }: { session: Session }) {
       )}
       {!allTime && (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[12px] text-slate-500">
-          No bookings, tickets or item requests have been raised yet. This page fills in as people use AdminPulse.
+          No bookings, tickets or item requests have been raised yet. This page fills in as people use the Help Desk.
         </div>
       )}
 

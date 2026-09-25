@@ -3,7 +3,7 @@
  * Each tab answers one question an administrator actually has:
  *   People    — who can sign in, and which tools they may open
  *   Content   — what staff have added to the dashboard, waiting to be approved
- *   Noticeboard — announcements and the holiday circular, written by HR
+ *   Noticeboard — announcements, the Daily News strip, and the holiday circular
  *   Activity  — who did what, and when
  *   HRMS      — what Pocket HRMS is sending us, verbatim, and when we last pulled it
  *   Sessions  — who is signed in right now, and how to end it
@@ -20,6 +20,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
   Users, RefreshCw, Database, Monitor, Search, ShieldCheck, X, Check, AlertCircle,
   Loader2, LogOut, Eye, Crown, UserPlus, Trash2, Grid3x3, ClipboardCheck, ScrollText, Megaphone,
+  Newspaper, Pencil, Clock, Image as ImageIcon, Rss, DownloadCloud, CheckCheck, Ban, AlertTriangle,
 } from 'lucide-react';
 import { apiFetch, portalFetch, type PortalUser } from './session';
 
@@ -1874,12 +1875,13 @@ const nbField = 'w-full px-3 py-2 rounded-lg border border-slate-200 bg-white te
 const nbLabel = 'block text-[11.5px] font-bold text-slate-600 mb-1.5';
 
 function NoticeboardTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void }) {
-  const [section, setSection] = useState<'announcements' | 'holidays'>('announcements');
+  const [section, setSection] = useState<'announcements' | 'news' | 'holidays'>('announcements');
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        {([['announcements', 'Announcements'], ['holidays', 'Holiday List']] as const).map(([k, label]) => (
+        {([['announcements', 'Announcements'], ['news', 'Daily News'],
+           ['holidays', 'Holiday List']] as const).map(([k, label]) => (
           <button key={k} onClick={() => setSection(k)}
             className={`px-3 py-1.5 rounded-lg text-[11.5px] font-black transition-colors ${
               section === k ? 'bg-slate-900 text-white'
@@ -1889,6 +1891,7 @@ function NoticeboardTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) 
         ))}
       </div>
       {section === 'announcements' ? <AnnouncementsAdmin onToast={onToast} />
+        : section === 'news' ? <NewsAdmin onToast={onToast} />
         : <HolidaysAdmin onToast={onToast} />}
     </div>
   );
@@ -2104,6 +2107,642 @@ function AnnouncementsAdmin({ onToast }: { onToast: (t: { t: string; ok: boolean
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600
                            text-white text-[13px] font-black transition-all disabled:opacity-60">
                 <Check className="w-4 h-4" />{busy ? 'Saving…' : editing ? 'Save changes' : 'Post it'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+const NEWS_CATEGORIES = [
+  ['company', 'Company'], ['apis', 'APIs'], ['food_apis', 'Food APIs'],
+  ['nutraceuticals', 'Nutraceuticals'], ['industry', 'Industry'], ['products', 'Products'],
+] as const;
+
+/* How many days before the strip is calling stale stories "latest updates".
+   Matches NewsItem.STALE_AFTER_DAYS on the server. */
+const NEWS_STALE_DAYS = 14;
+
+const daysSince = (iso: string) => {
+  const t = new Date(iso).getTime();
+  return Number.isNaN(t) ? 0 : Math.floor((Date.now() - t) / 86400000);
+};
+
+/* ── Daily News ─────────────────────────────────────
+   The strip on the dashboard promises "latest updates", so the one thing this
+   screen has to do beyond add/edit/delete is tell the curator when that has
+   stopped being true. Nobody notices a feed going quiet from the feed itself.
+   ────────────────────────────────────────────────────── */
+/* ── Where the news comes from ────────────────────────────
+   A feed that has quietly stopped working is the failure nobody notices, so
+   every source carries what happened on its last run and says it here rather
+   than only in a log file. ─────────────────────────────────── */
+function NewsSourcesPanel({ onToast, onFetched }: {
+  onToast: (t: { t: string; ok: boolean }) => void; onFetched: () => void;
+}) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [nonce, setNonce] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [kind, setKind] = useState<'google_news' | 'rss'>('google_news');
+  const [busy, setBusy] = useState(false);
+  const [fetching, setFetching] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await apiFetch(`${NOTICEBOARD_API}/news/sources/`);
+        if (alive && r.ok) setRows(await r.json());
+      } catch { /* the panel below says nothing is set up */ }
+    })();
+    return () => { alive = false; };
+  }, [nonce]);
+
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const get = (k: string) => String(fd.get(k) ?? '').trim();
+    const payload = {
+      name: get('name'), kind, query: get('query'), feedUrl: get('feedUrl'),
+      category: get('category'),
+      maxPerRun: Number(get('maxPerRun') || 5),
+      autoPublish: fd.get('autoPublish') === 'on',
+      isActive: fd.get('isActive') === 'on',
+    };
+    setBusy(true);
+    try {
+      const url = editing ? `${NOTICEBOARD_API}/news/sources/${editing.id}/`
+        : `${NOTICEBOARD_API}/news/sources/`;
+      const r = await apiFetch(url, { method: editing ? 'PATCH' : 'POST',
+                                      body: JSON.stringify(payload) });
+      const d = await r.json().catch(() => ({}));
+      onToast({ t: r.ok ? (d.message || 'Saved') : (d.error || 'Could not save it'), ok: r.ok });
+      if (r.ok) { setOpen(false); setEditing(null); setNonce(n => n + 1); }
+    } finally { setBusy(false); }
+  }
+
+  async function remove(x: any) {
+    const r = await apiFetch(`${NOTICEBOARD_API}/news/sources/${x.id}/`, { method: 'DELETE' });
+    const d = await r.json().catch(() => ({}));
+    onToast({ t: r.ok ? (d.message || 'Source removed') : (d.error || 'Could not remove it'), ok: r.ok });
+    if (r.ok) setNonce(n => n + 1);
+  }
+
+  async function fetchNow() {
+    setFetching(true);
+    try {
+      const r = await apiFetch(`${NOTICEBOARD_API}/news/fetch/`, { method: 'POST' });
+      const d = await r.json().catch(() => ({}));
+      onToast({ t: r.ok ? (d.message || 'Done') : (d.error || 'Could not fetch'), ok: r.ok });
+      if (r.ok) { setNonce(n => n + 1); onFetched(); }
+    } finally { setFetching(false); }
+  }
+
+  const startNew = () => { setEditing(null); setKind('google_news'); setOpen(true); };
+  const startEdit = (x: any) => { setEditing(x); setKind(x.kind); setOpen(true); };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-[12px] text-slate-500 font-semibold max-w-xl leading-relaxed">
+          Feeds the strip pulls from on a schedule. A Google News source is a saved search;
+          an RSS source is a publication&rsquo;s own feed. Everything they find waits for
+          approval unless you mark the source trusted.
+        </p>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={fetchNow} disabled={fetching || rows.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200
+                       text-slate-600 hover:border-indigo-300 hover:text-indigo-600
+                       text-[12.5px] font-black transition-all disabled:opacity-50">
+            <DownloadCloud className="w-4 h-4" />{fetching ? 'Fetching…' : 'Fetch now'}
+          </button>
+          <button onClick={startNew}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600
+                       text-white text-[12.5px] font-black transition-all">
+            <Rss className="w-4 h-4" />Add a source
+          </button>
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-[12.5px] text-slate-600 font-semibold">
+            No feeds yet, so the strip only shows what you write by hand.
+          </p>
+          <p className="text-[11.5px] text-slate-400 mt-1.5 leading-relaxed">
+            A good first pair: one Google News search for <em>&ldquo;Apis India&rdquo;</em> to
+            catch anything written about the company, and one for the trade
+            (<em>honey industry OR nutraceuticals India</em>) to keep the strip moving on the
+            quiet weeks. Company news is rare — a wider window suits it.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map(x => (
+            <div key={x.id} className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className="flex items-start gap-3">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  x.isActive ? 'bg-indigo-50' : 'bg-slate-100'}`}>
+                  <Rss className={`w-4 h-4 ${x.isActive ? 'text-indigo-500' : 'text-slate-300'}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[13px] font-black text-slate-900 truncate">{x.name}</p>
+                    {!x.isActive && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 text-slate-500">
+                        PAUSED
+                      </span>
+                    )}
+                    {x.autoPublish && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700">
+                        PUBLISHES ITSELF
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11.5px] text-slate-400 mt-0.5 truncate">
+                    {x.kind === 'google_news' ? `Google News: ${x.query}` : x.feedUrl}
+                  </p>
+                  <p className="text-[11px] text-slate-400 font-semibold mt-1">
+                    {x.categoryLabel} · up to {x.maxPerRun} a run
+                    {x.lastFetchedAt
+                      ? ` · last run found ${x.lastFound}, kept ${x.lastAdded}`
+                      : ' · never run'}
+                  </p>
+                  {/* A feed that has stopped working, said where it will be seen. */}
+                  {x.lastStatus === 'failed' && (
+                    <p className="flex items-start gap-1.5 text-[11px] text-rose-600 font-bold mt-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />{x.lastError}
+                    </p>
+                  )}
+                  {x.lastStatus === 'paused' && (
+                    <p className="flex items-start gap-1.5 text-[11px] text-amber-700 font-bold mt-1.5">
+                      <Clock className="w-3.5 h-3.5 shrink-0 mt-px" />{x.lastError}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => startEdit(x)} title="Edit"
+                    className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => remove(x)} title="Remove"
+                    className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {open && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
+          onClick={() => { setOpen(false); setEditing(null); }}>
+          <form onClick={e => e.stopPropagation()} onSubmit={save}
+            className="ih-pop-in relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="sticky top-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 bg-white/95">
+              <p className="text-[14px] font-black text-slate-900 flex items-center gap-2">
+                <Rss className="w-4 h-4 text-indigo-500" />{editing ? 'Edit source' : 'Add a source'}
+              </p>
+              <button type="button" onClick={() => { setOpen(false); setEditing(null); }} title="Close"
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <div>
+                <label className={nbLabel}>Name it <span className="text-rose-500">*</span></label>
+                <input name="name" required defaultValue={editing?.name || ''}
+                  placeholder="e.g. Google News — Apis India" className={nbField} />
+              </div>
+              <div>
+                <label className={nbLabel}>Kind</label>
+                <div className="flex items-center gap-2">
+                  {([['google_news', 'Google News search'], ['rss', 'RSS feed']] as const).map(([k, l]) => (
+                    <button type="button" key={k} onClick={() => setKind(k)}
+                      className={`px-3 py-1.5 rounded-lg text-[11.5px] font-black transition-colors ${
+                        kind === k ? 'bg-slate-900 text-white'
+                          : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {kind === 'google_news' ? (
+                <div>
+                  <label className={nbLabel}>Search for <span className="text-rose-500">*</span></label>
+                  <input name="query" defaultValue={editing?.query || ''}
+                    placeholder='e.g. "Apis India" OR "Apis Himalaya"' className={nbField} />
+                  <p className="text-[10.5px] text-slate-400 font-semibold mt-1.5">
+                    Quotes keep a phrase together; OR widens it. Only results from the last
+                    two weeks are asked for, so the strip stays current.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className={nbLabel}>Feed address <span className="text-rose-500">*</span></label>
+                  <input name="feedUrl" type="url" defaultValue={editing?.feedUrl || ''}
+                    placeholder="https://example.com/feed.xml" className={nbField} />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={nbLabel}>File everything under</label>
+                  <select name="category" defaultValue={editing?.category || 'industry'} className={nbField}>
+                    {NEWS_CATEGORIES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={nbLabel}>Most per run</label>
+                  <input name="maxPerRun" type="number" min={1} max={20}
+                    defaultValue={editing?.maxPerRun ?? 5} className={nbField} />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-[12.5px] font-bold text-slate-600 cursor-pointer">
+                <input type="checkbox" name="isActive" defaultChecked={editing ? editing.isActive : true}
+                  className="w-4 h-4 rounded accent-indigo-500 cursor-pointer" />
+                Fetch from this source
+              </label>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <label className="flex items-start gap-2 text-[12.5px] font-bold text-amber-900 cursor-pointer">
+                  <input type="checkbox" name="autoPublish" defaultChecked={!!editing?.autoPublish}
+                    className="w-4 h-4 rounded accent-amber-500 cursor-pointer mt-0.5" />
+                  <span>
+                    Put its stories straight on the dashboard
+                    <span className="block font-semibold text-amber-700 mt-1 leading-relaxed">
+                      Leave this off unless you trust the feed completely. A search for the
+                      company&rsquo;s own name will eventually return a recall, a lawsuit or a
+                      rival&rsquo;s press release, and this would put it on the home page
+                      before anyone here read it.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-slate-100 bg-slate-50">
+              <button type="button" onClick={() => { setOpen(false); setEditing(null); }}
+                className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all">
+                Cancel
+              </button>
+              <button type="submit" disabled={busy}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600
+                           text-white text-[13px] font-black transition-all disabled:opacity-60">
+                <Check className="w-4 h-4" />{busy ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function NewsAdmin({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [nonce, setNonce] = useState(0);
+  const [loadedNonce, setLoadedNonce] = useState(-1);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<'stories' | 'sources'>('stories');
+  const [picked, setPicked] = useState<number[]>([]);
+  const loading = loadedNonce !== nonce;
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await apiFetch(`${NOTICEBOARD_API}/news/?scope=all`);
+        if (alive && r.ok) setRows(await r.json());
+      } catch {
+        if (alive) onToast({ t: 'Could not load the news list', ok: false });
+      } finally {
+        if (alive) setLoadedNonce(nonce);
+      }
+    })();
+    return () => { alive = false; };
+  }, [nonce, onToast]);
+
+  const live = rows.filter(n => n.moderationStatus === 'approved');
+  const waiting = rows.filter(n => n.moderationStatus === 'pending');
+  const newestAge = live.length ? Math.min(...live.map(n => daysSince(n.publishedOn))) : null;
+
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const get = (k: string) => String(fd.get(k) ?? '').trim();
+
+    if (!get('title') || !get('summary')) {
+      onToast({ t: 'A story needs a headline and a line about it', ok: false });
+      return;
+    }
+
+    const file = fd.get('image') as File | null;
+    const hasFile = !!(file && file.size > 0);
+    const fields: Record<string, string | boolean> = {
+      title: get('title'), summary: get('summary'), category: get('category'),
+      sourceName: get('sourceName'), sourceUrl: get('sourceUrl'),
+      imageUrl: get('imageUrl'),
+      publishedOn: get('publishedOn'), expiresOn: get('expiresOn'),
+      pinned: fd.get('pinned') === 'on',
+    };
+
+    // Only reach for multipart when there is actually a file to carry; the
+    // JSON path is the one every other form here uses and the one the tests
+    // cover most heavily.
+    let body: BodyInit;
+    if (hasFile) {
+      const out = new FormData();
+      Object.entries(fields).forEach(([k, v]) => {
+        if (typeof v === 'boolean') { if (v) out.append(k, 'on'); }
+        else if (v) out.append(k, v);
+      });
+      out.append('image', file as File);
+      body = out;
+    } else {
+      body = JSON.stringify(fields);
+    }
+
+    setBusy(true);
+    try {
+      const url = editing ? `${NOTICEBOARD_API}/news/${editing.id}/` : `${NOTICEBOARD_API}/news/`;
+      const r = await apiFetch(url, { method: editing ? 'PATCH' : 'POST', body });
+      const d = await r.json().catch(() => ({}));
+      onToast({ t: r.ok ? (d.message || 'Saved') : (d.error || 'Could not save it'), ok: r.ok });
+      if (r.ok) { setOpen(false); setEditing(null); setNonce(n => n + 1); }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(n: any) {
+    const r = await apiFetch(`${NOTICEBOARD_API}/news/${n.id}/`, { method: 'DELETE' });
+    const d = await r.json().catch(() => ({}));
+    onToast({ t: r.ok ? 'Story removed' : (d.error || 'Could not remove it'), ok: r.ok });
+    if (r.ok) setNonce(n2 => n2 + 1);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  /* Approving a morning's headlines one modal at a time is how a review queue
+     stops being used, so the waiting ones are reviewed as a batch. */
+  async function review(decision: 'approve' | 'reject') {
+    if (!picked.length) return;
+    const r = await apiFetch(`${NOTICEBOARD_API}/news/approve/`, {
+      method: 'POST', body: JSON.stringify({ ids: picked, decision }),
+    });
+    const d = await r.json().catch(() => ({}));
+    onToast({ t: r.ok ? (d.message || 'Done') : (d.error || 'Could not do that'), ok: r.ok });
+    if (r.ok) { setPicked([]); setNonce(n => n + 1); }
+  }
+
+  const toggle = (id: number) =>
+    setPicked(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        {([['stories', 'Stories'], ['sources', 'Where it comes from']] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setView(k)}
+            className={`px-3 py-1.5 rounded-lg text-[11.5px] font-black transition-colors ${
+              view === k ? 'bg-indigo-500 text-white'
+                : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {view === 'sources' ? (
+        <NewsSourcesPanel onToast={onToast} onFetched={() => setNonce(n => n + 1)} />
+      ) : (
+      <>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-[12px] text-slate-500 font-semibold max-w-xl leading-relaxed">
+          The Daily News strip under Your Tools on the dashboard. Stories come from the feeds
+          under &ldquo;Where it comes from&rdquo;, or from anyone signed in. Nothing shows until
+          you approve it.
+        </p>
+        <button onClick={() => { setEditing(null); setOpen(true); }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600
+                     text-white text-[12.5px] font-black transition-all shrink-0">
+          <Newspaper className="w-4 h-4" />Add a story
+        </button>
+      </div>
+
+      {/* The one thing the list itself cannot say. */}
+      {!loading && newestAge !== null && newestAge > NEWS_STALE_DAYS && (
+        <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3">
+          <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <p className="text-[12px] text-amber-900 font-semibold">
+            The newest story is {newestAge} days old, but the dashboard calls this strip
+            &ldquo;latest updates&rdquo;. Worth adding something, or taking the old ones down.
+          </p>
+        </div>
+      )}
+      {!loading && live.length === 0 && (
+        <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200 p-3">
+          <Newspaper className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+          <p className="text-[12px] text-slate-600 font-semibold">
+            Nothing published yet, so the strip is hidden from the dashboard entirely
+            rather than showing an empty frame.
+          </p>
+        </div>
+      )}
+      {!loading && waiting.length > 0 && (
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-[12px] text-indigo-900 font-bold">
+              {waiting.length} {waiting.length === 1 ? 'story is' : 'stories are'} waiting for
+              approval{picked.length ? ` \u00b7 ${picked.length} selected` : ''}.
+            </p>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPicked(waiting.map(n => n.id))}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black text-indigo-600
+                           bg-white border border-indigo-200 hover:border-indigo-400 transition-all">
+                Select all
+              </button>
+              <button onClick={() => review('approve')} disabled={!picked.length}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500
+                           hover:bg-indigo-600 text-white text-[11px] font-black transition-all
+                           disabled:opacity-40">
+                <CheckCheck className="w-3.5 h-3.5" />Publish
+              </button>
+              <button onClick={() => review('reject')} disabled={!picked.length}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white
+                           border border-slate-200 text-slate-500 hover:text-rose-600
+                           hover:border-rose-300 text-[11px] font-black transition-all
+                           disabled:opacity-40">
+                <Ban className="w-3.5 h-3.5" />Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-[12px] text-slate-400 py-6 text-center">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-[12px] text-slate-400 py-6 text-center">No stories yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {rows.map(n => (
+            <div key={n.id} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
+              {n.moderationStatus === 'pending' && (
+                <input type="checkbox" checked={picked.includes(n.id)}
+                  onChange={() => toggle(n.id)} title="Select for review"
+                  className="w-4 h-4 rounded accent-indigo-500 cursor-pointer mt-1 shrink-0" />
+              )}
+              {n.image
+                ? <img src={n.image} alt="" className="w-16 h-12 rounded-lg object-cover shrink-0" />
+                : <div className="w-16 h-12 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                    <ImageIcon className="w-4 h-4 text-slate-300" />
+                  </div>}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-[13px] font-black text-slate-900 truncate">{n.title}</p>
+                  {n.pinned && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700">
+                      PINNED
+                    </span>
+                  )}
+                  {n.moderationStatus !== 'approved' && (
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                      n.moderationStatus === 'pending' ? 'bg-indigo-100 text-indigo-700'
+                        : 'bg-rose-100 text-rose-700'}`}>
+                      {n.moderationStatus}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11.5px] text-slate-400 line-clamp-2 mt-0.5">{n.summary}</p>
+                <p className="text-[11px] text-slate-400 font-semibold mt-1">
+                  {n.categoryLabel} · {daysSince(n.publishedOn)}d old
+                  {n.sourceName ? ` · ${n.sourceName}` : ''}
+                  {n.submittedBy ? ` · by ${n.submittedBy}` : ''}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => { setEditing(n); setOpen(true); }} title="Edit"
+                  className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button onClick={() => remove(n)} title="Remove"
+                  className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      </>
+      )}
+
+      {open && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
+          onClick={() => { setOpen(false); setEditing(null); }}>
+          <form onClick={e => e.stopPropagation()} onSubmit={save}
+            className="ih-pop-in relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="sticky top-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 bg-white/95">
+              <p className="text-[14px] font-black text-slate-900 flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-indigo-500" />
+                {editing ? 'Edit story' : 'Add a story'}
+              </p>
+              <button type="button" onClick={() => { setOpen(false); setEditing(null); }} title="Close"
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <div>
+                <label className={nbLabel}>Headline <span className="text-rose-500">*</span></label>
+                <input name="title" required defaultValue={editing?.title || ''}
+                  placeholder="e.g. APIS expands nutraceutical capacity" className={nbField} />
+              </div>
+              <div>
+                <label className={nbLabel}>The story <span className="text-rose-500">*</span></label>
+                <textarea name="summary" required rows={3} defaultValue={editing?.summary || ''}
+                  placeholder="A sentence or two — enough to decide whether to click through."
+                  className={`${nbField} resize-y`} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={nbLabel}>Category</label>
+                  <select name="category" defaultValue={editing?.category || 'industry'} className={nbField}>
+                    {NEWS_CATEGORIES.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={nbLabel}>Dated</label>
+                  <input type="date" name="publishedOn"
+                    defaultValue={editing?.publishedOn || today} className={nbField} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={nbLabel}>Source <span className="text-slate-400 font-semibold">(optional)</span></label>
+                  <input name="sourceName" defaultValue={editing?.sourceName || ''}
+                    placeholder="e.g. Economic Times" className={nbField} />
+                </div>
+                <div>
+                  <label className={nbLabel}>Link <span className="text-slate-400 font-semibold">(optional)</span></label>
+                  <input name="sourceUrl" type="url" defaultValue={editing?.sourceUrl || ''}
+                    placeholder="https://…" className={nbField} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 p-3 space-y-2.5">
+                <p className="text-[11.5px] font-bold text-slate-600">Picture <span className="text-slate-400 font-semibold">(optional)</span></p>
+                <div>
+                  <label className={nbLabel}>Upload one</label>
+                  <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="block w-full text-[12px] text-slate-500 file:mr-3 file:py-1.5 file:px-3
+                               file:rounded-lg file:border-0 file:text-[12px] file:font-bold
+                               file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100" />
+                </div>
+                <div>
+                  <label className={nbLabel}>…or paste a link to one</label>
+                  <input name="imageUrl" type="url" defaultValue={editing?.image?.startsWith('http') && !editing?.image?.includes('/media/') ? editing.image : ''}
+                    placeholder="https://…" className={nbField} />
+                </div>
+                <p className="text-[10.5px] text-slate-400 font-semibold">
+                  An upload is kept here and keeps working. A pasted link lives on someone
+                  else&rsquo;s server and can stop loading — the card falls back to a plain tile if it does.
+                </p>
+              </div>
+
+              <div>
+                <label className={nbLabel}>
+                  Stop showing after <span className="text-slate-400 font-semibold">(optional)</span>
+                </label>
+                <input type="date" name="expiresOn" defaultValue={editing?.expiresOn || ''} className={nbField} />
+              </div>
+              <label className="flex items-center gap-2 text-[12.5px] font-bold text-slate-600 cursor-pointer">
+                <input type="checkbox" name="pinned" defaultChecked={!!editing?.pinned}
+                  className="w-4 h-4 rounded accent-indigo-500 cursor-pointer" />
+                Keep this first, ahead of newer stories
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-slate-100 bg-slate-50">
+              <button type="button" onClick={() => { setOpen(false); setEditing(null); }}
+                className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all">
+                Cancel
+              </button>
+              <button type="submit" disabled={busy}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600
+                           text-white text-[13px] font-black transition-all disabled:opacity-60">
+                <Check className="w-4 h-4" />{busy ? 'Saving…' : editing ? 'Save changes' : 'Publish it'}
               </button>
             </div>
           </form>

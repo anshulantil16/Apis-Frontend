@@ -7,7 +7,7 @@ import {
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
   ROLE_LABEL, Reveal, Panel, Skel, Empty, StatusPill, PURPOSE_LABEL, PURPOSE_COLOUR,
-  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './HelpDeskShared';
+  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, AssigneePicker} from './HelpDeskShared';
 import { HelpDeskLogin } from './HelpDeskLogin';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './HelpDeskAdminPanels';
 import {
@@ -148,11 +148,33 @@ function RoomCard({ room, delay, onBook, canManage, onFreed }: {
             Next: {room.next_booking.start_time} · {room.next_booking.requested_by_name}
           </p>
         )}
-        {room.status === 'free' && !room.next_booking && (
+        {room.status === 'free' && !room.next_booking && !room.pending?.length && (
           <p className="relative text-[11px] text-emerald-600/70 mb-3 flex items-center gap-1.5">
             <span className="w-1 h-1 rounded-full bg-emerald-400 rp-pulse-glow" />
             Nothing booked today
           </p>
+        )}
+
+        {/* Requests nobody has approved yet. Without these the card said
+            "Nothing booked today" straight after somebody had booked it and
+            been told it went for approval — so they could not tell their
+            request existed, and the next person asked for the same slot. */}
+        {room.pending?.length > 0 && (
+          <div className="relative rounded-xl bg-amber-50 border border-amber-200 p-2.5 mb-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700/80">
+              Awaiting approval
+            </p>
+            {room.pending.slice(0, 2).map((p: any) => (
+              <p key={p.id} className="text-[11px] font-bold text-amber-800 mt-1">
+                {p.start_time}–{p.end_time} · {p.requested_by_name}
+              </p>
+            ))}
+            {room.pending.length > 2 && (
+              <p className="text-[10px] text-amber-600 mt-1">
+                +{room.pending.length - 2} more waiting
+              </p>
+            )}
+          </div>
         )}
 
         <button onClick={onBook}
@@ -182,6 +204,7 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
   const [attendees, setAttendees] = useState(2);
   const [department, setDepartment] = useState('');
   const [name, setName] = useState(session.name || '');
+  const [assignee, setAssignee] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [conflict, setConflict] = useState<any>(null);
@@ -193,12 +216,14 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!assignee) { setErr('Choose which admin should handle this.'); return; }
     setBusy(true); setErr(''); setConflict(null);
     try {
       const res = await rpFetch(`${API}/bookings/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: session.email, requested_by_name: name, room_id: roomId, date,
+          assigned_to_email: assignee,
           start_time: start, end_time: end, purpose, purpose_detail: detail,
           attendees, department,
         }),
@@ -283,6 +308,9 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
                 {Object.entries(PURPOSE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
+            <AssigneePicker desk="admin" value={assignee} onChange={setAssignee}
+              labelCls="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5"
+              inputCls={inputCls} />
             <div>
               <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Details (optional)</label>
               <input value={detail} onChange={e => setDetail(e.target.value)} placeholder="What's this meeting about?" className={inputCls} />
@@ -350,6 +378,7 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
   const [neededBy, setNeededBy] = useState('');
   const [department, setDepartment] = useState('');
   const [name, setName] = useState(session.name || '');
+  const [assignee, setAssignee] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState<any>(null);
@@ -359,12 +388,14 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName.trim()) { setErr('What do you need?'); return; }
+    if (!assignee) { setErr('Choose which admin should handle this.'); return; }
     setBusy(true); setErr('');
     try {
       const res = await rpFetch(`${API}/resource-requests/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: session.email, requested_by_name: name, category, item_name: itemName,
+          assigned_to_email: assignee,
           quantity, urgency, reason, needed_by: neededBy || null, department,
         }),
       });
@@ -393,41 +424,41 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
     );
   }
 
+  // What it is, and who does it, lead -- those are the two answers that
+  // decide everything after them. The rest is detail, in pairs.
   return (
-    <form onSubmit={submit} className="p-5 space-y-4">
+    <form onSubmit={submit} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+      <div className="sm:col-span-2">
+        <label className={deskLabelCls}>What do you need?</label>
+        <input value={itemName} onChange={e => setItemName(e.target.value)}
+          placeholder="e.g. A4 paper, wireless mouse, whiteboard markers" className={deskInputCls} />
+      </div>
       <div>
         <label className={deskLabelCls}>Category</label>
         <select value={category} onChange={e => setCategory(e.target.value)} className={deskInputCls}>
           {Object.entries(CATEGORY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </div>
+      <AssigneePicker desk="admin" value={assignee} onChange={setAssignee}
+        labelCls={deskLabelCls} inputCls={deskInputCls} />
       <div>
-        <label className={deskLabelCls}>What do you need?</label>
-        <input value={itemName} onChange={e => setItemName(e.target.value)}
-          placeholder="e.g. A4 paper, wireless mouse, whiteboard markers" className={deskInputCls} />
+        <label className={deskLabelCls}>Quantity</label>
+        <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
+          className={deskInputCls} />
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <label className={deskLabelCls}>Quantity</label>
-          <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
-            className={`${deskInputCls} px-2.5 text-xs`} />
-        </div>
-        <div className="col-span-2">
-          <label className={deskLabelCls}>Urgency</label>
-          <select value={urgency} onChange={e => setUrgency(e.target.value)} className={deskInputCls}>
-            {Object.entries(URGENCY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </div>
+      <div>
+        <label className={deskLabelCls}>Urgency</label>
+        <select value={urgency} onChange={e => setUrgency(e.target.value)} className={deskInputCls}>
+          {Object.entries(URGENCY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={deskLabelCls}>Your name</label>
-          <input value={name} onChange={e => setName(e.target.value)} className={deskInputCls} />
-        </div>
-        <div>
-          <label className={deskLabelCls}>Department</label>
-          <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Sales" className={deskInputCls} />
-        </div>
+      <div>
+        <label className={deskLabelCls}>Your name</label>
+        <input value={name} onChange={e => setName(e.target.value)} className={deskInputCls} />
+      </div>
+      <div>
+        <label className={deskLabelCls}>Department</label>
+        <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Sales" className={deskInputCls} />
       </div>
       <div>
         <label className={deskLabelCls}>Needed by (optional)</label>
@@ -439,14 +470,14 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
       </div>
 
       {err && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
+        <div className="sm:col-span-2 flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
           <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
           <p className="text-[12px] text-rose-700">{err}</p>
         </div>
       )}
 
       <button type="submit" disabled={busy}
-        className="rp-sheen w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
+        className="rp-sheen sm:col-span-2 w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
                    bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-black
                    shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all
                    disabled:opacity-50 disabled:translate-y-0">
@@ -454,8 +485,8 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
           : <><Send className="w-4 h-4" />{isStaff ? 'Record (instant)' : 'Send request'}</>}
       </button>
       {!isStaff && (
-        <p className="text-[11px] text-slate-400 text-center">
-          Your request goes to an admin for approval, then fulfilment.
+        <p className="sm:col-span-2 text-[11px] text-slate-400 text-center -mt-1">
+          Your request goes to the admin you chose, for approval and then fulfilment.
         </p>
       )}
     </form>
@@ -473,6 +504,7 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
   const blank = { category: TICKET_CATEGORY_OPTIONS[0], priority: 'medium' as Priority, subject: '', description: '', relatedTo: TICKET_RELATED_TO_OPTIONS[0] };
   const [form, setForm] = useState(blank);
   const [files, setFiles] = useState<File[]>([]);
+  const [assignee, setAssignee] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState<{ status: string; message: string; ticket: SupportTicket } | null>(null);
@@ -482,6 +514,7 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.subject.trim() || !form.description.trim()) { setErr('Subject and description are required.'); return; }
+    if (!assignee) { setErr('Choose who in IT should handle this.'); return; }
     setBusy(true); setErr('');
     try {
       // multipart, not JSON — attachments are real files now (see
@@ -494,6 +527,7 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
       fd.append('subject', form.subject);
       fd.append('description', form.description);
       fd.append('related_to', form.relatedTo);
+      fd.append('assigned_to_email', assignee);
       files.forEach(f => fd.append('attachments', f));
       const res = await rpFetch(`${API}/tickets/`, { method: 'POST', body: fd });
       const d = await res.json();
@@ -523,31 +557,31 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
   }
 
   return (
-    <form onSubmit={submit} className="p-5 space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={deskLabelCls}>Issue Category</label>
-          <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={deskInputCls}>
-            {TICKET_CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{TICKET_CATEGORY_LABEL[c]}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className={deskLabelCls}>Priority</label>
-          <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Priority }))} className={deskInputCls}>
-            {Object.entries(TICKET_PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-        </div>
-      </div>
-      <div>
+    <form onSubmit={submit} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+      <div className="sm:col-span-2">
         <label className={deskLabelCls}>Subject</label>
         <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
           placeholder="Enter a short and clear subject" className={deskInputCls} />
       </div>
-      <div>
+      <div className="sm:col-span-2">
         <label className={deskLabelCls}>Description</label>
         <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
           placeholder="Describe your issue in detail (what happened, any error messages, etc.)"
-          rows={4} className={`${deskInputCls} resize-none`} />
+          rows={3} className={`${deskInputCls} resize-none`} />
+      </div>
+      <div>
+        <label className={deskLabelCls}>Issue Category</label>
+        <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={deskInputCls}>
+          {TICKET_CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{TICKET_CATEGORY_LABEL[c]}</option>)}
+        </select>
+      </div>
+      <AssigneePicker desk="it" value={assignee} onChange={setAssignee}
+        labelCls={deskLabelCls} inputCls={deskInputCls} />
+      <div>
+        <label className={deskLabelCls}>Priority</label>
+        <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Priority }))} className={deskInputCls}>
+          {Object.entries(TICKET_PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
       </div>
       <div>
         <label className={deskLabelCls}>Related to</label>
@@ -555,12 +589,15 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
           {TICKET_RELATED_TO_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
-      <div>
+      <div className="sm:col-span-2">
         <label className={deskLabelCls}>Attachments <span className="text-slate-400 normal-case font-semibold">(optional)</span></label>
-        <label className="flex flex-col items-center justify-center gap-1.5 px-4 py-4 rounded-xl border-2 border-dashed
+        {/* Shallower than it was: at full width it does not need the height
+            to read as a drop target, and every pixel here is a pixel of
+            scrollbar. */}
+        <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed
                           border-slate-200 bg-slate-50/60 hover:bg-cyan-50/40 hover:border-cyan-300
                           cursor-pointer transition-all text-center">
-          <Paperclip className="w-4 h-4 text-cyan-500" />
+          <Paperclip className="w-4 h-4 text-cyan-500 flex-shrink-0" />
           <p className="text-[11.5px] font-bold text-slate-600">Click to attach files</p>
           <p className="text-[10px] text-slate-400">(Max 5MB per file)</p>
           <input type="file" multiple className="hidden"
@@ -583,13 +620,13 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
       </div>
 
       {err && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
+        <div className="sm:col-span-2 flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
           <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
           <p className="text-[12px] text-rose-700">{err}</p>
         </div>
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="sm:col-span-2 flex items-center gap-3">
         <button type="button" onClick={() => { setForm(blank); setFiles([]); setErr(''); }}
           className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-slate-200 text-slate-500
                      text-[12.5px] font-black hover:bg-slate-50 transition-all flex-shrink-0">
@@ -629,9 +666,11 @@ function SupportDeskModal({ session, onClose, onDone }: {
 
   return (
     <div className="rp-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div className="rp-pop w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl
-                      max-h-[90vh] overflow-y-auto">
-        <div className="p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
+      {/* Two columns at this width; the page has the room and the form has
+          eleven fields. See the forms below -- the long ones span both. */}
+      <div className="rp-pop w-full max-w-3xl rounded-3xl bg-white border border-slate-200 shadow-2xl
+                      max-h-[92vh] overflow-y-auto">
+        <div className="px-6 py-5 border-b border-slate-200 sticky top-0 bg-white z-10">
           <div className={`flex items-start justify-between gap-3 ${showTabs ? 'mb-4' : ''}`}>
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-600
@@ -653,15 +692,15 @@ function SupportDeskModal({ session, onClose, onDone }: {
           </div>
 
           {showTabs && (
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100">
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-100">
               <button type="button" onClick={() => setDeskTab('admin')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px]
+                className={`flex items-center justify-center gap-1.5 px-5 py-2 rounded-lg text-[12px]
                            font-black transition-all ${deskTab === 'admin'
                              ? 'bg-white text-cyan-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 <ClipboardList className="w-3.5 h-3.5" />Admin Ticket
               </button>
               <button type="button" onClick={() => setDeskTab('it')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px]
+                className={`flex items-center justify-center gap-1.5 px-5 py-2 rounded-lg text-[12px]
                            font-black transition-all ${deskTab === 'it'
                              ? 'bg-white text-cyan-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 <Headphones className="w-3.5 h-3.5" />IT Tickets
@@ -770,6 +809,14 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
                 {row.admin_remarks && (
                   <p className="text-[11px] text-slate-400 mt-0.5">Note: {row.admin_remarks}</p>
                 )}
+                {/* "Expired" on its own invites the question. Nobody rejected
+                    this; the slot came and went without an answer, and the
+                    only thing left to do about it is ask again. */}
+                {row.status === 'expired' && (
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Nobody answered before the time passed. Book it again if you still need it.
+                  </p>
+                )}
                 {/* What actually happened to this ticket, in order. The row
                     itself only carries the most recent review, so before this
                     existed, a closed ticket no longer showed who had approved
@@ -832,6 +879,26 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
     } finally { setLoading(false); }
   }, []);
 
+  // The name in the header comes from the browser's copy of the session,
+  // saved when this person signed in. A session minted before names were
+  // resolved properly keeps the old one until they happen to sign out --
+  // which could be weeks -- so ask the server who this is and correct it.
+  // Also picks up a name changed in HRMS since.
+  useEffect(() => {
+    if (!session) return;
+    let live = true;
+    rpFetch(`${API}/me/`).then(r => r.json()).then(d => {
+      if (!live || !d?.name || d.name === session.name) return;
+      const fixed = { ...session, name: d.name, role: (d.role || session.role) as any };
+      saveSession(fixed);
+      setSession({ ...fixed, ts: Date.now() });
+    }).catch(() => {});
+    return () => { live = false; };
+    // Only when the signed-in address changes: this corrects the name, so
+    // depending on the name would re-run it against its own result.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.email]);
+
   useEffect(() => {
     if (!session) return;
     loadRooms();
@@ -849,10 +916,15 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
   // screen after login/logout, fixed only by a full reload" symptom. Hooks
   // must never move relative to a conditional return; only their computed
   // VALUE may depend on session-dependent state like `rooms`.
+  // room_status answers with three states, not two: free, upcoming and
+  // occupied. Counting only two of them meant a room whose meeting was about
+  // to start appeared in neither tally -- three rooms showing "2 free, 0
+  // occupied", with the third listed nowhere.
   const stats = useMemo(() => {
     const occ = rooms.filter(r => r.status === 'occupied').length;
+    const soon = rooms.filter(r => r.status === 'upcoming').length;
     const free = rooms.filter(r => r.status === 'free').length;
-    return { total: rooms.length, occ, free };
+    return { total: rooms.length, occ, soon, free };
   }, [rooms]);
 
   if (!session) {
@@ -875,6 +947,16 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
     { id: 'manage', label: 'Manage', icon: ShieldCheck, roles: ['super_admin'] },
   ];
   const visibleTabs = TABS.filter(t => !t.roles || t.roles.includes(session.role));
+  // A tab this person cannot see renders nothing at all: an empty page under
+  // a tab strip with nothing lit up, which is exactly the "blank after
+  // logging in" screenshot. It happens when a tab is removed from the app
+  // while somebody is standing on it, and when a role changes under a live
+  // session -- an admin demoted to employee still holding 'approvals'.
+  //
+  // Derived rather than corrected in an effect, so there is no render where
+  // the page is blank while the fix is on its way.
+  const activeTab: Tab = visibleTabs.some(t => t.id === tab)
+    ? tab : (visibleTabs[0]?.id ?? 'rooms');
 
   const onBookingDone = () => { setShowBooking(false); setBookRoom(null); setRefreshKey(k => k + 1); loadRooms(); };
   const onSupportDeskDone = () => { setShowSupportDesk(false); setRefreshKey(k => k + 1); };
@@ -899,6 +981,15 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
                 <p key={stats.free} className="rp-pop-in text-sm font-black text-emerald-600 tabular-nums">{stats.free}</p>
                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Free</p>
               </div>
+              {/* Shown only when there is one, so the usual case stays two
+                  numbers rather than three, but the counts always add up to
+                  the number of rooms on screen. */}
+              {stats.soon > 0 && (
+                <div className="text-center">
+                  <p key={stats.soon} className="rp-pop-in text-sm font-black text-amber-600 tabular-nums">{stats.soon}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Soon</p>
+                </div>
+              )}
               <div className="text-center">
                 <p key={stats.occ} className="rp-pop-in text-sm font-black text-rose-600 tabular-nums">{stats.occ}</p>
                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Occupied</p>
@@ -937,7 +1028,7 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
         <div className="max-w-[1500px] mx-auto px-6 flex items-center gap-1 overflow-x-auto">
           {visibleTabs.map(t => {
             const Icon = t.icon;
-            const on = tab === t.id;
+            const on = activeTab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`relative flex items-center gap-2 px-4 py-2.5 text-[13px] font-bold whitespace-nowrap
@@ -951,7 +1042,7 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
       </div>
 
       <div className="relative z-10 max-w-[1500px] mx-auto px-6 py-6">
-        {tab === 'rooms' && (
+        {activeTab === 'rooms' && (
           loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-56" />)}
@@ -973,17 +1064,17 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
           )
         )}
 
-        {tab === 'mine' && (
+        {activeTab === 'mine' && (
           <Panel title="My Requests" icon={ClipboardList} subtitle="Room bookings, item requests, and IT tickets you've made, and their status">
             <MyRequestsPanel session={session} refreshKey={refreshKey} />
           </Panel>
         )}
 
-        {tab === 'approvals' && canApprove && (
+        {activeTab === 'approvals' && canApprove && (
           <ApprovalsPanel session={session} onChanged={() => { setRefreshKey(k => k + 1); loadRooms(); }} />
         )}
-        {tab === 'calendar' && isStaff && <CalendarPanel rooms={rooms} />}
-        {tab === 'manage' && isSuper && (
+        {activeTab === 'calendar' && isStaff && <CalendarPanel rooms={rooms} />}
+        {activeTab === 'manage' && isSuper && (
           <SuperAdminPanel session={session} onRoomsChanged={loadRooms}
             onGoToTab={t => setTab(t as Tab)} />
         )}

@@ -4,12 +4,14 @@ import {
   ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw, Clock,
+  Newspaper,
 } from 'lucide-react';
 import type { StateHolidayGroup } from './IntranetHomeShared';
 import {
   QUICK_ACCESS, TOOL_CATEGORIES, UPLIFT_VALUES, useVacancies, summarizeVacancies,
   OUR_PRODUCTS, PACK_SIZES, APIS_GLANCE, QUICK_PORTALS, COMPANY_MILESTONES, APIS_QUOTES, APIS_FACTS, APIS_VISION, APIS_MISSION_POINTS,
   useCelebrations, useTicker, useAnnouncements, useHolidayZones,
+  useNews, newsAge, newsTagStyle, newsTile, type NewsArticle,
   getRecentToolsWithTime, formatRelativeTime,
   type VacancyListing,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
@@ -38,6 +40,13 @@ const LEADERSHIP_SLIDES: LeadershipSlide[] = [
 // milestone, product launch, facility/award, and "coming soon". Cycles via
 // `% MILESTONE_ICONS.length` if the data list ever grows past five.
 const MILESTONE_ICONS = [Building2, TrendingUp, Package, Trophy, Rocket];
+
+/* One mark per news category, so a story with no picture still gets a tile
+   that says something about it rather than the same newspaper four times. */
+const NEWS_ICON: Record<string, typeof Building2> = {
+  company: Building2, apis: Sparkles, food_apis: Package,
+  nutraceuticals: Heart, industry: TrendingUp, products: Tag,
+};
 
 /* Deterministic PRNG (mulberry32) seeded from today's date — same "random"
    order for everyone all day, a different order tomorrow. Not real
@@ -738,6 +747,240 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
 /* "View all" popup for the Announcements card — same pattern as
    NewJoinersPopup/VacanciesPopup, with each row's icon tile carrying the
    announcement's own icon instead of initials. */
+/* ── Daily News ─────────────────────────────────────────────
+   Industry and company stories, curated in Admin Console › Dashboard Content.
+
+   Two decisions worth keeping: a story with no picture gets a tinted panel
+   with its category on it rather than a grey box or a stretched placeholder,
+   because most stories will not have one; and every card shows its age, not
+   its date, so a strip that has stopped moving says so in its own words
+   instead of quietly sitting there under "latest updates". ──────────── */
+/* One card, two placements: fixed width in the sliding strip, full width in
+   the View all grid. Keeping a single design means the popup is recognisably
+   the same feature rather than a second, plainer list of the same stories.
+
+   The silhouette is the same whether or not a story has a picture, which most
+   do not — Google News carries none. With one, the header is the photograph;
+   without, it is a wash in the category's colour carrying its mark. Neither
+   reads as the other's fallback. */
+function NewsCard({ article, wide = false }: { article: NewsArticle; wide?: boolean }) {
+  const [broken, setBroken] = useState(false);
+  const look = newsTile(article.category);
+  const Glyph = NEWS_ICON[article.category] ?? Newspaper;
+  const hasImage = !!article.image && !broken;
+
+  const body = (
+    <>
+      <div className="relative h-[68px] shrink-0 overflow-hidden">
+        {hasImage ? (
+          <>
+            <img src={article.image} alt="" loading="lazy" onError={() => setBroken(true)}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <span className="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent" />
+          </>
+        ) : (
+          <>
+            <span className={`absolute inset-0 bg-gradient-to-br ${look.wash}`} />
+            {/* An oversized, clipped mark reads as texture rather than as a
+                picture that failed to load. */}
+            <Glyph className={`absolute -right-3 -top-2 w-20 h-20 ${look.mark} opacity-[0.13]`} />
+            <Glyph className={`absolute left-3.5 top-3.5 w-5 h-5 ${look.mark} opacity-80`} />
+          </>
+        )}
+        <span className={`absolute left-3.5 bottom-2 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm
+                          text-[9.5px] font-black ring-1 ${newsTagStyle(article.category)}`}>
+          {article.categoryLabel}
+        </span>
+      </div>
+
+      <div className="flex flex-col flex-1 px-3.5 pt-2.5 pb-3">
+        <p className={`font-black text-slate-900 leading-snug group-hover:text-amber-700
+                       transition-colors ${wide ? 'text-[14px] line-clamp-2' : 'text-[13px] line-clamp-3'}`}>
+          {article.title}
+        </p>
+
+        {/* Only when it says something the headline did not — the fetcher
+            drops the ones that merely repeat it. */}
+        {article.summary && (
+          <p className="text-[11.5px] text-slate-400 leading-relaxed mt-1.5 line-clamp-2">
+            {article.summary}
+          </p>
+        )}
+
+        <div className="flex items-center gap-1.5 mt-auto pt-2.5 text-[10.5px] font-bold text-slate-400">
+          <Clock className="w-3 h-3 shrink-0" />
+          <span className="shrink-0">{newsAge(article.publishedOn)}</span>
+          {article.sourceName && (
+            <>
+              <span className="text-slate-300">&middot;</span>
+              <span className="truncate min-w-0">{article.sourceName}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  /* ih-lift and ih-neon are the dashboard's own hover language, borrowed from
+     the tool cards so this section behaves like the rest of the page. The glow
+     is the category's, so the colour means something. */
+  const shell = 'ih-lift ih-neon ih-sheen group relative flex flex-col text-left rounded-2xl bg-white ' +
+                'border border-slate-200/80 shadow-sm overflow-hidden ' +
+                (wide ? 'w-full' : 'w-[252px] sm:w-[268px] shrink-0');
+  const style = { ['--ih-neon' as string]: look.glow, ['--ih-lift' as string]: look.glow } as any;
+
+  if (!article.sourceUrl) return <div className={shell} style={style}>{body}</div>;
+  return (
+    <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer"
+      className={shell} style={style}>{body}</a>
+  );
+}
+
+function DailyNewsSection({ onViewAll }: { onViewAll: () => void }) {
+  const { news, loading } = useNews('strip');
+  const live = news.filter(n => n.moderationStatus === 'approved');
+
+  // Nothing published yet: the section stays out of the page entirely rather
+  // than sitting there as an empty frame under a heading.
+  if (!loading && live.length === 0) return null;
+
+  /* Duplicated back-to-back so ihTicker's translateX(-50%) loops with no
+     visible seam -- the same technique as the product strip in the hero. The
+     track pauses on hover, which here is not a nicety: every card is a link,
+     and a link you have to chase is a link nobody follows.
+
+     Below four stories the doubled track is narrower than the container, so
+     translateX(-50%) would drag a visible gap across the row. Too few to
+     scroll is also too few to need scrolling, so those just sit in a grid. */
+  const slides = live.length >= 4;
+  const lane = slides ? [...live, ...live] : live;
+
+  return (
+    <section id="daily-news" className="scroll-mt-20">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500
+                           flex items-center justify-center shadow-md shrink-0">
+            <Newspaper className="w-4.5 h-4.5 text-white" />
+          </span>
+          <div>
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Daily News</h2>
+            <p className="text-[12px] text-slate-400 mt-0.5">Latest updates on APIS products &amp; the industry</p>
+          </div>
+        </div>
+        <button onClick={onViewAll}
+          className="inline-flex items-center gap-1 text-[11.5px] font-black text-amber-600
+                     hover:text-amber-700 transition-colors">
+          View all <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="rounded-xl bg-white border border-slate-200 p-3 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 animate-pulse" />
+              <div className="h-3 rounded bg-slate-100 animate-pulse mt-3" />
+              <div className="h-3 rounded bg-slate-100 animate-pulse mt-1.5" />
+              <div className="h-3 rounded bg-slate-100 animate-pulse mt-1.5 w-2/3" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Faded at both edges so cards enter and leave rather than being cut
+           off mid-word at the container border. */
+        <div className={slides
+          ? 'ih-ticker-track relative overflow-hidden ' +
+            '[mask-image:linear-gradient(to_right,transparent,black_3%,black_97%,transparent)]'
+          : ''}>
+          <div className={slides
+            /* py-3, not py-1: the track clips (overflow-hidden, for the
+               loop) and the cards lift 4px on hover with a soft shadow under
+               them. Too little room and the hover state is sheared off. */
+            ? 'ih-ticker flex items-stretch gap-4 w-max py-3'
+            : 'flex items-stretch gap-4 flex-wrap py-3'}
+            style={slides ? { animationDuration: `${Math.max(28, live.length * 9)}s` } : undefined}>
+            {lane.map((n, i) => <NewsCard key={`${n.id}-${i}`} article={n} />)}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DailyNewsPopup({ onClose }: { onClose: () => void }) {
+  const { news, loading } = useNews('all');
+  const [cat, setCat] = useState('All');
+
+  const live = news.filter(n => n.moderationStatus === 'approved');
+  const categories = ['All', ...Array.from(new Set(live.map(n => n.categoryLabel)))];
+  const shown = cat === 'All' ? live : live.filter(n => n.categoryLabel === cat);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        className="ih-palette-in w-full max-w-5xl max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        <div className="sticky top-0 z-10 px-6 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500
+                               flex items-center justify-center shadow-md shrink-0">
+                <Newspaper className="w-4 h-4 text-white" />
+              </span>
+              <div>
+              <p className="text-base font-black text-slate-900 leading-none">Daily News</p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {loading ? 'Loading…'
+                  : live.length ? `${live.length} ${live.length === 1 ? 'story' : 'stories'}`
+                  : 'Nothing published yet'}
+              </p>
+              </div>
+            </div>
+            <button onClick={onClose} title="Close"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          {categories.length > 2 && (
+            <div className="flex items-center gap-2 flex-wrap mt-3">
+              {categories.map(c => (
+                <button key={c} onClick={() => setCat(c)}
+                  className={`px-3 py-1 rounded-full text-[10.5px] font-black transition-all ${
+                    cat === c ? 'bg-amber-500 text-white shadow-sm'
+                      : 'bg-white border border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600'}`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 sm:p-6">
+          {!loading && shown.length === 0 && (
+            <div className="text-center py-12">
+              <Newspaper className="w-8 h-8 text-slate-200 mx-auto" />
+              <p className="text-sm text-slate-400 font-semibold mt-3">
+                Nothing here yet.
+              </p>
+              <p className="text-[12px] text-slate-400 mt-1">
+                Stories arrive from the feeds set up in Admin Console &rsaquo; Dashboard Content.
+              </p>
+            </div>
+          )}
+
+          {/* The same card as the strip, at full width. One design in both
+              places, so this reads as more of the same feature rather than a
+              second, plainer list of the same stories. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {shown.map(n => <NewsCard key={n.id} article={n} wide />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
   const { announcements, loading } = useAnnouncements();
   return (
@@ -925,7 +1168,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
   const [category, setCategory] = useState<ToolCategoryFilter>('All');
   const [dense, setDense] = useState(true);
   const [openProduct, setOpenProduct] = useState<OurProduct | null>(null);
-  const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | 'announcements' | 'celebrations' | null>(null);
+  const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | 'announcements' | 'celebrations' | 'news' | null>(null);
   const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
   const filteredTools = category === 'All' ? VISIBLE_TOOLS : VISIBLE_TOOLS.filter(t => t.category === category);
 
@@ -1360,6 +1603,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
             {openListPopup === 'joiners' && <NewJoinersPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} isSuperadmin={isSuperadmin} />}
             {openListPopup === 'announcements' && <AnnouncementsPopup onClose={() => setOpenListPopup(null)} />}
+            {openListPopup === 'news' && <DailyNewsPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'celebrations' && <CelebrationsPopup initialTab={celebrationTab} onClose={() => setOpenListPopup(null)} />}
 
             {/* Your Tools — filterable launcher grid, the intranet's app hub */}
@@ -1413,6 +1657,11 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 <p className="text-center text-[12px] text-slate-400 py-8">No tools in this category yet.</p>
               )}
             </section>
+
+            {/* Daily News — sits under the tools because it is something to
+                read, not something to do: the launcher is what people come
+                here for, this is what keeps them a moment longer. */}
+            <DailyNewsSection onViewAll={() => setOpenListPopup('news')} />
 
             {/* Our Journey / Milestones — same real COMPANY_MILESTONES data
                 and auto-advance/manual-nav behaviour as before (milestoneIndex
