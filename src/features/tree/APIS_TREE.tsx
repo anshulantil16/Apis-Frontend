@@ -52,15 +52,15 @@ const managingDirector: Person = {
 };
 
 // Order below is deliberate (not alphabetical) — it sets the row-by-row
-// layout: 4 per row, [Arun, Vaibhav, Narendra, Naagesh] / [Ankit, Pankaj,
+// layout: 4 per row, [Arun, Vaibhav, Narendra, Naagesh] / [Pankaj, Ankit,
 // Pradeep, Vikash] / [Manigandan, Heera Swami, Dinesh, Ershad].
 const hods: Person[] = [
   { id: 'arun-mishra', name: 'Arun Mishra', role: 'NSH-HO',department: 'General Trade', level: 'hod', photo: arunMishraPhoto },
   { id: 'vaibhav-mishra', name: 'Vaibhav Mishra', role: 'AGM-HO', department: 'Alternate Channel', level: 'hod', photo: vaibhavMishraPhoto },
   { id: 'narendra-gangwar', name: 'Narendra Gangwar', role: 'Sr. Manager',department: 'B2B', level: 'hod', photo: narendraGangwarPhoto },
   { id: 'naagesh-mishra', name: 'Naagesh Mishra', role: 'GM', department: 'Marketing', level: 'hod', photo: naageshMishraPhoto },
-  { id: 'ankit-nagar', name: 'Ankit Nagar', role: 'CFO', department: 'F&A/Internal Audit', level: 'hod', photo: ankitNagarPhoto },
   { id: 'pankaj-tripathi', name: 'Pankaj Tripathi', role: 'GM', department: 'P&C Admin & IT', level: 'hod', photo: '/hierarchy/Pankaj_Tripathi1.png' },
+  { id: 'ankit-nagar', name: 'Ankit Nagar', role: 'CFO', department: 'F&A/Internal Audit', level: 'hod', photo: ankitNagarPhoto },
   { id: 'pradeep-krishali', name: 'Pradeep Krishali', role: 'AGM', department: 'Procurement', level: 'hod', photo: pradeepKrishaliPhoto },
   { id: 'vikas-aggarwal', name: 'Vikas Aggarwal', role: 'AGM', department: 'CS & Legal', level: 'hod', photo: vikashAggarwalPhoto },
   { id: 'r-manigandan', name: 'R. Manigandan', role: 'GM', department: 'BEX & SCM', level: 'hod', photo: manigandanPhoto },

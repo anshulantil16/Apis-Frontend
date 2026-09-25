@@ -9,7 +9,7 @@ import { apiFetch, portalFetch } from '../portal/session';
 import {
   Users, FileSpreadsheet, Building2,
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
-  LifeBuoy, Globe2, CalendarClock, Landmark, Database,
+  Globe2, CalendarClock, Landmark, Database,
   Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp,
   Info, PartyPopper, AlertTriangle,
 } from 'lucide-react';
@@ -188,7 +188,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Facilities & Support', icon: Building2, accent: 'text-cyan-300', hoverAccent: 'hover:text-cyan-300', dot: 'bg-cyan-400', items: [
+    label: 'Help & Support', icon: Building2, accent: 'text-cyan-300', hoverAccent: 'hover:text-cyan-300', dot: 'bg-cyan-400', items: [
       { id: 'helpdesk', label: 'Help Desk' },
     ],
   },
@@ -423,7 +423,6 @@ export const COMING_SOON = [
   { label: 'Compliance', icon: Scale, soft: 'bg-violet-50', accent: 'text-violet-500' },
   { label: 'Sanction Approvals', icon: Stamp, soft: 'bg-indigo-50', accent: 'text-indigo-500' },
   { label: 'Announcements', icon: Megaphone, soft: 'bg-amber-50', accent: 'text-amber-500' },
-  { label: 'Help & Support', icon: LifeBuoy, soft: 'bg-sky-50', accent: 'text-sky-500' },
 ];
 
 /* Real APIS India Limited product photography, sourced from apisindia.com —
