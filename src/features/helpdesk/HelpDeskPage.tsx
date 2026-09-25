@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users, MapPin, X, Plus, Send, Loader, AlertTriangle, CheckCircle2,
   Calendar as CalendarIcon, LogOut, ShieldCheck, LayoutGrid, ListChecks,
-  ClipboardList, Headphones, Paperclip, RotateCcw, Ticket, PackageCheck,
+  ClipboardList, Headphones, Paperclip, RotateCcw,
 } from 'lucide-react';
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
@@ -16,7 +16,7 @@ import {
   ticketPriorityMeta, fmtTicketWhen,
 } from './HelpDeskTickets';
 
-type Tab = 'rooms' | 'mine' | 'tasks' | 'approvals' | 'calendar' | 'manage';
+type Tab = 'rooms' | 'mine' | 'approvals' | 'calendar' | 'manage';
 
 /* ── room card: the live-status tile that drives the whole dashboard ────── */
 const ROOM_GLOW: Record<string, string> = {
@@ -424,43 +424,41 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
     );
   }
 
+  // What it is, and who does it, lead -- those are the two answers that
+  // decide everything after them. The rest is detail, in pairs.
   return (
-    <form onSubmit={submit} className="p-5 space-y-4">
+    <form onSubmit={submit} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+      <div className="sm:col-span-2">
+        <label className={deskLabelCls}>What do you need?</label>
+        <input value={itemName} onChange={e => setItemName(e.target.value)}
+          placeholder="e.g. A4 paper, wireless mouse, whiteboard markers" className={deskInputCls} />
+      </div>
       <div>
         <label className={deskLabelCls}>Category</label>
         <select value={category} onChange={e => setCategory(e.target.value)} className={deskInputCls}>
           {Object.entries(CATEGORY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </div>
-      <div>
-        <label className={deskLabelCls}>What do you need?</label>
-        <input value={itemName} onChange={e => setItemName(e.target.value)}
-          placeholder="e.g. A4 paper, wireless mouse, whiteboard markers" className={deskInputCls} />
-      </div>
       <AssigneePicker desk="admin" value={assignee} onChange={setAssignee}
         labelCls={deskLabelCls} inputCls={deskInputCls} />
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <label className={deskLabelCls}>Quantity</label>
-          <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
-            className={`${deskInputCls} px-2.5 text-xs`} />
-        </div>
-        <div className="col-span-2">
-          <label className={deskLabelCls}>Urgency</label>
-          <select value={urgency} onChange={e => setUrgency(e.target.value)} className={deskInputCls}>
-            {Object.entries(URGENCY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </div>
+      <div>
+        <label className={deskLabelCls}>Quantity</label>
+        <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
+          className={deskInputCls} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={deskLabelCls}>Your name</label>
-          <input value={name} onChange={e => setName(e.target.value)} className={deskInputCls} />
-        </div>
-        <div>
-          <label className={deskLabelCls}>Department</label>
-          <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Sales" className={deskInputCls} />
-        </div>
+      <div>
+        <label className={deskLabelCls}>Urgency</label>
+        <select value={urgency} onChange={e => setUrgency(e.target.value)} className={deskInputCls}>
+          {Object.entries(URGENCY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={deskLabelCls}>Your name</label>
+        <input value={name} onChange={e => setName(e.target.value)} className={deskInputCls} />
+      </div>
+      <div>
+        <label className={deskLabelCls}>Department</label>
+        <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Sales" className={deskInputCls} />
       </div>
       <div>
         <label className={deskLabelCls}>Needed by (optional)</label>
@@ -472,14 +470,14 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
       </div>
 
       {err && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
+        <div className="sm:col-span-2 flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
           <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
           <p className="text-[12px] text-rose-700">{err}</p>
         </div>
       )}
 
       <button type="submit" disabled={busy}
-        className="rp-sheen w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
+        className="rp-sheen sm:col-span-2 w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl
                    bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-black
                    shadow-lg shadow-cyan-500/25 hover:-translate-y-0.5 transition-all
                    disabled:opacity-50 disabled:translate-y-0">
@@ -487,8 +485,8 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
           : <><Send className="w-4 h-4" />{isStaff ? 'Record (instant)' : 'Send request'}</>}
       </button>
       {!isStaff && (
-        <p className="text-[11px] text-slate-400 text-center">
-          Your request goes to an admin for approval, then fulfilment.
+        <p className="sm:col-span-2 text-[11px] text-slate-400 text-center -mt-1">
+          Your request goes to the admin you chose, for approval and then fulfilment.
         </p>
       )}
     </form>
@@ -559,31 +557,31 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
   }
 
   return (
-    <form onSubmit={submit} className="p-5 space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={deskLabelCls}>Issue Category</label>
-          <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={deskInputCls}>
-            {TICKET_CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{TICKET_CATEGORY_LABEL[c]}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className={deskLabelCls}>Priority</label>
-          <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Priority }))} className={deskInputCls}>
-            {Object.entries(TICKET_PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-        </div>
-      </div>
-      <div>
+    <form onSubmit={submit} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+      <div className="sm:col-span-2">
         <label className={deskLabelCls}>Subject</label>
         <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
           placeholder="Enter a short and clear subject" className={deskInputCls} />
       </div>
-      <div>
+      <div className="sm:col-span-2">
         <label className={deskLabelCls}>Description</label>
         <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
           placeholder="Describe your issue in detail (what happened, any error messages, etc.)"
-          rows={4} className={`${deskInputCls} resize-none`} />
+          rows={3} className={`${deskInputCls} resize-none`} />
+      </div>
+      <div>
+        <label className={deskLabelCls}>Issue Category</label>
+        <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={deskInputCls}>
+          {TICKET_CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{TICKET_CATEGORY_LABEL[c]}</option>)}
+        </select>
+      </div>
+      <AssigneePicker desk="it" value={assignee} onChange={setAssignee}
+        labelCls={deskLabelCls} inputCls={deskInputCls} />
+      <div>
+        <label className={deskLabelCls}>Priority</label>
+        <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Priority }))} className={deskInputCls}>
+          {Object.entries(TICKET_PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
       </div>
       <div>
         <label className={deskLabelCls}>Related to</label>
@@ -591,14 +589,15 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
           {TICKET_RELATED_TO_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
-      <AssigneePicker desk="it" value={assignee} onChange={setAssignee}
-        labelCls={deskLabelCls} inputCls={deskInputCls} />
-      <div>
+      <div className="sm:col-span-2">
         <label className={deskLabelCls}>Attachments <span className="text-slate-400 normal-case font-semibold">(optional)</span></label>
-        <label className="flex flex-col items-center justify-center gap-1.5 px-4 py-4 rounded-xl border-2 border-dashed
+        {/* Shallower than it was: at full width it does not need the height
+            to read as a drop target, and every pixel here is a pixel of
+            scrollbar. */}
+        <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed
                           border-slate-200 bg-slate-50/60 hover:bg-cyan-50/40 hover:border-cyan-300
                           cursor-pointer transition-all text-center">
-          <Paperclip className="w-4 h-4 text-cyan-500" />
+          <Paperclip className="w-4 h-4 text-cyan-500 flex-shrink-0" />
           <p className="text-[11.5px] font-bold text-slate-600">Click to attach files</p>
           <p className="text-[10px] text-slate-400">(Max 5MB per file)</p>
           <input type="file" multiple className="hidden"
@@ -621,13 +620,13 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
       </div>
 
       {err && (
-        <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
+        <div className="sm:col-span-2 flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3">
           <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
           <p className="text-[12px] text-rose-700">{err}</p>
         </div>
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="sm:col-span-2 flex items-center gap-3">
         <button type="button" onClick={() => { setForm(blank); setFiles([]); setErr(''); }}
           className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-slate-200 text-slate-500
                      text-[12.5px] font-black hover:bg-slate-50 transition-all flex-shrink-0">
@@ -667,9 +666,11 @@ function SupportDeskModal({ session, onClose, onDone }: {
 
   return (
     <div className="rp-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div className="rp-pop w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl
-                      max-h-[90vh] overflow-y-auto">
-        <div className="p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
+      {/* Two columns at this width; the page has the room and the form has
+          eleven fields. See the forms below -- the long ones span both. */}
+      <div className="rp-pop w-full max-w-3xl rounded-3xl bg-white border border-slate-200 shadow-2xl
+                      max-h-[92vh] overflow-y-auto">
+        <div className="px-6 py-5 border-b border-slate-200 sticky top-0 bg-white z-10">
           <div className={`flex items-start justify-between gap-3 ${showTabs ? 'mb-4' : ''}`}>
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-600
@@ -691,15 +692,15 @@ function SupportDeskModal({ session, onClose, onDone }: {
           </div>
 
           {showTabs && (
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100">
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-100">
               <button type="button" onClick={() => setDeskTab('admin')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px]
+                className={`flex items-center justify-center gap-1.5 px-5 py-2 rounded-lg text-[12px]
                            font-black transition-all ${deskTab === 'admin'
                              ? 'bg-white text-cyan-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 <ClipboardList className="w-3.5 h-3.5" />Admin Ticket
               </button>
               <button type="button" onClick={() => setDeskTab('it')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px]
+                className={`flex items-center justify-center gap-1.5 px-5 py-2 rounded-lg text-[12px]
                            font-black transition-all ${deskTab === 'it'
                              ? 'bg-white text-cyan-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 <Headphones className="w-3.5 h-3.5" />IT Tickets
@@ -718,128 +719,6 @@ function SupportDeskModal({ session, onClose, onDone }: {
 
 /* ── my requests: room bookings + item requests + IT tickets, merged into
    one timeline ───────────────────────────────────────────────────────── */
-/* ── My Tasks ──────────────────────────────────────────────────
-   "My Requests" answers what I asked for. This is the other half — what has
-   been given to me — which is what a person on a desk actually works from,
-   and the number their month is measured by.
-
-   Oldest first, deliberately: the request that has been waiting longest is
-   the one to do next, which is the opposite of how a feed usually reads.
-   ────────────────────────────────────────────────────────── */
-function MyTasksPanel({ refreshKey }: { refreshKey: number }) {
-  const [data, setData] = useState<any>(null);
-  const [err, setErr] = useState('');
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    let live = true;
-    setData(null); setErr('');
-    rpFetch(`${API}/my-tasks/${done ? '?all=1' : ''}`)
-      .then(async r => {
-        const d = await r.json().catch(() => ({}));
-        if (!live) return;
-        if (!r.ok) setErr(d.error || 'Could not load your list.');
-        else setData(d);
-      })
-      .catch(() => { if (live) setErr('Could not reach the server.'); });
-    return () => { live = false; };
-  }, [refreshKey, done]);
-
-  const KIND = {
-    ticket: { label: 'IT Ticket', cls: 'bg-amber-50 text-amber-700 ring-amber-200', icon: Ticket },
-    item: { label: 'Item', cls: 'bg-cyan-50 text-cyan-700 ring-cyan-200', icon: PackageCheck },
-    room: { label: 'Room', cls: 'bg-violet-50 text-violet-700 ring-violet-200', icon: LayoutGrid },
-  } as const;
-
-  const waited = (iso: string) => {
-    const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-    return days <= 0 ? 'today' : days === 1 ? '1 day' : `${days} days`;
-  };
-
-  return (
-    <Panel title="My Tasks" icon={ListChecks}
-      subtitle="Everything addressed to you — longest waiting first"
-      right={
-        <button onClick={() => setDone(d => !d)}
-          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black border transition-colors
-            ${done ? 'bg-slate-900 text-white border-slate-900'
-                   : 'text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
-          {done ? 'Showing all' : 'Still to do'}
-        </button>
-      }>
-      {err && <p className="text-[12px] text-rose-600 font-semibold py-4 text-center">{err}</p>}
-      {!err && !data && <Skel className="h-32" />}
-      {data && (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            {[['On your desk', data.waiting],
-              ['Unclaimed', data.unassigned],
-              [data.desk === 'admin' ? 'Item requests' : 'IT tickets',
-               data.desk === 'admin' ? data.by_kind.item : data.by_kind.ticket],
-              ['Room bookings', data.by_kind.room]].map(([l, v]) => (
-              <div key={l as string} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                <p className="text-xl font-black text-slate-900 tabular-nums">{v as number}</p>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{l}</p>
-              </div>
-            ))}
-          </div>
-
-          {!data.results.length ? (
-            <Empty msg={done ? 'Nothing has come your way yet' : 'Nothing waiting on you'}
-              icon={ListChecks} />
-          ) : (
-            <div className="space-y-2">
-              {data.results.map((r: any, i: number) => {
-                const k = KIND[r.kind as keyof typeof KIND];
-                const Icon = k.icon;
-                return (
-                  <Reveal key={`${r.kind}-${r.id}`} delay={i * 25}>
-                    <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3">
-                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px]
-                                        font-black uppercase ring-1 shrink-0 ${k.cls}`}>
-                        <Icon className="w-3 h-3" /> {k.label}
-                      </span>
-                      {/* Raised before anyone was being named, or simply not
-                          picked up yet. It is nobody's, so it is shown to the
-                          whole desk rather than to no one. */}
-                      {!r.mine && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase
-                                         ring-1 bg-amber-50 text-amber-700 ring-amber-200 shrink-0">
-                          Unclaimed
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-bold text-slate-800 truncate">{r.what}</p>
-                        <p className="text-[10.5px] text-slate-400 truncate">
-                          from {r.from} · {r.detail}
-                          {r.urgency ? ` · ${r.urgency}` : ''}
-                        </p>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400 shrink-0">
-                        waiting {waited(r.raised_at)}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase
-                                       ring-1 bg-slate-50 text-slate-600 ring-slate-200 shrink-0">
-                        {r.status_label}
-                      </span>
-                    </div>
-                  </Reveal>
-                );
-              })}
-            </div>
-          )}
-          <p className="text-[11px] text-slate-400 mt-3">
-            Act on these under Approvals. What is addressed to you is yours alone —
-            nobody else on the desk sees it — and your monthly report counts what you
-            finish. Anything marked Unclaimed was never given to a name, so the whole
-            desk can see it until somebody takes it.
-          </p>
-        </>
-      )}
-    </Panel>
-  );
-}
-
 function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey: number }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1035,10 +914,6 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
   const TABS: { id: Tab; label: string; icon: any; roles?: string[] }[] = [
     { id: 'rooms', label: 'Rooms', icon: LayoutGrid },
     { id: 'mine', label: 'My Requests', icon: ClipboardList },
-    // Staff only: an employee has no desk, so nothing is ever addressed
-    // to them.
-    { id: 'tasks', label: 'My Tasks', icon: ListChecks,
-      roles: ['admin', 'it_support', 'super_admin'] },
     { id: 'approvals', label: 'Approvals', icon: ListChecks, roles: ['admin', 'it_support', 'super_admin'] },
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon, roles: ['admin', 'super_admin'] },
     { id: 'manage', label: 'Manage', icon: ShieldCheck, roles: ['super_admin'] },
@@ -1156,8 +1031,6 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
             <MyRequestsPanel session={session} refreshKey={refreshKey} />
           </Panel>
         )}
-
-        {tab === 'tasks' && canApprove && <MyTasksPanel refreshKey={refreshKey} />}
 
         {tab === 'approvals' && canApprove && (
           <ApprovalsPanel session={session} onChanged={() => { setRefreshKey(k => k + 1); loadRooms(); }} />

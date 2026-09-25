@@ -25,25 +25,72 @@ const inputCls = "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200
    reviews IT tickets; Super Admin gets both, matching "super admin has
    access to everything". Each queue's history stays with its own queue —
    Admin never sees IT Support's closed tickets and vice versa. ─────────── */
+/* ── What is on your desk ───────────────────────────────────────
+   This was its own tab for a day, and it was the same list as the queues
+   below it -- two screens showing one thing, which is somewhere else for it
+   to go wrong rather than somewhere else to look. It is a header now, over
+   the queues you actually act in.
+
+   "Unclaimed" is the number worth having: work raised before anyone was
+   being named belongs to nobody, so the whole desk sees it until somebody
+   takes it. ─────────────────────────────────────────────── */
+function OnYourDesk({ refresh }: { refresh: number }) {
+  const [d, setD] = useState<any>(null);
+  useEffect(() => {
+    let live = true;
+    rpFetch(`${API}/my-tasks/`).then(r => r.json())
+      .then(x => { if (live) setD(x); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [refresh]);
+  if (!d) return null;
+
+  const kinds = d.desk === 'admin'
+    ? [['Item requests', d.by_kind.item], ['Room bookings', d.by_kind.room]]
+    : [['IT tickets', d.by_kind.ticket]];
+
+  return (
+    <div className="flex flex-wrap items-center gap-2.5">
+      <span className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[12px] font-black">
+        {d.waiting} waiting on you
+      </span>
+      {kinds.map(([l, v]) => (
+        <span key={l as string}
+          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-[12px] font-bold text-slate-600">
+          {v as number} {l as string}
+        </span>
+      ))}
+      {d.unassigned > 0 && (
+        <span className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200
+                         text-[12px] font-black text-amber-700">
+          {d.unassigned} unclaimed — nobody was named on these
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function ApprovalsPanel({ session, onChanged }: { session: Session; onChanged: () => void }) {
   const showAdminQueue = session.role === 'admin' || session.role === 'super_admin';
   const showTicketQueue = session.role === 'it_support' || session.role === 'super_admin';
-  // Bumped when a job is logged, so the list and the report below it show it
-  // at once rather than on the next visit to the tab.
+  // Bumped on any change from the queues below -- a job logged, a request
+  // approved, an item handed over -- so the counts at the top and the
+  // report at the bottom move with them rather than on the next visit.
   const [logTick, setLogTick] = useState(0);
+  const bump = () => { setLogTick(t => t + 1); onChanged(); };
   return (
     <div className="space-y-5">
-      {showAdminQueue && <AdminApprovalsSection session={session} onChanged={onChanged} />}
+      <OnYourDesk refresh={logTick} />
+      {showAdminQueue && <AdminApprovalsSection session={session} onChanged={bump} />}
       {showAdminQueue && <AdminTicketHistorySection refresh={logTick} />}
-      {showTicketQueue && <TicketApprovalsSection session={session} onChanged={onChanged} />}
+      {showTicketQueue && <TicketApprovalsSection session={session} onChanged={bump} />}
       {/* Logging work and the report it feeds are for Admin as much as IT:
           an admin does jobs nobody raised a ticket for too, and the monthly
           report is meant to cover both. The server has always allowed it --
           see require_role in views/work_report.py and the 'logged' branch in
           views/tickets.py -- so this was the only thing hiding it. */}
       {(showTicketQueue || showAdminQueue) && (
-        <LogWorkSection session={session}
-          onChanged={() => { setLogTick(t => t + 1); onChanged(); }} />
+        <LogWorkSection session={session} onChanged={bump} />
       )}
       {/* Directly under the form, because the complaint that led to it was
           "we add there but nothing comes anywhere". */}
