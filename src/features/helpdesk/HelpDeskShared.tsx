@@ -266,6 +266,64 @@ export const isoLocal = (d: Date) =>
 
 /* Shared page-scoped keyframes — one <style> block, imported by every screen
    in this feature so the whole app doesn't carry unused animation CSS. */
+
+/* ── Who should handle this? ──────────────────────────────────────
+   Two or three people share each desk, so every request names one of them
+   and lands on that person's screen alone. The list is the roster the super
+   admin keeps — /desk-staff/ is that roster reduced to a name and an
+   address, which is all a dropdown needs.
+
+   Required, so it opens unset rather than on whoever happens to be first:
+   a pre-picked name is a name nobody chose. ────────────────────── */
+export type DeskPerson = { email: string; name: string };
+
+export function useDeskStaff(desk: 'it' | 'admin') {
+  const [people, setPeople] = useState<DeskPerson[]>([]);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    let live = true;
+    rpFetch(`${API}/desk-staff/?desk=${desk}`)
+      .then(r => r.json())
+      .then(d => { if (live) setPeople(d.results || []); })
+      .catch(() => { if (live) setErr('Could not load the list.'); });
+    return () => { live = false; };
+  }, [desk]);
+  return { people, err };
+}
+
+export function AssigneePicker({ desk, value, onChange, label, labelCls, inputCls }: {
+  desk: 'it' | 'admin';
+  value: string;
+  onChange: (email: string) => void;
+  label?: string;
+  // Each form has its own look; the picker borrows it rather than importing
+  // a third one into the middle of somebody else's layout.
+  labelCls?: string;
+  inputCls?: string;
+}) {
+  const { people, err } = useDeskStaff(desk);
+  const cls = inputCls
+    || "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm "
+     + "focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
+  return (
+    <div>
+      <label className={labelCls || "text-[11px] font-black text-slate-500 uppercase tracking-wide"}>
+        {label || (desk === 'it' ? 'Who in IT should handle this?' : 'Which admin should handle this?')}
+      </label>
+      <select className={cls} value={value} onChange={e => onChange(e.target.value)} required>
+        <option value="" disabled>Choose a person…</option>
+        {people.map(p => <option key={p.email} value={p.email}>{p.name}</option>)}
+      </select>
+      {err && <p className="text-[11px] text-rose-600 mt-1">{err}</p>}
+      {!err && !people.length && (
+        <p className="text-[11px] text-amber-600 mt-1">
+          Nobody is set up on this desk yet — a Super Admin adds them under Manage.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export const RP_STYLES = `
   @keyframes rpReveal { from { opacity:0; transform: translateY(14px) scale(.985);} to {opacity:1;transform:none;} }
   .rp-reveal { animation: rpReveal .55s cubic-bezier(.2,.8,.2,1) both; }

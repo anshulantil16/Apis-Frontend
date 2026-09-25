@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users, MapPin, X, Plus, Send, Loader, AlertTriangle, CheckCircle2,
   Calendar as CalendarIcon, LogOut, ShieldCheck, LayoutGrid, ListChecks,
-  ClipboardList, Headphones, Paperclip, RotateCcw,
+  ClipboardList, Headphones, Paperclip, RotateCcw, Ticket, PackageCheck,
 } from 'lucide-react';
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
   ROLE_LABEL, Reveal, Panel, Skel, Empty, StatusPill, PURPOSE_LABEL, PURPOSE_COLOUR,
-  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch} from './HelpDeskShared';
+  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, AssigneePicker} from './HelpDeskShared';
 import { HelpDeskLogin } from './HelpDeskLogin';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './HelpDeskAdminPanels';
 import {
@@ -16,7 +16,7 @@ import {
   ticketPriorityMeta, fmtTicketWhen,
 } from './HelpDeskTickets';
 
-type Tab = 'rooms' | 'mine' | 'approvals' | 'calendar' | 'manage';
+type Tab = 'rooms' | 'mine' | 'tasks' | 'approvals' | 'calendar' | 'manage';
 
 /* ── room card: the live-status tile that drives the whole dashboard ────── */
 const ROOM_GLOW: Record<string, string> = {
@@ -204,6 +204,7 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
   const [attendees, setAttendees] = useState(2);
   const [department, setDepartment] = useState('');
   const [name, setName] = useState(session.name || '');
+  const [assignee, setAssignee] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [conflict, setConflict] = useState<any>(null);
@@ -215,12 +216,14 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!assignee) { setErr('Choose which admin should handle this.'); return; }
     setBusy(true); setErr(''); setConflict(null);
     try {
       const res = await rpFetch(`${API}/bookings/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: session.email, requested_by_name: name, room_id: roomId, date,
+          assigned_to_email: assignee,
           start_time: start, end_time: end, purpose, purpose_detail: detail,
           attendees, department,
         }),
@@ -305,6 +308,9 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
                 {Object.entries(PURPOSE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
+            <AssigneePicker desk="admin" value={assignee} onChange={setAssignee}
+              labelCls="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5"
+              inputCls={inputCls} />
             <div>
               <label className="block text-[10px] font-black uppercase tracking-widest text-cyan-700/70 mb-1.5">Details (optional)</label>
               <input value={detail} onChange={e => setDetail(e.target.value)} placeholder="What's this meeting about?" className={inputCls} />
@@ -372,6 +378,7 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
   const [neededBy, setNeededBy] = useState('');
   const [department, setDepartment] = useState('');
   const [name, setName] = useState(session.name || '');
+  const [assignee, setAssignee] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState<any>(null);
@@ -381,12 +388,14 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName.trim()) { setErr('What do you need?'); return; }
+    if (!assignee) { setErr('Choose which admin should handle this.'); return; }
     setBusy(true); setErr('');
     try {
       const res = await rpFetch(`${API}/resource-requests/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: session.email, requested_by_name: name, category, item_name: itemName,
+          assigned_to_email: assignee,
           quantity, urgency, reason, needed_by: neededBy || null, department,
         }),
       });
@@ -433,6 +442,10 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
           <label className={deskLabelCls}>Quantity</label>
           <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
             className={`${deskInputCls} px-2.5 text-xs`} />
+        </div>
+        <div className="col-span-4">
+          <AssigneePicker desk="admin" value={assignee} onChange={setAssignee}
+            labelCls={deskLabelCls} inputCls={deskInputCls} />
         </div>
         <div className="col-span-2">
           <label className={deskLabelCls}>Urgency</label>
@@ -495,6 +508,7 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
   const blank = { category: TICKET_CATEGORY_OPTIONS[0], priority: 'medium' as Priority, subject: '', description: '', relatedTo: TICKET_RELATED_TO_OPTIONS[0] };
   const [form, setForm] = useState(blank);
   const [files, setFiles] = useState<File[]>([]);
+  const [assignee, setAssignee] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState<{ status: string; message: string; ticket: SupportTicket } | null>(null);
@@ -504,6 +518,7 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.subject.trim() || !form.description.trim()) { setErr('Subject and description are required.'); return; }
+    if (!assignee) { setErr('Choose who in IT should handle this.'); return; }
     setBusy(true); setErr('');
     try {
       // multipart, not JSON — attachments are real files now (see
@@ -516,6 +531,7 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
       fd.append('subject', form.subject);
       fd.append('description', form.description);
       fd.append('related_to', form.relatedTo);
+      fd.append('assigned_to_email', assignee);
       files.forEach(f => fd.append('attachments', f));
       const res = await rpFetch(`${API}/tickets/`, { method: 'POST', body: fd });
       const d = await res.json();
@@ -577,6 +593,8 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
           {TICKET_RELATED_TO_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
+      <AssigneePicker desk="it" value={assignee} onChange={setAssignee}
+        labelCls={deskLabelCls} inputCls={deskInputCls} />
       <div>
         <label className={deskLabelCls}>Attachments <span className="text-slate-400 normal-case font-semibold">(optional)</span></label>
         <label className="flex flex-col items-center justify-center gap-1.5 px-4 py-4 rounded-xl border-2 border-dashed
@@ -702,6 +720,116 @@ function SupportDeskModal({ session, onClose, onDone }: {
 
 /* ── my requests: room bookings + item requests + IT tickets, merged into
    one timeline ───────────────────────────────────────────────────────── */
+/* ── My Tasks ──────────────────────────────────────────────────
+   "My Requests" answers what I asked for. This is the other half — what has
+   been given to me — which is what a person on a desk actually works from,
+   and the number their month is measured by.
+
+   Oldest first, deliberately: the request that has been waiting longest is
+   the one to do next, which is the opposite of how a feed usually reads.
+   ────────────────────────────────────────────────────────── */
+function MyTasksPanel({ refreshKey }: { refreshKey: number }) {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    setData(null); setErr('');
+    rpFetch(`${API}/my-tasks/${done ? '?all=1' : ''}`)
+      .then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!live) return;
+        if (!r.ok) setErr(d.error || 'Could not load your list.');
+        else setData(d);
+      })
+      .catch(() => { if (live) setErr('Could not reach the server.'); });
+    return () => { live = false; };
+  }, [refreshKey, done]);
+
+  const KIND = {
+    ticket: { label: 'IT Ticket', cls: 'bg-amber-50 text-amber-700 ring-amber-200', icon: Ticket },
+    item: { label: 'Item', cls: 'bg-cyan-50 text-cyan-700 ring-cyan-200', icon: PackageCheck },
+    room: { label: 'Room', cls: 'bg-violet-50 text-violet-700 ring-violet-200', icon: LayoutGrid },
+  } as const;
+
+  const waited = (iso: string) => {
+    const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    return days <= 0 ? 'today' : days === 1 ? '1 day' : `${days} days`;
+  };
+
+  return (
+    <Panel title="My Tasks" icon={ListChecks}
+      subtitle="Everything addressed to you — longest waiting first"
+      right={
+        <button onClick={() => setDone(d => !d)}
+          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black border transition-colors
+            ${done ? 'bg-slate-900 text-white border-slate-900'
+                   : 'text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+          {done ? 'Showing all' : 'Still to do'}
+        </button>
+      }>
+      {err && <p className="text-[12px] text-rose-600 font-semibold py-4 text-center">{err}</p>}
+      {!err && !data && <Skel className="h-32" />}
+      {data && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            {[['On your desk', data.waiting],
+              ['IT tickets', data.by_kind.ticket],
+              ['Item requests', data.by_kind.item],
+              ['Room bookings', data.by_kind.room]].map(([l, v]) => (
+              <div key={l as string} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xl font-black text-slate-900 tabular-nums">{v as number}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{l}</p>
+              </div>
+            ))}
+          </div>
+
+          {!data.results.length ? (
+            <Empty msg={done ? 'Nothing has come your way yet' : 'Nothing waiting on you'}
+              icon={ListChecks} />
+          ) : (
+            <div className="space-y-2">
+              {data.results.map((r: any, i: number) => {
+                const k = KIND[r.kind as keyof typeof KIND];
+                const Icon = k.icon;
+                return (
+                  <Reveal key={`${r.kind}-${r.id}`} delay={i * 25}>
+                    <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3">
+                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px]
+                                        font-black uppercase ring-1 shrink-0 ${k.cls}`}>
+                        <Icon className="w-3 h-3" /> {k.label}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-bold text-slate-800 truncate">{r.what}</p>
+                        <p className="text-[10.5px] text-slate-400 truncate">
+                          from {r.from} · {r.detail}
+                          {r.urgency ? ` · ${r.urgency}` : ''}
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 shrink-0">
+                        waiting {waited(r.raised_at)}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase
+                                       ring-1 bg-slate-50 text-slate-600 ring-slate-200 shrink-0">
+                        {r.status_label}
+                      </span>
+                    </div>
+                  </Reveal>
+                );
+              })}
+            </div>
+          )}
+          <p className="text-[11px] text-slate-400 mt-3">
+            Act on these under Approvals. They are yours alone — nobody else on the
+            desk sees them, and your monthly report counts what you finish.
+          </p>
+        </>
+      )}
+    </Panel>
+  );
+}
+
 function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey: number }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -897,6 +1025,10 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
   const TABS: { id: Tab; label: string; icon: any; roles?: string[] }[] = [
     { id: 'rooms', label: 'Rooms', icon: LayoutGrid },
     { id: 'mine', label: 'My Requests', icon: ClipboardList },
+    // Staff only: an employee has no desk, so nothing is ever addressed
+    // to them.
+    { id: 'tasks', label: 'My Tasks', icon: ListChecks,
+      roles: ['admin', 'it_support', 'super_admin'] },
     { id: 'approvals', label: 'Approvals', icon: ListChecks, roles: ['admin', 'it_support', 'super_admin'] },
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon, roles: ['admin', 'super_admin'] },
     { id: 'manage', label: 'Manage', icon: ShieldCheck, roles: ['super_admin'] },
@@ -1014,6 +1146,8 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
             <MyRequestsPanel session={session} refreshKey={refreshKey} />
           </Panel>
         )}
+
+        {tab === 'tasks' && canApprove && <MyTasksPanel refreshKey={refreshKey} />}
 
         {tab === 'approvals' && canApprove && (
           <ApprovalsPanel session={session} onChanged={() => { setRefreshKey(k => k + 1); loadRooms(); }} />
