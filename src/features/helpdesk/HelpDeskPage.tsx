@@ -919,6 +919,16 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
     { id: 'manage', label: 'Manage', icon: ShieldCheck, roles: ['super_admin'] },
   ];
   const visibleTabs = TABS.filter(t => !t.roles || t.roles.includes(session.role));
+  // A tab this person cannot see renders nothing at all: an empty page under
+  // a tab strip with nothing lit up, which is exactly the "blank after
+  // logging in" screenshot. It happens when a tab is removed from the app
+  // while somebody is standing on it, and when a role changes under a live
+  // session -- an admin demoted to employee still holding 'approvals'.
+  //
+  // Derived rather than corrected in an effect, so there is no render where
+  // the page is blank while the fix is on its way.
+  const activeTab: Tab = visibleTabs.some(t => t.id === tab)
+    ? tab : (visibleTabs[0]?.id ?? 'rooms');
 
   const onBookingDone = () => { setShowBooking(false); setBookRoom(null); setRefreshKey(k => k + 1); loadRooms(); };
   const onSupportDeskDone = () => { setShowSupportDesk(false); setRefreshKey(k => k + 1); };
@@ -990,7 +1000,7 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
         <div className="max-w-[1500px] mx-auto px-6 flex items-center gap-1 overflow-x-auto">
           {visibleTabs.map(t => {
             const Icon = t.icon;
-            const on = tab === t.id;
+            const on = activeTab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`relative flex items-center gap-2 px-4 py-2.5 text-[13px] font-bold whitespace-nowrap
@@ -1004,7 +1014,7 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
       </div>
 
       <div className="relative z-10 max-w-[1500px] mx-auto px-6 py-6">
-        {tab === 'rooms' && (
+        {activeTab === 'rooms' && (
           loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-56" />)}
@@ -1026,17 +1036,17 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
           )
         )}
 
-        {tab === 'mine' && (
+        {activeTab === 'mine' && (
           <Panel title="My Requests" icon={ClipboardList} subtitle="Room bookings, item requests, and IT tickets you've made, and their status">
             <MyRequestsPanel session={session} refreshKey={refreshKey} />
           </Panel>
         )}
 
-        {tab === 'approvals' && canApprove && (
+        {activeTab === 'approvals' && canApprove && (
           <ApprovalsPanel session={session} onChanged={() => { setRefreshKey(k => k + 1); loadRooms(); }} />
         )}
-        {tab === 'calendar' && isStaff && <CalendarPanel rooms={rooms} />}
-        {tab === 'manage' && isSuper && (
+        {activeTab === 'calendar' && isStaff && <CalendarPanel rooms={rooms} />}
+        {activeTab === 'manage' && isSuper && (
           <SuperAdminPanel session={session} onRoomsChanged={loadRooms}
             onGoToTab={t => setTab(t as Tab)} />
         )}

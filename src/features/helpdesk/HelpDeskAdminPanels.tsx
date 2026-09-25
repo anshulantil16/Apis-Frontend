@@ -82,7 +82,7 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
     <div className="space-y-5">
       <OnYourDesk refresh={logTick} />
       {showAdminQueue && <AdminApprovalsSection session={session} onChanged={bump} />}
-      {showAdminQueue && <AdminTicketHistorySection refresh={logTick} />}
+      {showAdminQueue && <AdminTicketHistorySection session={session} refresh={logTick} />}
       {showTicketQueue && <TicketApprovalsSection session={session} onChanged={bump} />}
       {/* Logging work and the report it feeds are for Admin as much as IT:
           an admin does jobs nobody raised a ticket for too, and the monthly
@@ -743,31 +743,31 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
-  const [mineOnly, setMineOnly] = useState(false);
-  // Each desk's own log. The super admin oversees both, so they get both.
+  // Your own log. Two or three people share a desk and each is measured on
+  // what they did, so a list mixing them answers nobody's question. The
+  // super admin oversees both desks and sees everyone's.
+  const isSuper = session.role === 'super_admin';
   const deskQ = session.role === 'admin' ? '&desk=admin'
               : session.role === 'it_support' ? '&desk=it' : '';
+  const mineQ = isSuper ? '' : `&performed_by=${encodeURIComponent(session.email)}`;
 
   const load = useCallback(async () => {
     setLoading(true); setErr('');
     try {
-      const r = await rpFetch(`${API}/tickets/?origin=logged&limit=200${deskQ}`);
+      const r = await rpFetch(`${API}/tickets/?origin=logged&limit=200${deskQ}${mineQ}`);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Could not load what has been logged.');
       setRows(d.results || []);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not reach the server.');
     } finally { setLoading(false); }
-  }, [deskQ]);
+  }, [deskQ, mineQ]);
   // `refresh` is bumped by the form above on a successful save.
   useEffect(() => { load(); }, [load, refresh]);
 
   const today = isoLocal(new Date());
   const month = today.slice(0, 7);
-  const me = (session.email || '').toLowerCase();
-  const isMine = (r: any) => (r.performed_by_email || '').toLowerCase() === me;
-
-  const shown = (mineOnly ? rows.filter(isMine) : rows).slice(0, 20);
+  const shown = rows.slice(0, 20);
   const thisMonth = rows.filter(r => (r.performed_on || '').startsWith(month));
   const minutes = thisMonth.reduce((n, r) => n + (r.time_spent_minutes || 0), 0);
   const hours = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
@@ -782,16 +782,10 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
   ];
 
   return (
-    <Panel title="Work logged" icon={ClipboardList}
-      subtitle="Jobs recorded directly — newest first, and counted in the monthly report"
+    <Panel title={isSuper ? 'Work logged' : 'Work you logged'} icon={ClipboardList}
+      subtitle="Jobs recorded directly — newest first, and counted in your monthly report"
       right={
         <div className="flex items-center gap-2">
-          <button onClick={() => setMineOnly(m => !m)}
-            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-colors border
-              ${mineOnly ? 'bg-slate-900 text-white border-slate-900'
-                         : 'text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
-            Only mine
-          </button>
           <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -814,7 +808,7 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
       {loading ? (
         <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
       ) : !shown.length ? (
-        <Empty msg={mineOnly ? 'You have not logged anything yet' : 'Nothing logged yet'}
+        <Empty msg={isSuper ? 'Nothing logged yet' : 'You have not logged anything yet'}
           icon={ClipboardList} />
       ) : (
         <div className="space-y-2">
@@ -916,7 +910,7 @@ function WorkReportSection({ session, refresh }:
   const hours = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
 
   return (
-    <Panel title="Work this month" icon={History}
+    <Panel title={data?.scope === 'me' ? 'Your work this month' : 'Work this month'} icon={History}
       subtitle={data ? `${data.desk_label} · ${data.label} · work done and jobs logged` : 'Loading…'}
       right={
         <div className="flex items-center gap-2">
@@ -978,7 +972,7 @@ function WorkReportSection({ session, refresh }:
             <Empty msg="Nothing recorded for this month yet" icon={History} />
           ) : (
             <>
-              <div>
+              <div className={data.scope === 'me' ? 'hidden' : ''}>
                 <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">By person</p>
                 <div className="space-y-1.5">
                   {data.people.map((p: any) => (
@@ -1193,7 +1187,8 @@ function ItTicketHistorySection() {
    the Admin queue only. ResourceRequest already tracks `fulfilled_at`
    separately, so "Fulfilled Today" doesn't need an updated_at field the
    way the IT ticket version does. ────────────────────────────────────── */
-function AdminTicketHistorySection({ refresh }: { refresh: number }) {
+function AdminTicketHistorySection({ session, refresh }:
+                                   { session: Session; refresh: number }) {
   const [requests, setRequests] = useState<any[]>([]);
   const [logged, setLogged] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1206,12 +1201,13 @@ function AdminTicketHistorySection({ refresh }: { refresh: number }) {
       // was landing on IT's.
       const [rq, lg] = await Promise.all([
         rpFetch(`${API}/resource-requests/?limit=500`).then(r => r.json()),
-        rpFetch(`${API}/tickets/?origin=logged&desk=admin&limit=500`).then(r => r.json()),
+        rpFetch(`${API}/tickets/?origin=logged&desk=admin&limit=500`
+          + `&performed_by=${encodeURIComponent(session.email)}`).then(r => r.json()),
       ]);
       setRequests(rq.results || []);
       setLogged(lg.results || []);
     } finally { setLoading(false); }
-  }, []);
+  }, [session.email]);
   useEffect(() => { load(); }, [load, refresh]);
 
   const today = isoLocal(new Date());
