@@ -773,8 +773,9 @@ function MyTasksPanel({ refreshKey }: { refreshKey: number }) {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             {[['On your desk', data.waiting],
-              ['IT tickets', data.by_kind.ticket],
-              ['Item requests', data.by_kind.item],
+              ['Unclaimed', data.unassigned],
+              [data.desk === 'admin' ? 'Item requests' : 'IT tickets',
+               data.desk === 'admin' ? data.by_kind.item : data.by_kind.ticket],
               ['Room bookings', data.by_kind.room]].map(([l, v]) => (
               <div key={l as string} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                 <p className="text-xl font-black text-slate-900 tabular-nums">{v as number}</p>
@@ -798,6 +799,15 @@ function MyTasksPanel({ refreshKey }: { refreshKey: number }) {
                                         font-black uppercase ring-1 shrink-0 ${k.cls}`}>
                         <Icon className="w-3 h-3" /> {k.label}
                       </span>
+                      {/* Raised before anyone was being named, or simply not
+                          picked up yet. It is nobody's, so it is shown to the
+                          whole desk rather than to no one. */}
+                      {!r.mine && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase
+                                         ring-1 bg-amber-50 text-amber-700 ring-amber-200 shrink-0">
+                          Unclaimed
+                        </span>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="text-[12px] font-bold text-slate-800 truncate">{r.what}</p>
                         <p className="text-[10.5px] text-slate-400 truncate">
@@ -819,8 +829,10 @@ function MyTasksPanel({ refreshKey }: { refreshKey: number }) {
             </div>
           )}
           <p className="text-[11px] text-slate-400 mt-3">
-            Act on these under Approvals. They are yours alone — nobody else on the
-            desk sees them, and your monthly report counts what you finish.
+            Act on these under Approvals. What is addressed to you is yours alone —
+            nobody else on the desk sees it — and your monthly report counts what you
+            finish. Anything marked Unclaimed was never given to a name, so the whole
+            desk can see it until somebody takes it.
           </p>
         </>
       )}
