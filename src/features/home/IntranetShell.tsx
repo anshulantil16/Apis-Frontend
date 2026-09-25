@@ -11,6 +11,7 @@
  * IntranetHomeShared.tsx and render its body as `children` here.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { portalFetch } from '../portal/session';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
   HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images,
@@ -72,8 +73,109 @@ const PARENT_OF: Partial<Record<ShellView, QuickAccessId>> = {
   'offer-approvals': 'offer-letters',
 };
 
+/* ── My Profile ───────────────────────────────────────────────────────────
+   Your own record, as the company holds it. Read-only on purpose: this is
+   HRMS's data, and a field edited here would be overwritten by the next
+   sync while looking like it had saved. The footer says who to ask instead.
+   ─────────────────────────────────────────────────────────────────────── */
+function MyProfileCard({ onClose }: { onClose: () => void }) {
+  const [p, setP] = useState<any>(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    let live = true;
+    portalFetch('/api/accounts/portal/profile/')
+      .then(r => r.json())
+      .then(d => { if (live) { if (d.profile) setP(d.profile); else setErr('Could not load your profile.'); } })
+      .catch(() => { if (live) setErr('Could not reach the server.'); });
+    return () => { live = false; };
+  }, []);
+
+  const initials = (p?.name || '?').trim().split(/\s+/).slice(0, 2)
+    .map((w: string) => w[0]).join('').toUpperCase();
+
+  const rows: [string, string][] = p ? [
+    ['Employee code', p.employee_code],
+    ['Department', p.department],
+    ['Category', p.category],
+    ['Location', p.location],
+    ['Reports to', p.manager],
+    ['Work number', p.office_mobile],
+    ['Email', p.email],
+    ['Joined', p.date_of_joining],
+    ['With APIS', p.served],
+    ['Birthday', p.birthday],
+  ].filter(([, v]) => !!v) as [string, string][] : [];
+
+  return (
+    <div className="ih-fade fixed inset-0 z-[60] flex items-start justify-center p-4 pt-24
+                    bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="ih-pop-in w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}>
+        {/* The same amber the sidebar is branded with, so this reads as part
+            of the intranet rather than a system dialog. */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 px-5 py-5">
+          <div aria-hidden className="ih-aurora pointer-events-none absolute -top-16 -right-8 w-44 h-44
+                                      rounded-full bg-amber-200/35 blur-2xl" />
+          <div className="relative flex items-center gap-3.5">
+            <div className="w-14 h-14 rounded-2xl bg-white/90 ring-1 ring-white/70 shadow-lg
+                            grid place-items-center text-lg font-black text-amber-700 flex-shrink-0">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[19px] leading-tight font-black text-[#2b2005] truncate">
+                {p?.name || 'Loading\u2026'}
+              </p>
+              <p className="text-[12px] font-bold text-amber-50/95 truncate">
+                {p?.designation || ''}
+              </p>
+            </div>
+            <button onClick={onClose}
+              className="ml-auto w-7 h-7 rounded-lg bg-white/25 hover:bg-white/40 ring-1 ring-white/30
+                         text-white grid place-items-center flex-shrink-0 transition-all">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5">
+          {err && <p className="text-[12.5px] text-rose-600 font-semibold text-center py-4">{err}</p>}
+          {!err && !p && (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="ih-skeleton h-8 rounded-lg" />
+              ))}
+            </div>
+          )}
+          {p && (
+            <dl className="divide-y divide-slate-100">
+              {rows.map(([k, v]) => (
+                <div key={k} className="flex items-baseline gap-4 py-2.5">
+                  <dt className="text-[11px] font-black uppercase tracking-wide text-slate-400 w-32 flex-shrink-0">
+                    {k}
+                  </dt>
+                  <dd className="text-[13px] font-bold text-slate-700 min-w-0 break-words">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {p && (
+            <p className="text-[11px] text-slate-400 mt-4 leading-relaxed">
+              This comes from the company\u2019s HR records, so it cannot be edited here \u2014
+              anything wrong is worth telling HR, and it will correct itself on the
+              next sync{p.last_synced_at ? `. Last updated ${p.last_synced_at}` : ''}.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function IntranetShell({ active, onNavigate, children, subNav, title, subtitle,
                                 userName, onSignOut, isSuperadmin, allowedApps }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const canOpen = (id: string) => isSuperadmin || !allowedApps || allowedApps.includes(id);
   const VISIBLE_GROUPS = useMemo(
     () => NAV_GROUPS
@@ -671,26 +773,60 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                   <Crown className="w-4 h-4" />
                 </button>
               )}
-              {/* Who is signed in — the initials double as the account marker,
-                  so there is never a doubt about whose session this is. */}
-              <div className="w-8 h-8 rounded-full bg-amber-100 ring-1 ring-amber-200 flex items-center
-                              justify-center text-[11px] font-black text-amber-700"
-                title={userName || 'Signed in'}>
-                {userName
-                  ? userName.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
-                  : <User className="w-4 h-4" />}
-              </div>
-              {onSignOut && (
-                <button onClick={onSignOut} title="Sign out"
-                  className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all">
-                  <LogOut className="w-4 h-4" />
+              {/* Who is signed in. The initials were only ever a label; the
+                  company already knows this person's code, department, work
+                  number and joining date, and their own screen is the one
+                  place all of it can be shown without a question being
+                  raised. Sign out moves in here with it, so the top bar is
+                  one control rather than two. */}
+              <div className="relative">
+                <button onClick={() => setMenuOpen(o => !o)}
+                  title={userName || 'Signed in'}
+                  className={`w-8 h-8 rounded-full bg-amber-100 ring-1 flex items-center justify-center
+                              text-[11px] font-black text-amber-700 transition-all hover:ring-amber-400
+                              ${menuOpen ? 'ring-amber-500 ring-2' : 'ring-amber-200'}`}>
+                  {userName
+                    ? userName.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+                    : <User className="w-4 h-4" />}
                 </button>
-              )}
+
+                {menuOpen && (
+                  <>
+                    {/* Click anywhere else to close, including on the page
+                        behind — a menu that only closes by its own button is
+                        a menu people leave open. */}
+                    <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                    <div className="ih-pop-in absolute right-0 top-10 z-50 w-56 rounded-xl bg-white
+                                    shadow-xl ring-1 ring-slate-200 overflow-hidden">
+                      <div className="px-3.5 py-3 border-b border-slate-100">
+                        <p className="text-[13px] font-black text-slate-800 truncate">
+                          {userName || 'Signed in'}
+                        </p>
+                        <p className="text-[11px] text-slate-400">Signed in</p>
+                      </div>
+                      <button onClick={() => { setMenuOpen(false); setProfileOpen(true); }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] font-bold
+                                   text-slate-600 hover:bg-amber-50 hover:text-amber-700 transition-colors">
+                        <User className="w-4 h-4" /> My Profile
+                      </button>
+                      {onSignOut && (
+                        <button onClick={() => { setMenuOpen(false); onSignOut(); }}
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] font-bold
+                                     text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors
+                                     border-t border-slate-100">
+                          <LogOut className="w-4 h-4" /> Sign out
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </header>
 
         <div className="ih-scroll-clean flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</div>
+        {profileOpen && <MyProfileCard onClose={() => setProfileOpen(false)} />}
       </main>
 
       {/* ── Command palette — ⌘K / Ctrl+K from anywhere in the app ─────────── */}
