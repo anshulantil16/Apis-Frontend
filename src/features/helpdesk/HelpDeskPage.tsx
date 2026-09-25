@@ -437,15 +437,13 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
         <input value={itemName} onChange={e => setItemName(e.target.value)}
           placeholder="e.g. A4 paper, wireless mouse, whiteboard markers" className={deskInputCls} />
       </div>
+      <AssigneePicker desk="admin" value={assignee} onChange={setAssignee}
+        labelCls={deskLabelCls} inputCls={deskInputCls} />
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className={deskLabelCls}>Quantity</label>
           <input type="number" min={1} value={quantity} onChange={e => setQuantity(Number(e.target.value))}
             className={`${deskInputCls} px-2.5 text-xs`} />
-        </div>
-        <div className="col-span-4">
-          <AssigneePicker desk="admin" value={assignee} onChange={setAssignee}
-            labelCls={deskLabelCls} inputCls={deskInputCls} />
         </div>
         <div className="col-span-2">
           <label className={deskLabelCls}>Urgency</label>
