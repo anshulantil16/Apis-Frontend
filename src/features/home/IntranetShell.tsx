@@ -331,14 +331,58 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
         {/* Brand panel — the app's one deliberately-amber surface, echoing
             the honey business; everything else in the shell stays neutral
             dark/light so this reads as an accent, not a theme change. */}
-        <div className="relative overflow-hidden flex-shrink-0">
+        <div className="ih-sheen relative overflow-hidden flex-shrink-0">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600" />
-          <div className={`relative flex items-center justify-between gap-2 ${collapsed ? 'px-2 py-4' : 'px-4 py-4'}`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0 drop-shadow" />
+          {/* One slow drift behind the gradient so the panel is not a flat
+              slab. 18s: atmosphere, not a tic — this is chrome somebody
+              looks at all day. */}
+          <div aria-hidden className="ih-aurora pointer-events-none absolute -top-16 -left-10 w-52 h-52
+                                      rounded-full bg-amber-200/35 blur-2xl" />
+          {/* The company makes honey. This is the one thing in the panel that
+              could not belong to anybody else's intranet. */}
+          <svg aria-hidden className="pointer-events-none absolute inset-0 w-full h-full opacity-[0.13]">
+            <defs>
+              <pattern id="ih-comb" width="28" height="24" patternUnits="userSpaceOnUse">
+                <path d="M0 12 L7 0 L21 0 L28 12 L21 24 L7 24 Z"
+                  fill="none" stroke="#fff" strokeWidth="1" />
+                <path d="M-14 24 L-7 12 L7 12 L14 24 L7 36 L-7 36 Z"
+                  fill="none" stroke="#fff" strokeWidth="1" />
+                <path d="M14 24 L21 12 L35 12 L42 24 L35 36 L21 36 Z"
+                  fill="none" stroke="#fff" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#ih-comb)" />
+          </svg>
+          {/* A lit edge at the bottom instead of the hard cut into the dark
+              sidebar — the two surfaces meet rather than collide. */}
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-px
+                                      bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
+
+          <div className={`relative flex items-center justify-between gap-2 ${collapsed ? 'px-2 py-4' : 'px-4 py-5'}`}>
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Straight onto the amber: the mark carries its own dark oval,
+                  so it holds on its own, and a white tile behind it only read
+                  as packaging. */}
+              <img src="/logo.png" alt="APIS India"
+                className={`object-contain flex-shrink-0 transition-transform duration-300
+                            hover:scale-105 drop-shadow-[0_2px_6px_rgba(120,53,15,.45)]
+                            ${collapsed ? 'w-11 h-11' : 'w-14 h-14'}`} />
               {!collapsed && (
-                <div className="leading-none min-w-0">
-                  <p className="text-lg font-black text-white uppercase tracking-tight truncate">Intranet</p>
+                <div className="min-w-0">
+                  {/* "Intranet" alone says what the page is, not whose it is. */}
+                  <p className="text-[9px] font-black uppercase tracking-[0.24em] text-amber-50/90 leading-none">
+                    APIS India
+                  </p>
+                  <p className="mt-1.5 text-[23px] leading-none font-black uppercase tracking-[0.01em]
+                                truncate text-[#2b2005]"
+                    style={{ textShadow: '0 1px 0 rgba(255,236,179,.55)' }}>
+                    Intranet
+                  </p>
+                  {/* A short rule under the word, in the light the panel is
+                      lit from — it finishes the lockup and stops the word
+                      floating in the middle of a gradient. */}
+                  <span aria-hidden className="mt-2 block h-[2px] w-12 rounded-full
+                                               bg-gradient-to-r from-[#2b2005]/70 to-transparent" />
                 </div>
               )}
             </div>
@@ -347,9 +391,10 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                 collapsed and expanded states so it's always where you left
                 it. */}
             <button onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="w-5 h-5 rounded-md bg-white/15 hover:bg-white/25 text-white flex items-center
-                         justify-center flex-shrink-0 transition-all">
-              {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+              className="w-6 h-6 rounded-lg bg-white/20 hover:bg-white/35 ring-1 ring-white/25
+                         text-white flex items-center justify-center flex-shrink-0
+                         transition-all hover:scale-110 self-start">
+              {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
