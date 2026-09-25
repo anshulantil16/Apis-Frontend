@@ -252,6 +252,10 @@ export const REQUEST_STATUS_BADGE: Record<string, string> = {
   closed: 'bg-emerald-50 text-emerald-600 ring-emerald-200',
   rejected: 'bg-rose-50 text-rose-600 ring-rose-200',
   cancelled: 'bg-slate-50 text-slate-400 ring-slate-200',
+  // Nobody turned it down -- the slot came and went unanswered. Grey like
+  // cancelled rather than red like rejected, because no one decided
+  // anything, and that difference is the whole point of the state.
+  expired: 'bg-slate-100 text-slate-500 ring-slate-300',
 };
 
 export const fmtTime = (t: string) => t; // already HH:MM from the API

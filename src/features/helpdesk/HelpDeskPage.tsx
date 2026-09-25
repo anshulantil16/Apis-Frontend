@@ -809,6 +809,14 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
                 {row.admin_remarks && (
                   <p className="text-[11px] text-slate-400 mt-0.5">Note: {row.admin_remarks}</p>
                 )}
+                {/* "Expired" on its own invites the question. Nobody rejected
+                    this; the slot came and went without an answer, and the
+                    only thing left to do about it is ask again. */}
+                {row.status === 'expired' && (
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Nobody answered before the time passed. Book it again if you still need it.
+                  </p>
+                )}
                 {/* What actually happened to this ticket, in order. The row
                     itself only carries the most recent review, so before this
                     existed, a closed ticket no longer showed who had approved
