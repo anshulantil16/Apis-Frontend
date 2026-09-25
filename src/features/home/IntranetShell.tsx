@@ -387,13 +387,13 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               )}
             </div>
             {/* Collapse toggle — small, sits fully inside the brand header
-                (never straddles the sidebar's edge), same spot in both
-                collapsed and expanded states so it's always where you left
-                it. */}
+                (never straddles the sidebar's edge), centred on the lockup
+                so it reads as part of it, and in the same spot collapsed or
+                expanded so it is always where you left it. */}
             <button onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               className="w-6 h-6 rounded-lg bg-white/20 hover:bg-white/35 ring-1 ring-white/25
                          text-white flex items-center justify-center flex-shrink-0
-                         transition-all hover:scale-110 self-start">
+                         transition-all hover:scale-110">
               {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
             </button>
           </div>
