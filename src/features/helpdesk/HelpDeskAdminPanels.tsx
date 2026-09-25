@@ -34,7 +34,7 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
   return (
     <div className="space-y-5">
       {showAdminQueue && <AdminApprovalsSection session={session} onChanged={onChanged} />}
-      {showAdminQueue && <AdminTicketHistorySection />}
+      {showAdminQueue && <AdminTicketHistorySection refresh={logTick} />}
       {showTicketQueue && <TicketApprovalsSection session={session} onChanged={onChanged} />}
       {/* Logging work and the report it feeds are for Admin as much as IT:
           an admin does jobs nobody raised a ticket for too, and the monthly
@@ -48,7 +48,7 @@ export function ApprovalsPanel({ session, onChanged }: { session: Session; onCha
       {/* Directly under the form, because the complaint that led to it was
           "we add there but nothing comes anywhere". */}
       {(showTicketQueue || showAdminQueue) && <LoggedWorkSection session={session} refresh={logTick} />}
-      {(showTicketQueue || showAdminQueue) && <WorkReportSection refresh={logTick} />}
+      {(showTicketQueue || showAdminQueue) && <WorkReportSection session={session} refresh={logTick} />}
       {showTicketQueue && <ItTicketHistorySection />}
     </div>
   );
@@ -697,18 +697,21 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [mineOnly, setMineOnly] = useState(false);
+  // Each desk's own log. The super admin oversees both, so they get both.
+  const deskQ = session.role === 'admin' ? '&desk=admin'
+              : session.role === 'it_support' ? '&desk=it' : '';
 
   const load = useCallback(async () => {
     setLoading(true); setErr('');
     try {
-      const r = await rpFetch(`${API}/tickets/?origin=logged&limit=200`);
+      const r = await rpFetch(`${API}/tickets/?origin=logged&limit=200${deskQ}`);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Could not load what has been logged.');
       setRows(d.results || []);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not reach the server.');
     } finally { setLoading(false); }
-  }, []);
+  }, [deskQ]);
   // `refresh` is bumped by the form above on a successful save.
   useEffect(() => { load(); }, [load, refresh]);
 
@@ -805,7 +808,13 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
 }
 
 /* ── The month's work: tickets closed AND jobs logged ─────────────────── */
-function WorkReportSection({ refresh }: { refresh: number }) {
+function WorkReportSection({ session, refresh }:
+                           { session: Session; refresh: number }) {
+  // IT and Admin are reported separately -- different people, different work.
+  // The server decides this from the role; only the super admin, who is
+  // neither, gets to choose, and defaults to both.
+  const [desk, setDesk] = useState<'' | 'it' | 'admin'>('');
+  const isSuper = session.role === 'super_admin';
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -822,7 +831,8 @@ function WorkReportSection({ refresh }: { refresh: number }) {
     if (openPerson === email) { setOpenPerson(''); setItems([]); return; }
     setOpenPerson(email); setItems([]); setItemsBusy(true);
     try {
-      const r = await rpFetch(`${API}/work-report/?month=${month}&person=${encodeURIComponent(email)}`);
+      const r = await rpFetch(`${API}/work-report/?month=${month}`
+        + `${desk ? `&desk=${desk}` : ''}&person=${encodeURIComponent(email)}`);
       const d = await r.json();
       if (r.ok) setItems(d.items || []);
     } finally { setItemsBusy(false); }
@@ -831,7 +841,7 @@ function WorkReportSection({ refresh }: { refresh: number }) {
   const download = () => {
     // Straight to the browser: the session cookie is not what authorises
     // this, so it goes through rpFetch and is handed over as a blob.
-    rpFetch(`${API}/work-report/export/?month=${month}`).then(async r => {
+    rpFetch(`${API}/work-report/export/?month=${month}${desk ? `&desk=${desk}` : ''}`).then(async r => {
       if (!r.ok) { setErr('Could not build the file.'); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
@@ -845,7 +855,7 @@ function WorkReportSection({ refresh }: { refresh: number }) {
   useEffect(() => {
     let live = true;
     setData(null); setErr(''); setOpenPerson(''); setItems([]);
-    rpFetch(`${API}/work-report/?month=${month}`)
+    rpFetch(`${API}/work-report/?month=${month}${desk ? `&desk=${desk}` : ''}`)
       .then(async r => {
         const body = await r.json().catch(() => ({}));
         if (!live) return;
@@ -854,15 +864,26 @@ function WorkReportSection({ refresh }: { refresh: number }) {
       })
       .catch(() => { if (live) setErr('Could not reach the server.'); });
     return () => { live = false; };
-  }, [month, refresh]);
+  }, [month, refresh, desk]);
 
   const hours = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
 
   return (
     <Panel title="Work this month" icon={History}
-      subtitle={data ? `${data.label} · tickets closed and jobs logged` : 'Loading…'}
+      subtitle={data ? `${data.desk_label} · ${data.label} · work done and jobs logged` : 'Loading…'}
       right={
         <div className="flex items-center gap-2">
+          {isSuper && (
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              {([['', 'Both'], ['it', 'IT'], ['admin', 'Admin']] as const).map(([v, l]) => (
+                <button key={v} onClick={() => setDesk(v)}
+                  className={`px-2.5 py-1.5 text-[11px] font-black transition-colors
+                    ${desk === v ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
           <input type="month" value={month} onChange={e => setMonth(e.target.value)}
             className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-bold text-slate-600" />
           <button onClick={download} title="Download this month as a spreadsheet"
@@ -1020,7 +1041,9 @@ function ItTicketHistorySection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await rpFetch(`${API}/tickets/?limit=500`);
+      // desk=it: an admin's logged work is Admin's, and it was turning up
+      // here because everything logged lives in the one table.
+      const r = await rpFetch(`${API}/tickets/?limit=500&desk=it`);
       const d = await r.json();
       setTickets(d.results || []);
     } finally { setLoading(false); }
@@ -1123,19 +1146,26 @@ function ItTicketHistorySection() {
    the Admin queue only. ResourceRequest already tracks `fulfilled_at`
    separately, so "Fulfilled Today" doesn't need an updated_at field the
    way the IT ticket version does. ────────────────────────────────────── */
-function AdminTicketHistorySection() {
+function AdminTicketHistorySection({ refresh }: { refresh: number }) {
   const [requests, setRequests] = useState<any[]>([]);
+  const [logged, setLogged] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await rpFetch(`${API}/resource-requests/?limit=500`);
-      const d = await r.json();
-      setRequests(d.results || []);
+      // Two halves of Admin's work: what people asked for, and what Admin
+      // did without being asked. Both belong on Admin's screen -- the second
+      // was landing on IT's.
+      const [rq, lg] = await Promise.all([
+        rpFetch(`${API}/resource-requests/?limit=500`).then(r => r.json()),
+        rpFetch(`${API}/tickets/?origin=logged&desk=admin&limit=500`).then(r => r.json()),
+      ]);
+      setRequests(rq.results || []);
+      setLogged(lg.results || []);
     } finally { setLoading(false); }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refresh]);
 
   const today = isoLocal(new Date());
   const isToday = (iso: string) => isoLocal(new Date(iso)) === today;
@@ -1144,24 +1174,35 @@ function AdminTicketHistorySection() {
   const fulfilledToday = requests.filter(r => r.status === 'fulfilled' && r.fulfilled_at && isToday(r.fulfilled_at)).length;
   const awaitingFulfilment = requests.filter(r => r.status === 'approved').length;
   const pending = requests.filter(r => r.status === 'pending').length;
+  const loggedToday = logged.filter(t => t.performed_on === today).length;
 
   const STAT_TILES = [
     { label: 'Received Today', value: receivedToday, icon: Inbox, cls: 'text-cyan-600' },
     { label: 'Fulfilled Today', value: fulfilledToday, icon: CheckCircle2, cls: 'text-emerald-600' },
+    { label: 'Logged Today', value: loggedToday, icon: ClipboardList, cls: 'text-violet-600' },
     { label: 'Awaiting Fulfilment', value: awaitingFulfilment, icon: PlayCircle, cls: 'text-sky-600' },
     { label: 'Pending', value: pending, icon: Clock, cls: 'text-amber-600' },
   ];
 
-  const recent = requests.slice(0, 15);
+  // One list, newest first, whichever half a row came from -- a request and
+  // a job Admin did are both Admin's day.
+  const when = (r: any) => (r.kind === 'logged'
+    ? (r.performed_on || r.created_at.slice(0, 10))
+    : r.created_at.slice(0, 10));
+  const recent = [...requests.map(r => ({ ...r, kind: 'request' })),
+                  ...logged.map(t => ({ ...t, kind: 'logged' }))]
+    .sort((a, b) => (when(a) < when(b) ? 1 : -1))
+    .slice(0, 15);
 
   return (
-    <Panel title="Admin Ticket History" icon={History} subtitle="Today's volume, throughput, and the most recent item requests"
+    <Panel title="Admin Ticket History" icon={History}
+      subtitle="Today's volume, and the most recent requests and logged jobs"
       right={
         <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       }>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
         {STAT_TILES.map(s => {
           const Icon = s.icon;
           return (
@@ -1177,21 +1218,41 @@ function AdminTicketHistorySection() {
       {loading ? (
         <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
       ) : !recent.length ? (
-        <Empty msg="No item requests raised yet" icon={History} />
+        <Empty msg="Nothing raised or logged yet" icon={History} />
       ) : (
         <div className="space-y-2">
           {recent.map((r, i) => (
-            <Reveal key={r.id} delay={i * 30}>
+            <Reveal key={`${r.kind}-${r.id}`} delay={i * 30}>
               <div className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3">
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0 ${REQUEST_STATUS_BADGE[r.status]}`}>
-                  {r.status}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-bold text-slate-800 truncate">{r.item_name} × {r.quantity}</p>
-                  <p className="text-[10.5px] text-slate-400 truncate">
-                    {r.requested_by_name} · {r.category_label} · {fmtDate(r.created_at.slice(0, 10))}
-                  </p>
-                </div>
+                {r.kind === 'logged' ? (
+                  <>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1
+                                     bg-violet-50 text-violet-600 ring-violet-200 flex-shrink-0">
+                      Logged
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-slate-800 truncate">{r.subject}</p>
+                      <p className="text-[10.5px] text-slate-400 truncate">
+                        {r.performed_by_name || r.performed_by_email}
+                        {r.logged_for ? ` · for ${r.logged_for}` : ''}
+                        {' · '}{r.category_label}
+                        {r.performed_on ? ` · ${fmtDate(r.performed_on)}` : ''}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ring-1 flex-shrink-0 ${REQUEST_STATUS_BADGE[r.status]}`}>
+                      {r.status}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-slate-800 truncate">{r.item_name} × {r.quantity}</p>
+                      <p className="text-[10.5px] text-slate-400 truncate">
+                        {r.requested_by_name} · {r.category_label} · {fmtDate(r.created_at.slice(0, 10))}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </Reveal>
           ))}
