@@ -751,6 +751,14 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
               : session.role === 'it_support' ? '&desk=it' : '';
   const mineQ = isSuper ? '' : `&performed_by=${encodeURIComponent(session.email)}`;
 
+  // How much the whole desk has logged, alongside your own. Not to show
+  // somebody else's jobs -- the list below stays yours -- but because "0"
+  // with nothing beside it reads as "it did not save". Two people share this
+  // desk, and an empty screen on the day your colleague logged three jobs is
+  // the exact report this line answers: the work is there, under whoever
+  // did it.
+  const [deskTotal, setDeskTotal] = useState<number | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true); setErr('');
     try {
@@ -758,13 +766,22 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Could not load what has been logged.');
       setRows(d.results || []);
+      // A count only, and only for a desk -- the super admin already sees
+      // every row above, so there is nothing for them to be missing.
+      if (!isSuper && deskQ) {
+        rpFetch(`${API}/tickets/?origin=logged&limit=1${deskQ}`)
+          .then(x => x.json())
+          .then(x => setDeskTotal(typeof x.count === 'number' ? x.count : null))
+          .catch(() => setDeskTotal(null));
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not reach the server.');
     } finally { setLoading(false); }
-  }, [deskQ, mineQ]);
+  }, [deskQ, mineQ, isSuper]);
   // `refresh` is bumped by the form above on a successful save.
   useEffect(() => { load(); }, [load, refresh]);
 
+  const DESK_NAME = session.role === 'admin' ? 'Admin' : 'IT';
   const today = isoLocal(new Date());
   const month = today.slice(0, 7);
   const shown = rows.slice(0, 20);
@@ -783,7 +800,12 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
 
   return (
     <Panel title={isSuper ? 'Work logged' : 'Work you logged'} icon={ClipboardList}
-      subtitle="Jobs recorded directly — newest first, and counted in your monthly report"
+      subtitle={isSuper
+        ? 'Jobs recorded directly — newest first, across both desks'
+        : 'Jobs you recorded directly — newest first, and counted in your monthly report'
+          + (deskTotal && deskTotal > rows.length
+             ? `. The ${DESK_NAME} desk has logged ${deskTotal} in total; these ${rows.length} are yours`
+             : '')}
       right={
         <div className="flex items-center gap-2">
           <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
@@ -808,7 +830,12 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
       {loading ? (
         <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
       ) : !shown.length ? (
-        <Empty msg={isSuper ? 'Nothing logged yet' : 'You have not logged anything yet'}
+        <Empty
+          msg={isSuper ? 'Nothing logged yet'
+               : deskTotal
+                 ? `Nothing logged under ${session.email} yet — the ${DESK_NAME} desk has `
+                   + `${deskTotal}, recorded by whoever did them`
+                 : 'You have not logged anything yet'}
           icon={ClipboardList} />
       ) : (
         <div className="space-y-2">
