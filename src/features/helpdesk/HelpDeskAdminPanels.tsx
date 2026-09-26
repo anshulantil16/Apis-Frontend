@@ -45,9 +45,16 @@ function OnYourDesk({ refresh }: { refresh: number }) {
   }, [refresh]);
   if (!d) return null;
 
+  // Each desk sees its own queues. The super admin is on neither roster, so
+  // the server sends no desk at all and they get all three -- the strip is
+  // the one place that says how much is waiting, and for them that is both
+  // desks rather than IT's half of it.
   const kinds = d.desk === 'admin'
     ? [['Item requests', d.by_kind.item], ['Room bookings', d.by_kind.room]]
-    : [['IT tickets', d.by_kind.ticket]];
+    : d.desk === 'it'
+      ? [['IT tickets', d.by_kind.ticket]]
+      : [['IT tickets', d.by_kind.ticket], ['Item requests', d.by_kind.item],
+         ['Room bookings', d.by_kind.room]];
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
