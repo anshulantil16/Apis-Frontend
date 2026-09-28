@@ -328,6 +328,105 @@ export function AssigneePicker({ desk, value, onChange, label, labelCls, inputCl
   );
 }
 
+/* ── Passing work to the right person ──────────────────────────────────────
+   Whoever raised this picked one name off a list, and they were guessing.
+   When they guessed wrong the only ways out were to answer it anyway or to
+   leave it sitting, and a request sitting with the wrong person looks exactly
+   like one nobody has got to yet.
+
+   Folded away until asked for, because the common case is still to approve or
+   reject: an open form beside every row would make passing it on look like
+   the expected move. ───────────────────────────────────────────────────── */
+export function TransferControl({ desk, currentEmail, onTransfer, busy }: {
+  desk: 'it' | 'admin';
+  // Whoever has it now, so they are not offered as somewhere to send it.
+  currentEmail?: string;
+  onTransfer: (toEmail: string, reason: string) => Promise<void> | void;
+  busy?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [to, setTo] = useState('');
+  const [why, setWhy] = useState('');
+  const { people, err } = useDeskStaff(desk);
+  const others = people.filter(
+    p => p.email.toLowerCase() !== (currentEmail || '').toLowerCase());
+  const ready = !!to && !!why.trim();
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px]
+                   font-black text-slate-500 hover:border-violet-300 hover:text-violet-600
+                   transition-colors">
+        Pass to someone else
+      </button>
+    );
+  }
+
+  return (
+    <div className="w-full rounded-xl bg-violet-50/60 ring-1 ring-violet-200 p-3 space-y-2">
+      <p className="text-[10px] font-black uppercase tracking-wide text-violet-500">
+        Pass this on — it stays at the same stage, on their desk instead
+      </p>
+      <select value={to} onChange={e => setTo(e.target.value)}
+        className="w-full px-2.5 py-2 rounded-lg bg-white border border-violet-200
+                   text-[12.5px] font-bold text-slate-700 focus:outline-none
+                   focus:border-violet-400">
+        <option value="" disabled>Choose who should have it…</option>
+        {others.map(p => <option key={p.email} value={p.email}>{p.name}</option>)}
+      </select>
+      {/* Required. "Passed to Sana" answers nothing; whoever picks this up
+          needs the sentence that explains why it is theirs. */}
+      <input value={why} onChange={e => setWhy(e.target.value)}
+        placeholder="Why? e.g. Sana looks after the VPN"
+        className="w-full px-2.5 py-2 rounded-lg bg-white border border-violet-200
+                   text-[12.5px] text-slate-700 focus:outline-none focus:border-violet-400" />
+      <div className="flex items-center gap-2">
+        <button disabled={!ready || busy}
+          onClick={async () => { await onTransfer(to, why.trim()); setOpen(false); setTo(''); setWhy(''); }}
+          className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-[11px] font-black
+                     hover:bg-violet-700 disabled:opacity-40 transition-colors">
+          {busy ? 'Passing…' : 'Pass it on'}
+        </button>
+        <button onClick={() => { setOpen(false); setTo(''); setWhy(''); }}
+          className="px-3 py-1.5 rounded-lg text-[11px] font-black text-slate-400
+                     hover:text-slate-700 transition-colors">
+          Cancel
+        </button>
+      </div>
+      {err && <p className="text-[11px] text-rose-600">{err}</p>}
+      {!err && !others.length && (
+        <p className="text-[11px] text-amber-600">
+          There is nobody else on this desk to pass it to — a Super Admin adds
+          people under Manage.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── Where this has been ──────────────────────────────────────────────────
+   Shown on the card of whoever holds it now, because "why is this mine?" is
+   the first thing they ask. Every hop, not just the last: raised to A, passed
+   to B who was away, passed to C — the middle hop is often the one that
+   explains it. ─────────────────────────────────────────────────────────── */
+export function TransferTrail({ hops }: { hops?: any[] }) {
+  if (!hops || !hops.length) return null;
+  return (
+    <div className="mt-2 rounded-lg bg-violet-50/70 ring-1 ring-violet-100 px-2.5 py-2">
+      {hops.map((h, i) => (
+        <p key={i} className="text-[10.5px] text-violet-700 leading-relaxed">
+          <span className="font-black">
+            {h.from ? `${h.from} → ${h.to}` : `Given to ${h.to}`}
+          </span>
+          {h.reason ? ` — ${h.reason}` : ''}
+          {h.by ? <span className="text-violet-400"> · by {h.by}</span> : null}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export const RP_STYLES = `
   @keyframes rpReveal { from { opacity:0; transform: translateY(14px) scale(.985);} to {opacity:1;transform:none;} }
   .rp-reveal { animation: rpReveal .55s cubic-bezier(.2,.8,.2,1) both; }

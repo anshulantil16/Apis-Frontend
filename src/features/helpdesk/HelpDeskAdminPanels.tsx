@@ -11,7 +11,8 @@ import {
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
-  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, fileHref} from './HelpDeskShared';
+  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, fileHref,
+  TransferControl, TransferTrail} from './HelpDeskShared';
 import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, ticketStatusMeta, fmtTicketWhen } from './HelpDeskTickets';
 
 // What the server treats as the normal working day — see roompulse/worktime.py.
@@ -152,6 +153,27 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
     } finally { setBusyId(null); }
   };
 
+  // Pass it to another admin without deciding it. Same endpoint as approve
+  // and reject, because from the row's point of view this is one more thing
+  // that can happen to it.
+  const pass = async (row: any, toEmail: string, reason: string) => {
+    const key = `${row.kind}-${row.id}`;
+    setBusyId(key); setErr('');
+    try {
+      const url = row.kind === 'room' ? `${API}/bookings/${row.id}/`
+                                      : `${API}/resource-requests/${row.id}/`;
+      const r = await rpFetch(url, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'transfer', to_email: toEmail, remarks: reason }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not pass it on');
+      load(); onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not pass it on');
+    } finally { setBusyId(null); }
+  };
+
   const fulfil = async (id: number) => {
     setBusyId(`resource-${id}`); setErr('');
     try {
@@ -230,6 +252,8 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
                             "{isRoom ? row.purpose_detail : row.reason}"
                           </p>
                         )}
+                        {/* Why this is on your desk, if it was not always. */}
+                        <TransferTrail hops={row.transfers} />
                       </div>
                     </div>
                     <input value={remarks[key] || ''} onChange={e => setRemarks(r => ({ ...r, [key]: e.target.value }))}
@@ -248,6 +272,14 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
                                    hover:bg-rose-100 hover:-translate-y-0.5 transition-all disabled:opacity-50">
                         <XCircle className="w-3.5 h-3.5" />Reject
                       </button>
+                    </div>
+                    {/* Under the two buttons, not beside them: approving or
+                        rejecting is still the usual answer, and this is the
+                        way out when it is not yours to give. */}
+                    <div className="mt-2">
+                      <TransferControl desk="admin" currentEmail={row.assigned_to_email}
+                        busy={busyId === key}
+                        onTransfer={(to, why) => pass(row, to, why)} />
                     </div>
                   </div>
                 </Reveal>
@@ -326,6 +358,25 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
       return { ...t, [id]: { ...prev, [k]: v } };
     });
 
+  // Pass a ticket to another IT person without deciding it. A ticket raised
+  // to whoever the employee happened to recognise is the commonest way this
+  // queue stalls -- they are guessing which of two or three people looks
+  // after the thing that broke.
+  const pass = async (id: number, toEmail: string, reason: string) => {
+    setBusyId(id); setErr('');
+    try {
+      const r = await rpFetch(`${API}/tickets/${id}/`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'transfer', to_email: toEmail, remarks: reason }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not pass it on');
+      load(); onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not pass it on');
+    } finally { setBusyId(null); }
+  };
+
   const act = async (id: number, action: 'approve' | 'reject' | 'start' | 'close') => {
     setBusyId(id); setErr('');
     const tm = timing[id];
@@ -392,6 +443,8 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                       {t.description && (
                         <p className="text-[11px] text-slate-400 mt-1 italic">"{t.description}"</p>
                       )}
+                      {/* Why this is on your desk, if it was not always. */}
+                      <TransferTrail hops={t.transfers} />
                       {t.attachments?.length > 0 && (
                         <div className="flex items-center gap-1.5 flex-wrap mt-2">
                           <Paperclip className="w-3 h-3 text-slate-400 flex-shrink-0" />
@@ -424,6 +477,14 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                       <XCircle className="w-3.5 h-3.5" />Reject
                     </button>
                   </div>
+                  {/* Under the two buttons, not beside them: approving or
+                      rejecting is still the usual answer, and this is the way
+                      out when it is not yours to give. */}
+                  <div className="mt-2">
+                    <TransferControl desk="it" currentEmail={t.assigned_to_email}
+                      busy={busyId === t.id}
+                      onTransfer={(to, why) => pass(t.id, to, why)} />
+                  </div>
                 </div>
               </Reveal>
             ))}
@@ -441,7 +502,12 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
           <div className="space-y-2.5">
             {active.map((t, i) => (
               <Reveal key={t.id} delay={i * 50}>
-                <div className="rp-tilt flex items-center gap-3 rounded-xl bg-cyan-50/50 border border-cyan-200 p-3.5">
+                {/* A column, so passing it on has somewhere to open. An
+                    approved or in-progress ticket can still turn out to be
+                    the wrong person's -- that is often exactly when it
+                    becomes clear. */}
+                <div className="rp-tilt rounded-xl bg-cyan-50/50 border border-cyan-200 p-3.5">
+                <div className="flex items-center gap-3">
                   <div className="w-2 h-full min-h-[36px] rounded-full flex-shrink-0" style={{ background: '#f59e0b' }} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-bold text-slate-800 truncate">
@@ -481,6 +547,13 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                       </button>
                     </div>
                   )}
+                </div>
+                <TransferTrail hops={t.transfers} />
+                <div className="mt-2">
+                  <TransferControl desk="it" currentEmail={t.assigned_to_email}
+                    busy={busyId === t.id}
+                    onTransfer={(to, why) => pass(t.id, to, why)} />
+                </div>
                 </div>
               </Reveal>
             ))}
