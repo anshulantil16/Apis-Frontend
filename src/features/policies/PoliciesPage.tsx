@@ -12,7 +12,7 @@ import {
   ChevronRight, ChevronDown, Plus, Search, FileText, ClipboardList,
   LayoutTemplate, ListChecks, FolderOpen, CalendarClock,
   CheckCircle2, BarChart3, ArrowUpRight, FileStack,
-  X, Eye, Download, UploadCloud,
+  X, Eye, UploadCloud,
 } from 'lucide-react';
 
 /* Real files dropped in public/Policies/ — served as static assets, so this
@@ -341,16 +341,10 @@ export function PoliciesPage() {
                     <td className="px-4 py-3 text-slate-400 font-bold">{String(i + 1).padStart(2, '0')}</td>
                     <td className="px-4 py-3 font-black text-slate-900">
                       {r.file ? (
-                        <span className="inline-flex items-center gap-2">
-                          <a href={policyHref(r.file)} target="_blank" rel="noopener noreferrer"
-                            className="hover:text-amber-600 hover:underline">
-                            {r.department ? `${r.department} / ${r.doc}` : r.doc}
-                          </a>
-                          <a href={policyHref(r.file)} download title="Download"
-                            className="text-slate-400 hover:text-amber-600 transition-colors">
-                            <Download className="w-3.5 h-3.5" />
-                          </a>
-                        </span>
+                        <a href={policyHref(r.file)} target="_blank" rel="noopener noreferrer"
+                          className="hover:text-amber-600 hover:underline">
+                          {r.department ? `${r.department} / ${r.doc}` : r.doc}
+                        </a>
                       ) : (r.department ? `${r.department} / ${r.doc}` : r.doc)}
                     </td>
                     <td className="px-4 py-3">
@@ -486,16 +480,11 @@ export function PoliciesPage() {
                         )}
                       </div>
                     </div>
-                    <div className="mt-auto flex items-center gap-2 pt-2">
+                    <div className="mt-auto pt-2">
                       <a href={policyHref(doc.file)} target="_blank" rel="noopener noreferrer"
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200
+                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200
                                    text-slate-600 hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50 text-[11px] font-black transition-all">
                         <Eye className="w-3.5 h-3.5" />View
-                      </a>
-                      <a href={policyHref(doc.file)} download
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600
-                                   hover:from-amber-600 hover:to-yellow-700 text-white text-[11px] font-black shadow-md shadow-amber-200 transition-all">
-                        <Download className="w-3.5 h-3.5" />Download
                       </a>
                     </div>
                   </div>

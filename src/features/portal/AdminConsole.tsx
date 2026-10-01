@@ -779,6 +779,13 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
                 className="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-amber-200 text-amber-700 hover:bg-amber-50 disabled:opacity-40">
                 {u.is_superadmin ? 'Remove admin' : 'Make administrator'}
               </button>
+              {!u.is_superadmin && (
+                <button onClick={() => onPatch(u, { can_edit_tree: !u.can_edit_tree })}
+                  title="Lets this person edit names, photos and designations on APIS Tree cards, without the rest of the console."
+                  className="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-cyan-200 text-cyan-700 hover:bg-cyan-50">
+                  {u.can_edit_tree ? 'Remove APIS Tree edit' : 'Allow APIS Tree edit'}
+                </button>
+              )}
             </div>
           </div>
 

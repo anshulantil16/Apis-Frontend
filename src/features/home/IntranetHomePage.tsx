@@ -4,7 +4,7 @@ import {
   ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw, Clock,
-  Newspaper,
+  Newspaper, Users, Database, Headphones, Network, BookOpen,
 } from 'lucide-react';
 import type { StateHolidayGroup } from './IntranetHomeShared';
 import {
@@ -34,6 +34,33 @@ const LEADERSHIP_SLIDES: LeadershipSlide[] = [
     name: 'Mr Vimal Anand', role: 'Director – Global Business', photo: '/hierarchy/VImal_Anand1.png',
     bio: 'Driven by his passion and conviction, Mr. Vimal Anand received formal training in beekeeping and honey processing from the University of Warmia, Poland. He gradually built a global presence and a robust structure supported by a state-of-the-art production factory to cater to global markets — his undeterred leadership and vision have led the company to reach its heights today, becoming a leading player in the world\'s organized honey trade.',
   },
+];
+
+/* Floating tool badges on the "Everything You Need, One Place" hero slide
+   — a handful of real, distinct tools (not all of them; the point is a
+   representative spread) each keeping the same accent colour it already
+   carries elsewhere in this app where one exists (Pocket HRMS/ERP match
+   QUICK_PORTALS; Help Desk matches its cyan-family badge in QUICK_ACCESS
+   is close enough visually but rose reads better against amber/violet/
+   green/blue neighbours, so it's given its own here). Position is a
+   percentage of the slide's device stage, anchored to the badge's own
+   centre (see HeroToolBadge below). */
+interface HeroTool {
+  label: string; sub: string; icon: typeof Users;
+  ring: string; soft: string; accent: string;
+  left: number; top: number;
+}
+const HERO_TOOLS: HeroTool[] = [
+  { label: 'Pocket HRMS', sub: 'Leave · Attendance · HR', icon: Users,
+    ring: 'ring-amber-200', soft: 'bg-amber-50', accent: 'text-amber-600', left: 16, top: 12 },
+  { label: 'ERP', sub: 'Finance · Purchase · Inventory', icon: Database,
+    ring: 'ring-violet-200', soft: 'bg-violet-50', accent: 'text-violet-600', left: 62, top: 6 },
+  { label: 'Help Desk', sub: 'IT Support · Tickets', icon: Headphones,
+    ring: 'ring-rose-200', soft: 'bg-rose-50', accent: 'text-rose-600', left: 90, top: 46 },
+  { label: 'APIS Tree', sub: 'Our People · Our Structure', icon: Network,
+    ring: 'ring-emerald-200', soft: 'bg-emerald-50', accent: 'text-emerald-600', left: 12, top: 80 },
+  { label: 'Policies & Guidelines', sub: 'Know · Follow · Grow', icon: BookOpen,
+    ring: 'ring-sky-200', soft: 'bg-sky-50', accent: 'text-sky-600', left: 64, top: 90 },
 ];
 
 // One badge icon per COMPANY_MILESTONES entry, in order: founding, revenue
@@ -166,6 +193,51 @@ function MountainScape() {
 }
 
 
+/* Left-to-right display order for the hero's product cluster (see the
+   heroSlide === 0 branch below) — Honey is the hero item (`big`), everyone
+   else the same size, evenly spaced across the stage and bottom-aligned so
+   the whole row reads as one line of packs sitting together.
+
+   The card this renders inside is often only ~400px wide once the sidebar
+   and the right-rail panels take their share — not enough room for ten
+   products to sit fully apart. Rather than hand-place x/y/z per item (a
+   first pass did, and it buried two or three products completely behind
+   bigger ones with no way to know without measuring the live page), the
+   coordinates below are computed: items are spaced evenly and z-index
+   climbs strictly left-to-right, so each item only ever overlaps its
+   immediate right-hand neighbour's edge, the way a fanned hand of cards
+   does. Nothing is ever sandwiched between two higher items on both
+   sides — every product keeps at least its own face visible, however
+   narrow the row gets. */
+const HERO_ORDER: { idx: number; big?: boolean }[] = [
+  { idx: 3 },             // Corn Flakes
+  { idx: 1 },              // Royal Zahidi Dates
+  { idx: 8 },              // Misk Masala Dates
+  { idx: 7 },              // Saffron
+  { idx: 0, big: true },   // Honey — the hero item
+  { idx: 2 },              // Mixed Fruit Jam
+  { idx: 5 },              // Ginger Garlic Paste
+  { idx: 6 },              // Lemon Honey Green Tea
+  { idx: 9 },              // Misk Shahi Khazoor
+  { idx: 4 },              // Vermicelli
+];
+// Edge margin sized to the widest item's own half-width (26% / 2 = 13),
+// plus a couple of points of breathing room — the first and last items in
+// the row are the ones whose OWN edge can run past the stage boundary
+// and get clipped by the hero card's overflow-hidden, since `x` places
+// their centre, not their edge. A flat 5%-in margin (a first pass used)
+// isn't enough once an item is wider than 2×5% of the stage.
+const HERO_EDGE_MARGIN = 15;
+const HERO_CLUSTER: { idx: number; x: number; y: number; z: number; w: string; rot: number }[] =
+  HERO_ORDER.map((item, i) => ({
+    idx: item.idx,
+    x: HERO_EDGE_MARGIN + i * ((100 - 2 * HERO_EDGE_MARGIN) / (HERO_ORDER.length - 1)),
+    y: 0,
+    z: 10 + i,
+    w: item.big ? '24%' : '14%',
+    rot: i % 2 === 0 ? -3 : 3,
+  }));
+
 /* Not every OUR_PRODUCTS entry has a real photo checked into
    public/products/ yet (see the comment on OUR_PRODUCTS). Rather than a
    broken-image icon, missing files fall back to a neutral tile — and the
@@ -196,6 +268,30 @@ function LeaderPhoto({ src, name, className }: { src: string; name: string; clas
     );
   }
   return <img src={src} alt={name} className={className} onError={() => setBroken(true)} />;
+}
+
+/* One floating badge on the "Everything You Need, One Place" hero slide —
+   a small white card (real tool name + what it's for), absolutely
+   positioned around the device mockup at its own hand-picked spot. Same
+   ih-pop-in/ih-float vocabulary as the product cluster's cards, so this
+   slide still reads as part of the same hero, not a different component
+   bolted on. */
+function HeroToolBadge({ tool, delayMs }: { tool: HeroTool; delayMs: number }) {
+  const Icon = tool.icon;
+  return (
+    <div
+      className="ih-pop-in ih-float absolute -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5
+                 rounded-lg bg-white shadow-xl ring-1 ring-black/5 px-2 py-1 w-[124px] sm:w-[140px]"
+      style={{ left: `${tool.left}%`, top: `${tool.top}%`, animationDelay: `${delayMs}ms`, animationDuration: '5s' }}>
+      <div className={`w-5 h-5 sm:w-6 sm:h-6 shrink-0 rounded-md ${tool.soft} ring-1 ${tool.ring} flex items-center justify-center`}>
+        <Icon className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${tool.accent}`} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10.5px] sm:text-[11.5px] font-black text-slate-900 leading-tight truncate">{tool.label}</p>
+        <p className="text-[8.5px] sm:text-[9.5px] font-semibold text-slate-400 leading-tight truncate">{tool.sub}</p>
+      </div>
+    </div>
+  );
 }
 
 /* Packaging-types popup — opened by clicking a product card in Our Products.
@@ -1154,9 +1250,10 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
     [allowedApps, isSuperadmin],
   );
   // Top-level hero carousel: slide 0 is the "Our Products" showcase, with
-  // its own continuously-sliding product strip; slides 1+ are the
-  // leadership profiles.
-  const heroSlideCount = 1 + LEADERSHIP_SLIDES.length;
+  // its own continuously-sliding product strip; the next LEADERSHIP_SLIDES
+  // are the leadership profiles; the last slide is the "Everything You
+  // Need, One Place" tools showcase.
+  const heroSlideCount = 1 + LEADERSHIP_SLIDES.length + 1;
   const [heroSlide, setHeroSlide] = useState(0);
 
   const recentEntries = useMemo(() => getRecentToolsWithTime(), []);
@@ -1288,7 +1385,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                          backgroundSize: '44px 44px' }} />
 
               {heroSlide === 0 ? (
-                <div className="relative z-10 p-6 md:p-8 flex flex-col xl:flex-row xl:items-center gap-6">
+                <div className="relative z-10 p-6 md:p-8 flex flex-col xl:flex-row xl:items-end gap-6 h-[281px]">
                   {/* left: pitch + CTA */}
                   <div className="ih-fade xl:w-72 shrink-0">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md
@@ -1307,30 +1404,53 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                     </button>
                   </div>
 
-                  {/* right: continuously auto-sliding product strip — no
-                      manual arrows, just a seamless marquee (pauses on
-                      hover). OUR_PRODUCTS is duplicated back-to-back so the
-                      ihTicker keyframe's translateX(-50%) loops with no
-                      visible seam; see .ih-ticker in intranetStyles.ts. */}
-                  <div className="ih-ticker-track relative flex-1 min-w-0 overflow-hidden">
-                    <div className="ih-ticker flex items-center gap-3 w-max">
-                      {[...OUR_PRODUCTS, ...OUR_PRODUCTS].map((p, i) => (
-                        <div key={`${p.label}-${i}`}
-                          className="w-24 sm:w-28 shrink-0 aspect-square rounded-2xl p-3 flex items-center justify-center overflow-hidden">
-                          <ProductPhoto src={p.image} alt={p.label} className="w-4/5 h-4/5 object-contain" />
-                        </div>
-                      ))}
+                  {/* right: the whole range as one physically-arranged
+                      cluster — packs leaning into and overlapping each
+                      other the way they'd actually sit grouped on a table,
+                      not a row of evenly-spaced icon tiles. Each product is
+                      hand-placed (HERO_CLUSTER below) rather than laid out
+                      by a grid, front items overlapping back ones for real
+                      depth. No per-item card chrome — just the product cutout
+                      itself with a grounded drop-shadow, same as a real
+                      product photo. Reuses the hero's own animation
+                      vocabulary (.ih-pop-in / .ih-float / .ih-tilt) and the
+                      same amber the ambient blobs already use for the
+                      grounding glow — nothing new brought in. */}
+                  <div className="relative flex-1 min-w-0 h-32 sm:h-36 md:h-40">
+                    {/* grounding "table" — a warmer, more solid band than a
+                        plain glow, so the row reads as sitting on a surface
+                        rather than floating in front of the background. */}
+                    <div aria-hidden className="absolute inset-x-2 bottom-3 h-10 rounded-[100%] bg-amber-400/30 blur-xl" />
+                    <div aria-hidden className="absolute inset-x-10 bottom-4 h-5 rounded-[100%] bg-amber-300/25 blur-md" />
+                    <div className="relative w-full h-full">
+                      {HERO_CLUSTER.map((spot, i) => {
+                        const p = OUR_PRODUCTS[spot.idx];
+                        if (!p) return null;
+                        return (
+                          <div key={p.label} title={p.label}
+                            className="ih-pop-in ih-float ih-tilt absolute"
+                            style={{
+                              left: `${spot.x}%`, bottom: `${spot.y}%`, zIndex: spot.z,
+                              width: spot.w,
+                              transform: `translateX(-50%) rotate(${spot.rot}deg)`,
+                              animationDelay: `${i * 90}ms`, animationDuration: `${4 + (i % 3)}s`,
+                            }}>
+                            <ProductPhoto src={p.image} alt={p.label}
+                              className="w-full h-auto object-contain drop-shadow-[0_18px_14px_rgba(0,0,0,.45)]" />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : heroSlide <= LEADERSHIP_SLIDES.length ? (
                 /* Leadership profile slides — same dark hero shell/glow/particles
                    as the products slide above, just different content, so the
                    whole carousel reads as one consistent hero, not a bolt-on. */
                 (() => {
                   const leader = LEADERSHIP_SLIDES[heroSlide - 1];
                   return (
-                    <div key={leader.name} className="ih-fade relative z-10 p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-6 md:gap-10 min-h-[240px]">
+                    <div key={leader.name} className="ih-fade relative z-10 p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-6 md:gap-10 h-[281px]">
                       <LeaderPhoto src={leader.photo} name={leader.name}
                         className="w-32 h-32 md:w-40 md:h-40 shrink-0 rounded-full object-cover object-top
                                    ring-4 ring-white/10 shadow-2xl mx-auto md:mx-0" />
@@ -1340,11 +1460,95 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                         </h1>
                         <p className="text-base font-bold text-slate-300 mb-3">{leader.role}</p>
                         <div className="w-12 h-1 rounded-full bg-amber-500 mb-3 mx-auto md:mx-0" />
-                        <p className="text-slate-300 text-[15px] leading-relaxed">{leader.bio}</p>
+                        {/* Clamped rather than left to grow: the same fixed
+                            height now applies to every hero slide, so a
+                            longer bio must not be able to push this one
+                            taller than the products/other leader slides. */}
+                        <p className="text-slate-300 text-[15px] leading-relaxed line-clamp-5">{leader.bio}</p>
                       </div>
                     </div>
                   );
                 })()
+              ) : (
+                /* "Everything You Need, One Place" — same dark hero shell/
+                   glow/particles as every other slide, a small app-window
+                   mockup standing in for the intranet itself, with real
+                   tool badges (HERO_TOOLS) floating around it on dotted
+                   orbit lines. Same fixed height, same ih-pop-in/ih-float
+                   vocabulary as the rest of this carousel. */
+                <div className="relative z-10 p-6 md:p-8 flex flex-col xl:flex-row xl:items-center gap-6 h-[281px]">
+                  <div className="ih-fade xl:w-72 shrink-0">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md
+                                     ring-1 ring-white/20 text-[10px] font-black uppercase tracking-widest text-amber-300 mb-3">
+                      <LayoutGrid className="w-3 h-3" />Your Workspace
+                    </span>
+                    <h1 className="text-2xl md:text-[28px] font-black text-white leading-[1.15] mb-2.5">
+                      Everything You Need,<br /><span className="text-amber-300">One Place</span>
+                    </h1>
+                    <p className="text-slate-300 text-[13px] leading-relaxed mb-5">
+                      Your <span className="font-bold text-white">essential</span> APIS products, tools and
+                      resources — all in one intranet.
+                    </p>
+                    <button onClick={() => document.getElementById('all-tools')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      className="ih-sheen group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 text-slate-900
+                                 font-black text-sm shadow-xl transition-all hover:-translate-y-0.5">
+                      Explore Your Tools
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </button>
+                  </div>
+
+                  {/* right: the device mockup + its orbit of tool badges —
+                      hidden below sm, where there isn't remotely enough
+                      width for five floating cards around anything. */}
+                  <div className="relative flex-1 min-w-0 h-full hidden sm:block">
+                    <div aria-hidden className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
+                                                 w-40 h-40 rounded-full bg-amber-500/25 blur-2xl" />
+                    {/* dotted orbit lines from the device to each badge —
+                        plain SVG with a 0-100 viewBox so the same left/top
+                        percentages HeroToolBadge uses can be reused as line
+                        endpoints, one source of truth for every position. */}
+                    <svg aria-hidden className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      {HERO_TOOLS.map(t => (
+                        <line key={t.label} x1="50" y1="50" x2={t.left} y2={t.top}
+                          stroke="rgba(251,191,36,.65)" strokeWidth="1" strokeDasharray="2.5 2.5" />
+                      ))}
+                    </svg>
+
+                    {/* the device itself — a small app-window standing in
+                        for the intranet: a title bar, a logo row, and a
+                        few skeleton content blocks, not a real screenshot. */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 sm:w-32
+                                    rounded-lg bg-white shadow-2xl ring-1 ring-black/5 overflow-hidden ih-pop-in">
+                      <div className="flex items-center gap-1 px-1.5 py-1 bg-slate-100 border-b border-slate-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-300" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                        <span className="ml-1 text-[6.5px] font-black text-slate-400 uppercase tracking-wider truncate">
+                          APIS Intranet
+                        </span>
+                      </div>
+                      <div className="p-1.5 space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4 h-4 rounded-md bg-amber-400 flex items-center justify-center shrink-0">
+                            <span className="text-white text-[6px] font-black">apis</span>
+                          </div>
+                          <div className="flex-1 h-1 rounded-full bg-slate-100" />
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <div className="h-4 rounded-md bg-amber-50 ring-1 ring-amber-100" />
+                          <div className="h-4 rounded-md bg-violet-50 ring-1 ring-violet-100" />
+                          <div className="h-4 rounded-md bg-emerald-50 ring-1 ring-emerald-100" />
+                        </div>
+                        <div className="h-1 rounded-full bg-slate-100 w-4/5" />
+                        <div className="h-1 rounded-full bg-slate-100 w-3/5" />
+                      </div>
+                    </div>
+
+                    {HERO_TOOLS.map((tool, i) => (
+                      <HeroToolBadge key={tool.label} tool={tool} delayMs={i * 110} />
+                    ))}
+                  </div>
+                </div>
               )}
 
               {heroSlideCount > 1 && (
