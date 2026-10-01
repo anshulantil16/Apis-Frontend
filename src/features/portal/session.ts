@@ -27,6 +27,10 @@ export type PortalUser = {
   is_active: boolean;
   is_superadmin: boolean;
   is_bootstrap: boolean;
+  // Granted per person from the Admin Console: may restructure the org chart.
+  // The API has always sent this (accounts/views.py); it was only missing
+  // here, which stopped the whole frontend compiling.
+  can_edit_tree: boolean;
   allowed_apps: string[];
   from_hrms: boolean;
   last_login_at: string | null;
