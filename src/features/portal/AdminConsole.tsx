@@ -696,6 +696,35 @@ function AddPerson({ apps, onClose, onAdd }: {
 }
 
 /** One person in full: their access, and exactly what HRMS sent for them. */
+/* One thing this person is allowed to change.
+   Wider than the app chips above it on purpose: "Policies & Guidelines" needs
+   no explaining, whereas the difference between correcting a card and taking
+   somebody off the chart does, and a tooltip is the wrong place for the one
+   sentence that decides whether to grant it. */
+function GrantRow({ on, label, note, onToggle }: {
+  on: boolean; label: string; note: string; onToggle: () => void;
+}) {
+  return (
+    <button onClick={onToggle}
+      className={`w-full flex items-start gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
+        on ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 hover:border-slate-300'}`}>
+      <span className={`mt-px shrink-0 w-4 h-4 rounded grid place-items-center ${
+        on ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+        {on ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+      </span>
+      <span className="min-w-0">
+        <span className={`block text-[12px] font-black ${
+          on ? 'text-emerald-800' : 'text-slate-500'}`}>
+          {label}
+        </span>
+        <span className="block text-[10.5px] leading-snug text-slate-400 font-semibold mt-0.5">
+          {note}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
   u: any; detail: any; apps: any[]; onClose: () => void;
   onPatch: (u: any, b: any) => void; onRemove: (u: any, name: string) => Promise<void>;
@@ -779,26 +808,6 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
                 className="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-amber-200 text-amber-700 hover:bg-amber-50 disabled:opacity-40">
                 {u.is_superadmin ? 'Remove admin' : 'Make administrator'}
               </button>
-              {/* Two switches, not one. Correcting a card is routine and
-                  worth delegating widely; adding or removing a person is
-                  structural, shows up for the whole company, and wants one
-                  or two people. Under a single grant, whoever could fix a
-                  typo could also delete the managing director's card.
-                  A superadmin has both already, so neither is offered. */}
-              {!u.is_superadmin && (
-                <button onClick={() => onPatch(u, { can_edit_tree: !u.can_edit_tree })}
-                  title="Lets this person correct names, photos and designations on APIS Tree cards — not add or remove people."
-                  className="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-cyan-200 text-cyan-700 hover:bg-cyan-50">
-                  {u.can_edit_tree ? 'Remove APIS Tree edit' : 'Allow APIS Tree edit'}
-                </button>
-              )}
-              {!u.is_superadmin && (
-                <button onClick={() => onPatch(u, { can_manage_tree: !u.can_manage_tree })}
-                  title="Lets this person add people to APIS Tree, remove them, and place them under a different HOD. Carries card editing with it."
-                  className="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-violet-200 text-violet-700 hover:bg-violet-50">
-                  {u.can_manage_tree ? 'Remove APIS Tree add/remove' : 'Allow APIS Tree add/remove'}
-                </button>
-              )}
             </div>
           </div>
 
@@ -827,6 +836,47 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
                     </button>
                   );
                 })}
+              </div>
+            )}
+          </div>
+
+          {/* Opening a tool and changing what is in it are two different
+              questions, so they are two sections rather than a row of
+              buttons sharing a heading with "Disable sign-in". Everything
+              above says what this person can SEE; this says what they can
+              CHANGE, which is the half worth reading twice. */}
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              What they may change
+            </p>
+            {u.is_superadmin ? (
+              <p className="text-xs text-slate-500 font-semibold bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                An administrator can change everything — these are not toggled.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {/* Two grants, not one. Correcting a card is routine and
+                    worth delegating widely; adding or removing a person is
+                    structural, shows up for the whole company, and wants one
+                    or two people. Under a single grant, whoever could fix a
+                    typo could also delete the managing director's card. */}
+                <GrantRow on={u.can_edit_tree}
+                  label="Edit APIS Tree cards"
+                  note="Correct a name, designation, department or photo on someone already on the chart."
+                  onToggle={() => onPatch(u, { can_edit_tree: !u.can_edit_tree })} />
+                <GrantRow on={u.can_manage_tree}
+                  label="Add & remove people on APIS Tree"
+                  note="Put someone new on the chart, take someone off, or move them under a different HOD. Includes editing cards."
+                  onToggle={() => onPatch(u, { can_manage_tree: !u.can_manage_tree })} />
+                {/* Said plainly, because the console would otherwise look
+                    broken: the smaller switch reads as off while the person
+                    can plainly still edit. */}
+                {u.can_manage_tree && !u.can_edit_tree && (
+                  <p className="text-[10.5px] text-slate-400 font-semibold px-1">
+                    Add &amp; remove already covers editing, so the first one
+                    does not need to be on as well.
+                  </p>
+                )}
               </div>
             )}
           </div>
