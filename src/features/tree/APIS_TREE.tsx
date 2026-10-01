@@ -576,15 +576,21 @@ const TreeEditContext = createContext<{
    *  TreeProfile). Throws on failure so RemovePicker can keep its confirm
    *  step up rather than silently closing. */
   removePerson: (personId: string, isNew: boolean, baseline?: EditableBaseline) => Promise<void>;
-  /** Label of whoever was most recently removed, or null once undone/none
-   *  yet — drives the permanent header Undo button on both the main tree
-   *  and every sub-tree, so it stays available (not just an 8s toast). */
+  /** Label of whoever is next in line to be restored (the most recently
+   *  removed person still pending), or null once the stack is empty —
+   *  drives the permanent header Undo button on both the main tree and
+   *  every sub-tree, so it stays available (not just an 8s toast). */
   undoLabel: string | null;
+  /** How many removals are still waiting to be undone — lets the button
+   *  show "Undo (3)" rather than silently only ever offering the last
+   *  one, which used to make removing several people in a row lose the
+   *  ability to bring back anyone except whoever was removed last. */
+  undoCount: number;
   performUndo: () => void;
 }>({
   profiles: {}, addedByParent: {}, canEdit: false, canManage: false,
   openEditor: () => {}, openCreator: () => {},
-  removePerson: async () => {}, undoLabel: null, performUndo: () => {},
+  removePerson: async () => {}, undoLabel: null, undoCount: 0, performUndo: () => {},
 });
 
 /** Reads the live override (if any) for `personId` and merges it onto the
@@ -1425,9 +1431,18 @@ function PeerCard({ hodId, peer, collapsed, onToggleCollapse, showConnector }: {
    shares the same person_id and picks up the same live override. */
 function HodOwnCard({ hod, members }: { hod: Person; members: TeamMember[] }) {
   const merged = useMergedPerson(hod.id, hod);
+  // A flat department (Arun Mishra's GTRs, etc. — see FLAT_TREE_IDS) has no
+  // manager tier for a "+" here to ask about: everyone reports straight to
+  // the HOD, so there's no column to choose between. The "which column?"
+  // picker only makes sense once there actually are manager columns to
+  // pick from — here it would just be one option that always means "the
+  // HOD", so skip straight to the add-person form instead.
+  const flat = FLAT_TREE_IDS.has(hod.id);
   return (
     <div className="relative rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm p-5">
-      <ColumnPickerAddButton hodId={hod.id} columns={members.map(m => ({ id: memberId(m), name: m.name }))} />
+      {flat
+        ? <InlineAddButton parentId={hod.id} />
+        : <ColumnPickerAddButton hodId={hod.id} columns={members.map(m => ({ id: memberId(m), name: m.name }))} />}
       <div className="flex items-center gap-3.5">
         <PersonAvatar name={merged.name} photo={merged.photo} big />
         <div className="min-w-0 flex-1">
@@ -1495,6 +1510,48 @@ function FlatMemberCard({ member, personId }: { member: TeamMember; personId?: s
   );
 }
 
+/* Same card as FlatMemberCard, for an added person instead of a static
+ * TeamMember — a flat department's own grid has no manager-tier/row/box
+ * shape to match (see AddedPersonCard's size variants), it only ever has
+ * this one card shape, so additions there get their own dedicated match
+ * rather than reusing AddedPersonCard's smaller amber "row" box, which
+ * read as visibly undersized next to GTR cards styled like this. The
+ * "Location" field on the create form (TreeEditModal's isFlatDept branch)
+ * writes into `department`, which is what this reads back out as
+ * location — same field, relabelled for this one context. */
+function AddedFlatMemberCard({ person }: { person: Profile }) {
+  return (
+    <div onMouseMove={onSpotlightMove}
+      className="ih-spotlight ih-neon relative w-full h-full flex flex-col rounded-2xl border border-amber-200
+                 bg-gradient-to-br from-amber-50 to-white shadow-sm p-4"
+      style={{ ['--ih-neon' as string]: '#f59e0b' }}>
+      <InlineAddButton parentId={person.person_id} />
+      <div className="flex items-start gap-3">
+        {person.photo_url
+          ? (
+            <img src={person.photo_url} alt={person.name}
+              className="w-11 h-11 shrink-0 rounded-full object-cover object-top ring-2 ring-white shadow" />
+          )
+          : <GenericAvatar />}
+        <div className="min-w-0 flex-1">
+          <p className="font-black text-slate-900 text-[13px] leading-tight line-clamp-1" title={person.name}>{person.name}</p>
+          <p className="text-[11px] font-semibold text-slate-600 mt-1 leading-snug line-clamp-2 min-h-[2.4em]" title={person.role}>
+            {person.role || 'Team member'}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 mt-auto pt-2.5 text-[10.5px] text-slate-400 min-h-[1.25em]">
+        {person.department && (
+          <>
+            <MapPin className="w-3 h-3 shrink-0" />
+            <span className="truncate">{person.department}</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* Straight top-to-bottom chain of cards, one stem per link — used for PPC's
    peer columns (Plant Head / Heera Swami / Nischal Bharadwaj) per the org
    chart supplied, which draws each column as a single vertical line of
@@ -1532,10 +1589,17 @@ function VerticalChainBranch({ members }: { members: TeamMember[] }) {
    "Reporting to their functional head" label underneath. Horizontal
    overflow scrolls on narrow screens rather than wrapping, so the stems
    stay meaningful. */
-function FlatBranch({ members }: { members: TeamMember[] }) {
+function FlatBranch({ members, directParentId }: { members: TeamMember[]; directParentId?: string }) {
   const direct = members.filter(m => !m.functional);
   const functional = members.filter(m => m.functional);
   const hasFunctionalGroup = functional.length > 0;
+  const { addedByParent } = useContext(TreeEditContext);
+  // Someone added straight under a flat department's HOD (Arun Mishra's
+  // "+") has no manager tier to attach to — everyone here is already a
+  // peer of everyone else, direct reports of the HOD — so they belong as
+  // one more card in this SAME grid, not a separate "Additional managers"
+  // section below it (which read as a floating, disconnected block).
+  const addedDirect = directParentId ? addedByParent[directParentId] ?? [] : [];
 
   // Two straight connectors — one from the vacant seat straight down to
   // the centre of the 4-card direct group, one to the centre of the
@@ -1587,6 +1651,13 @@ function FlatBranch({ members }: { members: TeamMember[] }) {
             <div key={m.name} className="ih-pop-in relative flex flex-col" style={{ animationDelay: `${140 + i * 90}ms` }}>
               <FlatMemberCard member={m} />
               <AddedBranch parentId={memberId(m)} size="stack" />
+            </div>
+          ))}
+          {addedDirect.map((person, i) => (
+            <div key={person.person_id} className="ih-pop-in relative flex flex-col"
+              style={{ animationDelay: `${140 + (members.length + i) * 90}ms` }}>
+              <AddedFlatMemberCard person={person} />
+              <AddedBranch parentId={person.person_id} size="stack" />
             </div>
           ))}
         </div>
@@ -1859,7 +1930,7 @@ function RemovePicker({ people, variant = 'button' }: {
 function UndoButton({ variant = 'button' }: { variant?: 'button' | 'pill' }) {
   // Both things this can undo -- putting somebody back on the chart, and
   // re-adding a person who was deleted -- are add/remove, not card edits.
-  const { canManage, undoLabel, performUndo } = useContext(TreeEditContext);
+  const { canManage, undoLabel, undoCount, performUndo } = useContext(TreeEditContext);
   const [busy, setBusy] = useState(false);
 
   if (!canManage) return null;
@@ -1870,10 +1941,15 @@ function UndoButton({ variant = 'button' }: { variant?: 'button' | 'pill' }) {
     setBusy(true);
     try { await performUndo(); } finally { setBusy(false); }
   };
+  // One click only ever undoes the single most recent removal — each
+  // click pops the next one off the stack — but the count on the button
+  // itself says up front how many are still waiting, so removing several
+  // people in a row doesn't look like only the last one can come back.
+  const label = undoCount > 1 ? `Undo (${undoCount})` : 'Undo';
 
   return (
     <button type="button" disabled={disabled} onClick={go}
-      title={undoLabel ? `Undo removing ${undoLabel}` : 'Nothing to undo'}
+      title={undoLabel ? `Undo removing ${undoLabel}${undoCount > 1 ? ` (${undoCount} removals pending)` : ''}` : 'Nothing to undo'}
       className={variant === 'pill'
         ? `ih-pop-in flex items-center gap-2 px-3.5 py-2 rounded-xl border shadow-sm transition-all
            ${disabled
@@ -1884,7 +1960,7 @@ function UndoButton({ variant = 'button' }: { variant?: 'button' | 'pill' }) {
              ? 'border-slate-200 bg-white text-slate-300 cursor-not-allowed'
              : 'border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50'}`}>
       {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-      {variant === 'pill' ? <span className="text-[10px] font-black uppercase tracking-wider">Undo</span> : 'Undo'}
+      {variant === 'pill' ? <span className="text-[10px] font-black uppercase tracking-wider">{label}</span> : label}
     </button>
   );
 }
@@ -2011,8 +2087,8 @@ function DeptSubTree({ hod, root, members, onBack }: {
             <>
               {/* flat tree: one amber stem straight into the T-connector, no manager tier */}
               <div aria-hidden className="w-px h-8 bg-amber-300 mx-auto" />
-              <FlatBranch members={members} />
-              {!root && <AddedBranch parentId={hod.id} />}
+              <FlatBranch members={members} directParentId={!root ? hod.id : undefined} />
+              {root && <AddedBranch parentId={hod.id} />}
             </>
           ) : (
             <>
@@ -2161,6 +2237,16 @@ function TreeEditModal({ mode, personId, parentHodId, baseline, hasOverride, onS
   const [preview, setPreview] = useState(baseline.photo ?? '');
   const [busy, setBusy] = useState<'save' | 'revert' | null>(null);
   const [error, setError] = useState('');
+  // A flat department's cards (FlatMemberCard — Arun Mishra's GTRs, etc.)
+  // show a location line, not a department line — everyone in a flat
+  // department is already the same department as their HOD, so asking for
+  // it again on each person would be redundant, while location is the
+  // thing actually missing and shown on every other card in that grid.
+  // Direct additions there (openCreator(hod.id)) always carry the flat
+  // HOD's own id as parentHodId, so this is enough to tell the two apart
+  // without threading an extra prop through every call site.
+  const isFlatDept = mode === 'create' && FLAT_TREE_IDS.has(parentHodId ?? '');
+  const deptLabel = isFlatDept ? 'Location' : 'Department';
 
   const onPickPhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -2173,7 +2259,7 @@ function TreeEditModal({ mode, personId, parentHodId, baseline, hasOverride, onS
     if (mode === 'create') {
       if (!name.trim()) { setError('Name is required.'); return; }
       if (!role.trim()) { setError('Role / designation is required.'); return; }
-      if (!dept.trim()) { setError('Department is required.'); return; }
+      if (!dept.trim()) { setError(`${deptLabel} is required.`); return; }
     }
     setBusy('save'); setError('');
     try {
@@ -2249,7 +2335,7 @@ function TreeEditModal({ mode, personId, parentHodId, baseline, hasOverride, onS
           </label>
           <label className="block">
             <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
-              Department{mode === 'create' && <span className="text-rose-500"> *</span>}
+              {deptLabel}{mode === 'create' && <span className="text-rose-500"> *</span>}
             </span>
             <input value={dept} onChange={e => setDept(e.target.value)} required={mode === 'create'}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-amber-400" />
@@ -2340,13 +2426,19 @@ export function ApisTreePage() {
   // just can't be more complete than the tools it's built from allow.
   // No auto-dismiss timer — the Undo control is a permanent header button
   // (see the header rows in ApisTreePage/DeptSubTree), not a toast, so it
-  // stays available until the person actually clicks it or removes someone
-  // else (which simply replaces it with the newer removal).
-  const [undo, setUndo] = useState<
+  // stays available until the person actually clicks it.
+  //
+  // A STACK, not a single slot — removing several people in a row used to
+  // overwrite the undo with only the most recent one, so undoing after a
+  // third removal could only bring the third person back, with no way to
+  // get the first two back short of re-adding them by hand. Each removal
+  // now pushes its own entry; Undo always pops and restores the most
+  // recent one still pending, in last-removed-first-restored order, and
+  // the next click moves on to whichever is next, same as any undo stack.
+  type UndoAction =
     | { kind: 'unhide'; personId: string; label: string }
-    | { kind: 'recreate'; label: string; name: string; role: string; department: string; parentHodId: string }
-    | null
-  >(null);
+    | { kind: 'recreate'; label: string; name: string; role: string; department: string; parentHodId: string };
+  const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
 
   const removePerson = async (personId: string, isNew: boolean, baseline?: EditableBaseline) => {
     const before = profiles[personId];
@@ -2358,11 +2450,11 @@ export function ApisTreePage() {
         delete next[personId];
         return next;
       });
-      setUndo({
+      setUndoStack(prev => [...prev, {
         kind: 'recreate', label: before?.name || 'That person',
         name: before?.name ?? '', role: before?.role ?? '',
         department: before?.department ?? '', parentHodId: before?.parent_hod_id ?? '',
-      });
+      }]);
     } else {
       // Hiding a static card for the first time has no existing override
       // row — get_or_create on the backend makes a blank one, and the PATCH
@@ -2384,14 +2476,14 @@ export function ApisTreePage() {
       if (!r.ok) throw new Error('Could not remove.');
       const d = await r.json();
       setProfiles(prev => ({ ...prev, [personId]: d.profile as Profile }));
-      setUndo({ kind: 'unhide', personId, label: (d.profile as Profile).name || 'That card' });
+      setUndoStack(prev => [...prev, { kind: 'unhide', personId, label: (d.profile as Profile).name || 'That card' }]);
     }
   };
 
   const performUndo = async () => {
-    if (!undo) return;
-    const action = undo;
-    setUndo(null);
+    if (undoStack.length === 0) return;
+    const action = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
     try {
       if (action.kind === 'unhide') {
         const fd = new FormData();
@@ -2414,7 +2506,7 @@ export function ApisTreePage() {
           setProfiles(prev => ({ ...prev, [p.person_id]: p }));
         }
       }
-    } catch { /* the toast is already gone; nothing more to show for a failed undo */ }
+    } catch { /* this entry is already popped; nothing more to show for a failed undo */ }
   };
 
   // Added people (is_new rows) live in the same `profiles` map as overrides
@@ -2481,7 +2573,8 @@ export function ApisTreePage() {
   return (
     <TreeEditContext.Provider value={{
       profiles, addedByParent, canEdit, canManage, openEditor, openCreator, removePerson,
-      undoLabel: undo?.label ?? null, performUndo,
+      undoLabel: undoStack.length > 0 ? undoStack[undoStack.length - 1].label : null,
+      undoCount: undoStack.length, performUndo,
     }}>
     <div className="min-h-full bg-[#f8fafc] relative">
       <style>{AT_STYLES}</style>
