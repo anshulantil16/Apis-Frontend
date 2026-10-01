@@ -20,6 +20,7 @@ import {
   createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState,
   type ChangeEvent, type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft, Building2, ChevronDown, ChevronUp, Crown, Info, Loader2, MapPin, Network,
   Pencil, Plus, RotateCcw, Search, User, UserMinus, Users, X,
@@ -831,13 +832,33 @@ function InlineAddButton({ parentId }: { parentId: string }) {
 function ColumnPickerAddButton({ hodId, columns }: { hodId: string; columns: { id: string; name: string }[] }) {
   const { canManage, openCreator } = useContext(TreeEditContext);
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
   if (!canManage) return null;
+
+  // Every card this button sits on top of — the HOD's own card in a flat
+  // department, each manager tile in a T-bar one — carries an ih-pop-in
+  // entrance animation (and siblings often carry their own hover-tilt
+  // transform), and CSS creates a brand-new stacking context for anything
+  // animated via `transform`. Once that happens, z-index stops mattering:
+  // a later sibling's own stacking context paints over this dropdown no
+  // matter how high z-40 goes, because the dropdown never escapes the
+  // card's local context. Portaling the panel straight to <body> sidesteps
+  // the whole problem — this was the actual cause of the picker rendering
+  // behind the next card over in a flat department (e.g. Arun Mishra's
+  // subtree), not a z-index number that needed to be higher.
+  const openMenu = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setCoords({ top: r.bottom + window.scrollY + 6, left: r.left + window.scrollX });
+    setOpen(o => !o);
+  };
 
   return (
     <div className="absolute -top-1.5 -left-1.5 z-10">
       <button
+        ref={btnRef}
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        onClick={(e) => { e.stopPropagation(); openMenu(); }}
         title="Add a report under one of this HOD's teams"
         className="w-4.5 h-4.5 rounded-full bg-white border border-slate-200 shadow-sm
                    flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:border-emerald-300
@@ -845,11 +866,12 @@ function ColumnPickerAddButton({ hodId, columns }: { hodId: string; columns: { i
       >
         <Plus className="w-2.5 h-2.5" />
       </button>
-      {open && (
+      {open && createPortal(
         <>
-          <div className="fixed inset-0 z-30" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
           <div onClick={(e) => e.stopPropagation()}
-            className="absolute z-40 top-full left-0 mt-1.5 w-56 bg-white border border-slate-200
+            style={{ position: 'absolute', top: coords.top, left: coords.left }}
+            className="z-[101] w-56 bg-white border border-slate-200
                        rounded-xl shadow-xl p-2 ih-fade">
             {columns.length > 0 && (
               <>
@@ -881,7 +903,8 @@ function ColumnPickerAddButton({ hodId, columns }: { hodId: string; columns: { i
               <Plus className="w-3 h-3" />Add new manager
             </button>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );
@@ -2050,9 +2073,24 @@ function DeptSubTree({ hod, root, members, onBack }: {
                         const branchOpen = !closedBranches.has(mgr.name);
                         const reports = mgr.reports ?? [];
                         const nested = hasNestedReports(reports);
+                        // A column whose team renders as a box-grid (nested
+                        // reports, e.g. Devender Kumar's) needs more width
+                        // than a flat leaf-list column — each report is its
+                        // own ~122px box plus a 6px gap, and a too-narrow
+                        // column was forcing a box down to its own wrapped
+                        // row, where it sat almost directly under the box
+                        // above it and read as nested under it instead of
+                        // beside it. Width is computed from the actual box
+                        // count (static reports + anyone added here) rather
+                        // than a flat guess, so it's never short by one box.
+                        const colAddedCount = addedByParent[memberId(mgr)]?.length ?? 0;
+                        const colBoxCount = reports.length + colAddedCount;
+                        const colMinW = nested && colBoxCount > 2
+                          ? `${colBoxCount * 122 + (colBoxCount - 1) * 6 + 20}px`
+                          : '270px';
                         return (
-                          <div key={mgr.name} className="ih-pop-in relative flex flex-col items-center w-full sm:w-auto sm:flex-1 sm:min-w-[270px]"
-                            style={{ animationDelay: `${140 + i * 100}ms` }}>
+                          <div key={mgr.name} className="ih-pop-in relative flex flex-col items-center w-full sm:w-auto sm:flex-1"
+                            style={{ animationDelay: `${140 + i * 100}ms`, minWidth: colMinW }}>
                             <div aria-hidden className="hidden sm:block absolute -top-10 left-1/2 -translate-x-1/2 w-px h-10 bg-sky-300" />
                             {mgr.stemLabel && (
                               <span className="hidden sm:block absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap
