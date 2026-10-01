@@ -779,11 +779,24 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
                 className="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-amber-200 text-amber-700 hover:bg-amber-50 disabled:opacity-40">
                 {u.is_superadmin ? 'Remove admin' : 'Make administrator'}
               </button>
+              {/* Two switches, not one. Correcting a card is routine and
+                  worth delegating widely; adding or removing a person is
+                  structural, shows up for the whole company, and wants one
+                  or two people. Under a single grant, whoever could fix a
+                  typo could also delete the managing director's card.
+                  A superadmin has both already, so neither is offered. */}
               {!u.is_superadmin && (
                 <button onClick={() => onPatch(u, { can_edit_tree: !u.can_edit_tree })}
-                  title="Lets this person edit names, photos and designations on APIS Tree cards, without the rest of the console."
+                  title="Lets this person correct names, photos and designations on APIS Tree cards — not add or remove people."
                   className="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-cyan-200 text-cyan-700 hover:bg-cyan-50">
                   {u.can_edit_tree ? 'Remove APIS Tree edit' : 'Allow APIS Tree edit'}
+                </button>
+              )}
+              {!u.is_superadmin && (
+                <button onClick={() => onPatch(u, { can_manage_tree: !u.can_manage_tree })}
+                  title="Lets this person add people to APIS Tree, remove them, and place them under a different HOD. Carries card editing with it."
+                  className="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-violet-200 text-violet-700 hover:bg-violet-50">
+                  {u.can_manage_tree ? 'Remove APIS Tree add/remove' : 'Allow APIS Tree add/remove'}
                 </button>
               )}
             </div>
