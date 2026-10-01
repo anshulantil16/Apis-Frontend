@@ -11,7 +11,8 @@ import {
 import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
-  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, fileHref} from './HelpDeskShared';
+  REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, fileHref,
+  TransferControl, TransferTrail} from './HelpDeskShared';
 import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, ticketStatusMeta, fmtTicketWhen } from './HelpDeskTickets';
 
 // What the server treats as the normal working day — see roompulse/worktime.py.
@@ -45,9 +46,16 @@ function OnYourDesk({ refresh }: { refresh: number }) {
   }, [refresh]);
   if (!d) return null;
 
+  // Each desk sees its own queues. The super admin is on neither roster, so
+  // the server sends no desk at all and they get all three -- the strip is
+  // the one place that says how much is waiting, and for them that is both
+  // desks rather than IT's half of it.
   const kinds = d.desk === 'admin'
     ? [['Item requests', d.by_kind.item], ['Room bookings', d.by_kind.room]]
-    : [['IT tickets', d.by_kind.ticket]];
+    : d.desk === 'it'
+      ? [['IT tickets', d.by_kind.ticket]]
+      : [['IT tickets', d.by_kind.ticket], ['Item requests', d.by_kind.item],
+         ['Room bookings', d.by_kind.room]];
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
@@ -145,6 +153,27 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
     } finally { setBusyId(null); }
   };
 
+  // Pass it to another admin without deciding it. Same endpoint as approve
+  // and reject, because from the row's point of view this is one more thing
+  // that can happen to it.
+  const pass = async (row: any, toEmail: string, reason: string) => {
+    const key = `${row.kind}-${row.id}`;
+    setBusyId(key); setErr('');
+    try {
+      const url = row.kind === 'room' ? `${API}/bookings/${row.id}/`
+                                      : `${API}/resource-requests/${row.id}/`;
+      const r = await rpFetch(url, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'transfer', to_email: toEmail, remarks: reason }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not pass it on');
+      load(); onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not pass it on');
+    } finally { setBusyId(null); }
+  };
+
   const fulfil = async (id: number) => {
     setBusyId(`resource-${id}`); setErr('');
     try {
@@ -223,6 +252,8 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
                             "{isRoom ? row.purpose_detail : row.reason}"
                           </p>
                         )}
+                        {/* Why this is on your desk, if it was not always. */}
+                        <TransferTrail hops={row.transfers} />
                       </div>
                     </div>
                     <input value={remarks[key] || ''} onChange={e => setRemarks(r => ({ ...r, [key]: e.target.value }))}
@@ -241,6 +272,14 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
                                    hover:bg-rose-100 hover:-translate-y-0.5 transition-all disabled:opacity-50">
                         <XCircle className="w-3.5 h-3.5" />Reject
                       </button>
+                    </div>
+                    {/* Under the two buttons, not beside them: approving or
+                        rejecting is still the usual answer, and this is the
+                        way out when it is not yours to give. */}
+                    <div className="mt-2">
+                      <TransferControl desk="admin" currentEmail={row.assigned_to_email}
+                        busy={busyId === key}
+                        onTransfer={(to, why) => pass(row, to, why)} />
                     </div>
                   </div>
                 </Reveal>
@@ -319,6 +358,25 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
       return { ...t, [id]: { ...prev, [k]: v } };
     });
 
+  // Pass a ticket to another IT person without deciding it. A ticket raised
+  // to whoever the employee happened to recognise is the commonest way this
+  // queue stalls -- they are guessing which of two or three people looks
+  // after the thing that broke.
+  const pass = async (id: number, toEmail: string, reason: string) => {
+    setBusyId(id); setErr('');
+    try {
+      const r = await rpFetch(`${API}/tickets/${id}/`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'transfer', to_email: toEmail, remarks: reason }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not pass it on');
+      load(); onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not pass it on');
+    } finally { setBusyId(null); }
+  };
+
   const act = async (id: number, action: 'approve' | 'reject' | 'start' | 'close') => {
     setBusyId(id); setErr('');
     const tm = timing[id];
@@ -385,6 +443,8 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                       {t.description && (
                         <p className="text-[11px] text-slate-400 mt-1 italic">"{t.description}"</p>
                       )}
+                      {/* Why this is on your desk, if it was not always. */}
+                      <TransferTrail hops={t.transfers} />
                       {t.attachments?.length > 0 && (
                         <div className="flex items-center gap-1.5 flex-wrap mt-2">
                           <Paperclip className="w-3 h-3 text-slate-400 flex-shrink-0" />
@@ -417,6 +477,14 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                       <XCircle className="w-3.5 h-3.5" />Reject
                     </button>
                   </div>
+                  {/* Under the two buttons, not beside them: approving or
+                      rejecting is still the usual answer, and this is the way
+                      out when it is not yours to give. */}
+                  <div className="mt-2">
+                    <TransferControl desk="it" currentEmail={t.assigned_to_email}
+                      busy={busyId === t.id}
+                      onTransfer={(to, why) => pass(t.id, to, why)} />
+                  </div>
                 </div>
               </Reveal>
             ))}
@@ -434,7 +502,12 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
           <div className="space-y-2.5">
             {active.map((t, i) => (
               <Reveal key={t.id} delay={i * 50}>
-                <div className="rp-tilt flex items-center gap-3 rounded-xl bg-cyan-50/50 border border-cyan-200 p-3.5">
+                {/* A column, so passing it on has somewhere to open. An
+                    approved or in-progress ticket can still turn out to be
+                    the wrong person's -- that is often exactly when it
+                    becomes clear. */}
+                <div className="rp-tilt rounded-xl bg-cyan-50/50 border border-cyan-200 p-3.5">
+                <div className="flex items-center gap-3">
                   <div className="w-2 h-full min-h-[36px] rounded-full flex-shrink-0" style={{ background: '#f59e0b' }} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-bold text-slate-800 truncate">
@@ -474,6 +547,13 @@ function TicketApprovalsSection({ session, onChanged }: { session: Session; onCh
                       </button>
                     </div>
                   )}
+                </div>
+                <TransferTrail hops={t.transfers} />
+                <div className="mt-2">
+                  <TransferControl desk="it" currentEmail={t.assigned_to_email}
+                    busy={busyId === t.id}
+                    onTransfer={(to, why) => pass(t.id, to, why)} />
+                </div>
                 </div>
               </Reveal>
             ))}
@@ -751,6 +831,14 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
               : session.role === 'it_support' ? '&desk=it' : '';
   const mineQ = isSuper ? '' : `&performed_by=${encodeURIComponent(session.email)}`;
 
+  // How much the whole desk has logged, alongside your own. Not to show
+  // somebody else's jobs -- the list below stays yours -- but because "0"
+  // with nothing beside it reads as "it did not save". Two people share this
+  // desk, and an empty screen on the day your colleague logged three jobs is
+  // the exact report this line answers: the work is there, under whoever
+  // did it.
+  const [deskTotal, setDeskTotal] = useState<number | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true); setErr('');
     try {
@@ -758,13 +846,22 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Could not load what has been logged.');
       setRows(d.results || []);
+      // A count only, and only for a desk -- the super admin already sees
+      // every row above, so there is nothing for them to be missing.
+      if (!isSuper && deskQ) {
+        rpFetch(`${API}/tickets/?origin=logged&limit=1${deskQ}`)
+          .then(x => x.json())
+          .then(x => setDeskTotal(typeof x.count === 'number' ? x.count : null))
+          .catch(() => setDeskTotal(null));
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not reach the server.');
     } finally { setLoading(false); }
-  }, [deskQ, mineQ]);
+  }, [deskQ, mineQ, isSuper]);
   // `refresh` is bumped by the form above on a successful save.
   useEffect(() => { load(); }, [load, refresh]);
 
+  const DESK_NAME = session.role === 'admin' ? 'Admin' : 'IT';
   const today = isoLocal(new Date());
   const month = today.slice(0, 7);
   const shown = rows.slice(0, 20);
@@ -783,7 +880,12 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
 
   return (
     <Panel title={isSuper ? 'Work logged' : 'Work you logged'} icon={ClipboardList}
-      subtitle="Jobs recorded directly — newest first, and counted in your monthly report"
+      subtitle={isSuper
+        ? 'Jobs recorded directly — newest first, across both desks'
+        : 'Jobs you recorded directly — newest first, and counted in your monthly report'
+          + (deskTotal && deskTotal > rows.length
+             ? `. The ${DESK_NAME} desk has logged ${deskTotal} in total; these ${rows.length} are yours`
+             : '')}
       right={
         <div className="flex items-center gap-2">
           <button onClick={load} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
@@ -808,7 +910,12 @@ function LoggedWorkSection({ session, refresh }: { session: Session; refresh: nu
       {loading ? (
         <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skel key={i} className="h-12" />)}</div>
       ) : !shown.length ? (
-        <Empty msg={isSuper ? 'Nothing logged yet' : 'You have not logged anything yet'}
+        <Empty
+          msg={isSuper ? 'Nothing logged yet'
+               : deskTotal
+                 ? `Nothing logged under ${session.email} yet — the ${DESK_NAME} desk has `
+                   + `${deskTotal}, recorded by whoever did them`
+                 : 'You have not logged anything yet'}
           icon={ClipboardList} />
       ) : (
         <div className="space-y-2">
