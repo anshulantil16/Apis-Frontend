@@ -563,7 +563,12 @@ const TreeEditContext = createContext<{
    *  stuck from when only HOD-level additions existed, but the field
    *  always was just "whichever person_id this reports to". */
   addedByParent: Record<string, Profile[]>;
+  /** May correct what an existing card says: name, role, department, photo. */
   canEdit: boolean;
+  /** May change who is ON the chart -- add a person, remove one, place one
+   *  under a different HOD. A bigger thing than correcting a card, and
+   *  granted separately in Admin Console; it carries canEdit with it. */
+  canManage: boolean;
   openEditor: (personId: string, baseline: EditableBaseline) => void;
   openCreator: (parentHodId: string) => void;
   /** Removes a card — for an added person this deletes them outright; for
@@ -577,7 +582,8 @@ const TreeEditContext = createContext<{
   undoLabel: string | null;
   performUndo: () => void;
 }>({
-  profiles: {}, addedByParent: {}, canEdit: false, openEditor: () => {}, openCreator: () => {},
+  profiles: {}, addedByParent: {}, canEdit: false, canManage: false,
+  openEditor: () => {}, openCreator: () => {},
   removePerson: async () => {}, undoLabel: null, performUndo: () => {},
 });
 
@@ -628,8 +634,8 @@ function EditButton({ personId, baseline }: { personId: string; baseline: Editab
    canEdit gate as EditButton, same context, so both affordances appear
    and disappear together. */
 function AddCardTile({ parentHodId, variant = 'tile' }: { parentHodId: string; variant?: 'tile' | 'button' | 'pill' }) {
-  const { canEdit, openCreator } = useContext(TreeEditContext);
-  if (!canEdit) return null;
+  const { canManage, openCreator } = useContext(TreeEditContext);
+  if (!canManage) return null;
   if (variant === 'pill') {
     // Same shape as the People/Departments/HODs stat pills beside it in
     // the header, so this reads as one more of them rather than a
@@ -799,8 +805,8 @@ function AddedPersonCard({ person, size = 'row' }: { person: Profile; size?: 'gr
  * flow AddCardTile does, just anchored to this specific card's id as the
  * new person's parent rather than a fixed HOD/top-level slot. */
 function InlineAddButton({ parentId }: { parentId: string }) {
-  const { canEdit, openCreator } = useContext(TreeEditContext);
-  if (!canEdit) return null;
+  const { canManage, openCreator } = useContext(TreeEditContext);
+  if (!canManage) return null;
   return (
     <button
       type="button"
@@ -824,11 +830,11 @@ function InlineAddButton({ parentId }: { parentId: string }) {
  * id — so the new card lands inside the table exactly where any other
  * card added via that manager's own "+" would. */
 function ColumnPickerAddButton({ hodId, columns }: { hodId: string; columns: { id: string; name: string }[] }) {
-  const { canEdit, openCreator } = useContext(TreeEditContext);
+  const { canManage, openCreator } = useContext(TreeEditContext);
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
-  if (!canEdit) return null;
+  if (!canManage) return null;
 
   // Every card this button sits on top of — the HOD's own card in a flat
   // department, each manager tile in a T-bar one — carries an ih-pop-in
@@ -1760,14 +1766,14 @@ function RemovePicker({ people, variant = 'button' }: {
   people: { personId: string; name: string; role: string; department?: string; isNew: boolean }[];
   variant?: 'button' | 'pill';
 }) {
-  const { canEdit, removePerson } = useContext(TreeEditContext);
+  const { canManage, removePerson } = useContext(TreeEditContext);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [confirming, setConfirming] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  if (!canEdit || people.length === 0) return null;
+  if (!canManage || people.length === 0) return null;
 
   const needle = q.trim().toLowerCase();
   const filtered = needle
@@ -1851,10 +1857,12 @@ function RemovePicker({ people, variant = 'button' }: {
  * out and inert once there's nothing to undo, same disabled-affordance
  * pattern as everywhere else in this header row. */
 function UndoButton({ variant = 'button' }: { variant?: 'button' | 'pill' }) {
-  const { canEdit, undoLabel, performUndo } = useContext(TreeEditContext);
+  // Both things this can undo -- putting somebody back on the chart, and
+  // re-adding a person who was deleted -- are add/remove, not card edits.
+  const { canManage, undoLabel, performUndo } = useContext(TreeEditContext);
   const [busy, setBusy] = useState(false);
 
-  if (!canEdit) return null;
+  if (!canManage) return null;
 
   const disabled = !undoLabel || busy;
   const go = async () => {
@@ -2287,7 +2295,10 @@ export function ApisTreePage() {
   // other standalone page that needs the current portal user).
   const [me, setMe] = useState<PortalUser | null>(null);
   useEffect(() => { fetchMe().then(setMe); }, []);
-  const canEdit = !!me && (me.is_superadmin || me.can_edit_tree);
+  // Managing implies editing: somebody trusted to add a person is not then
+  // barred from correcting their title. Mirrors auth.require_tree_editor.
+  const canManage = !!me && (me.is_superadmin || me.can_manage_tree);
+  const canEdit = canManage || (!!me && me.can_edit_tree);
 
   // Live overrides — an empty map is the normal starting state (nobody's
   // edited anything yet), and a failed fetch just leaves it empty too, so
@@ -2469,7 +2480,7 @@ export function ApisTreePage() {
 
   return (
     <TreeEditContext.Provider value={{
-      profiles, addedByParent, canEdit, openEditor, openCreator, removePerson,
+      profiles, addedByParent, canEdit, canManage, openEditor, openCreator, removePerson,
       undoLabel: undo?.label ?? null, performUndo,
     }}>
     <div className="min-h-full bg-[#f8fafc] relative">
