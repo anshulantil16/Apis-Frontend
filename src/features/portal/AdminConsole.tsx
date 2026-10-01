@@ -1237,6 +1237,45 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
 
   const has = (u: any, key: string) => u.is_superadmin || (u.allowed_apps || []).includes(key);
 
+  /* The grid above answers "what may they OPEN". These two answer "what may
+     they CHANGE", which is the other half of the same question and the half
+     people come here looking for. Kept in the same grid rather than only in
+     the person drawer, because this is the screen for handing access out.
+
+     Deliberately without the column-level grant-everyone buttons the app
+     columns have: giving six hundred people the right to delete cards off
+     the org chart should not be one click. */
+  const GRANTS = [
+    { field: 'can_edit_tree', label: 'Edit APIS Tree',
+      note: 'Correct a name, designation, department or photo on an existing card' },
+    { field: 'can_manage_tree', label: 'Add / remove on APIS Tree',
+      note: 'Put someone on the chart, take someone off, move them under another HOD — includes editing' },
+  ];
+  // Managing carries editing with it on the server too (require_tree_editor),
+  // so the smaller cell reads as on rather than contradicting the page.
+  const holds = (u: any, field: string) =>
+    u.is_superadmin || !!u[field]
+    || (field === 'can_edit_tree' && !!u.can_manage_tree);
+
+  const toggleGrant = async (u: any, field: string) => {
+    if (u.is_superadmin) return;
+    setSaving(`${u.id}:${field}`);
+    const next = !u[field];
+    const r = await portalFetch(`/admin/users/${u.id}/`, {
+      method: 'PATCH', body: JSON.stringify({ [field]: next }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) {
+      setData((p: any) => ({
+        ...p,
+        users: p.users.map((x: any) => (x.id === u.id ? { ...x, [field]: next } : x)),
+      }));
+    } else {
+      onToast({ t: d.error || 'Could not change that.', ok: false });
+    }
+    setSaving('');
+  };
+
   /* One cell. The request goes out immediately and the row is marked busy, so
      a slow network cannot be mistaken for a click that did not register. */
   const toggle = async (u: any, key: string) => {
@@ -1329,6 +1368,18 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
                                px-3 py-2 text-left font-black text-slate-400 min-w-[220px]">
                   Person
                 </th>
+                {GRANTS.map(g => (
+                  <th key={g.field}
+                    className="sticky top-0 z-20 bg-violet-50 border-b border-l-2 border-violet-200
+                               px-2 py-2 align-bottom min-w-[104px]">
+                    <p className="font-black text-violet-700 text-[11px] leading-tight mb-1">{g.label}</p>
+                    <p className="text-[10px] font-bold text-violet-400 mb-1.5" title={g.note}>
+                      {rows.filter(u => holds(u, g.field)).length} of {signInCount}
+                    </p>
+                    {/* No grant-everyone button here on purpose — see GRANTS. */}
+                    <p className="text-[9px] font-bold text-violet-300">one at a time</p>
+                  </th>
+                ))}
                 {apps.map(a => (
                   <th key={a.key}
                     className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 px-2 py-2 align-bottom min-w-[92px]">
@@ -1366,6 +1417,35 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
                     </p>
                     <p className="text-slate-400 truncate">{u.department || u.email}</p>
                   </td>
+                  {GRANTS.map(g => {
+                    const on = holds(u, g.field);
+                    const busy = saving === `${u.id}:${g.field}`;
+                    // On because the bigger grant carries it, not because it
+                    // was given — so it cannot be switched off from here.
+                    const implied = g.field === 'can_edit_tree'
+                      && !u.can_edit_tree && !!u.can_manage_tree && !u.is_superadmin;
+                    return (
+                      <td key={g.field} className="border-b border-slate-100 border-l-2 border-l-violet-200 p-0 text-center">
+                        <button
+                          onClick={() => toggleGrant(u, g.field)}
+                          disabled={u.is_superadmin || implied || !!saving}
+                          title={u.is_superadmin
+                            ? 'An administrator can change everything'
+                            : implied
+                              ? `${u.name} can already edit cards, because they can add and remove people`
+                              : `${on ? 'Take away' : 'Give'} — ${g.note.toLowerCase()}`}
+                          className={`w-full h-9 flex items-center justify-center transition-colors ${
+                            u.is_superadmin || implied ? 'cursor-default'
+                              : on ? 'bg-violet-50 hover:bg-violet-100'
+                                   : 'hover:bg-slate-100'}`}>
+                          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                            : u.is_superadmin ? <Crown className="w-3.5 h-3.5 text-amber-400" />
+                              : on ? <Check className={`w-4 h-4 ${implied ? 'text-violet-300' : 'text-violet-600'}`} />
+                                : <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />}
+                        </button>
+                      </td>
+                    );
+                  })}
                   {apps.map(a => {
                     const on = has(u, a.key);
                     const busy = saving === `${u.id}:${a.key}`;
@@ -1392,14 +1472,14 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={apps.length + 1} className="px-3 py-12 text-center text-slate-300 font-semibold">
+                <tr><td colSpan={apps.length + GRANTS.length + 1} className="px-3 py-12 text-center text-slate-300 font-semibold">
                   Nobody matches that.
                 </td></tr>
               )}
               {/* Says what is being held back and offers the rest, rather than
                   quietly stopping at 100 and letting the grid look complete. */}
               {rows.length > visible.length && (
-                <tr><td colSpan={apps.length + 1} className="px-3 py-4 text-center">
+                <tr><td colSpan={apps.length + GRANTS.length + 1} className="px-3 py-4 text-center">
                   <button onClick={() => setShown(s => s + ROW_STEP)}
                     className="px-3 py-1.5 rounded-lg border-2 border-slate-200 hover:border-slate-300 text-[11px] font-black text-slate-500">
                     Show {Math.min(ROW_STEP, rows.length - visible.length)} more
