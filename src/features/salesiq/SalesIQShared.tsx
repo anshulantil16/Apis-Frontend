@@ -6,6 +6,50 @@ import { Boxes } from 'lucide-react';
 export const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export const API = `${_API_BASE}/api/sales`;
 
+/* ── The session, and every request that carries it ───────────────────────
+   SalesIQ used to sign somebody in by writing their address into
+   localStorage; the API itself had no idea who was calling, because there
+   was no token and no check. A page is not a gate. The server now issues a
+   token on verify and requires it, so every call goes through here. */
+const SESSION_KEY = 'salesiq_session';
+
+export type SalesIQSession = {
+  email: string; ts: number; token?: string;
+  role?: 'super_admin' | 'viewer'; can_edit?: boolean;
+};
+
+export function readSession(): SalesIQSession | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    // 12 hours, matching the server's own TTL. A browser left open overnight
+    // on a shared machine should not still be signed in to revenue.
+    if (!s?.email || Date.now() - (s.ts || 0) > 12 * 60 * 60 * 1000) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return s;
+  } catch { return null; }
+}
+
+/** Only the owner uploads or deletes. Everyone else granted SalesIQ in the
+ *  Admin Console reads: the numbers are the point of the tool. */
+export const canEdit = () => readSession()?.can_edit === true;
+
+export async function sqFetch(path: string, init: RequestInit = {}) {
+  const t = readSession()?.token;
+  const headers: Record<string, string> = { ...(init.headers as any) };
+  if (t) headers['X-SalesIQ-Session'] = t;
+  const r = await fetch(path.startsWith('http') ? path : `${API}${path}`,
+                        { ...init, headers });
+  // The session died or was never valid — drop it so the page shows the
+  // login rather than an endless wall of failed panels.
+  if (r.status === 401) {
+    localStorage.removeItem(SESSION_KEY);
+    window.dispatchEvent(new Event('salesiq-signed-out'));
+  }
+  return r;
+}
+
 /* ── formatting ─────────────────────────────────────────────────────────── */
 export const inr = (n: number) =>
   new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n || 0);

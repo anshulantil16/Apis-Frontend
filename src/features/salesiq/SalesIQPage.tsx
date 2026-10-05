@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import {
   API, _API_BASE, inr, shortInr, PALETTE, useCountUp, Counter, Reveal, Panel,
-  Skel, Empty, ChartTip, Leaderboard, Coverage,
+  Skel, Empty, ChartTip, Leaderboard, Coverage, sqFetch, canEdit,
 } from './SalesIQShared';
 import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
 import { SalesIQLogin, loadSession, clearSession } from './SalesIQLogin';
@@ -20,7 +20,7 @@ import { SalesIQLogin, loadSession, clearSession } from './SalesIQLogin';
  *  failing endpoint silently navigates away or does nothing at all, which is
  *  indistinguishable from a broken button — this surfaces the actual reason. */
 async function downloadFile(url: string, filename: string) {
-  const res = await fetch(url);
+  const res = await sqFetch(url);
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
     if (res.status === 404) {
@@ -121,6 +121,15 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // Auth gate. Session is read once on mount; loadSession() also enforces the
   // 12-hour expiry, so a stale localStorage entry can't grant access.
   const [session, setSession] = useState(() => loadSession());
+
+  // The server can end a session before its 12 hours are up — a restart
+  // clears the cache it lives in. sqFetch raises this on the first 401 so
+  // the page returns to the login instead of showing a wall of dead panels.
+  useEffect(() => {
+    const out = () => setSession(null);
+    window.addEventListener('salesiq-signed-out', out);
+    return () => window.removeEventListener('salesiq-signed-out', out);
+  }, []);
   const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<any>(null);
@@ -156,7 +165,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     setLoading(true); setErr('');
     const q = qs();
     const get = async (path: string) => {
-      const r = await fetch(`${API}/${path}${path.includes('?') ? '&' : '?'}${q}`);
+      const r = await sqFetch(`/${path}${path.includes('?') ? '&' : '?'}${q}`);
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Failed: ${path}`);
       return r.json();
     };
@@ -174,8 +183,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
              rfm, cohorts, newRepeat, paretoCustomer, orgTree, yoyData,
              ...bs] = await Promise.all([
         get('overview/'), get('trend/'), get('insights/'),
-        get(`forecast/?periods=${horizon}`), fetch(`${API}/filters/`).then(r => r.json()),
-        fetch(`${API}/uploads/`).then(r => r.json()),
+        get(`forecast/?periods=${horizon}`), sqFetch('/filters/').then(r => r.json()),
+        sqFetch('/uploads/').then(r => r.json()),
         // intelligence tab
         get(`pareto/?dim=${intelDim}`), get(`matrix/?dim=${intelDim}`),
         get(`movers/?dim=${intelDim}`), get('anomalies/'), get('seasonality/'),
@@ -248,7 +257,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   if (!session) {
     return (
       <SalesIQLogin
-        onSuccess={email => setSession({ email, ts: Date.now() })}
+        // Re-read rather than rebuild: the stored session carries the
+        // token and the role the server resolved, and both matter below.
+        onSuccess={() => setSession(loadSession())}
       />
     );
   }
@@ -414,14 +425,19 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               </div>
               <h2 className="text-2xl font-black text-slate-900 mb-2">No sales data yet</h2>
               <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
-                Upload a sales report to unlock revenue trends, state and product breakdowns,
-                team leaderboards and forecasting.
+                {canEdit()
+                  ? 'Upload a sales report to unlock revenue trends, state and product breakdowns, team leaderboards and forecasting.'
+                  : 'Nothing has been loaded yet. The sales files are maintained by the SalesIQ owner — once a report is uploaded, everything here fills in.'}
               </p>
-              <button onClick={() => setTab('data')}
-                className="px-6 py-3 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white
-                           font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 transition-all">
-                Upload sales data
-              </button>
+              {/* No point offering the upload screen to somebody the server
+                  will refuse. */}
+              {canEdit() && (
+                <button onClick={() => setTab('data')}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white
+                             font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 transition-all">
+                  Upload sales data
+                </button>
+              )}
             </div>
           </Reveal>
         )}
@@ -979,7 +995,7 @@ function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
     try {
       const fd = new FormData();
       fd.append('file', f);
-      const r = await fetch(`${API}/upload/`, { method: 'POST', body: fd });
+      const r = await sqFetch('/upload/', { method: 'POST', body: fd });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Upload failed');
       setRes(d); setFile(null); onChanged();
@@ -988,12 +1004,19 @@ function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
     } finally { setBusy(false); }
   };
 
+  // Only the owner uploads or deletes. Everybody else granted SalesIQ in
+  // the Admin Console reads: the numbers are the point of the tool, and
+  // whoever owns the file is one person. The server enforces this (see
+  // views/auth.SalesIQAdminView); hiding the controls is so nobody is
+  // offered a button that will refuse them.
+  const mayEdit = canEdit();
+
   const removeUpload = async (id: number | null) => {
     const msg = id
       ? 'Remove this upload and all of its rows?'
       : `Delete ALL sales data (${uploads?.total_rows?.toLocaleString() || 0} rows)? This cannot be undone.`;
     if (!confirm(msg)) return;
-    const r = await fetch(`${API}/uploads/${id ? `?id=${id}` : ''}`, { method: 'DELETE' });
+    const r = await sqFetch(`/uploads/${id ? `?id=${id}` : ''}`, { method: 'DELETE' });
     const d = await r.json();
     alert(d.message || 'Done');
     onChanged();
@@ -1002,7 +1025,25 @@ function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
       <Panel title="Upload primary sales" icon={Upload}
-        subtitle="Both sheets in one workbook is fine — each tab is read on its own">
+        subtitle={mayEdit
+          ? 'Both sheets in one workbook is fine — each tab is read on its own'
+          : 'Read-only — the sales data is maintained by the SalesIQ owner'}>
+        {!mayEdit && (
+          <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5">
+            <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[12.5px] font-black text-slate-600">
+                You have read access to SalesIQ
+              </p>
+              <p className="text-[11.5px] text-slate-400 font-semibold mt-0.5">
+                Every figure, breakdown and export is open to you. Uploading and
+                deleting the underlying files is kept to one person, so the
+                numbers everyone is reading cannot change underneath them.
+              </p>
+            </div>
+          </div>
+        )}
+        {mayEdit && <>
         <button
           onClick={async () => {
             setErr('');
@@ -1183,6 +1224,7 @@ function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
             )}
           </div>
         )}
+        </>}
       </Panel>
 
       {/* One honest list of what the files do not carry, instead of a blank
@@ -1238,7 +1280,7 @@ function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
 
       <Panel title="Uploaded files" icon={FileSpreadsheet}
         subtitle={`${uploads?.total_rows?.toLocaleString() || 0} rows in total`}
-        right={uploads?.count > 0 && (
+        right={mayEdit && uploads?.count > 0 && (
           <button onClick={() => removeUpload(null)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200
                        text-rose-600 text-[12px] font-bold hover:bg-rose-50 transition-all">
@@ -1270,10 +1312,12 @@ function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
                     </p>
                   ) : null}
                 </div>
-                <button onClick={() => removeUpload(u.id)}
-                  className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {mayEdit && (
+                  <button onClick={() => removeUpload(u.id)}
+                    className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
