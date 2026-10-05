@@ -7,7 +7,7 @@ import {
 import {
   Crown, TrendingUp, TrendingDown, AlertTriangle, Gauge as GaugeIcon, CalendarRange,
   Grid3x3, Users, Repeat, Sparkles, Target, Layers, Activity, Zap, ArrowUpRight,
-  ArrowDownRight, Flame, Snowflake,
+  ArrowDownRight, Flame, Snowflake, Info,
 } from 'lucide-react';
 import {
   Panel, Empty, Leaderboard, ChartTip, Counter, Reveal, Gauge, HeatGrid, CohortGrid,
@@ -140,7 +140,12 @@ export function IntelligencePanel({ data, dim, setDim }: {
       {/* growth quadrant */}
       <Panel title={`Growth quadrant — by ${dim}`} icon={Target} delay={120}
         subtitle="Revenue size vs momentum against the prior equal period">
-        {matrix?.results?.length ? (
+        {/* `comparable` is false when nothing precedes this window — the file
+            does not reach back that far. There were still 26 rows, so the
+            old `results.length` test passed, the chart drew nothing (every
+            y was null) and the tiles above it called half the sales force
+            Stars on no evidence. */}
+        {matrix?.results?.length && matrix.comparable !== false ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
               {Object.entries(QUAD).map(([k, q]) => {
@@ -201,6 +206,23 @@ export function IntelligencePanel({ data, dim, setDim }: {
               rest of your book, not fixed thresholds.
             </p>
           </>
+        ) : matrix?.results?.length ? (
+          <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5">
+            <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[12.5px] font-black text-slate-600">
+                Nothing to measure momentum against yet
+              </p>
+              <p className="text-[11.5px] text-slate-400 font-semibold mt-0.5">
+                This quadrant plots revenue against growth versus the equal period
+                before it{matrix.prior_window?.from
+                  ? ` (${matrix.prior_window.from} to ${matrix.prior_window.to})`
+                  : ''}, and the data does not reach back that far — so there is no
+                growth figure for any of the {matrix.results.length} {dim}s here.
+                The revenue itself is in the breakdown above.
+              </p>
+            </div>
+          </div>
         ) : <Empty msg="Need two comparable periods of data to build the quadrant" />}
       </Panel>
 
