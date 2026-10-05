@@ -954,7 +954,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         {/* ══ DATA ══ */}
         {!loading && tab === 'data' && (
           <DataPanel uploads={uploads} onChanged={loadAll}
-            absentDims={filterOpts?.absent_dimensions || []} />
+            absentDims={filterOpts?.absent_dimensions || []}
+            absentDetail={filterOpts?.absent_detail || []} />
         )}
       </div>
     </div>
@@ -962,8 +963,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 }
 
 /* ── data / upload tab ──────────────────────────────────────────────────── */
-function DataPanel({ uploads, onChanged, absentDims = [] }:
-  { uploads: any; onChanged: () => void; absentDims?: string[] }) {
+function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
+  { uploads: any; onChanged: () => void; absentDims?: string[];
+    // Why each dark breakdown is dark — 'missing' wants a new column,
+    // 'empty' wants the existing one filled in upstream.
+    absentDetail?: { dim: string; reason: 'empty' | 'missing' }[] }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<any>(null);
@@ -1183,23 +1187,54 @@ function DataPanel({ uploads, onChanged, absentDims = [] }:
 
       {/* One honest list of what the files do not carry, instead of a blank
           panel wherever one of them would have gone. */}
-      {absentDims.length > 0 && (
-        <Panel title="Not in your upload" icon={Info}
-          subtitle="These breakdowns are hidden because no column feeds them">
+      {absentDims.length > 0 && (() => {
+        // Two reasons a breakdown is dark, and they want opposite actions.
+        // Area, Region, Territory and Salesperson are in neither file — add
+        // the column. Sub Category and Variant ARE columns in the dump; they
+        // arrive on every row and are blank on every row, so "add this column
+        // and re-upload" sends somebody to add a column that is already there
+        // and nothing changes when they do. That one is filled in upstream.
+        const by = (r: string) => absentDetail
+          .filter(x => x.reason === r).map(x => x.dim);
+        // Falls back to the old single list if an older server is answering.
+        const missing = absentDetail.length ? by('missing') : absentDims;
+        const empty = absentDetail.length ? by('empty') : [];
+        const chips = (list: string[], tone: string) => (
           <div className="flex flex-wrap gap-2">
-            {absentDims.map((d: string) => (
-              <span key={d} className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500
-                                       text-[11px] font-bold capitalize">
+            {list.map((d: string) => (
+              <span key={d} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold capitalize ${tone}`}>
                 {d.replace(/_/g, ' ')}
               </span>
             ))}
           </div>
-          <p className="text-[11px] text-slate-400 mt-3 leading-relaxed">
-            Add any of these as a column and re-upload, and its views turn on
-            by themselves. Nothing else needs changing.
-          </p>
-        </Panel>
-      )}
+        );
+        return (
+          <Panel title="Breakdowns that are dark" icon={Info}
+            subtitle="What is missing, and what is there but never filled in">
+            {missing.length > 0 && (
+              <div className="mb-4">
+                {chips(missing, 'bg-slate-100 text-slate-500')}
+                <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                  <span className="font-black text-slate-500">No column for these.</span>{' '}
+                  Add any one to the export and re-upload, and its views turn on by
+                  themselves. Nothing else needs changing.
+                </p>
+              </div>
+            )}
+            {empty.length > 0 && (
+              <div>
+                {chips(empty, 'bg-amber-100 text-amber-700')}
+                <p className="text-[11px] text-amber-700 mt-2 leading-relaxed">
+                  <span className="font-black">The column is already in your file —
+                  every row is blank.</span>{' '}
+                  Re-uploading will not change this; the values have to be filled in
+                  upstream, in the ERP, and then exported.
+                </p>
+              </div>
+            )}
+          </Panel>
+        );
+      })()}
 
       <Panel title="Uploaded files" icon={FileSpreadsheet}
         subtitle={`${uploads?.total_rows?.toLocaleString() || 0} rows in total`}
