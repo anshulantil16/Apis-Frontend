@@ -242,6 +242,20 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     return [...hist.slice(0, -1), ...bridge, ...fut];
   }, [forecast]);
 
+  /* "anshul.antil" off the end of an address is not how anybody writes their
+     own name. Split on the separators a work address uses, drop anything that
+     is only digits (joiner suffixes like anshul.antil02), and capitalise. */
+  const displayName = (session?.email || '')
+    .split('@')[0]
+    .split(/[._\-]+/)
+    .filter(w => w && !/^\d+$/.test(w))
+    .map(w => w[0].toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ') || (session?.email || '');
+
+  // A tab that is no longer in the list must not stay selected: every panel
+  // is gated on `activeTab === ...`, so a reader whose session lands on 'data'
+  // would match nothing and see an empty page. Derived rather than corrected
+  // in an effect, so there is never a frame showing nothing.
   const TABS: { id: Tab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'intelligence', label: 'Intelligence', icon: Brain },
@@ -251,8 +265,16 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     { id: 'team', label: 'Sales Team', icon: Users },
     { id: 'structure', label: 'Structure', icon: Network },
     { id: 'forecast', label: 'Forecast', icon: Radar },
-    { id: 'data', label: 'Data', icon: FileSpreadsheet },
+    // The owner's tab. It is the upload screen, the list of loaded files and
+    // their row counts, warnings and spans — none of which is a reader's
+    // business, and all of which previously showed with the buttons greyed
+    // out, which reads as something broken rather than something private.
+    ...(canEdit()
+      ? [{ id: 'data' as Tab, label: 'Data', icon: FileSpreadsheet }]
+      : []),
   ];
+
+  const activeTab: Tab = TABS.some(t => t.id === tab) ? tab : 'overview';
 
   if (!session) {
     return (
@@ -326,8 +348,14 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             </button>
             <div className="flex items-center gap-2 pl-2 ml-1 border-l border-slate-200">
               <div className="hidden sm:block text-right leading-none">
-                <p className="text-[11px] font-black text-slate-700">{session.email.split('@')[0]}</p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-amber-600">Super admin</p>
+                <p className="text-[11px] font-black text-slate-700">{displayName}</p>
+                {/* The role the server resolved, not a label on the page.
+                    This said "Super admin" to everybody, in literal text,
+                    under their own name. */}
+                <p className={`text-[9px] font-bold uppercase tracking-widest ${
+                  canEdit() ? 'text-amber-600' : 'text-slate-400'}`}>
+                  {canEdit() ? 'Owner' : 'View only'}
+                </p>
               </div>
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600
                               flex items-center justify-center text-white text-[12px] font-black
@@ -348,7 +376,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         <div className="max-w-[1600px] mx-auto px-6 flex items-center gap-1 overflow-x-auto">
           {TABS.map(t => {
             const Icon = t.icon;
-            const on = tab === t.id;
+            const on = activeTab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`relative flex items-center gap-2 px-4 py-2.5 text-[13px] font-bold
@@ -443,7 +471,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ OVERVIEW ══ */}
-        {!loading && hasData && tab === 'overview' && (
+        {!loading && hasData && activeTab === 'overview' && (
           <div className="space-y-5">
             {/* A dashboard built on a handful of leftover rows looks exactly
                 as confident as one built on the real file — same tiles, same
@@ -461,14 +489,18 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   <p className="text-[11.5px] text-amber-700 font-semibold mt-0.5">
                     The primary sales file runs to tens of thousands of lines. Everything
                     below is computed correctly from what is here, which is almost nothing.
-                    Upload <span className="font-black">Primary sales data.xlsx</span> to
-                    replace it.
+                    {canEdit()
+                      ? <> Upload <span className="font-black">Primary sales data.xlsx</span> to replace it.</>
+                      : ' The SalesIQ owner needs to load the full file.'}
                   </p>
-                  <button onClick={() => setTab('data')}
-                    className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-[11.5px] font-black
-                               hover:bg-amber-700 transition-colors">
-                    Go to upload
-                  </button>
+                  {/* A reader has no Data tab to be sent to. */}
+                  {canEdit() && (
+                    <button onClick={() => setTab('data')}
+                      className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-[11.5px] font-black
+                                 hover:bg-amber-700 transition-colors">
+                      Go to upload
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -632,7 +664,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ INTELLIGENCE ══ */}
-        {!loading && hasData && tab === 'overview' && yoy?.results?.length > 1
+        {!loading && hasData && activeTab === 'overview' && yoy?.results?.length > 1
           && (yoy.years?.length || 0) > 1 && (
           <Panel title="Year on year" icon={CalendarDays}
             subtitle={`Same month, ${yoy.years.join(' vs ')} · April to March — where the year is actually being won or lost`}>
@@ -678,15 +710,15 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
           </Panel>
         )}
 
-        {!loading && hasData && tab === 'intelligence' && (
+        {!loading && hasData && activeTab === 'intelligence' && (
           <IntelligencePanel data={intel} dim={intelDim} setDim={setIntelDim} />
         )}
 
         {/* ══ CUSTOMERS ══ */}
-        {!loading && hasData && tab === 'customers' && <CustomersPanel data={cust} />}
+        {!loading && hasData && activeTab === 'customers' && <CustomersPanel data={cust} />}
 
         {/* ══ GEOGRAPHY ══ */}
-        {!loading && hasData && tab === 'geography' && (
+        {!loading && hasData && activeTab === 'geography' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             <Panel title="Revenue by state" icon={MapPin} subtitle="Ranked by contribution" delay={0} right={<Coverage coverage={breaks.state?.coverage} />}>
               {breaks.state?.results?.length ? (
@@ -742,7 +774,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ PRODUCTS ══ */}
-        {!loading && hasData && tab === 'products' && (
+        {!loading && hasData && activeTab === 'products' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             <Panel title="Category contribution" icon={Package} delay={0} right={<Coverage coverage={breaks.category?.coverage} />}>
               {breaks.category?.results?.length ? (
@@ -797,7 +829,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ TEAM ══ */}
-        {!loading && hasData && tab === 'team' && (
+        {!loading && hasData && activeTab === 'team' && (
           <div className="space-y-5">
             {/* The three hierarchy panels below used to be nested inside this
                 salesperson check, so a file with RSM, ASM and Head but no
@@ -870,11 +902,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ FORECAST ══ */}
-        {!loading && hasData && tab === 'structure' && (
+        {!loading && hasData && activeTab === 'structure' && (
           <StructureTab org={org} levels={orgLevels} setLevels={setOrgLevels} />
         )}
 
-        {!loading && hasData && tab === 'forecast' && forecast && (
+        {!loading && hasData && activeTab === 'forecast' && forecast && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Kpi icon={Radar} label={`Next ${horizon} months`} value={forecast.forecast_total || 0}
@@ -968,7 +1000,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ DATA ══ */}
-        {!loading && tab === 'data' && (
+        {!loading && activeTab === 'data' && (
           <DataPanel uploads={uploads} onChanged={loadAll}
             absentDims={filterOpts?.absent_dimensions || []}
             absentDetail={filterOpts?.absent_detail || []} />
