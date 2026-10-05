@@ -151,6 +151,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // filters
   const [dFrom, setDFrom] = useState('');
   const [dTo, setDTo] = useState('');
+  /* Which stretch of time the whole dashboard describes. Both primary files
+     carry more than one financial year — the review sheet keeps last year's
+     actuals beside this year's so growth can be shown — and the server used
+     to total the lot, so REVENUE read Rs 298 Cr: eighteen months standing
+     where the business reads its year to date. The year is the default now,
+     and this is how to see past it. */
+  const [allYears, setAllYears] = useState(false);
   const [sel, setSel] = useState<Record<string, string[]>>({});
   const [horizon, setHorizon] = useState(6);
 
@@ -158,9 +165,10 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     const p = new URLSearchParams();
     if (dFrom) p.set('from', dFrom);
     if (dTo) p.set('to', dTo);
+    if (allYears) p.set('span', 'all');
     Object.entries(sel).forEach(([k, vs]) => vs.forEach(v => p.append(k, v)));
     return p.toString();
-  }, [dFrom, dTo, sel]);
+  }, [dFrom, dTo, sel, allYears]);
 
   const loadAll = useCallback(async () => {
     setLoading(true); setErr('');
@@ -473,6 +481,21 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
           <Reveal>
             <div className="mb-5 rounded-2xl bg-white border border-slate-200 p-3 flex flex-wrap items-center gap-2 shadow-sm">
               <Filter className="w-4 h-4 text-slate-400 ml-1" />
+              {/* Named, not implied: a window nobody can see is a window
+                  nobody can question. */}
+              <select value={allYears ? 'all' : 'fy'}
+                onChange={e => setAllYears(e.target.value === 'all')}
+                className="px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50
+                           text-[12px] font-bold text-violet-700">
+                <option value="fy">
+                  {dFrom || dTo
+                    ? 'Dates below'
+                    : overview?.filters?.window?.label
+                      ? `${overview.filters.window.label} to date`
+                      : 'This financial year'}
+                </option>
+                <option value="all">All history</option>
+              </select>
               <input type="date" value={dFrom} onChange={e => setDFrom(e.target.value)}
                 className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
               <span className="text-slate-300 text-xs">to</span>
