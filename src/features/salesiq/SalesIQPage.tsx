@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import {
   API, _API_BASE, inr, shortInr, PALETTE, useCountUp, Counter, Reveal, Panel,
-  Skel, Empty, ChartTip, Leaderboard, Coverage,
+  Skel, Empty, ChartTip, Leaderboard, Coverage, sqFetch, canEdit,
 } from './SalesIQShared';
 import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
 import { SalesIQLogin, loadSession, clearSession } from './SalesIQLogin';
@@ -20,7 +20,7 @@ import { SalesIQLogin, loadSession, clearSession } from './SalesIQLogin';
  *  failing endpoint silently navigates away or does nothing at all, which is
  *  indistinguishable from a broken button — this surfaces the actual reason. */
 async function downloadFile(url: string, filename: string) {
-  const res = await fetch(url);
+  const res = await sqFetch(url);
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
     if (res.status === 404) {
@@ -121,7 +121,17 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // Auth gate. Session is read once on mount; loadSession() also enforces the
   // 12-hour expiry, so a stale localStorage entry can't grant access.
   const [session, setSession] = useState(() => loadSession());
+
+  // The server can end a session before its 12 hours are up — a restart
+  // clears the cache it lives in. sqFetch raises this on the first 401 so
+  // the page returns to the login instead of showing a wall of dead panels.
+  useEffect(() => {
+    const out = () => setSession(null);
+    window.addEventListener('salesiq-signed-out', out);
+    return () => window.removeEventListener('salesiq-signed-out', out);
+  }, []);
   const [tab, setTab] = useState<Tab>('overview');
+  const [filterList, setFilterList] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<any>(null);
   const [trend, setTrend] = useState<any>(null);
@@ -156,7 +166,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     setLoading(true); setErr('');
     const q = qs();
     const get = async (path: string) => {
-      const r = await fetch(`${API}/${path}${path.includes('?') ? '&' : '?'}${q}`);
+      const r = await sqFetch(`/${path}${path.includes('?') ? '&' : '?'}${q}`);
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Failed: ${path}`);
       return r.json();
     };
@@ -174,8 +184,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
              rfm, cohorts, newRepeat, paretoCustomer, orgTree, yoyData,
              ...bs] = await Promise.all([
         get('overview/'), get('trend/'), get('insights/'),
-        get(`forecast/?periods=${horizon}`), fetch(`${API}/filters/`).then(r => r.json()),
-        fetch(`${API}/uploads/`).then(r => r.json()),
+        get(`forecast/?periods=${horizon}`), sqFetch('/filters/').then(r => r.json()),
+        sqFetch('/uploads/').then(r => r.json()),
         // intelligence tab
         get(`pareto/?dim=${intelDim}`), get(`matrix/?dim=${intelDim}`),
         get(`movers/?dim=${intelDim}`), get('anomalies/'), get('seasonality/'),
@@ -207,6 +217,28 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   const monthsCompared: number = overview?.achievement_basis?.months ?? 0;
   const activeFilters = Object.values(sel).flat().length + (dFrom ? 1 : 0) + (dTo ? 1 : 0);
 
+  // Dropping the last filter unmounts the chip, but this state would survive
+  // it — so the next filter picked would pop the list open on its own.
+  useEffect(() => { if (!activeFilters) setFilterList(false); }, [activeFilters]);
+
+  /* Every applied filter, each carrying the way to drop just itself. The
+     header only had a count and a button that cleared the lot, so narrowing
+     to Zone=North and Brand=Honey and then wanting only Honey meant starting
+     over and re-picking it. */
+  const appliedFilters: { key: string; dim: string; value: string; drop: () => void }[] = [
+    ...Object.entries(sel).flatMap(([dim, vals]) =>
+      (vals as string[]).map(v => ({
+        key: `${dim}:${v}`,
+        dim: dim.replace(/_/g, ' '),
+        value: v,
+        drop: () => toggle(dim, v),
+      }))),
+    ...(dFrom ? [{ key: 'from', dim: 'from', value: dFrom,
+                   drop: () => setDFrom('') }] : []),
+    ...(dTo ? [{ key: 'to', dim: 'to', value: dTo,
+                 drop: () => setDTo('') }] : []),
+  ];
+
   const toggle = (k: string, v: string) =>
     setSel(s => {
       const cur = s[k] || [];
@@ -233,6 +265,20 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     return [...hist.slice(0, -1), ...bridge, ...fut];
   }, [forecast]);
 
+  /* "anshul.antil" off the end of an address is not how anybody writes their
+     own name. Split on the separators a work address uses, drop anything that
+     is only digits (joiner suffixes like anshul.antil02), and capitalise. */
+  const displayName = (session?.email || '')
+    .split('@')[0]
+    .split(/[._\-]+/)
+    .filter(w => w && !/^\d+$/.test(w))
+    .map(w => w[0].toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ') || (session?.email || '');
+
+  // A tab that is no longer in the list must not stay selected: every panel
+  // is gated on `activeTab === ...`, so a reader whose session lands on 'data'
+  // would match nothing and see an empty page. Derived rather than corrected
+  // in an effect, so there is never a frame showing nothing.
   const TABS: { id: Tab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'intelligence', label: 'Intelligence', icon: Brain },
@@ -242,13 +288,23 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     { id: 'team', label: 'Sales Team', icon: Users },
     { id: 'structure', label: 'Structure', icon: Network },
     { id: 'forecast', label: 'Forecast', icon: Radar },
-    { id: 'data', label: 'Data', icon: FileSpreadsheet },
+    // The owner's tab. It is the upload screen, the list of loaded files and
+    // their row counts, warnings and spans — none of which is a reader's
+    // business, and all of which previously showed with the buttons greyed
+    // out, which reads as something broken rather than something private.
+    ...(canEdit()
+      ? [{ id: 'data' as Tab, label: 'Data', icon: FileSpreadsheet }]
+      : []),
   ];
+
+  const activeTab: Tab = TABS.some(t => t.id === tab) ? tab : 'overview';
 
   if (!session) {
     return (
       <SalesIQLogin
-        onSuccess={email => setSession({ email, ts: Date.now() })}
+        // Re-read rather than rebuild: the stored session carries the
+        // token and the role the server resolved, and both matter below.
+        onSuccess={() => setSession(loadSession())}
       />
     );
   }
@@ -289,11 +345,57 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4">
           <div className="ml-auto flex items-center gap-2">
             {activeFilters > 0 && (
-              <button onClick={() => { setSel({}); setDFrom(''); setDTo(''); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600
-                           text-[12px] font-bold hover:bg-indigo-100 transition-all">
-                <X className="w-3.5 h-3.5" />{activeFilters} filter{activeFilters > 1 ? 's' : ''}
-              </button>
+              <div className="relative">
+                <button onClick={() => setFilterList(o => !o)}
+                  title="See which filters are on, and drop them one at a time"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px]
+                              font-bold transition-all ${filterList
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}>
+                  <Filter className="w-3.5 h-3.5" />
+                  {activeFilters} filter{activeFilters > 1 ? 's' : ''}
+                  <ChevronDown className={`w-3 h-3 transition-transform ${filterList ? 'rotate-180' : ''}`} />
+                </button>
+                {filterList && (
+                  <>
+                    {/* Click anywhere else to close — a list that only closes
+                        by its own button is one people leave open. */}
+                    <div className="fixed inset-0 z-40" onClick={() => setFilterList(false)} />
+                    <div className="absolute right-0 top-10 z-50 w-72 rounded-xl bg-white shadow-xl
+                                    ring-1 ring-slate-200 overflow-hidden">
+                      <p className="px-3.5 pt-3 pb-2 text-[10px] font-black uppercase tracking-widest
+                                    text-slate-400 border-b border-slate-100">
+                        Showing only
+                      </p>
+                      <div className="max-h-72 overflow-y-auto py-1">
+                        {appliedFilters.map(f => (
+                          <div key={f.key}
+                            className="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 group">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[9.5px] font-black uppercase tracking-wide
+                                            text-slate-400 capitalize">{f.dim}</p>
+                              <p className="text-[12.5px] font-bold text-slate-700 truncate">{f.value}</p>
+                            </div>
+                            <button onClick={f.drop}
+                              title={`Stop filtering by ${f.value}`}
+                              className="p-1 rounded-md text-slate-300 hover:text-rose-600
+                                         hover:bg-rose-50 transition-colors shrink-0">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => { setSel({}); setDFrom(''); setDTo(''); setFilterList(false); }}
+                        className="w-full px-3.5 py-2.5 text-[12px] font-black text-slate-500
+                                   hover:bg-rose-50 hover:text-rose-600 border-t border-slate-100
+                                   transition-colors">
+                        Clear all {activeFilters}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
             <button onClick={loadAll} disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
@@ -315,8 +417,14 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             </button>
             <div className="flex items-center gap-2 pl-2 ml-1 border-l border-slate-200">
               <div className="hidden sm:block text-right leading-none">
-                <p className="text-[11px] font-black text-slate-700">{session.email.split('@')[0]}</p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-amber-600">Super admin</p>
+                <p className="text-[11px] font-black text-slate-700">{displayName}</p>
+                {/* The role the server resolved, not a label on the page.
+                    This said "Super admin" to everybody, in literal text,
+                    under their own name. */}
+                <p className={`text-[9px] font-bold uppercase tracking-widest ${
+                  canEdit() ? 'text-amber-600' : 'text-slate-400'}`}>
+                  {canEdit() ? 'Owner' : 'View only'}
+                </p>
               </div>
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600
                               flex items-center justify-center text-white text-[12px] font-black
@@ -337,7 +445,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         <div className="max-w-[1600px] mx-auto px-6 flex items-center gap-1 overflow-x-auto">
           {TABS.map(t => {
             const Icon = t.icon;
-            const on = tab === t.id;
+            const on = activeTab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`relative flex items-center gap-2 px-4 py-2.5 text-[13px] font-bold
@@ -414,21 +522,57 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               </div>
               <h2 className="text-2xl font-black text-slate-900 mb-2">No sales data yet</h2>
               <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
-                Upload a sales report to unlock revenue trends, state and product breakdowns,
-                team leaderboards and forecasting.
+                {canEdit()
+                  ? 'Upload a sales report to unlock revenue trends, state and product breakdowns, team leaderboards and forecasting.'
+                  : 'Nothing has been loaded yet. The sales files are maintained by the SalesIQ owner — once a report is uploaded, everything here fills in.'}
               </p>
-              <button onClick={() => setTab('data')}
-                className="px-6 py-3 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white
-                           font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 transition-all">
-                Upload sales data
-              </button>
+              {/* No point offering the upload screen to somebody the server
+                  will refuse. */}
+              {canEdit() && (
+                <button onClick={() => setTab('data')}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white
+                             font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 transition-all">
+                  Upload sales data
+                </button>
+              )}
             </div>
           </Reveal>
         )}
 
         {/* ══ OVERVIEW ══ */}
-        {!loading && hasData && tab === 'overview' && (
+        {!loading && hasData && activeTab === 'overview' && (
           <div className="space-y-5">
+            {/* A dashboard built on a handful of leftover rows looks exactly
+                as confident as one built on the real file — same tiles, same
+                colours, ₹1.91 L where ₹274 Cr belongs. Saying so costs one
+                strip and saves somebody concluding the figures are wrong. */}
+            {overview.loaded?.looks_empty && (
+              <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border-2 border-amber-300 px-4 py-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-black text-amber-900">
+                    Only {overview.loaded.lines.toLocaleString('en-IN')} line
+                    {overview.loaded.lines === 1 ? '' : 's'} are loaded — these figures
+                    are not the business.
+                  </p>
+                  <p className="text-[11.5px] text-amber-700 font-semibold mt-0.5">
+                    The primary sales file runs to tens of thousands of lines. Everything
+                    below is computed correctly from what is here, which is almost nothing.
+                    {canEdit()
+                      ? <> Upload <span className="font-black">Primary sales data.xlsx</span> to replace it.</>
+                      : ' The SalesIQ owner needs to load the full file.'}
+                  </p>
+                  {/* A reader has no Data tab to be sent to. */}
+                  {canEdit() && (
+                    <button onClick={() => setTab('data')}
+                      className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-[11.5px] font-black
+                                 hover:bg-amber-700 transition-colors">
+                      Go to upload
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               {/* "Prior period" is the stretch immediately before this one,
                   which for a seasonal business compares a festive quarter
@@ -440,7 +584,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 accent="from-indigo-500 to-violet-600" delay={0}
                 sub={overview.vs_last_year
                   ? `vs ₹${shortInr(overview.vs_last_year.last_year)} same ${overview.vs_last_year.months} months last year`
-                  : `vs ₹${shortInr(overview.prev_revenue)} prior period`} />
+                  : overview.prev_period_has_data
+                    ? `vs ₹${shortInr(overview.prev_revenue)} prior period`
+                    // Not a collapse to zero — the file simply does not go
+                    // back that far. "vs ₹0" read as the former.
+                    : 'nothing loaded for the period before this'} />
               <Kpi icon={Target} label="Target" value={overview.target || 0} prefix="₹"
                 accent="from-emerald-500 to-teal-600" delay={60}
                 sub={overview.achievement_pct !== null
@@ -585,7 +733,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ INTELLIGENCE ══ */}
-        {!loading && hasData && tab === 'overview' && yoy?.results?.length > 1
+        {!loading && hasData && activeTab === 'overview' && yoy?.results?.length > 1
           && (yoy.years?.length || 0) > 1 && (
           <Panel title="Year on year" icon={CalendarDays}
             subtitle={`Same month, ${yoy.years.join(' vs ')} · April to March — where the year is actually being won or lost`}>
@@ -631,15 +779,15 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
           </Panel>
         )}
 
-        {!loading && hasData && tab === 'intelligence' && (
+        {!loading && hasData && activeTab === 'intelligence' && (
           <IntelligencePanel data={intel} dim={intelDim} setDim={setIntelDim} />
         )}
 
         {/* ══ CUSTOMERS ══ */}
-        {!loading && hasData && tab === 'customers' && <CustomersPanel data={cust} />}
+        {!loading && hasData && activeTab === 'customers' && <CustomersPanel data={cust} />}
 
         {/* ══ GEOGRAPHY ══ */}
-        {!loading && hasData && tab === 'geography' && (
+        {!loading && hasData && activeTab === 'geography' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             <Panel title="Revenue by state" icon={MapPin} subtitle="Ranked by contribution" delay={0} right={<Coverage coverage={breaks.state?.coverage} />}>
               {breaks.state?.results?.length ? (
@@ -695,7 +843,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ PRODUCTS ══ */}
-        {!loading && hasData && tab === 'products' && (
+        {!loading && hasData && activeTab === 'products' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             <Panel title="Category contribution" icon={Package} delay={0} right={<Coverage coverage={breaks.category?.coverage} />}>
               {breaks.category?.results?.length ? (
@@ -750,7 +898,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ TEAM ══ */}
-        {!loading && hasData && tab === 'team' && (
+        {!loading && hasData && activeTab === 'team' && (
           <div className="space-y-5">
             {/* The three hierarchy panels below used to be nested inside this
                 salesperson check, so a file with RSM, ASM and Head but no
@@ -823,11 +971,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ FORECAST ══ */}
-        {!loading && hasData && tab === 'structure' && (
+        {!loading && hasData && activeTab === 'structure' && (
           <StructureTab org={org} levels={orgLevels} setLevels={setOrgLevels} />
         )}
 
-        {!loading && hasData && tab === 'forecast' && forecast && (
+        {!loading && hasData && activeTab === 'forecast' && forecast && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Kpi icon={Radar} label={`Next ${horizon} months`} value={forecast.forecast_total || 0}
@@ -921,9 +1069,10 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ DATA ══ */}
-        {!loading && tab === 'data' && (
+        {!loading && activeTab === 'data' && (
           <DataPanel uploads={uploads} onChanged={loadAll}
-            absentDims={filterOpts?.absent_dimensions || []} />
+            absentDims={filterOpts?.absent_dimensions || []}
+            absentDetail={filterOpts?.absent_detail || []} />
         )}
       </div>
     </div>
@@ -931,8 +1080,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 }
 
 /* ── data / upload tab ──────────────────────────────────────────────────── */
-function DataPanel({ uploads, onChanged, absentDims = [] }:
-  { uploads: any; onChanged: () => void; absentDims?: string[] }) {
+function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
+  { uploads: any; onChanged: () => void; absentDims?: string[];
+    // Why each dark breakdown is dark — 'missing' wants a new column,
+    // 'empty' wants the existing one filled in upstream.
+    absentDetail?: { dim: string; reason: 'empty' | 'missing' }[] }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<any>(null);
@@ -944,7 +1096,7 @@ function DataPanel({ uploads, onChanged, absentDims = [] }:
     try {
       const fd = new FormData();
       fd.append('file', f);
-      const r = await fetch(`${API}/upload/`, { method: 'POST', body: fd });
+      const r = await sqFetch('/upload/', { method: 'POST', body: fd });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Upload failed');
       setRes(d); setFile(null); onChanged();
@@ -953,12 +1105,19 @@ function DataPanel({ uploads, onChanged, absentDims = [] }:
     } finally { setBusy(false); }
   };
 
+  // Only the owner uploads or deletes. Everybody else granted SalesIQ in
+  // the Admin Console reads: the numbers are the point of the tool, and
+  // whoever owns the file is one person. The server enforces this (see
+  // views/auth.SalesIQAdminView); hiding the controls is so nobody is
+  // offered a button that will refuse them.
+  const mayEdit = canEdit();
+
   const removeUpload = async (id: number | null) => {
     const msg = id
       ? 'Remove this upload and all of its rows?'
       : `Delete ALL sales data (${uploads?.total_rows?.toLocaleString() || 0} rows)? This cannot be undone.`;
     if (!confirm(msg)) return;
-    const r = await fetch(`${API}/uploads/${id ? `?id=${id}` : ''}`, { method: 'DELETE' });
+    const r = await sqFetch(`/uploads/${id ? `?id=${id}` : ''}`, { method: 'DELETE' });
     const d = await r.json();
     alert(d.message || 'Done');
     onChanged();
@@ -967,7 +1126,25 @@ function DataPanel({ uploads, onChanged, absentDims = [] }:
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
       <Panel title="Upload primary sales" icon={Upload}
-        subtitle="Both sheets in one workbook is fine — each tab is read on its own">
+        subtitle={mayEdit
+          ? 'Both sheets in one workbook is fine — each tab is read on its own'
+          : 'Read-only — the sales data is maintained by the SalesIQ owner'}>
+        {!mayEdit && (
+          <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5">
+            <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[12.5px] font-black text-slate-600">
+                You have read access to SalesIQ
+              </p>
+              <p className="text-[11.5px] text-slate-400 font-semibold mt-0.5">
+                Every figure, breakdown and export is open to you. Uploading and
+                deleting the underlying files is kept to one person, so the
+                numbers everyone is reading cannot change underneath them.
+              </p>
+            </div>
+          </div>
+        )}
+        {mayEdit && <>
         <button
           onClick={async () => {
             setErr('');
@@ -1148,31 +1325,63 @@ function DataPanel({ uploads, onChanged, absentDims = [] }:
             )}
           </div>
         )}
+        </>}
       </Panel>
 
       {/* One honest list of what the files do not carry, instead of a blank
           panel wherever one of them would have gone. */}
-      {absentDims.length > 0 && (
-        <Panel title="Not in your upload" icon={Info}
-          subtitle="These breakdowns are hidden because no column feeds them">
+      {absentDims.length > 0 && (() => {
+        // Two reasons a breakdown is dark, and they want opposite actions.
+        // Area, Region, Territory and Salesperson are in neither file — add
+        // the column. Sub Category and Variant ARE columns in the dump; they
+        // arrive on every row and are blank on every row, so "add this column
+        // and re-upload" sends somebody to add a column that is already there
+        // and nothing changes when they do. That one is filled in upstream.
+        const by = (r: string) => absentDetail
+          .filter(x => x.reason === r).map(x => x.dim);
+        // Falls back to the old single list if an older server is answering.
+        const missing = absentDetail.length ? by('missing') : absentDims;
+        const empty = absentDetail.length ? by('empty') : [];
+        const chips = (list: string[], tone: string) => (
           <div className="flex flex-wrap gap-2">
-            {absentDims.map((d: string) => (
-              <span key={d} className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500
-                                       text-[11px] font-bold capitalize">
+            {list.map((d: string) => (
+              <span key={d} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold capitalize ${tone}`}>
                 {d.replace(/_/g, ' ')}
               </span>
             ))}
           </div>
-          <p className="text-[11px] text-slate-400 mt-3 leading-relaxed">
-            Add any of these as a column and re-upload, and its views turn on
-            by themselves. Nothing else needs changing.
-          </p>
-        </Panel>
-      )}
+        );
+        return (
+          <Panel title="Breakdowns that are dark" icon={Info}
+            subtitle="What is missing, and what is there but never filled in">
+            {missing.length > 0 && (
+              <div className="mb-4">
+                {chips(missing, 'bg-slate-100 text-slate-500')}
+                <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                  <span className="font-black text-slate-500">No column for these.</span>{' '}
+                  Add any one to the export and re-upload, and its views turn on by
+                  themselves. Nothing else needs changing.
+                </p>
+              </div>
+            )}
+            {empty.length > 0 && (
+              <div>
+                {chips(empty, 'bg-amber-100 text-amber-700')}
+                <p className="text-[11px] text-amber-700 mt-2 leading-relaxed">
+                  <span className="font-black">The column is already in your file —
+                  every row is blank.</span>{' '}
+                  Re-uploading will not change this; the values have to be filled in
+                  upstream, in the ERP, and then exported.
+                </p>
+              </div>
+            )}
+          </Panel>
+        );
+      })()}
 
       <Panel title="Uploaded files" icon={FileSpreadsheet}
         subtitle={`${uploads?.total_rows?.toLocaleString() || 0} rows in total`}
-        right={uploads?.count > 0 && (
+        right={mayEdit && uploads?.count > 0 && (
           <button onClick={() => removeUpload(null)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200
                        text-rose-600 text-[12px] font-bold hover:bg-rose-50 transition-all">
@@ -1204,10 +1413,12 @@ function DataPanel({ uploads, onChanged, absentDims = [] }:
                     </p>
                   ) : null}
                 </div>
-                <button onClick={() => removeUpload(u.id)}
-                  className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {mayEdit && (
+                  <button onClick={() => removeUpload(u.id)}
+                    className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all flex-shrink-0">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

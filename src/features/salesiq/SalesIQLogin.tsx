@@ -18,8 +18,16 @@ export function loadSession(): { email: string; ts: number } | null {
     return s;
   } catch { return null; }
 }
-export const saveSession = (email: string) =>
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ email, ts: Date.now() }));
+/** The token the server issued, and the role it resolved — not a role the
+ *  page decided for itself. Without the token every later request is
+ *  anonymous and the API refuses it. */
+export const saveSession = (
+  email: string,
+  token?: string,
+  role?: 'super_admin' | 'viewer',
+  can_edit?: boolean,
+) => localStorage.setItem(SESSION_KEY,
+      JSON.stringify({ email, token, role, can_edit, ts: Date.now() }));
 export const clearSession = () => localStorage.removeItem(SESSION_KEY);
 
 /* ── Realistic honey pour ─────────────────────────────────────────────────
@@ -275,7 +283,7 @@ export function SalesIQLogin({ onSuccess }: {
     setBusy(true); setErr('');
     try {
       const d = await post({ action: 'verify_otp', email: email.trim().toLowerCase(), otp: code });
-      saveSession(d.email);
+      saveSession(d.email, d.token, d.role, d.can_edit);
       onSuccess(d.email);
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : 'Verification failed');
