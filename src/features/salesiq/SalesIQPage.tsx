@@ -131,6 +131,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     return () => window.removeEventListener('salesiq-signed-out', out);
   }, []);
   const [tab, setTab] = useState<Tab>('overview');
+  const [filterList, setFilterList] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<any>(null);
   const [trend, setTrend] = useState<any>(null);
@@ -215,6 +216,28 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // reader to assume it is the whole span on screen.
   const monthsCompared: number = overview?.achievement_basis?.months ?? 0;
   const activeFilters = Object.values(sel).flat().length + (dFrom ? 1 : 0) + (dTo ? 1 : 0);
+
+  // Dropping the last filter unmounts the chip, but this state would survive
+  // it — so the next filter picked would pop the list open on its own.
+  useEffect(() => { if (!activeFilters) setFilterList(false); }, [activeFilters]);
+
+  /* Every applied filter, each carrying the way to drop just itself. The
+     header only had a count and a button that cleared the lot, so narrowing
+     to Zone=North and Brand=Honey and then wanting only Honey meant starting
+     over and re-picking it. */
+  const appliedFilters: { key: string; dim: string; value: string; drop: () => void }[] = [
+    ...Object.entries(sel).flatMap(([dim, vals]) =>
+      (vals as string[]).map(v => ({
+        key: `${dim}:${v}`,
+        dim: dim.replace(/_/g, ' '),
+        value: v,
+        drop: () => toggle(dim, v),
+      }))),
+    ...(dFrom ? [{ key: 'from', dim: 'from', value: dFrom,
+                   drop: () => setDFrom('') }] : []),
+    ...(dTo ? [{ key: 'to', dim: 'to', value: dTo,
+                 drop: () => setDTo('') }] : []),
+  ];
 
   const toggle = (k: string, v: string) =>
     setSel(s => {
@@ -322,11 +345,57 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-4">
           <div className="ml-auto flex items-center gap-2">
             {activeFilters > 0 && (
-              <button onClick={() => { setSel({}); setDFrom(''); setDTo(''); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600
-                           text-[12px] font-bold hover:bg-indigo-100 transition-all">
-                <X className="w-3.5 h-3.5" />{activeFilters} filter{activeFilters > 1 ? 's' : ''}
-              </button>
+              <div className="relative">
+                <button onClick={() => setFilterList(o => !o)}
+                  title="See which filters are on, and drop them one at a time"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px]
+                              font-bold transition-all ${filterList
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}>
+                  <Filter className="w-3.5 h-3.5" />
+                  {activeFilters} filter{activeFilters > 1 ? 's' : ''}
+                  <ChevronDown className={`w-3 h-3 transition-transform ${filterList ? 'rotate-180' : ''}`} />
+                </button>
+                {filterList && (
+                  <>
+                    {/* Click anywhere else to close — a list that only closes
+                        by its own button is one people leave open. */}
+                    <div className="fixed inset-0 z-40" onClick={() => setFilterList(false)} />
+                    <div className="absolute right-0 top-10 z-50 w-72 rounded-xl bg-white shadow-xl
+                                    ring-1 ring-slate-200 overflow-hidden">
+                      <p className="px-3.5 pt-3 pb-2 text-[10px] font-black uppercase tracking-widest
+                                    text-slate-400 border-b border-slate-100">
+                        Showing only
+                      </p>
+                      <div className="max-h-72 overflow-y-auto py-1">
+                        {appliedFilters.map(f => (
+                          <div key={f.key}
+                            className="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 group">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[9.5px] font-black uppercase tracking-wide
+                                            text-slate-400 capitalize">{f.dim}</p>
+                              <p className="text-[12.5px] font-bold text-slate-700 truncate">{f.value}</p>
+                            </div>
+                            <button onClick={f.drop}
+                              title={`Stop filtering by ${f.value}`}
+                              className="p-1 rounded-md text-slate-300 hover:text-rose-600
+                                         hover:bg-rose-50 transition-colors shrink-0">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => { setSel({}); setDFrom(''); setDTo(''); setFilterList(false); }}
+                        className="w-full px-3.5 py-2.5 text-[12px] font-black text-slate-500
+                                   hover:bg-rose-50 hover:text-rose-600 border-t border-slate-100
+                                   transition-colors">
+                        Clear all {activeFilters}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
             <button onClick={loadAll} disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
