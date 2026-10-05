@@ -429,6 +429,33 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         {/* ══ OVERVIEW ══ */}
         {!loading && hasData && tab === 'overview' && (
           <div className="space-y-5">
+            {/* A dashboard built on a handful of leftover rows looks exactly
+                as confident as one built on the real file — same tiles, same
+                colours, ₹1.91 L where ₹274 Cr belongs. Saying so costs one
+                strip and saves somebody concluding the figures are wrong. */}
+            {overview.loaded?.looks_empty && (
+              <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border-2 border-amber-300 px-4 py-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-black text-amber-900">
+                    Only {overview.loaded.lines.toLocaleString('en-IN')} line
+                    {overview.loaded.lines === 1 ? '' : 's'} are loaded — these figures
+                    are not the business.
+                  </p>
+                  <p className="text-[11.5px] text-amber-700 font-semibold mt-0.5">
+                    The primary sales file runs to tens of thousands of lines. Everything
+                    below is computed correctly from what is here, which is almost nothing.
+                    Upload <span className="font-black">Primary sales data.xlsx</span> to
+                    replace it.
+                  </p>
+                  <button onClick={() => setTab('data')}
+                    className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-[11.5px] font-black
+                               hover:bg-amber-700 transition-colors">
+                    Go to upload
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               {/* "Prior period" is the stretch immediately before this one,
                   which for a seasonal business compares a festive quarter
@@ -440,7 +467,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 accent="from-indigo-500 to-violet-600" delay={0}
                 sub={overview.vs_last_year
                   ? `vs ₹${shortInr(overview.vs_last_year.last_year)} same ${overview.vs_last_year.months} months last year`
-                  : `vs ₹${shortInr(overview.prev_revenue)} prior period`} />
+                  : overview.prev_period_has_data
+                    ? `vs ₹${shortInr(overview.prev_revenue)} prior period`
+                    // Not a collapse to zero — the file simply does not go
+                    // back that far. "vs ₹0" read as the former.
+                    : 'nothing loaded for the period before this'} />
               <Kpi icon={Target} label="Target" value={overview.target || 0} prefix="₹"
                 accent="from-emerald-500 to-teal-600" delay={60}
                 sub={overview.achievement_pct !== null
