@@ -448,8 +448,13 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
       </div>
       <div>
         <label className={deskLabelCls}>Urgency</label>
+        {/* "Urgent" stays in URGENCY_LABEL for every other urgency display
+            (My Requests, the admin queue badge) — it's only dropped from
+            this one picker, so raising an Admin Ticket can't be marked
+            Urgent, without touching how an already-urgent ticket reads
+            elsewhere. */}
         <select value={urgency} onChange={e => setUrgency(e.target.value)} className={deskInputCls}>
-          {Object.entries(URGENCY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {Object.entries(URGENCY_LABEL).filter(([k]) => k !== 'urgent').map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </div>
       <div>
