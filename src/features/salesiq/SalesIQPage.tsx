@@ -151,24 +151,32 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // filters
   const [dFrom, setDFrom] = useState('');
   const [dTo, setDTo] = useState('');
-  /* Which stretch of time the whole dashboard describes. Both primary files
-     carry more than one financial year — the review sheet keeps last year's
-     actuals beside this year's so growth can be shown — and the server used
-     to total the lot, so REVENUE read Rs 298 Cr: eighteen months standing
-     where the business reads its year to date. The year is the default now,
-     and this is how to see past it. */
-  const [allYears, setAllYears] = useState(false);
+  /* How the dashboard is being asked its question — and therefore which of
+     the two uploaded sheets answers it.
+
+     YTD/AOP vs ACH is month-wise and year-wise: twelve columns a year, no
+     days in it anywhere, and its YTD ACH column is the figure the business
+     actually reads. PRI SALES DUMP is date-wise: one row per invoice line,
+     dated to the day, but only the month it was extracted in.
+
+     So 'fy' and 'all' are answered from the review sheet, and 'dates' from
+     the dump. Picking a date range used to leave the sheet in scope, which
+     answered "the 5th to the 10th" with a whole month's sales. */
+  const [span, setSpan] = useState<'fy' | 'all' | 'dates'>('fy');
   const [sel, setSel] = useState<Record<string, string[]>>({});
   const [horizon, setHorizon] = useState(6);
 
   const qs = useCallback(() => {
     const p = new URLSearchParams();
-    if (dFrom) p.set('from', dFrom);
-    if (dTo) p.set('to', dTo);
-    if (allYears) p.set('span', 'all');
+    if (span === 'dates') {
+      if (dFrom) p.set('from', dFrom);
+      if (dTo) p.set('to', dTo);
+    } else if (span === 'all') {
+      p.set('span', 'all');
+    }
     Object.entries(sel).forEach(([k, vs]) => vs.forEach(v => p.append(k, v)));
     return p.toString();
-  }, [dFrom, dTo, sel, allYears]);
+  }, [dFrom, dTo, sel, span]);
 
   const loadAll = useCallback(async () => {
     setLoading(true); setErr('');
@@ -223,7 +231,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // result, so the panel says how many that is rather than leaving the
   // reader to assume it is the whole span on screen.
   const monthsCompared: number = overview?.achievement_basis?.months ?? 0;
-  const activeFilters = Object.values(sel).flat().length + (dFrom ? 1 : 0) + (dTo ? 1 : 0);
+  const dated = span === 'dates';
+  const activeFilters = Object.values(sel).flat().length
+    + (dated && dFrom ? 1 : 0) + (dated && dTo ? 1 : 0);
 
   // Dropping the last filter unmounts the chip, but this state would survive
   // it — so the next filter picked would pop the list open on its own.
@@ -241,10 +251,10 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         value: v,
         drop: () => toggle(dim, v),
       }))),
-    ...(dFrom ? [{ key: 'from', dim: 'from', value: dFrom,
-                   drop: () => setDFrom('') }] : []),
-    ...(dTo ? [{ key: 'to', dim: 'to', value: dTo,
-                 drop: () => setDTo('') }] : []),
+    ...(dated && dFrom ? [{ key: 'from', dim: 'from', value: dFrom,
+                            drop: () => setDFrom('') }] : []),
+    ...(dated && dTo ? [{ key: 'to', dim: 'to', value: dTo,
+                          drop: () => setDTo('') }] : []),
   ];
 
   const toggle = (k: string, v: string) =>
@@ -482,25 +492,39 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             <div className="mb-5 rounded-2xl bg-white border border-slate-200 p-3 flex flex-wrap items-center gap-2 shadow-sm">
               <Filter className="w-4 h-4 text-slate-400 ml-1" />
               {/* Named, not implied: a window nobody can see is a window
-                  nobody can question. */}
-              <select value={allYears ? 'all' : 'fy'}
-                onChange={e => setAllYears(e.target.value === 'all')}
+                  nobody can question — and here the window also decides
+                  which sheet answers, which is the first thing anyone asks
+                  when a figure looks wrong. */}
+              <select value={span}
+                onChange={e => setSpan(e.target.value as 'fy' | 'all' | 'dates')}
                 className="px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50
                            text-[12px] font-bold text-violet-700">
                 <option value="fy">
-                  {dFrom || dTo
-                    ? 'Dates below'
-                    : overview?.filters?.window?.label
-                      ? `${overview.filters.window.label} to date`
-                      : 'This financial year'}
+                  {overview?.filters?.window?.label
+                    ? `${overview.filters.window.label} to date`
+                    : 'This financial year'}
                 </option>
                 <option value="all">All history</option>
+                <option value="dates">Date range…</option>
               </select>
-              <input type="date" value={dFrom} onChange={e => setDFrom(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
-              <span className="text-slate-300 text-xs">to</span>
-              <input type="date" value={dTo} onChange={e => setDTo(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
+              {span === 'dates' && (
+                <>
+                  <input type="date" value={dFrom} onChange={e => setDFrom(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
+                  <span className="text-slate-300 text-xs">to</span>
+                  <input type="date" value={dTo} onChange={e => setDTo(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
+                </>
+              )}
+              {/* Which of the two uploaded sheets these numbers came from. */}
+              {overview?.filters?.source && (
+                <span className="px-2 py-1 rounded-lg bg-slate-100 text-[11px] font-bold text-slate-500"
+                  title={overview.filters.source === 'invoice_dump'
+                    ? 'A date range is answered from PRI SALES DUMP — the only sheet with days in it. It covers the months the extract reaches.'
+                    : 'Month and year figures come from YTD,AOP vs.ACH — the sheet your YTD ACH column is read off.'}>
+                  {overview.filters.source === 'invoice_dump' ? 'PRI SALES DUMP' : 'YTD,AOP vs.ACH'}
+                </span>
+              )}
               {(['state', 'category', 'channel', 'salesperson'] as const).map(k => (
                 (filterOpts[k] || []).length > 0 && (
                   <select key={k} value=""
