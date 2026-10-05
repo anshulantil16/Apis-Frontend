@@ -497,6 +497,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   when a figure looks wrong. */}
               <select value={span}
                 onChange={e => setSpan(e.target.value as 'fy' | 'all' | 'dates')}
+                title={span === 'dates'
+                  ? 'Day-level figures come from the invoice dump, which covers the months your extract reaches.'
+                  : 'Month and year figures come from the review sheet — the one your YTD ACH column is read off.'}
                 className="px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50
                            text-[12px] font-bold text-violet-700">
                 <option value="fy">
@@ -515,15 +518,6 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   <input type="date" value={dTo} onChange={e => setDTo(e.target.value)}
                     className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
                 </>
-              )}
-              {/* Which of the two uploaded sheets these numbers came from. */}
-              {overview?.filters?.source && (
-                <span className="px-2 py-1 rounded-lg bg-slate-100 text-[11px] font-bold text-slate-500"
-                  title={overview.filters.source === 'invoice_dump'
-                    ? 'A date range is answered from PRI SALES DUMP — the only sheet with days in it. It covers the months the extract reaches.'
-                    : 'Month and year figures come from YTD,AOP vs.ACH — the sheet your YTD ACH column is read off.'}>
-                  {overview.filters.source === 'invoice_dump' ? 'PRI SALES DUMP' : 'YTD,AOP vs.ACH'}
-                </span>
               )}
               {(['state', 'category', 'channel', 'salesperson'] as const).map(k => (
                 (filterOpts[k] || []).length > 0 && (
