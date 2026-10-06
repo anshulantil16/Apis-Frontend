@@ -9,7 +9,8 @@
     "build:qa": "tsc -b && vite build --mode qa",
     "build:prod": "tsc -b && vite build --mode production",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:preview": "tsc -b && vite build --mode preview"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
