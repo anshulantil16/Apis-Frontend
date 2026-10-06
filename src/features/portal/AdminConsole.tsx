@@ -1769,6 +1769,14 @@ function ContentTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => v
                           </span>
                         ))}
                     </div>
+                    {/* A document can't be previewed inline like a photo, so the
+                        reviewer opens it instead. */}
+                    {item.link && (
+                      <a href={item.link} target="_blank" rel="noopener noreferrer"
+                        className="inline-block mt-2 text-[11.5px] font-black text-indigo-600 hover:underline">
+                        Open file ↗
+                      </a>
+                    )}
                   </div>
 
                   {/* Approved content can still be taken down. Without this the

@@ -1,24 +1,32 @@
 /* Policies & Guidelines — document register for SOPs, manual policies,
  * templates, work instructions and formats.
  *
- * No policies backend exists yet (see Apis-Backend's app list — there's no
- * `policies` app), so every record here is a sample row shaped the way a
- * real register would look, not live company data. Swap CATEGORY_CARDS /
- * POLICY_ROWS / SUMMARY_STATS for a real fetch once that API exists — the
- * page itself doesn't need to change shape.
+ * Two sources, one table. The 11 PDFs in public/Policies/ ship with the
+ * build (MANUAL_POLICIES below) and can't be removed from here. Everything
+ * else comes from the `policies` Django app: an upload is stored on the
+ * server, attributed to whoever is signed in, and — unless a superadmin
+ * added it — held back until a superadmin approves it. Until then the
+ * uploader sees their own row marked "Awaiting approval" and nobody else
+ * sees it. The uploader can delete their own row; a superadmin can delete
+ * any uploaded row.
  */
 import { useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent } from 'react';
 import {
   ChevronRight, ChevronDown, Plus, Search, FileText, ClipboardList,
   LayoutTemplate, ListChecks, FolderOpen, CalendarClock,
   CheckCircle2, BarChart3, ArrowUpRight, FileStack,
-  X, Eye, UploadCloud,
+  X, Eye, UploadCloud, Trash2, Loader2,
 } from 'lucide-react';
+import { apiFetch } from '../portal/session';
+import { apiBase } from '../../apiBase';
 
-/* Real files dropped in public/Policies/ — served as static assets, so this
-   is just the filename register (title + version tag for display) until a
-   real `policies` backend/upload flow exists. Encode-on-use handles the
-   spaces/parens in the filenames. */
+const POLICIES_API = `${apiBase()}/api/policies`;
+const ACCEPTED_FILES = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
+
+/* Real files dropped in public/Policies/ — served as static assets and part
+   of the build, so they sit beside the uploaded documents and can't be
+   deleted from the page. Encode-on-use handles the spaces/parens in the
+   filenames. */
 interface ManualPolicyDoc { title: string; version?: string; file: string }
 const MANUAL_POLICIES: ManualPolicyDoc[] = [
   { title: 'Policy on Prevention of Sexual Harassment', file: 'Apis India Limited Policy on Prevention of Sexual Harassment.pdf' },
@@ -33,10 +41,10 @@ const MANUAL_POLICIES: ManualPolicyDoc[] = [
   { title: 'Variable Pay Policy', version: 'v1.0.0 · 2024', file: 'Variale Pay policy 1.0.0 2024.pdf' },
   { title: 'Workplace Affair Policy', version: '2025-26', file: 'Workplace Affair Policy 2025-26.pdf' },
 ];
-/* A freshly-added policy's file is a browser object URL (blob:...), not a
-   path under public/Policies/ — pass those straight through. */
+/* An uploaded document's file is a full URL from the server, not a path
+   under public/Policies/ — pass those straight through. */
 function policyHref(file: string) {
-  return /^(blob:|https?:)/.test(file) ? file : encodeURI(`/Policies/${file}`);
+  return /^(blob:|https?:|\/)/.test(file) ? file : encodeURI(`/Policies/${file}`);
 }
 
 /* Counts up from 0 to `target` on mount — same easing/technique as the home
@@ -72,8 +80,11 @@ function AnimatedCount({ value, durationMs }: { value: number | string; duration
 import { onSpotlightMove, onTilt3dMove, onTilt3dLeave } from '../../ui';
 
 interface CategoryCard {
-  label: string; count: number; icon: ComponentType<{ className?: string }>;
+  label: string; icon: ComponentType<{ className?: string }>;
   action: string; gradient: string; glow: string; bar: string;
+  /* What one of these is called — the card's "+ Add" button and the form
+     title read "Add SOP", "Add Template", not "Add Templates". */
+  singular: string;
 }
 /* Each category gets its own accent (matching CATEGORY_BADGE's colours
    below, so a SOP pill in the table and the SOP card read as the same
@@ -81,26 +92,56 @@ interface CategoryCard {
    sidebar stay the dominant mustard/amber so the page still reads as one
    theme, this is just per-category variety within it. */
 const CATEGORY_CARDS: CategoryCard[] = [
-  { label: 'SOP', count: 0, icon: FileText, action: 'View All', gradient: 'from-amber-400 to-orange-500', glow: 'rgba(245,158,11,.4)', bar: 'bg-amber-500' },
-  { label: 'Manual Policy', count: MANUAL_POLICIES.length, icon: ClipboardList, action: 'Browse', gradient: 'from-amber-400 to-yellow-600', glow: 'rgba(217,119,6,.4)', bar: 'bg-yellow-500' },
-  { label: 'Templates', count: 0, icon: LayoutTemplate, action: 'Browse', gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.4)', bar: 'bg-cyan-500' },
-  { label: 'Work Instructions', count: 0, icon: ListChecks, action: 'View All', gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.4)', bar: 'bg-emerald-500' },
-  { label: 'Formats', count: 0, icon: FileStack, action: 'Browse', gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.4)', bar: 'bg-rose-500' },
+  { label: 'SOP', singular: 'SOP', icon: FileText, action: 'View All', gradient: 'from-amber-400 to-orange-500', glow: 'rgba(245,158,11,.4)', bar: 'bg-amber-500' },
+  { label: 'Manual Policy', singular: 'Policy', icon: ClipboardList, action: 'Browse', gradient: 'from-amber-400 to-yellow-600', glow: 'rgba(217,119,6,.4)', bar: 'bg-yellow-500' },
+  { label: 'Templates', singular: 'Template', icon: LayoutTemplate, action: 'Browse', gradient: 'from-cyan-400 to-blue-600', glow: 'rgba(6,182,212,.4)', bar: 'bg-cyan-500' },
+  { label: 'Work Instructions', singular: 'Work Instruction', icon: ListChecks, action: 'View All', gradient: 'from-emerald-400 to-teal-600', glow: 'rgba(16,185,129,.4)', bar: 'bg-emerald-500' },
+  { label: 'Formats', singular: 'Format', icon: FileStack, action: 'Browse', gradient: 'from-rose-400 to-pink-600', glow: 'rgba(244,63,94,.4)', bar: 'bg-rose-500' },
 ];
-/* Every category a policy can be filed under — drives both the demo cards
-   above and the Add Policy form's category select, so the two can't drift. */
+/* Every category a document can be filed under — drives the cards, the
+   table's filter tabs and the Add form's select, so the three can't drift.
+   Must match PolicyDocument.CATEGORY_CHOICES on the backend. */
 const CATEGORY_LABELS = CATEGORY_CARDS.map(c => c.label);
+const singularOf = (label: string) => CATEGORY_CARDS.find(c => c.label === label)?.singular ?? 'Document';
 /* Same department list the Employee Referral form uses (ReferralFormPopup.tsx)
    — kept in step so "department" means the same thing everywhere in the app. */
 const DEPARTMENTS = ['Sales', 'Marketing', 'HR', 'Finance', 'Operations', 'IT', 'Production', 'Other'];
 
 interface PolicyRow {
-  doc: string; category: string; version: number; pages?: number;
+  doc: string; category: string; version: number; pages?: number | null;
   approvedBy: string; approvalDate: string; reviewedBy: string;
   department?: string;
-  /* Present only for policies added through the Add Policy form — an
-     object URL for the uploaded PDF, so the row is actually viewable. */
   file?: string;
+  /* Present only on uploaded rows, which come from the server; the seed
+     rows built from public/Policies/ have none of these. */
+  id?: number;
+  moderationStatus?: 'pending' | 'approved' | 'rejected';
+  reviewNote?: string;
+  canDelete?: boolean;
+}
+
+/* The `policies` API's row shape — see policies/views.py `_serialize`. */
+interface ApiDocument {
+  id: number; title: string; category: string; department: string;
+  version: number; pages: number | null;
+  approvedBy: string; reviewedBy: string; approvalDate: string | null;
+  file: string; moderationStatus: 'pending' | 'approved' | 'rejected';
+  reviewNote: string; canDelete: boolean; message?: string;
+}
+function fromApi(d: ApiDocument): PolicyRow {
+  /* d/m/yyyy: the seed rows show d/m only because their year was never
+     recorded, not because the year doesn't matter. */
+  let approvalDate = '—';
+  if (d.approvalDate) {
+    const [y, m, day] = d.approvalDate.split('-').map(Number);
+    approvalDate = `${day}/${m}/${y}`;
+  }
+  return {
+    id: d.id, doc: d.title, category: d.category, department: d.department || undefined,
+    version: d.version, pages: d.pages, approvedBy: d.approvedBy || '—', reviewedBy: d.reviewedBy || '—',
+    approvalDate, file: d.file, moderationStatus: d.moderationStatus, reviewNote: d.reviewNote,
+    canDelete: d.canDelete,
+  };
 }
 /* Real register, built from the 11 PDFs in public/Policies/ — same titles as
    MANUAL_POLICIES above so a document reads identically in the table and in
@@ -152,61 +193,148 @@ export function PoliciesPage() {
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [manualPolicyOpen, setManualPolicyOpen] = useState(false);
 
-  const [rows, setRows] = useState<PolicyRow[]>(POLICY_ROWS);
-  const [manualDocs, setManualDocs] = useState<ManualPolicyDoc[]>(MANUAL_POLICIES);
-  const [categoryCards, setCategoryCards] = useState<CategoryCard[]>(CATEGORY_CARDS);
-  const maxCategoryCount = Math.max(1, ...categoryCards.map(c => c.label === 'Manual Policy' ? manualDocs.length : c.count));
+  /* Uploaded rows, newest first, ahead of the seed rows that ship with the
+     build. Kept apart so a refetch never has to touch the seed rows. */
+  const [uploaded, setUploaded] = useState<PolicyRow[]>([]);
+  const rows = useMemo(() => [...uploaded, ...POLICY_ROWS], [uploaded]);
+  const countFor = (label: string) => rows.filter(r => r.category === label).length;
+  const maxCategoryCount = Math.max(1, ...CATEGORY_LABELS.map(countFor));
+  /* The Manual Policy browser shows the seed PDFs plus any uploaded
+     manual policy, so a newly filed policy is browsable the same way. */
+  const manualDocs: ManualPolicyDoc[] = rows
+    .filter(r => r.category === 'Manual Policy' && r.file)
+    .map(r => ({ title: r.doc, version: r.id ? `v${r.version}` : MANUAL_POLICIES.find(m => m.file === r.file)?.version, file: r.file! }));
 
-  // Add Policy form
+  /* 'All', or one category — set by the tabs above the table and by each
+     card's View All / Browse button. */
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const tableRef = useRef<HTMLDivElement>(null);
+  function showCategory(label: string) {
+    setActiveCategory(label);
+    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await apiFetch(`${POLICIES_API}/documents/`);
+        if (!r.ok || cancelled) return;
+        const docs = (await r.json()) as ApiDocument[];
+        if (!cancelled) setUploaded(docs.map(fromApi));
+      } catch {
+        /* Server unreachable: the seed register still shows, which is the
+           whole page minus what people uploaded. */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Add Document form — one form for every category, opened from the
+  // header button or a card's "+ Add" with that card's category preset.
   const [addPolicyOpen, setAddPolicyOpen] = useState(false);
   const [newDoc, setNewDoc] = useState('');
   const [newCategory, setNewCategory] = useState(CATEGORY_LABELS[0]);
   const [newDepartment, setNewDepartment] = useState(DEPARTMENTS[0]);
   const [newVersion, setNewVersion] = useState(1);
   const [newApprovedBy, setNewApprovedBy] = useState('');
+  const [newReviewedBy, setNewReviewedBy] = useState('');
+  const [newApprovalDate, setNewApprovalDate] = useState('');
   const [newFile, setNewFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function resetAddPolicyForm() {
     setNewDoc(''); setNewCategory(CATEGORY_LABELS[0]); setNewDepartment(DEPARTMENTS[0]); setNewVersion(1);
-    setNewApprovedBy(''); setNewFile(null);
+    setNewApprovedBy(''); setNewReviewedBy(''); setNewApprovalDate(''); setNewFile(null); setFormError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
-
-  function handleAddPolicy(e: FormEvent) {
-    e.preventDefault();
-    if (!newDoc.trim() || !newFile) return;
-
-    const fileUrl = URL.createObjectURL(newFile);
-    const today = new Date();
-    const approvalDate = `${today.getDate()}/${today.getMonth() + 1}`;
-
-    setRows(prev => [{
-      doc: newDoc.trim(), category: newCategory, department: newDepartment, version: newVersion,
-      approvedBy: newApprovedBy.trim() || 'You', approvalDate, reviewedBy: '—', file: fileUrl,
-    }, ...prev]);
-
-    if (newCategory === 'Manual Policy') {
-      setManualDocs(prev => [{ title: newDoc.trim(), version: `v${newVersion}`, file: fileUrl }, ...prev]);
-    } else {
-      setCategoryCards(prev => prev.map(c => c.label === newCategory ? { ...c, count: c.count + 1 } : c));
-    }
-
+  function openAddForm(category: string) {
+    resetAddPolicyForm();
+    setNewCategory(category);
+    setAddPolicyOpen(true);
+  }
+  function closeAddForm() {
+    if (saving) return;
     setAddPolicyOpen(false);
     resetAddPolicyForm();
   }
 
+  async function handleAddPolicy(e: FormEvent) {
+    e.preventDefault();
+    if (!newDoc.trim() || !newFile || saving) return;
+
+    const body = new FormData();
+    body.append('title', newDoc.trim());
+    body.append('category', newCategory);
+    body.append('department', newDepartment);
+    body.append('version', String(newVersion));
+    body.append('approvedBy', newApprovedBy.trim());
+    body.append('reviewedBy', newReviewedBy.trim());
+    if (newApprovalDate) body.append('approvalDate', newApprovalDate);
+    body.append('file', newFile);
+
+    setSaving(true); setFormError('');
+    try {
+      const r = await apiFetch(`${POLICIES_API}/documents/`, { method: 'POST', body });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setFormError(data.error || (r.status === 401 ? 'Please sign in to add documents.' : 'Could not upload that document.'));
+        return;
+      }
+      setUploaded(prev => [fromApi(data as ApiDocument), ...prev]);
+      setNotice({ tone: 'ok', text: data.message || 'Document added.' });
+      setAddPolicyOpen(false);
+      resetAddPolicyForm();
+    } catch {
+      setFormError('Could not reach the server. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  async function handleDelete(row: PolicyRow) {
+    if (!row.id || deletingId) return;
+    if (!window.confirm(`Remove "${row.doc}" from ${row.category}? This deletes the file too.`)) return;
+    setDeletingId(row.id);
+    try {
+      const r = await apiFetch(`${POLICIES_API}/documents/${row.id}/`, { method: 'DELETE' });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setNotice({ tone: 'error', text: data.error || 'Could not remove that document.' });
+        return;
+      }
+      setUploaded(prev => prev.filter(u => u.id !== row.id));
+      setNotice({ tone: 'ok', text: data.message || 'Document removed.' });
+    } catch {
+      setNotice({ tone: 'error', text: 'Could not reach the server. Please try again.' });
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   const q = query.trim().toLowerCase();
   const filteredRows = useMemo(
-    () => !q ? rows : rows.filter(r =>
-      r.doc.toLowerCase().includes(q) || r.category.toLowerCase().includes(q) || r.approvedBy.toLowerCase().includes(q)),
-    [q, rows],
+    () => rows.filter(r =>
+      (activeCategory === 'All' || r.category === activeCategory) &&
+      (!q || r.doc.toLowerCase().includes(q) || r.category.toLowerCase().includes(q) || r.approvedBy.toLowerCase().includes(q))),
+    [q, rows, activeCategory],
   );
 
   const summaryStats = useMemo(() => [
-    { label: 'Total Policies', value: rows.length, icon: FolderOpen },
+    { label: 'Total Documents', value: rows.length, icon: FolderOpen },
     { label: 'Total Pages', value: rows.reduce((sum, r) => sum + (r.pages ?? 0), 0), icon: FileText },
-    { label: 'Total Approvals', value: rows.length, icon: CheckCircle2 },
+    /* A row awaiting the intranet's approval gate isn't an approved document. */
+    { label: 'Total Approvals', value: rows.filter(r => r.moderationStatus !== 'pending' && r.moderationStatus !== 'rejected').length, icon: CheckCircle2 },
     { label: 'Latest Approval', value: rows[0]?.approvalDate ?? '—', icon: CalendarClock },
   ], [rows]);
 
@@ -250,25 +378,25 @@ export function PoliciesPage() {
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Policies</h1>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-[10px] font-black text-amber-600">
-                    <AnimatedCount value={221} /> documents
+                    <AnimatedCount value={rows.length} /> documents
                   </span>
                 </div>
-                <p className="text-sm text-slate-500 mt-1">Manage policies, track revisions, total pages and approvals.</p>
+                <p className="text-sm text-slate-500 mt-1">SOPs, policies, templates, work instructions and formats — add, find and manage them in one place.</p>
               </div>
             </div>
-            <button onClick={() => setAddPolicyOpen(true)}
+            <button onClick={() => openAddForm(activeCategory === 'All' ? 'Manual Policy' : activeCategory)}
               className="ih-sheen group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 text-white
                          font-black text-sm shadow-lg shadow-amber-500/30 transition-all hover:-translate-y-0.5 shrink-0 self-start lg:self-auto">
-              <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />Add Policy
+              <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />Add Document
             </button>
           </div>
         </div>
 
         {/* category cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {categoryCards.map((c, i) => {
+          {CATEGORY_CARDS.map((c, i) => {
             const Icon = c.icon;
-            const count = c.label === 'Manual Policy' ? manualDocs.length : c.count;
+            const count = countFor(c.label);
             return (
               <div key={c.label}
                 onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
@@ -289,18 +417,42 @@ export function PoliciesPage() {
                     style={{ width: `${Math.max(6, (count / maxCategoryCount) * 100)}%` }} />
                 </div>
 
-                <button onClick={() => c.label === 'Manual Policy' && setManualPolicyOpen(true)}
-                  className="w-full mt-1 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-600
-                                   text-[11px] font-black hover:bg-amber-50 transition-all">
-                  {c.action}
-                </button>
+                {/* Manual Policy keeps its document browser; the others filter
+                    the register below to that category. */}
+                <div className="w-full mt-1 flex gap-1.5">
+                  <button onClick={() => c.label === 'Manual Policy' ? setManualPolicyOpen(true) : showCategory(c.label)}
+                    className="flex-1 min-w-0 px-2 py-1.5 rounded-lg border border-amber-300 text-amber-600
+                                     text-[11px] font-black hover:bg-amber-50 transition-all">
+                    {c.action}
+                  </button>
+                  <button onClick={() => openAddForm(c.label)} title={`Add ${c.singular}`}
+                    className="shrink-0 inline-flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-amber-500 text-white
+                               text-[11px] font-black shadow-sm shadow-amber-500/30 hover:bg-amber-600 transition-all">
+                    <Plus className="w-3.5 h-3.5" />Add
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
 
         {/* search + table */}
-        <div className="ih-reveal rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden" style={{ animationDelay: '100ms' }}>
+        <div ref={tableRef} className="ih-reveal scroll-mt-4 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden" style={{ animationDelay: '100ms' }}>
+          {/* category tabs — one register, sliced by kind of document */}
+          <div className="px-4 pt-4 flex items-center gap-1.5 overflow-x-auto ih-scroll-clean">
+            {['All', ...CATEGORY_LABELS].map(label => {
+              const active = activeCategory === label;
+              const n = label === 'All' ? rows.length : countFor(label);
+              return (
+                <button key={label} onClick={() => setActiveCategory(label)}
+                  className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-black transition-all
+                             ${active ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30' : 'text-slate-500 hover:bg-slate-100'}`}>
+                  {label}
+                  <span className={`px-1.5 rounded-md text-[10px] ${active ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{n}</span>
+                </button>
+              );
+            })}
+          </div>
           <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
             <div className="ih-spotlight relative flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 sm:w-80"
               onMouseMove={onSpotlightMove}>
@@ -309,7 +461,7 @@ export function PoliciesPage() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 type="text"
-                placeholder="Search policies…"
+                placeholder="Search documents…"
                 className="w-full bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400"
               />
             </div>
@@ -330,11 +482,12 @@ export function PoliciesPage() {
                   <th className="text-left px-4 py-3">Approved By</th>
                   <th className="text-left px-4 py-3">Approval Date</th>
                   <th className="text-left px-4 py-3">Reviewed By</th>
+                  <th className="px-2 py-3"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.map((r, i) => (
-                  <tr key={r.doc}
+                  <tr key={r.id ?? `seed-${r.file ?? r.doc}`}
                     className={`ih-inview border-t border-slate-100 border-l-4 ${CATEGORY_BORDER[r.category] ?? 'border-l-transparent'}
                                hover:bg-amber-50/40 hover:shadow-[inset_0_0_0_9999px_rgba(245,158,11,.02)] transition-all`}
                     style={{ transitionDelay: `${i * 40}ms` }}>
@@ -346,6 +499,18 @@ export function PoliciesPage() {
                           {r.department ? `${r.department} / ${r.doc}` : r.doc}
                         </a>
                       ) : (r.department ? `${r.department} / ${r.doc}` : r.doc)}
+                      {r.moderationStatus === 'pending' && (
+                        <span title="Only you can see this until an administrator approves it"
+                          className="ml-2 inline-block align-middle px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9.5px] font-black uppercase">
+                          Awaiting approval
+                        </span>
+                      )}
+                      {r.moderationStatus === 'rejected' && (
+                        <span title={r.reviewNote || 'Not approved'}
+                          className="ml-2 inline-block align-middle px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[9.5px] font-black uppercase">
+                          Not approved
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase ring-1 ${CATEGORY_BADGE[r.category] ?? 'text-slate-600 bg-slate-50 ring-slate-200'}`}>
@@ -373,10 +538,33 @@ export function PoliciesPage() {
                         <span className="text-slate-600 font-semibold">{r.reviewedBy}</span>
                       </span>
                     </td>
+                    {/* Only uploaded rows the viewer may remove get the icon;
+                        the seed PDFs ship with the build. */}
+                    <td className="px-2 py-3 text-right">
+                      {r.canDelete && r.id && (
+                        <button onClick={() => handleDelete(r)} disabled={deletingId === r.id}
+                          title="Remove this document" aria-label={`Remove ${r.doc}`}
+                          className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-300
+                                     hover:text-rose-600 hover:bg-rose-50 transition-all disabled:opacity-50">
+                          {deletingId === r.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {filteredRows.length === 0 && (
-                  <tr><td colSpan={8} className="text-center text-sm text-slate-400 py-10">No policies match this search.</td></tr>
+                  <tr><td colSpan={9} className="text-center text-sm text-slate-400 py-10">
+                    {q ? 'No documents match this search.' : (
+                      <>No {activeCategory === 'All' ? 'documents' : activeCategory} yet.{' '}
+                        <button onClick={() => openAddForm(activeCategory === 'All' ? 'Manual Policy' : activeCategory)}
+                          className="font-black text-amber-600 hover:underline">
+                          Add {activeCategory === 'All' ? 'one' : `a ${singularOf(activeCategory)}`}
+                        </button>
+                      </>
+                    )}
+                  </td></tr>
                 )}
               </tbody>
             </table>
@@ -495,15 +683,20 @@ export function PoliciesPage() {
         </div>
       )}
 
-      {/* Add Policy — client-side only (no `policies` backend exists yet, see
-          the file header), so the PDF becomes a browser object URL rather
-          than something uploaded to a server. It's fully viewable/downloadable
-          for the rest of this session and shows up in the table (and in the
-          Manual Policy browser, if that's the chosen category) immediately,
-          but won't survive a page reload until a real upload endpoint exists. */}
+      {/* confirmation / error after an add or delete */}
+      {notice && (
+        <div role="status"
+          className={`ih-pop-in fixed bottom-5 right-5 z-60 max-w-sm rounded-xl px-4 py-3 shadow-lg text-[13px] font-bold ring-1
+                     ${notice.tone === 'ok' ? 'bg-white text-slate-700 ring-emerald-200' : 'bg-rose-50 text-rose-700 ring-rose-200'}`}>
+          {notice.text}
+        </div>
+      )}
+
+      {/* Add Document — uploads to the `policies` API (see the file header).
+          The title follows the chosen category: "Add SOP", "Add Template"… */}
       {addPolicyOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => { setAddPolicyOpen(false); resetAddPolicyForm(); }}>
+          onClick={closeAddForm}>
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
           <form onClick={e => e.stopPropagation()} onSubmit={handleAddPolicy}
             className="ih-pop-in relative w-full max-w-lg flex flex-col rounded-3xl bg-white
@@ -516,11 +709,11 @@ export function PoliciesPage() {
                     <Plus className="w-5.5 h-5.5 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-lg font-black text-white tracking-tight truncate">Add Policy</h2>
-                    <p className="text-amber-50/90 text-[12px] font-medium">Upload a PDF and file it under a category</p>
+                    <h2 className="text-lg font-black text-white tracking-tight truncate">Add {singularOf(newCategory)}</h2>
+                    <p className="text-amber-50/90 text-[12px] font-medium">Upload a file and it's listed under {newCategory}</p>
                   </div>
                 </div>
-                <button type="button" onClick={() => { setAddPolicyOpen(false); resetAddPolicyForm(); }} title="Close"
+                <button type="button" onClick={closeAddForm} title="Close"
                   className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center flex-shrink-0 transition-all">
                   <X className="w-4 h-4" />
                 </button>
@@ -563,39 +756,62 @@ export function PoliciesPage() {
                              outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approved By (optional)</label>
-                <input value={newApprovedBy} onChange={e => setNewApprovedBy(e.target.value)}
-                  placeholder="e.g. Vimal Anand"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
-                             placeholder:text-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approved By (optional)</label>
+                  <input value={newApprovedBy} onChange={e => setNewApprovedBy(e.target.value)}
+                    placeholder="e.g. Vimal Anand"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
+                               placeholder:text-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Reviewed By (optional)</label>
+                  <input value={newReviewedBy} onChange={e => setNewReviewedBy(e.target.value)}
+                    placeholder="e.g. Pankaj"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
+                               placeholder:text-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
+                </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">PDF File</label>
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approval Date (optional)</label>
+                <input type="date" value={newApprovalDate} onChange={e => setNewApprovalDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
+                             outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">File · PDF, Word, Excel or PowerPoint, up to 25 MB</label>
                 <button type="button" onClick={() => fileInputRef.current?.click()}
                   className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-dashed transition-all text-left
                              ${newFile ? 'border-amber-300 bg-amber-50' : 'border-slate-200 hover:border-amber-300 hover:bg-amber-50/50'}`}>
                   <UploadCloud className={`w-5 h-5 flex-shrink-0 ${newFile ? 'text-amber-600' : 'text-slate-400'}`} />
                   <span className={`text-sm font-bold truncate ${newFile ? 'text-amber-700' : 'text-slate-400'}`}>
-                    {newFile ? newFile.name : 'Click to choose a PDF…'}
+                    {newFile ? newFile.name : 'Click to choose a file…'}
                   </span>
                 </button>
-                <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden"
+                <input ref={fileInputRef} type="file" accept={ACCEPTED_FILES} className="hidden"
                   onChange={e => setNewFile(e.target.files?.[0] ?? null)} />
               </div>
+
+              {formError && (
+                <p role="alert" className="rounded-xl bg-rose-50 ring-1 ring-rose-200 px-3.5 py-2.5 text-[12.5px] font-bold text-rose-700">
+                  {formError}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-slate-100 bg-slate-50">
-              <button type="button" onClick={() => { setAddPolicyOpen(false); resetAddPolicyForm(); }}
-                className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all">
+              <button type="button" onClick={closeAddForm} disabled={saving}
+                className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all disabled:opacity-50">
                 Cancel
               </button>
-              <button type="submit" disabled={!newDoc.trim() || !newFile}
+              <button type="submit" disabled={!newDoc.trim() || !newFile || saving}
                 className="ih-sheen inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600
                            hover:from-amber-600 hover:to-orange-700 text-white text-[13px] font-black shadow-md shadow-amber-200
                            transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                <Plus className="w-4 h-4" />Add Policy
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                {saving ? 'Uploading…' : `Add ${singularOf(newCategory)}`}
               </button>
             </div>
           </form>
