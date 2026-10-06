@@ -1,6 +1,6 @@
 /* APIS Wall — a photo wall of real team moments, events and celebrations.
 
-   The 8 seed photos ship with the build in public/Apis_wall/ and are not user
+   The seed photos ship with the build in public/Apis_wall/ and are not user
    content: nobody uploaded them, so there is nothing to attribute or approve
    and they always show.
 
@@ -41,6 +41,7 @@ const UPLOAD_CATEGORIES = ['Celebrations', 'Team Moments', 'CSR', 'Events', 'Oth
 const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall01.jpeg', title: 'Happy Independence Day', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall02.jpeg', title: 'Community Outreach Drive', category: 'CSR' },
+  { src: '/Apis_wall/Apiswall16.jpeg', title: 'Showcasing the APIS Range', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall09.png', title: 'Wall of Gratitude', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall03.jpeg', title: 'Office Birthday Celebration', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall04.jpeg', title: 'Birthday Surprise', category: 'Celebrations' },
@@ -49,6 +50,7 @@ const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall14.png', title: 'AIL Cares Community Drive', category: 'CSR' },
   { src: '/Apis_wall/Apiswall06.jpeg', title: 'Birthday Wishes', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall11.png', title: 'Team Stretch Break', category: 'Team Moments' },
+  { src: '/Apis_wall/Apiswall15.jpeg', title: 'APIS Product Hamper', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall07.jpeg', title: 'Lunch Break Bonding', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall08.jpeg', title: 'Cutting the Cake', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall12.png', title: 'Celebrating Team Spirit', category: 'Team Moments' },
