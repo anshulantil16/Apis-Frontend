@@ -207,7 +207,6 @@ function initials(name: string) {
 export function PoliciesPage() {
   const [query, setQuery] = useState('');
   const [summaryOpen, setSummaryOpen] = useState(true);
-  const [manualPolicyOpen, setManualPolicyOpen] = useState(false);
 
   /* Uploaded rows, newest first, ahead of the seed rows that ship with the
      build. Kept apart so a refetch never has to touch the seed rows. */
@@ -225,20 +224,16 @@ export function PoliciesPage() {
   ], [uploaded, removedBuiltIns, canRemoveBuiltIns]);
   const countFor = (label: string) => rows.filter(r => r.category === label).length;
   const maxCategoryCount = Math.max(1, ...CATEGORY_LABELS.map(countFor));
-  /* The Manual Policy browser shows the seed PDFs plus any uploaded
-     manual policy, so a newly filed policy is browsable the same way. */
-  const manualDocs = rows
-    .filter(r => r.category === 'Manual Policy' && r.file)
+  /* The document browser popup — opened by any card's View All / Browse,
+     showing that category's documents (built-in PDFs and uploads alike). */
+  const [browseCategory, setBrowseCategory] = useState<string | null>(null);
+  const browseCard = CATEGORY_CARDS.find(c => c.label === browseCategory);
+  const browseDocs = rows
+    .filter(r => r.category === browseCategory && r.file)
     .map(r => ({ row: r, title: r.doc, version: r.id ? `v${r.version}` : MANUAL_POLICIES.find(m => m.file === r.file)?.version, file: r.file! }));
 
-  /* 'All', or one category — set by the tabs above the table and by each
-     card's View All / Browse button. */
+  /* 'All', or one category — set by the tabs above the table. */
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const tableRef = useRef<HTMLDivElement>(null);
-  function showCategory(label: string) {
-    setActiveCategory(label);
-    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
 
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   useEffect(() => {
@@ -455,10 +450,8 @@ export function PoliciesPage() {
                     style={{ width: `${Math.max(6, (count / maxCategoryCount) * 100)}%` }} />
                 </div>
 
-                {/* Manual Policy keeps its document browser; the others filter
-                    the register below to that category. */}
                 <div className="w-full mt-1 flex gap-1.5">
-                  <button onClick={() => c.label === 'Manual Policy' ? setManualPolicyOpen(true) : showCategory(c.label)}
+                  <button onClick={() => setBrowseCategory(c.label)}
                     className="flex-1 min-w-0 px-2 py-1.5 rounded-lg border border-amber-300 text-amber-600
                                      text-[11px] font-black hover:bg-amber-50 transition-all">
                     {c.action}
@@ -475,7 +468,7 @@ export function PoliciesPage() {
         </div>
 
         {/* search + table */}
-        <div ref={tableRef} className="ih-reveal scroll-mt-4 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden" style={{ animationDelay: '100ms' }}>
+        <div className="ih-reveal rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden" style={{ animationDelay: '100ms' }}>
           {/* category tabs — one register, sliced by kind of document */}
           <div className="px-4 pt-4 flex items-center gap-1.5 overflow-x-auto ih-scroll-clean">
             {['All', ...CATEGORY_LABELS].map(label => {
@@ -611,7 +604,7 @@ export function PoliciesPage() {
                 <BarChart3 className="w-4 h-4 text-amber-600" />
                 <span className="ih-pulse-glow absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">1</span>
               </span>
-              <span className="text-sm font-black text-slate-900">Policies Summary</span>
+              <span className="text-sm font-black text-slate-900">Summary</span>
             </span>
             <span className="flex items-center gap-3">
               <span className="text-[11px] font-black text-amber-600 flex items-center gap-1">
@@ -645,43 +638,65 @@ export function PoliciesPage() {
         <div className="h-2" />
       </div>
 
-      {/* Manual Policy browser — a big, realistic document-picker popup, not a
-          tucked-away dropdown, since this is the one category with real files
-          behind it (public/Policies/) rather than placeholder rows. */}
-      {manualPolicyOpen && (
+      {/* Document browser — a big, realistic document-picker popup, not a
+          tucked-away dropdown. One popup for every category, coloured with
+          that category's card gradient and icon. */}
+      {browseCategory && browseCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
-          onClick={() => setManualPolicyOpen(false)}>
+          onClick={() => setBrowseCategory(null)}>
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
           <div onClick={e => e.stopPropagation()}
             className="ih-pop-in relative w-full max-w-5xl max-h-[88vh] flex flex-col rounded-3xl bg-white
                        shadow-[0_60px_120px_-30px_rgba(0,0,0,.5)] ring-1 ring-black/5 overflow-hidden">
             {/* header */}
             <div className="relative flex-shrink-0 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-600" />
+              <div className={`absolute inset-0 bg-gradient-to-br ${browseCard.gradient}`} />
               <div className="absolute inset-0 opacity-[0.08] pointer-events-none"
                 style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.9) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.9) 1px,transparent 1px)',
                          backgroundSize: '36px 36px' }} />
               <div className="relative flex items-center justify-between gap-4 px-6 sm:px-8 py-6">
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center flex-shrink-0">
-                    <ClipboardList className="w-7 h-7 text-white" />
+                    <browseCard.icon className="w-7 h-7 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">Manual Policy Documents</h2>
-                    <p className="text-amber-50/90 text-sm font-medium mt-0.5">{manualDocs.length} documents · view or download any policy below</p>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">{browseCategory} Documents</h2>
+                    <p className="text-white/85 text-sm font-medium mt-0.5">
+                      {browseDocs.length} {browseDocs.length === 1 ? 'document' : 'documents'} · view or download any of them below
+                    </p>
                   </div>
                 </div>
-                <button onClick={() => setManualPolicyOpen(false)} title="Close"
-                  className="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center flex-shrink-0 transition-all">
-                  <X className="w-4.5 h-4.5" />
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => { setBrowseCategory(null); openAddForm(browseCategory); }}
+                    className="inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl bg-white text-slate-800 hover:bg-white/90
+                               text-[12px] font-black shadow-sm transition-all">
+                    <Plus className="w-4 h-4" />Add {browseCard.singular}
+                  </button>
+                  <button onClick={() => setBrowseCategory(null)} title="Close"
+                    className="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-all">
+                    <X className="w-4.5 h-4.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* document grid */}
             <div className="flex-1 overflow-y-auto ih-scroll-clean p-6 sm:p-8 bg-slate-50">
+              {browseDocs.length === 0 && (
+                <div className="flex flex-col items-center justify-center text-center py-14 gap-3">
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${browseCard.gradient} flex items-center justify-center shadow-md opacity-80`}>
+                    <browseCard.icon className="w-7 h-7 text-white" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-500">No {browseCategory} documents yet.</p>
+                  <button onClick={() => { setBrowseCategory(null); openAddForm(browseCategory); }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white
+                               text-[12px] font-black shadow-sm shadow-amber-500/30 transition-all">
+                    <Plus className="w-4 h-4" />Add the first {browseCard.singular}
+                  </button>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {manualDocs.map((doc, i) => (
+                {browseDocs.map((doc, i) => (
                   <div key={rowKey(doc.row)}
                     className="ih-inview group relative flex flex-col rounded-2xl bg-white border border-slate-200
                                shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-amber-300 transition-all p-4 overflow-hidden"
@@ -691,16 +706,24 @@ export function PoliciesPage() {
                         onClick={() => handleDelete(doc.row)} className="absolute top-2 right-2" />
                     )}
                     <div className={`flex items-start gap-3 mb-3 ${doc.row.canDelete ? 'pr-6' : ''}`}>
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center
-                                      shadow-md flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
+                      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${browseCard.gradient} flex items-center justify-center
+                                      shadow-md flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6`}>
                         <FileText className="w-5.5 h-5.5 text-white" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[13px] font-black text-slate-900 leading-snug">{doc.title}</p>
-                        {doc.version && (
-                          <span className="inline-block mt-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600
-                                           ring-1 ring-amber-200 text-[10px] font-black">{doc.version}</span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          {doc.version && (
+                            <span className="inline-block px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600
+                                             ring-1 ring-amber-200 text-[10px] font-black">{doc.version}</span>
+                          )}
+                          {doc.row.department && (
+                            <span className="inline-block px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-black">{doc.row.department}</span>
+                          )}
+                          {doc.row.moderationStatus === 'pending' && (
+                            <span className="inline-block px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9.5px] font-black uppercase">Awaiting approval</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="mt-auto pt-2">
