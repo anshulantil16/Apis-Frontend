@@ -124,6 +124,32 @@ type Tab = 'overview' | 'intelligence' | 'geography' | 'products' | 'customers' 
  * sub-1% names piled on top of each other in a stack of unreadable colour.
  * Small slices keep their colour, their tooltip and their legend row; they
  * just stop shouting over one another on the chart itself. */
+/* What each dimension is CALLED, as against what the column is named.
+ *
+ * The review sheet answers every figure on this screen, and it heads these
+ * two REGION and Sub-Region. They are stored as `zone` and `state` because
+ * the invoice dump has columns of those names holding its own vocabulary --
+ * North, and a state code. Showing the storage name asked the reader to
+ * translate, and "State" in particular named something the sheet does not
+ * have. Renaming the columns would be a migration across both files for a
+ * wording problem, so the mapping lives here instead. */
+const DIM_LABEL: Record<string, string> = {
+  zone: 'Region',
+  state: 'Sub-Region',
+  subzone: 'Sub-Zone',
+  rsm: 'RSM',
+  asm: 'ASM',
+  sales_head: 'Head',
+  salesperson: 'Salesperson',
+  prod_group: 'Product Group',
+  sub_category: 'Sub Category',
+  item_alt_code: 'I-Code',
+  customer_name: 'Customer',
+  product_name: 'Item Name',
+};
+const dimLabel = (k: string) =>
+  DIM_LABEL[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
 const PIE_LABEL_MIN_PCT = 4;
 const pieLabel = (e: any) =>
   (e.share_pct ?? 0) >= PIE_LABEL_MIN_PCT ? `${e.name} ${e.share_pct}%` : '';
@@ -259,7 +285,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     ...Object.entries(sel).flatMap(([dim, vals]) =>
       (vals as string[]).map(v => ({
         key: `${dim}:${v}`,
-        dim: dim.replace(/_/g, ' '),
+        dim: dimLabel(dim),
         value: v,
         drop: () => toggle(dim, v),
       }))),
@@ -555,13 +581,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   </>
                 );
               })()}
-              {(['state', 'category', 'channel', 'salesperson'] as const).map(k => (
+              {(['zone', 'state', 'channel', 'category', 'salesperson'] as const).map(k => (
                 (filterOpts[k] || []).length > 0 && (
                   <select key={k} value=""
                     onChange={e => e.target.value && toggle(k, e.target.value)}
                     className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold
                                text-slate-600 bg-white max-w-[150px]">
-                    <option value="">{k === 'salesperson' ? 'Salesperson' : k[0].toUpperCase() + k.slice(1)}</option>
+                    <option value="">{dimLabel(k)}</option>
                     {filterOpts[k].map((v: string) => <option key={v} value={v}>{v}</option>)}
                   </select>
                 )
@@ -1592,7 +1618,7 @@ function StructureTab({ org, levels, setLevels }: {
 }) {
   const SHAPES: { k: string; label: string }[] = [
     { k: 'sales_head,rsm,asm', label: 'Reporting line' },
-    { k: 'zone,state,subzone', label: 'Geography' },
+    { k: 'zone,state,subzone', label: 'Region & Sub-Region' },
     { k: 'zone,rsm,asm', label: 'Zone → team' },
     { k: 'category,sub_category,brand', label: 'Product' },
     { k: 'channel,business_type,customer_name', label: 'Channel' },
