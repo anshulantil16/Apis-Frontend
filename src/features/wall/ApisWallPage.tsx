@@ -17,6 +17,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ChevronRight, X, Sparkles, Image as ImageIcon, PartyPopper, Users, HeartHandshake, Plus, UploadCloud } from 'lucide-react';
 import { apiFetch } from '../portal/session';
+import { apiBase } from '../../apiBase';
 
 interface WallPhoto {
   src: string; title: string; category: string;
@@ -29,7 +30,7 @@ interface WallPhoto {
   isMine?: boolean;
 }
 
-const WALL_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/wall`;
+const WALL_API = `${apiBase()}/api/wall`;
 const UPLOAD_CATEGORIES = ['Celebrations', 'Team Moments', 'CSR', 'Events', 'Other'];
 
 /* Order here is deliberate — the wall below is a CSS-columns masonry, which

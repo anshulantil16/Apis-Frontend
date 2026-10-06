@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+import { apiBase } from '../apiBase';
+const API_BASE = apiBase();
 export const PROGRESS_API = `${API_BASE}/api/performance`;
 
 async function apiFetch(url: string, opts?: RequestInit) {

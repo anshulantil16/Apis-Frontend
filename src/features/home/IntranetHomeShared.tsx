@@ -13,6 +13,7 @@ import {
   Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp,
   Info, PartyPopper, AlertTriangle,
 } from 'lucide-react';
+import { apiBase } from '../../apiBase';
 
 /* lucide-react dropped brand icons, so these are small hand-rolled SVG marks
    (currentColor, 24x24 viewBox) — standard practice for social "follow us"
@@ -206,7 +207,7 @@ export const NAV_GROUPS: NavGroup[] = [
 
 export interface NewJoiner { name: string; date: string; department?: string; days_ago?: number; }
 
-const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const _API_BASE = apiBase();
 const VACANCIES_API = `${_API_BASE}/api/vacancies`;
 const NOTICEBOARD_API = `${_API_BASE}/api/noticeboard`;
 

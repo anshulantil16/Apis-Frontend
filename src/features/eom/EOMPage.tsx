@@ -6,7 +6,7 @@ import { EOMPanelView }     from '../../Components/EOM/panel/EOMPanelView';
 import { EOMHrView }        from '../../Components/EOM/hr/EOMHrView';
 import { TOOL_STYLES } from '../../Components/toolStyles';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = apiBase();
 export const EOM_API = `${API_BASE}/api/eom`;
 
 type Role = 'employee' | 'hod' | 'panel' | 'hr';
@@ -16,6 +16,7 @@ type LoginStep = 'id' | 'otp' | 'admin_otp';
    hover and batches its writes, where this file's old private copy
    measured inside every mousemove and forced a synchronous layout. */
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
+import { apiBase } from '../../apiBase';
 
 interface EOMPageProps { onNavigateBack?: () => void; }
 

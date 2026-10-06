@@ -17,6 +17,7 @@ type ToolId = 'joining' | 'medical' | 'payroll' | 'attendance' | 'delhi' | 'terr
    hover and batches its writes, where this file's old private copy
    measured inside every mousemove and forced a synchronous layout. */
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
+import { apiBase } from '../../apiBase';
 
 /* The sidebar and page header come from IntranetShell — this page renders only
    its own centre content, starting with the tool switcher below. */
@@ -66,7 +67,7 @@ export function DataExtractorPage() {
     setLoading(true); setError(null);
     abortRef.current = new AbortController();
     const fd = new FormData(); fd.append('file', file);
-    const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const API = apiBase();
 
     try {
       // Territory tool uses its own upload endpoint
@@ -99,7 +100,7 @@ export function DataExtractorPage() {
       selectedColumns.forEach(c => { r[c] = (row as Record<string, unknown>)[c]; });
       return r;
     });
-    const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const API = apiBase();
     try {
       const res = await fetch(`${API}/api/user_management/export-excel/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: filtered }),
@@ -117,7 +118,7 @@ export function DataExtractorPage() {
   const handleSalesExport = async () => {
     if (!salesData.length) return;
     setSalesExporting(true); setError(null);
-    const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const API = apiBase();
     try {
       const res = await fetch(`${API}/api/user_management/export-excel/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: salesData }),

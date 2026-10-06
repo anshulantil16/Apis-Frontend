@@ -8,8 +8,9 @@ import {
   Download, Upload, FileSpreadsheet, Mail, Loader2, CheckCircle2, AlertCircle,
   X, Search, Trash2, RefreshCw, Archive, IndianRupee,
 } from 'lucide-react';
+import { apiBase } from '../../apiBase';
 
-const API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/pms/arrears`;
+const API = `${apiBase()}/api/pms/arrears`;
 
 const money = (n: number | undefined) =>
   n == null ? '—' : `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;

@@ -23,6 +23,7 @@ import {
   Newspaper, Pencil, Clock, Image as ImageIcon, Rss, DownloadCloud, CheckCheck, Ban, AlertTriangle,
 } from 'lucide-react';
 import { apiFetch, portalFetch, type PortalUser } from './session';
+import { apiBase } from '../../apiBase';
 
 type Tab = 'people' | 'access' | 'content' | 'noticeboard' | 'activity' | 'hrms' | 'sessions';
 
@@ -2012,7 +2013,7 @@ function ActivityTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => 
  * anyone may propose an announcement and it queues, while the holiday list is
  * a transcription of a signed circular and only an administrator writes it.
  */
-const NOTICEBOARD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/noticeboard`;
+const NOTICEBOARD_API = `${apiBase()}/api/noticeboard`;
 
 const TONES = [
   ['general', 'General'], ['maintenance', 'Maintenance / downtime'],

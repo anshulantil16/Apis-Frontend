@@ -1,3 +1,4 @@
+import { apiBase } from '../../apiBase';
 /* Goal Setting Hub — everything that talks to the server, in one place.
  *
  * The product is one workflow seen from four seats (employee, manager, HOD,
@@ -6,7 +7,7 @@
  * status — the frontend only asks.
  */
 
-const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const BASE = apiBase();
 export const GS_API = `${BASE}/api/goalsetting`;
 
 export type Role = 'employee' | 'manager' | 'hod' | 'admin';

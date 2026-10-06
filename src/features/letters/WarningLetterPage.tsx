@@ -3,8 +3,9 @@ import {
   Download, Upload, Send, CheckCircle, AlertCircle, Loader, XCircle,
   History, Trash2, Search, RefreshCw, FileWarning, UserPlus,
 } from 'lucide-react';
+import { apiBase } from '../../apiBase';
 
-const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const _API_BASE = apiBase();
 const PMS_API = `${_API_BASE}/api/pms`;
 
 const WARNING_TYPES = [

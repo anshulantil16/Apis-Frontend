@@ -38,6 +38,7 @@ import narendraGangwarPhoto from '../../assets/hierarchy/narendra-gangwar.jpeg';
 import pradeepKrishaliPhoto from '../../assets/hierarchy/pradeep-krishali.jpeg';
 import vaibhavMishraPhoto from '../../assets/hierarchy/vaibhav-mishra.jpeg';
 import vikashAggarwalPhoto from '../../assets/hierarchy/vikash-aggarwal.jpeg';
+import { apiBase } from '../../apiBase';
 
 
 type Level = 'md' | 'hod';
@@ -427,7 +428,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
  * is saved to the backend's `tree_profiles` table (keyed by the person_id
  * scheme built below) and every future page load merges it back in. A card
  * nobody has ever edited simply has no row and renders exactly as before. */
-const TREE_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/accounts/tree`;
+const TREE_API = `${apiBase()}/api/accounts/tree`;
 
 type Profile = {
   person_id: string; name: string; role: string; department: string; photo_url: string;

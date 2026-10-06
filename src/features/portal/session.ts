@@ -1,3 +1,4 @@
+import { apiBase } from '../../apiBase';
 /* The one place that knows whether anyone is signed in.
  *
  * Every tool on this server used to be reachable by anyone who knew its URL.
@@ -7,7 +8,7 @@
  */
 
 export const PORTAL_API =
-  `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/accounts/portal`;
+  `${apiBase()}/api/accounts/portal`;
 
 /* localStorage rather than a cookie: the API is on a different origin in
    development, and a Bearer header works identically in both. The token is

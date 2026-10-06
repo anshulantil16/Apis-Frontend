@@ -2,8 +2,9 @@
    components and chart chrome used by every tab. */
 import { useState, useEffect, useRef } from 'react';
 import { Boxes } from 'lucide-react';
+import { apiBase } from '../../apiBase';
 
-export const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export const _API_BASE = apiBase();
 export const API = `${_API_BASE}/api/sales`;
 
 /* ── The session, and every request that carries it ───────────────────────

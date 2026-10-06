@@ -8,6 +8,7 @@ import {
 import { API, d, dt, fmt, HR_LABEL, roleLabel, type User } from './shared';
 import { Confetti, Pill, StageTrail, Toast } from './components';
 import { PolicyBreakdown } from './PolicyBreakdown';
+import { apiBase } from '../../apiBase';
 
 /** Every journey on this request that is sitting at options_sent — the desk
     found more than one flight or train, and it is this employee's turn to say
@@ -405,7 +406,7 @@ export function Detail({ id, user, onBack, onActioned }: { id: number; user: Use
                   </td>
                   <td className="py-2 text-center">
                     {it.has_bill
-                      ? <a href={`${(import.meta.env.VITE_API_BASE_URL || '')}${it.bill_url}`} target="_blank" rel="noreferrer" className="text-emerald-600 font-bold">View</a>
+                      ? <a href={`${apiBase()}${it.bill_url}`} target="_blank" rel="noreferrer" className="text-emerald-600 font-bold">View</a>
                       : <span className="text-rose-400 font-bold">None</span>}
                   </td>
                 </tr>

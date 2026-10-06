@@ -1,8 +1,9 @@
+import { apiBase } from '../../apiBase';
 /* Shared contract for the TA/DA portal: the API base, the session user shape,
    the option lists the forms offer, and the small pure helpers. Data and
    arithmetic only — no components — so any screen can import it freely. */
 
-export const API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/tada`;
+export const API = `${apiBase()}/api/tada`;
 /* Dates come off the API two ways, and they need different handling.
  *
  * A bare calendar date ("2026-09-01" — travel dates, leg dates) has no

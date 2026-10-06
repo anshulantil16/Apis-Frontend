@@ -5,6 +5,7 @@ import { ManagerView } from '../../Components/Performance/manager/ManagerView';
 import { HRView } from '../../Components/Performance/hr/HRView';
 import { ProgressReportDashboard } from '../../Components/ProgressReport/ProgressReportDashboard';
 import { TOOL_STYLES } from '../../Components/toolStyles';
+import { apiBase } from '../../apiBase';
 
 interface PerformancePageProps {
   onNavigateBack?: () => void;
@@ -12,7 +13,7 @@ interface PerformancePageProps {
 
 type Role = 'employee' | 'manager' | 'hr';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = apiBase();
 export const PERF_API = `${API_BASE}/api/performance`;
 
 // ─── Inner hub wrapper ────────────────────────────────────────────────────────

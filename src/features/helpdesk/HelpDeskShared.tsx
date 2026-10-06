@@ -5,8 +5,9 @@
    data-analysis one — while staying light per the house style. */
 import { useState, useEffect, useRef } from 'react';
 import { Users2 } from 'lucide-react';
+import { apiBase } from '../../apiBase';
 
-export const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export const _API_BASE = apiBase();
 export const API = `${_API_BASE}/api/roompulse`;
 
 /* Ticket attachments come back as a root-relative, signed path

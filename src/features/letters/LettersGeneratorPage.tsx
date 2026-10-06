@@ -12,8 +12,9 @@ import { TOOL_STYLES } from '../../Components/toolStyles';
    hover and batches its writes, where this file's old private copy
    measured inside every mousemove and forced a synchronous layout. */
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
+import { apiBase } from '../../apiBase';
 
-const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const _API_BASE = apiBase();
 const PMS_API = `${_API_BASE}/api/pms`;
 
 type LetterKind = 'appraisal' | 'warning' | 'arrears';

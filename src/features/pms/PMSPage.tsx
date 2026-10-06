@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Motes } from '../goalsetting/chrome';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = apiBase();
 const PMS = `${API_BASE}/api/pms`;
 
 const GRADES: Record<string, { label: string; color: string; gradient: string; glow: string; text: string; light: string; inc_min: number; inc_max: number; promo_pct: number; range: string }> = {
@@ -35,6 +35,7 @@ const POLICY: Record<string, { staff1: number; staff2: number; worker: number; w
    hover and batches its writes, where this file's old private copy
    measured inside every mousemove and forced a synchronous layout. */
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
+import { apiBase } from '../../apiBase';
 
 const fmt   = (n: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n);
 const fmtCr = (n: number) => n >= 10000000 ? `₹${(n/10000000).toFixed(2)}Cr` : n >= 100000 ? `₹${(n/100000).toFixed(2)}L` : `₹${fmt(n)}`;

@@ -12,8 +12,9 @@ import {
   Send, ThumbsUp as RecommendIcon, AlertTriangle, CheckCircle2, Loader2,
 } from 'lucide-react';
 import type { VacancyListing } from './IntranetHomeShared';
+import { apiBase } from '../../apiBase';
 
-const _API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const _API_BASE = apiBase();
 const REFERRALS_API = `${_API_BASE}/api/referrals`;
 
 const DEPARTMENTS = ['Sales', 'Marketing', 'HR', 'Finance', 'Operations', 'IT', 'Production', 'Other'];

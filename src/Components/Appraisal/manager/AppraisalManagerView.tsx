@@ -4,8 +4,9 @@ import {
   Target, MessageSquare, BookOpen, Send, ArrowLeft, FileText, Download,
 } from 'lucide-react';
 import { TOOL_STYLES } from '../../toolStyles';
+import { apiBase } from '../../../apiBase';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = apiBase();
 const PERF_API = `${API_BASE}/api/appraisal`;
 
 const SELF_REVIEW_QUESTIONS = [
