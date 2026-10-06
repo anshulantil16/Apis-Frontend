@@ -103,9 +103,10 @@ const CATEGORY_CARDS: CategoryCard[] = [
    Must match PolicyDocument.CATEGORY_CHOICES on the backend. */
 const CATEGORY_LABELS = CATEGORY_CARDS.map(c => c.label);
 const singularOf = (label: string) => CATEGORY_CARDS.find(c => c.label === label)?.singular ?? 'Document';
-/* Same department list the Employee Referral form uses (ReferralFormPopup.tsx)
-   — kept in step so "department" means the same thing everywhere in the app. */
-const DEPARTMENTS = ['Sales', 'Marketing', 'HR', 'Finance', 'Operations', 'IT', 'Production', 'Other'];
+/* The Employee Referral form's department list (ReferralFormPopup.tsx), plus
+   P & C and Admin — the departments the existing policies are filed under,
+   so a new policy can be filed alongside them. */
+const DEPARTMENTS = ['P & C', 'Admin', 'Sales', 'Marketing', 'HR', 'Finance', 'Operations', 'IT', 'Production', 'Other'];
 
 interface PolicyRow {
   doc: string; category: string; version: number; pages?: number | null;
@@ -128,6 +129,9 @@ interface ApiDocument {
   file: string; moderationStatus: 'pending' | 'approved' | 'rejected';
   reviewNote: string; canDelete: boolean; message?: string;
 }
+/* Uploaded rows by id; built-in rows by filename, the only thing they have. */
+const rowKey = (r: PolicyRow) => (r.id ? `doc-${r.id}` : `builtin-${r.file ?? r.doc}`);
+
 function fromApi(d: ApiDocument): PolicyRow {
   /* d/m/yyyy: the seed rows show d/m only because their year was never
      recorded, not because the year doesn't matter. */
@@ -184,6 +188,18 @@ const CATEGORY_BORDER: Record<string, string> = {
 };
 const AVATAR_RING = ['ring-amber-200 bg-amber-50 text-amber-700', 'ring-violet-200 bg-violet-50 text-violet-700',
   'ring-cyan-200 bg-cyan-50 text-cyan-700', 'ring-emerald-200 bg-emerald-50 text-emerald-700'];
+/* The small bin used on table rows and in the Manual Policy browser. */
+function DeleteIcon({ label, busy, onClick, className = '' }: { label: string; busy: boolean; onClick: () => void; className?: string }) {
+  return (
+    <button type="button" onClick={onClick} disabled={busy}
+      title="Remove this document" aria-label={`Remove ${label}`}
+      className={`w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-300
+                  hover:text-rose-600 hover:bg-rose-50 transition-all disabled:opacity-50 ${className}`}>
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
 function initials(name: string) {
   return name.replace(/^Mr\.?\s*/i, '').split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -196,14 +212,24 @@ export function PoliciesPage() {
   /* Uploaded rows, newest first, ahead of the seed rows that ship with the
      build. Kept apart so a refetch never has to touch the seed rows. */
   const [uploaded, setUploaded] = useState<PolicyRow[]>([]);
-  const rows = useMemo(() => [...uploaded, ...POLICY_ROWS], [uploaded]);
+  /* Built-in PDFs a superadmin has taken off the page (filenames), and
+     whether this viewer may take off more. The files stay in the build;
+     the page just stops listing them. */
+  const [removedBuiltIns, setRemovedBuiltIns] = useState<string[]>([]);
+  const [canRemoveBuiltIns, setCanRemoveBuiltIns] = useState(false);
+  const rows = useMemo(() => [
+    ...uploaded,
+    ...POLICY_ROWS
+      .filter(r => !removedBuiltIns.includes(r.file!))
+      .map(r => ({ ...r, canDelete: canRemoveBuiltIns })),
+  ], [uploaded, removedBuiltIns, canRemoveBuiltIns]);
   const countFor = (label: string) => rows.filter(r => r.category === label).length;
   const maxCategoryCount = Math.max(1, ...CATEGORY_LABELS.map(countFor));
   /* The Manual Policy browser shows the seed PDFs plus any uploaded
      manual policy, so a newly filed policy is browsable the same way. */
-  const manualDocs: ManualPolicyDoc[] = rows
+  const manualDocs = rows
     .filter(r => r.category === 'Manual Policy' && r.file)
-    .map(r => ({ title: r.doc, version: r.id ? `v${r.version}` : MANUAL_POLICIES.find(m => m.file === r.file)?.version, file: r.file! }));
+    .map(r => ({ row: r, title: r.doc, version: r.id ? `v${r.version}` : MANUAL_POLICIES.find(m => m.file === r.file)?.version, file: r.file! }));
 
   /* 'All', or one category — set by the tabs above the table and by each
      card's View All / Browse button. */
@@ -229,6 +255,14 @@ export function PoliciesPage() {
         if (!r.ok || cancelled) return;
         const docs = (await r.json()) as ApiDocument[];
         if (!cancelled) setUploaded(docs.map(fromApi));
+      } catch {
+        /* see below */
+      }
+      try {
+        const r = await apiFetch(`${POLICIES_API}/built-in/removed/`);
+        if (!r.ok || cancelled) return;
+        const data = (await r.json()) as { removed: string[]; canRemove: boolean };
+        if (!cancelled) { setRemovedBuiltIns(data.removed); setCanRemoveBuiltIns(data.canRemove); }
       } catch {
         /* Server unreachable: the seed register still shows, which is the
            whole page minus what people uploaded. */
@@ -301,24 +335,33 @@ export function PoliciesPage() {
     }
   }
 
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  /* Uploaded rows are deleted outright (row and file). A built-in PDF can't
+     be — it's part of the build — so removing one records it as hidden. */
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
   async function handleDelete(row: PolicyRow) {
-    if (!row.id || deletingId) return;
-    if (!window.confirm(`Remove "${row.doc}" from ${row.category}? This deletes the file too.`)) return;
-    setDeletingId(row.id);
+    if (!row.canDelete || deletingKey) return;
+    const builtIn = !row.id;
+    if (!window.confirm(builtIn
+      ? `Remove "${row.doc}" from the page for everyone?`
+      : `Remove "${row.doc}" from ${row.category}? This deletes the file too.`)) return;
+    setDeletingKey(rowKey(row));
     try {
-      const r = await apiFetch(`${POLICIES_API}/documents/${row.id}/`, { method: 'DELETE' });
+      const r = builtIn
+        ? await apiFetch(`${POLICIES_API}/built-in/removed/`, {
+            method: 'POST', body: JSON.stringify({ file: row.file, title: row.doc }) })
+        : await apiFetch(`${POLICIES_API}/documents/${row.id}/`, { method: 'DELETE' });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         setNotice({ tone: 'error', text: data.error || 'Could not remove that document.' });
         return;
       }
-      setUploaded(prev => prev.filter(u => u.id !== row.id));
+      if (builtIn) setRemovedBuiltIns(prev => [...prev, row.file!]);
+      else setUploaded(prev => prev.filter(u => u.id !== row.id));
       setNotice({ tone: 'ok', text: data.message || 'Document removed.' });
     } catch {
       setNotice({ tone: 'error', text: 'Could not reach the server. Please try again.' });
     } finally {
-      setDeletingId(null);
+      setDeletingKey(null);
     }
   }
 
@@ -487,7 +530,7 @@ export function PoliciesPage() {
               </thead>
               <tbody>
                 {filteredRows.map((r, i) => (
-                  <tr key={r.id ?? `seed-${r.file ?? r.doc}`}
+                  <tr key={rowKey(r)}
                     className={`ih-inview border-t border-slate-100 border-l-4 ${CATEGORY_BORDER[r.category] ?? 'border-l-transparent'}
                                hover:bg-amber-50/40 hover:shadow-[inset_0_0_0_9999px_rgba(245,158,11,.02)] transition-all`}
                     style={{ transitionDelay: `${i * 40}ms` }}>
@@ -538,18 +581,11 @@ export function PoliciesPage() {
                         <span className="text-slate-600 font-semibold">{r.reviewedBy}</span>
                       </span>
                     </td>
-                    {/* Only uploaded rows the viewer may remove get the icon;
-                        the seed PDFs ship with the build. */}
+                    {/* Only rows the viewer may remove get the icon: their own
+                        uploads, or anything for a superadmin. */}
                     <td className="px-2 py-3 text-right">
-                      {r.canDelete && r.id && (
-                        <button onClick={() => handleDelete(r)} disabled={deletingId === r.id}
-                          title="Remove this document" aria-label={`Remove ${r.doc}`}
-                          className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-300
-                                     hover:text-rose-600 hover:bg-rose-50 transition-all disabled:opacity-50">
-                          {deletingId === r.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <Trash2 className="w-3.5 h-3.5" />}
-                        </button>
+                      {r.canDelete && (
+                        <DeleteIcon label={r.doc} busy={deletingKey === rowKey(r)} onClick={() => handleDelete(r)} />
                       )}
                     </td>
                   </tr>
@@ -651,11 +687,15 @@ export function PoliciesPage() {
             <div className="flex-1 overflow-y-auto ih-scroll-clean p-6 sm:p-8 bg-slate-50">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {manualDocs.map((doc, i) => (
-                  <div key={doc.file}
+                  <div key={rowKey(doc.row)}
                     className="ih-inview group relative flex flex-col rounded-2xl bg-white border border-slate-200
                                shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-amber-300 transition-all p-4 overflow-hidden"
                     style={{ transitionDelay: `${i * 40}ms` }}>
-                    <div className="flex items-start gap-3 mb-3">
+                    {doc.row.canDelete && (
+                      <DeleteIcon label={doc.title} busy={deletingKey === rowKey(doc.row)}
+                        onClick={() => handleDelete(doc.row)} className="absolute top-2 right-2" />
+                    )}
+                    <div className={`flex items-start gap-3 mb-3 ${doc.row.canDelete ? 'pr-6' : ''}`}>
                       <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center
                                       shadow-md flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
                         <FileText className="w-5.5 h-5.5 text-white" />
