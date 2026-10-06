@@ -176,7 +176,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
      answered by the dump -- which carries no target at all, so the same
      stretch of time asked by month and by day came back with two different
      figures and only one of them had a plan to measure against. */
-  const [span, setSpan] = useState<'fy' | 'all' | 'months'>('fy');
+  const [span, setSpan] = useState<'fy' | 'months'>('fy');
   const [sel, setSel] = useState<Record<string, string[]>>({});
   const [horizon, setHorizon] = useState(6);
 
@@ -185,8 +185,6 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     if (span === 'months') {
       if (mFrom) p.set('month_from', mFrom);
       if (mTo) p.set('month_to', mTo);
-    } else if (span === 'all') {
-      p.set('span', 'all');
     }
     Object.entries(sel).forEach(([k, vs]) => vs.forEach(v => p.append(k, v)));
     return p.toString();
@@ -510,7 +508,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   which sheet answers, which is the first thing anyone asks
                   when a figure looks wrong. */}
               <select value={span}
-                onChange={e => setSpan(e.target.value as 'fy' | 'all' | 'months')}
+                onChange={e => setSpan(e.target.value as 'fy' | 'months')}
                 title={'Every figure is read off the review sheet — the file your YTD AOP and YTD ACH columns live in.'}
                 className="px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50
                            text-[12px] font-bold text-violet-700">
@@ -519,20 +517,44 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     ? `${overview.filters.window.label} to date`
                     : 'This financial year'}
                 </option>
-                <option value="all">All history</option>
                 <option value="months">Choose months…</option>
               </select>
-              {span === 'months' && (
-                <>
-                  <input type="month" value={mFrom} onChange={e => setMFrom(e.target.value)}
-                    aria-label="From month"
-                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
-                  <span className="text-slate-300 text-xs">to</span>
-                  <input type="month" value={mTo} onChange={e => setMTo(e.target.value)}
-                    aria-label="To month"
-                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
-                </>
-              )}
+              {span === 'months' && (() => {
+                /* The months the files actually hold, oldest first so the pair
+                   reads left to right like the sheet does. A free month input
+                   let somebody pick a month no file covers and read the empty
+                   dashboard as a bad month of trading. */
+                const all: string[] = [...(filterOpts?.months || [])].sort();
+                const pick = `px-2.5 py-1.5 rounded-lg border border-violet-200 bg-white
+                              text-[12px] font-bold text-violet-700 cursor-pointer`;
+                return (
+                  <>
+                    <select value={mFrom} aria-label="From month" className={pick}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setMFrom(v);
+                        // Keep the pair in order rather than refusing it: an
+                        // end before its start is an empty dashboard with
+                        // nothing on screen explaining why.
+                        if (v && mTo && v > mTo) setMTo(v);
+                      }}>
+                      <option value="">From…</option>
+                      {all.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+                    </select>
+                    <span className="text-slate-300 text-xs">to</span>
+                    <select value={mTo} aria-label="To month" className={pick}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setMTo(v);
+                        if (v && mFrom && v < mFrom) setMFrom(v);
+                      }}>
+                      <option value="">To…</option>
+                      {all.filter(m => !mFrom || m >= mFrom)
+                          .map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+                    </select>
+                  </>
+                );
+              })()}
               {(['state', 'category', 'channel', 'salesperson'] as const).map(k => (
                 (filterOpts[k] || []).length > 0 && (
                   <select key={k} value=""
