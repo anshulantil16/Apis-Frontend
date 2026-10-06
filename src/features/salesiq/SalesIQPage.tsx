@@ -14,6 +14,17 @@ import {
   Skel, Empty, ChartTip, Leaderboard, Coverage, sqFetch, canEdit,
 } from './SalesIQShared';
 import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
+
+/** '2026-04' -> 'Apr 26', which is how the review sheet heads its columns.
+ *  A chip reading "2026-04" makes the reader translate; the sheet's own
+ *  spelling does not. */
+const monthLabel = (m: string) => {
+  const [y, mo] = (m || '').split('-');
+  const i = Number(mo) - 1;
+  if (!y || Number.isNaN(i) || i < 0 || i > 11) return m;
+  return `${['Jan','Feb','Mar','Apr','May','Jun',
+             'Jul','Aug','Sep','Oct','Nov','Dec'][i]} ${y.slice(2)}`;
+};
 import { SalesIQLogin, loadSession, clearSession } from './SalesIQLogin';
 
 /** Download via fetch+blob rather than a bare <a href>. A plain anchor to a
@@ -149,8 +160,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   const [err, setErr] = useState('');
 
   // filters
-  const [dFrom, setDFrom] = useState('');
-  const [dTo, setDTo] = useState('');
+  // Months ('YYYY-MM'), not days. See the note on `span` below.
+  const [mFrom, setMFrom] = useState('');
+  const [mTo, setMTo] = useState('');
   /* How the dashboard is being asked its question — and therefore which of
      the two uploaded sheets answers it.
 
@@ -159,24 +171,26 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
      actually reads. PRI SALES DUMP is date-wise: one row per invoice line,
      dated to the day, but only the month it was extracted in.
 
-     So 'fy' and 'all' are answered from the review sheet, and 'dates' from
-     the dump. Picking a date range used to leave the sheet in scope, which
-     answered "the 5th to the 10th" with a whole month's sales. */
-  const [span, setSpan] = useState<'fy' | 'all' | 'dates'>('fy');
+     So the window is a range of MONTHS and the review sheet answers all
+     three options. A day-level range was offered once and could only be
+     answered by the dump -- which carries no target at all, so the same
+     stretch of time asked by month and by day came back with two different
+     figures and only one of them had a plan to measure against. */
+  const [span, setSpan] = useState<'fy' | 'all' | 'months'>('fy');
   const [sel, setSel] = useState<Record<string, string[]>>({});
   const [horizon, setHorizon] = useState(6);
 
   const qs = useCallback(() => {
     const p = new URLSearchParams();
-    if (span === 'dates') {
-      if (dFrom) p.set('from', dFrom);
-      if (dTo) p.set('to', dTo);
+    if (span === 'months') {
+      if (mFrom) p.set('month_from', mFrom);
+      if (mTo) p.set('month_to', mTo);
     } else if (span === 'all') {
       p.set('span', 'all');
     }
     Object.entries(sel).forEach(([k, vs]) => vs.forEach(v => p.append(k, v)));
     return p.toString();
-  }, [dFrom, dTo, sel, span]);
+  }, [mFrom, mTo, sel, span]);
 
   const loadAll = useCallback(async () => {
     setLoading(true); setErr('');
@@ -231,9 +245,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // result, so the panel says how many that is rather than leaving the
   // reader to assume it is the whole span on screen.
   const monthsCompared: number = overview?.achievement_basis?.months ?? 0;
-  const dated = span === 'dates';
+  const dated = span === 'months';
   const activeFilters = Object.values(sel).flat().length
-    + (dated && dFrom ? 1 : 0) + (dated && dTo ? 1 : 0);
+    + (dated && mFrom ? 1 : 0) + (dated && mTo ? 1 : 0);
 
   // Dropping the last filter unmounts the chip, but this state would survive
   // it — so the next filter picked would pop the list open on its own.
@@ -251,10 +265,10 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         value: v,
         drop: () => toggle(dim, v),
       }))),
-    ...(dated && dFrom ? [{ key: 'from', dim: 'from', value: dFrom,
-                            drop: () => setDFrom('') }] : []),
-    ...(dated && dTo ? [{ key: 'to', dim: 'to', value: dTo,
-                          drop: () => setDTo('') }] : []),
+    ...(dated && mFrom ? [{ key: 'from', dim: 'from', value: monthLabel(mFrom),
+                            drop: () => setMFrom('') }] : []),
+    ...(dated && mTo ? [{ key: 'to', dim: 'to', value: monthLabel(mTo),
+                          drop: () => setMTo('') }] : []),
   ];
 
   const toggle = (k: string, v: string) =>
@@ -404,7 +418,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                         ))}
                       </div>
                       <button
-                        onClick={() => { setSel({}); setDFrom(''); setDTo(''); setFilterList(false); }}
+                        onClick={() => { setSel({}); setMFrom(''); setMTo(''); setFilterList(false); }}
                         className="w-full px-3.5 py-2.5 text-[12px] font-black text-slate-500
                                    hover:bg-rose-50 hover:text-rose-600 border-t border-slate-100
                                    transition-colors">
@@ -496,10 +510,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   which sheet answers, which is the first thing anyone asks
                   when a figure looks wrong. */}
               <select value={span}
-                onChange={e => setSpan(e.target.value as 'fy' | 'all' | 'dates')}
-                title={span === 'dates'
-                  ? 'Day-level figures come from the invoice dump, which covers the months your extract reaches.'
-                  : 'Month and year figures come from the review sheet — the one your YTD ACH column is read off.'}
+                onChange={e => setSpan(e.target.value as 'fy' | 'all' | 'months')}
+                title={'Every figure is read off the review sheet — the file your YTD AOP and YTD ACH columns live in.'}
                 className="px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50
                            text-[12px] font-bold text-violet-700">
                 <option value="fy">
@@ -508,14 +520,16 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     : 'This financial year'}
                 </option>
                 <option value="all">All history</option>
-                <option value="dates">Date range…</option>
+                <option value="months">Choose months…</option>
               </select>
-              {span === 'dates' && (
+              {span === 'months' && (
                 <>
-                  <input type="date" value={dFrom} onChange={e => setDFrom(e.target.value)}
+                  <input type="month" value={mFrom} onChange={e => setMFrom(e.target.value)}
+                    aria-label="From month"
                     className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
                   <span className="text-slate-300 text-xs">to</span>
-                  <input type="date" value={dTo} onChange={e => setDTo(e.target.value)}
+                  <input type="month" value={mTo} onChange={e => setMTo(e.target.value)}
+                    aria-label="To month"
                     className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-600" />
                 </>
               )}
