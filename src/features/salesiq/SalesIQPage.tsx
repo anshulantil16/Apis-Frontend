@@ -681,38 +681,102 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-              {/* "Prior period" is the stretch immediately before this one,
-                  which for a seasonal business compares a festive quarter
-                  with a quiet one. Where the file has last year in it, show
-                  April against April instead — the comparison the review
-                  sheet makes in its LYTD column. */}
-              <Kpi icon={TrendingUp} label="Revenue" value={overview.revenue} prefix="₹"
-                delta={overview.vs_last_year?.growth_pct ?? overview.revenue_growth_pct}
-                accent="from-indigo-500 to-violet-600" delay={0}
-                sub={overview.vs_last_year
-                  ? `vs ₹${shortInr(overview.vs_last_year.last_year)} same ${overview.vs_last_year.months} months last year`
-                  : overview.prev_period_has_data
-                    ? `vs ₹${shortInr(overview.prev_revenue)} prior period`
-                    // Not a collapse to zero — the file simply does not go
-                    // back that far. "vs ₹0" read as the former.
-                    : 'nothing loaded for the period before this'} />
-              <Kpi icon={Target} label="Target" value={overview.target || 0} prefix="₹"
-                accent="from-emerald-500 to-teal-600" delay={60}
-                sub={overview.achievement_pct !== null
-                  ? `${overview.achievement_pct}% of plan to date (${overview.achievement_basis?.months ?? 0} mo)`
-                  : 'no target set'} />
-              <Kpi icon={ShoppingCart} label="Orders" value={overview.orders} format={inr}
-                accent="from-amber-500 to-orange-600" delay={120}
-                sub={`₹${shortInr(overview.avg_order_value)} avg value`} />
-              <Kpi icon={Boxes} label="Quantity" value={overview.quantity} format={inr}
-                delta={overview.quantity_growth_pct} accent="from-cyan-500 to-blue-600" delay={180}
-                sub="units sold" />
-              <Kpi icon={Users} label="Customers" value={overview.customers} format={inr}
-                accent="from-fuchsia-500 to-pink-600" delay={240} sub="active buyers" />
-              <Kpi icon={Layers} label="SKUs" value={overview.skus} format={inr}
-                accent="from-rose-500 to-red-600" delay={300} sub="products sold" />
-            </div>
+            {/* Plan and actual, read as one relationship.
+
+                This was six equal cards -- Revenue, Target, Orders, Quantity,
+                Customers, SKUs -- which gave the plan the same weight as the
+                SKU count and left the reader to work out the one thing the
+                review actually asks: are we ahead or behind, and by how much.
+                Revenue and Target now sit either side of a single bar that
+                answers it. */}
+            {(() => {
+              const rev = Number(overview.revenue || 0);
+              const tgt = Number(overview.target || 0);
+              const pct = overview.achievement_pct;
+              const gap = rev - tgt;
+              const ahead = gap >= 0;
+              // Clamped: 140% of plan must not render as a bar running off
+              // the end of its own track.
+              const fill = tgt ? Math.max(0, Math.min(100, (rev / tgt) * 100)) : 0;
+              const growth = overview.vs_last_year?.growth_pct
+                           ?? overview.revenue_growth_pct;
+              const months = overview.achievement_basis?.months ?? 0;
+              return (
+                <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm
+                                overflow-hidden siq-reveal">
+                  <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x
+                                  divide-slate-100">
+                    <div className="p-6 sm:p-7">
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500
+                                         to-violet-600 grid place-items-center shrink-0">
+                          <TrendingUp className="w-4 h-4 text-white" />
+                        </span>
+                        <span className="text-[11px] font-black tracking-[0.12em]
+                                         text-slate-400 uppercase">Revenue</span>
+                        {growth !== null && growth !== undefined && (
+                          <span className={`ml-auto px-2 py-0.5 rounded-full text-[11px] font-black
+                            ${growth >= 0 ? 'bg-emerald-50 text-emerald-600'
+                                          : 'bg-rose-50 text-rose-600'}`}>
+                            {growth >= 0 ? '+' : ''}{growth}%
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-3 text-[34px] sm:text-[40px] leading-none font-black
+                                    text-slate-900 tabular-nums">
+                        ₹{shortInr(rev)}
+                      </p>
+                      <p className="mt-2 text-[12px] font-semibold text-slate-500">
+                        {overview.vs_last_year
+                          ? `vs ₹${shortInr(overview.vs_last_year.last_year)} same ${overview.vs_last_year.months} months last year`
+                          : overview.prev_period_has_data
+                            ? `vs ₹${shortInr(overview.prev_revenue)} prior period`
+                            : 'nothing loaded for the period before this'}
+                      </p>
+                    </div>
+                    <div className="p-6 sm:p-7">
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500
+                                         to-teal-600 grid place-items-center shrink-0">
+                          <Target className="w-4 h-4 text-white" />
+                        </span>
+                        <span className="text-[11px] font-black tracking-[0.12em]
+                                         text-slate-400 uppercase">Target</span>
+                      </div>
+                      <p className="mt-3 text-[34px] sm:text-[40px] leading-none font-black
+                                    text-slate-900 tabular-nums">
+                        {tgt ? `₹${shortInr(tgt)}` : '—'}
+                      </p>
+                      <p className="mt-2 text-[12px] font-semibold text-slate-500">
+                        {tgt
+                          ? `${months} month${months === 1 ? '' : 's'} of plan`
+                          : 'no target set for this window'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {tgt > 0 && (
+                    <div className="px-6 sm:px-7 py-5 border-t border-slate-100 bg-slate-50/70">
+                      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                        <p className="text-[13px] font-black text-slate-700">
+                          {pct !== null && pct !== undefined ? `${pct}% of plan` : 'Against plan'}
+                        </p>
+                        <p className={`text-[13px] font-black tabular-nums
+                          ${ahead ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {ahead ? 'ahead by ' : 'behind by '}₹{shortInr(Math.abs(gap))}
+                        </p>
+                      </div>
+                      <div className="mt-2.5 h-2.5 rounded-full bg-slate-200/80 overflow-hidden">
+                        <div className={`h-full rounded-full transition-[width] duration-700
+                          ${ahead ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                                  : 'bg-gradient-to-r from-amber-500 to-rose-500'}`}
+                          style={{ width: `${fill}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
               <Panel title="Revenue trend" subtitle="Monthly sales against target" icon={Activity}
