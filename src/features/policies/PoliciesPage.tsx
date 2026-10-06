@@ -271,8 +271,8 @@ export function PoliciesPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Add Document form — one form for every category, opened from the
-  // header button or a card's "+ Add" with that card's category preset.
+  // Add Document form — one form for every category, opened from a card's
+  // "+ Add" (or the empty-table link) with that category preset.
   const [addPolicyOpen, setAddPolicyOpen] = useState(false);
   const [newDoc, setNewDoc] = useState('');
   const [newCategory, setNewCategory] = useState(CATEGORY_LABELS[0]);
@@ -419,7 +419,7 @@ export function PoliciesPage() {
               </div>
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Policies</h1>
+                  <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Guidelines</h1>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-[10px] font-black text-amber-600">
                     <AnimatedCount value={rows.length} /> documents
                   </span>
@@ -427,11 +427,6 @@ export function PoliciesPage() {
                 <p className="text-sm text-slate-500 mt-1">SOPs, policies, templates, work instructions and formats — add, find and manage them in one place.</p>
               </div>
             </div>
-            <button onClick={() => openAddForm(activeCategory === 'All' ? 'Manual Policy' : activeCategory)}
-              className="ih-sheen group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 text-white
-                         font-black text-sm shadow-lg shadow-amber-500/30 transition-all hover:-translate-y-0.5 shrink-0 self-start lg:self-auto">
-              <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />Add Document
-            </button>
           </div>
         </div>
 
