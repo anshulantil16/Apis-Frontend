@@ -1857,8 +1857,29 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                   );
                 })}
               </div>
+              {/* Two different nothings, and they must not read the same.
+                  "No tools in this category" is a filter that happens to be
+                  empty. Nothing granted AT ALL is the state every employee is
+                  in the day the portal opens, and telling them a category is
+                  empty reads as a broken page rather than as "your access is
+                  on its way". */}
               {filteredTools.length === 0 && (
-                <p className="text-center text-[12px] text-slate-400 py-8">No tools in this category yet.</p>
+                VISIBLE_TOOLS.length === 0 ? (
+                  <div className="text-center py-12 px-6 rounded-2xl border border-dashed border-slate-200 bg-white/60">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500
+                                    flex items-center justify-center shadow-md mx-auto mb-3">
+                      <LayoutGrid className="w-5 h-5 text-white" />
+                    </div>
+                    <p className="text-[14px] font-black text-slate-900">No tools yet</p>
+                    <p className="text-[12px] text-slate-500 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                      You're signed in — an administrator still needs to give you
+                      access to the tools you need. Everything else on this page is
+                      yours to read in the meantime.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-center text-[12px] text-slate-400 py-8">No tools in this category yet.</p>
+                )
               )}
             </section>
 
