@@ -28,21 +28,30 @@ interface WallPhoto {
   submittedBy?: string;
   reviewNote?: string;
   isMine?: boolean;
-  /* Seed photos only: crop the tile to this aspect ratio (a Tailwind
-     aspect class) instead of the photo's own height. Kept to the top so a
-     portrait loses its feet, not its face. The lightbox still shows it whole. */
-  tileAspect?: string;
 }
 
 const WALL_API = `${apiBase()}/api/wall`;
+
+/* Columns the collage grid is showing — must match its grid-cols classes
+   (1 / sm:2 / lg:3 / xl:4), which follow the viewport width. */
+function columnsFor(width: number) {
+  return width >= 1280 ? 4 : width >= 1024 ? 3 : width >= 640 ? 2 : 1;
+}
+function useWallColumns() {
+  const [cols, setCols] = useState(() => columnsFor(window.innerWidth));
+  useEffect(() => {
+    const onResize = () => setCols(columnsFor(window.innerWidth));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return cols;
+}
 const UPLOAD_CATEGORIES = ['Celebrations', 'Team Moments', 'CSR', 'Events', 'Other'];
 
-/* Order here is deliberate — the wall below is a CSS-columns masonry, which
-   fills column 1 top-to-bottom before moving to column 2, then 3, then 4, so
-   whatever's placed at the end of this array lands bunched together in the
-   last column or two rather than spread across the wall. Interleaving the
-   later additions among the originals keeps every new photo landing in a
-   different column instead of piling up on the right. */
+/* Order here is deliberate — the wall fills row by row, so interleaving the
+   later additions among the originals spreads them across the wall instead
+   of bunching them at the bottom. Portraits (the tall tiles) are kept apart
+   so two of them never sit side by side. */
 const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall01.jpeg', title: 'Happy Independence Day', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall02.jpeg', title: 'Community Outreach Drive', category: 'CSR' },
@@ -52,7 +61,7 @@ const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall04.jpeg', title: 'Birthday Surprise', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall10.png', title: 'Traditional Office Celebration', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall05.jpeg', title: 'Team Lunch Together', category: 'Team Moments' },
-  { src: '/Apis_wall/Apiswall17.jpeg', title: 'APIS on the Shelves', category: 'Team Moments', tileAspect: 'aspect-[7/8]' },
+  { src: '/Apis_wall/Apiswall17.jpeg', title: 'APIS on the Shelves', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall14.png', title: 'AIL Cares Community Drive', category: 'CSR' },
   { src: '/Apis_wall/Apiswall06.jpeg', title: 'Birthday Wishes', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall11.png', title: 'Team Stretch Break', category: 'Team Moments' },
@@ -85,6 +94,10 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
   const [uploaded, setUploaded] = useState<WallPhoto[]>([]);
   const [filter, setFilter] = useState('All');
   const [lightbox, setLightbox] = useState<WallPhoto | null>(null);
+  /* Photos measured as portrait once loaded, by src — those take two rows
+     of the collage. Measured rather than declared so an upload gets the
+     right shape without anybody saying what shape it is. */
+  const [tall, setTall] = useState<Record<string, boolean>>({});
   const [uploadOpen, setUploadOpen] = useState(false);
   const [previewSrc, setPreviewSrc] = useState('');
   const [busy, setBusy] = useState(false);
@@ -109,6 +122,23 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
   const categoryList = Array.from(new Set(photos.map(p => p.category)));
   const categories = ['All', ...categoryList];
   const filtered = filter === 'All' ? photos : photos.filter(p => p.category === filter);
+
+  /* Make the collage come out a full rectangle. Each portrait takes two
+     cells; if the total still isn't a multiple of the column count, the
+     bottom row ends in holes. Widen just enough landscape photos to two
+     columns to make up the difference, spread evenly through the wall so
+     the wide tiles don't cluster. */
+  const cols = useWallColumns();
+  const wide = new Set<string>();
+  if (cols > 1) {
+    const landscapes = filtered.filter(p => !tall[p.src]);
+    const cells = filtered.length + (filtered.length - landscapes.length);
+    const short = (cols - (cells % cols)) % cols;
+    const n = Math.min(short, landscapes.length);
+    for (let k = 0; k < n; k++) {
+      wide.add(landscapes[Math.floor(((k + 0.5) * landscapes.length) / n)].src);
+    }
+  }
   const countFor = (c: string) => c === 'All' ? photos.length : photos.filter(p => p.category === c).length;
   const awaiting = uploaded.filter(p => p.moderationStatus === 'pending');
 
@@ -267,25 +297,36 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
           </div>
         )}
 
-        {/* masonry photo wall — CSS columns, not a fixed-row grid, so every
-            photo keeps its own real size/aspect ratio instead of being
-            cropped to a uniform tile. */}
-        <div className="[column-count:1] sm:[column-count:2] lg:[column-count:3] xl:[column-count:4] [column-gap:1rem]">
+        {/* collage wall — a grid with one fixed row height, so rows line up
+            edge to edge. A landscape photo fills one cell; a portrait spans
+            two rows so it isn't cropped to a sliver. grid-flow-dense lets the
+            browser backfill any hole a tall tile would leave. Tiles crop to
+            fill (object-cover); the lightbox shows each photo whole.
+            Replaces a CSS-columns masonry whose columns ended at ragged,
+            different heights. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-[210px] grid-flow-row-dense">
           {filtered.map((p, i) => {
             const s = styleFor(p.category);
             const CatIcon = s.icon;
             const pending = p.moderationStatus === 'pending';
             const rejected = p.moderationStatus === 'rejected';
+            const isTall = !!tall[p.src];
             return (
               <button key={p.id ? `u${p.id}` : p.src} onClick={() => setLightbox(p)}
                 style={{ animationDelay: `${i * 60}ms` }}
-                className={`ih-pop-in group relative block w-full mb-4 break-inside-avoid rounded-2xl overflow-hidden
-                           bg-white shadow-sm hover:shadow-2xl transition-all text-left ${
+                className={`ih-pop-in group relative block w-full h-full rounded-2xl overflow-hidden
+                           bg-white shadow-sm hover:shadow-2xl transition-all text-left ${isTall ? 'row-span-2' : ''} ${
+                  wide.has(p.src) ? 'col-span-2' : ''} ${
                   pending ? 'border-2 border-dashed border-amber-300'
                     : rejected ? 'border-2 border-rose-200' : 'border border-slate-200'}`}>
                 <img src={p.src} alt={p.title} loading="lazy"
-                  className={`w-full block transition-transform duration-500 group-hover:scale-105 ${
-                    p.tileAspect ? `${p.tileAspect} object-cover object-top` : 'h-auto'} ${
+                  onLoad={e => {
+                    const im = e.currentTarget;
+                    const portrait = im.naturalHeight > im.naturalWidth * 1.05;
+                    if (portrait !== isTall) setTall(prev => ({ ...prev, [p.src]: portrait }));
+                  }}
+                  className={`w-full h-full block object-cover ${isTall ? 'object-top' : 'object-center'}
+                              transition-transform duration-500 group-hover:scale-105 ${
                     pending ? 'opacity-60' : ''}`} />
                 {(pending || rejected) && (
                   <span className={`absolute top-10 left-2.5 z-10 px-2 py-1 rounded-lg text-[9.5px] font-black uppercase
