@@ -28,6 +28,10 @@ interface WallPhoto {
   submittedBy?: string;
   reviewNote?: string;
   isMine?: boolean;
+  /* Seed photos only: crop the tile to this aspect ratio (a Tailwind
+     aspect class) instead of the photo's own height. Kept to the top so a
+     portrait loses its feet, not its face. The lightbox still shows it whole. */
+  tileAspect?: string;
 }
 
 const WALL_API = `${apiBase()}/api/wall`;
@@ -48,6 +52,7 @@ const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall04.jpeg', title: 'Birthday Surprise', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall10.png', title: 'Traditional Office Celebration', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall05.jpeg', title: 'Team Lunch Together', category: 'Team Moments' },
+  { src: '/Apis_wall/Apiswall17.jpeg', title: 'APIS on the Shelves', category: 'Team Moments', tileAspect: 'aspect-[7/8]' },
   { src: '/Apis_wall/Apiswall14.png', title: 'AIL Cares Community Drive', category: 'CSR' },
   { src: '/Apis_wall/Apiswall06.jpeg', title: 'Birthday Wishes', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall11.png', title: 'Team Stretch Break', category: 'Team Moments' },
@@ -279,7 +284,8 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
                   pending ? 'border-2 border-dashed border-amber-300'
                     : rejected ? 'border-2 border-rose-200' : 'border border-slate-200'}`}>
                 <img src={p.src} alt={p.title} loading="lazy"
-                  className={`w-full h-auto block transition-transform duration-500 group-hover:scale-105 ${
+                  className={`w-full block transition-transform duration-500 group-hover:scale-105 ${
+                    p.tileAspect ? `${p.tileAspect} object-cover object-top` : 'h-auto'} ${
                     pending ? 'opacity-60' : ''}`} />
                 {(pending || rejected) && (
                   <span className={`absolute top-10 left-2.5 z-10 px-2 py-1 rounded-lg text-[9.5px] font-black uppercase
