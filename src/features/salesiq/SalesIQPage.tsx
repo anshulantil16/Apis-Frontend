@@ -135,8 +135,13 @@ type Tab = 'overview' | 'intelligence' | 'geography' | 'products' | 'customers' 
  * wording problem, so the mapping lives here instead. */
 const DIM_LABEL: Record<string, string> = {
   zone: 'Region',
-  state: 'Sub-Region',
-  subzone: 'Sub-Zone',
+  // The sheet's Sub-Region lives in `subzone`, verbatim -- MH-1, KA-5, Lulu.
+  // `state` holds a state name DERIVED from that code (MH-1 -> Maharashtra)
+  // so the sheet and the invoice dump name states the same way. Labelling
+  // `state` Sub-Region showed the derivation in place of the sheet's own
+  // words, which is not what the column says.
+  subzone: 'Sub-Region',
+  state: 'State',
   rsm: 'RSM',
   asm: 'ASM',
   sales_head: 'Head',
@@ -581,7 +586,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   </>
                 );
               })()}
-              {(['zone', 'state', 'channel', 'category', 'salesperson'] as const).map(k => (
+              {(['zone', 'subzone', 'channel', 'category', 'salesperson'] as const).map(k => (
                 (filterOpts[k] || []).length > 0 && (
                   <select key={k} value=""
                     onChange={e => e.target.value && toggle(k, e.target.value)}
@@ -1618,7 +1623,7 @@ function StructureTab({ org, levels, setLevels }: {
 }) {
   const SHAPES: { k: string; label: string }[] = [
     { k: 'sales_head,rsm,asm', label: 'Reporting line' },
-    { k: 'zone,state,subzone', label: 'Region & Sub-Region' },
+    { k: 'zone,subzone,state', label: 'Region & Sub-Region' },
     { k: 'zone,rsm,asm', label: 'Zone → team' },
     { k: 'category,sub_category,brand', label: 'Product' },
     { k: 'channel,business_type,customer_name', label: 'Channel' },
