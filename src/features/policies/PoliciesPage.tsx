@@ -611,7 +611,7 @@ export function PoliciesPage() {
                 <BarChart3 className="w-4 h-4 text-amber-600" />
                 <span className="ih-pulse-glow absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">1</span>
               </span>
-              <span className="text-sm font-black text-slate-900">Policies Summary</span>
+              <span className="text-sm font-black text-slate-900">Summary</span>
             </span>
             <span className="flex items-center gap-3">
               <span className="text-[11px] font-black text-amber-600 flex items-center gap-1">
