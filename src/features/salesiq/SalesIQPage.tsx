@@ -1542,9 +1542,10 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                       been running. It is deliberately <b>not</b> the plan copied back: at
                       {' '}{forecast.run_rate.rate_pct}% of AOP it sits
                       {' '}{forecast.run_rate.rate_pct >= 100 ? 'above' : 'below'} the plan by
-                      design, and it would move if the achievement rate moved. The calendar notes
-                      below name what the business knows sits in each month; they explain the
-                      shape, they do not produce it.
+                      design, and it would move if the achievement rate moved. The notes against each
+                      month below are dated calendar events — festivals, the year boundary, the
+                      monsoon — and nothing more: they are there to sit beside the number, not
+                      to claim what it means for APIS.
                     </>) : (<>
                       No AOP reaches these months, so this is an extrapolation of the sales
                       history alone and has nothing anchoring it to a plan. Upload the AOP sheet
@@ -1560,7 +1561,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="text-slate-400">
-                    <tr>{['Month', 'Forecast', 'Low', 'High', 'AOP', 'Gap', "What's in this month"].map(h => (
+                    <tr>{['Month', 'Forecast', 'Low', 'High', 'AOP', 'Gap', 'Also this month'].map(h => (
                       <th key={h} className="text-left text-[10px] font-black uppercase tracking-widest px-3 py-2 whitespace-nowrap">{h}</th>
                     ))}</tr>
                   </thead>
@@ -1588,7 +1589,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                               <span className={`inline-block mb-1 px-2 py-0.5 rounded-full text-[10px] font-black
                                 ${p.seasonal_pct >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                                 {p.seasonal_pct >= 0 ? '+' : ''}{p.seasonal_pct}% vs an average month
-                                <span className="font-semibold"> · from your own history</span>
+                                <span className="font-semibold"> · measured from APIS invoices</span>
                               </span>
                             )}
                             <ul className="space-y-0.5">
@@ -2131,6 +2132,49 @@ function StructureTab({ org, levels, setLevels }: {
           accent="from-emerald-500 to-teal-600" delay={counts.length * 60}
           sub="distinct customer codes" />
       </div>
+
+      {/* How the branches fall across the bands.
+
+          Shown because the bands put most of this organisation in red, and a
+          colour that is on almost every row has stopped carrying a signal.
+          Said out loud — "19 of 23 under 70% of AOP" — it reads as what it
+          probably is, a statement about how the plan was set, rather than as
+          nineteen separate accusations. If that is not what it is, the line
+          is still the fastest way to notice. */}
+      {org.status_tally?.total > 0 && (
+        <Reveal>
+          <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm px-5 py-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              {([['green', 'on or ahead'], ['amber', 'watch'], ['red', 'under the red line']] as const)
+                .map(([k, what]) => (
+                  org.status_tally[k] > 0 && (
+                    <span key={k} className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${RAG[k].dot}`} />
+                      <span className="text-[13px] font-black text-slate-800 tabular-nums">
+                        {org.status_tally[k]}
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-400">{what}</span>
+                    </span>
+                  )
+              ))}
+              {org.status_tally.unrated > 0 && (
+                <span className="text-[11px] font-semibold text-slate-400">
+                  {org.status_tally.unrated} with no AOP set
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-[11px] text-slate-400 leading-relaxed">
+              Red is under {org.status_thresholds?.red_below}% of AOP, green is
+              {' '}{org.status_thresholds?.green_at}% or better
+              {org.status_tally.red > org.status_tally.total / 2 && (
+                <> — and most of this list is red, which usually says more about how the
+                AOP was set than about the people under it. The thresholds are a setting,
+                not a fact; they can be moved.</>
+              )}.
+            </p>
+          </div>
+        </Reveal>
+      )}
 
       {/* Where these counts come from, once, rather than a footnote per card.
           Somebody asked "why 23 RSMs" and nothing on the page could answer. */}
