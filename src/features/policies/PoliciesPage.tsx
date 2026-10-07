@@ -297,9 +297,15 @@ export function PoliciesPage() {
     resetAddPolicyForm();
   }
 
+  /* Every field is mandatory — the backend refuses an upload missing any of
+     them, so the button stays disabled until all are filled. Category,
+     department and version always hold a value (selects / number input). */
+  const formComplete = !!(newDoc.trim() && newApprovedBy.trim() && newReviewedBy.trim()
+    && newApprovalDate && newDepartment && newFile);
+
   async function handleAddPolicy(e: FormEvent) {
     e.preventDefault();
-    if (!newDoc.trim() || !newFile || saving) return;
+    if (!formComplete || saving) return;
 
     const body = new FormData();
     body.append('title', newDoc.trim());
@@ -780,7 +786,7 @@ export function PoliciesPage() {
 
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto ih-scroll-clean">
               <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Document Name</label>
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Document Name<span className="text-rose-500"> *</span></label>
                 <input value={newDoc} onChange={e => setNewDoc(e.target.value)} required
                   placeholder="e.g. Remote Work Policy"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
@@ -789,7 +795,7 @@ export function PoliciesPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Category</label>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Category<span className="text-rose-500"> *</span></label>
                   <select value={newCategory} onChange={e => setNewCategory(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
                                outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all">
@@ -797,7 +803,7 @@ export function PoliciesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Department</label>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Department<span className="text-rose-500"> *</span></label>
                   <select value={newDepartment} onChange={e => setNewDepartment(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
                                outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all">
@@ -807,7 +813,7 @@ export function PoliciesPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Version</label>
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Version<span className="text-rose-500"> *</span></label>
                 <input type="number" min={1} value={newVersion}
                   onChange={e => setNewVersion(Math.max(1, parseInt(e.target.value, 10) || 1))}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
@@ -816,15 +822,15 @@ export function PoliciesPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approved By (optional)</label>
-                  <input value={newApprovedBy} onChange={e => setNewApprovedBy(e.target.value)}
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approved By<span className="text-rose-500"> *</span></label>
+                  <input value={newApprovedBy} onChange={e => setNewApprovedBy(e.target.value)} required
                     placeholder="e.g. Vimal Anand"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
                                placeholder:text-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Reviewed By (optional)</label>
-                  <input value={newReviewedBy} onChange={e => setNewReviewedBy(e.target.value)}
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Reviewed By<span className="text-rose-500"> *</span></label>
+                  <input value={newReviewedBy} onChange={e => setNewReviewedBy(e.target.value)} required
                     placeholder="e.g. Pankaj"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
                                placeholder:text-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
@@ -832,14 +838,14 @@ export function PoliciesPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approval Date (optional)</label>
-                <input type="date" value={newApprovalDate} onChange={e => setNewApprovalDate(e.target.value)}
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approval Date<span className="text-rose-500"> *</span></label>
+                <input type="date" value={newApprovalDate} onChange={e => setNewApprovalDate(e.target.value)} required
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
                              outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
               </div>
 
               <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">File · PDF, Word, Excel or PowerPoint, up to 25 MB</label>
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">File · PDF, Word, Excel or PowerPoint, up to 25 MB<span className="text-rose-500"> *</span></label>
                 <button type="button" onClick={() => fileInputRef.current?.click()}
                   className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-dashed transition-all text-left
                              ${newFile ? 'border-amber-300 bg-amber-50' : 'border-slate-200 hover:border-amber-300 hover:bg-amber-50/50'}`}>
@@ -864,7 +870,7 @@ export function PoliciesPage() {
                 className="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-[13px] font-bold transition-all disabled:opacity-50">
                 Cancel
               </button>
-              <button type="submit" disabled={!newDoc.trim() || !newFile || saving}
+              <button type="submit" disabled={!formComplete || saving}
                 className="ih-sheen inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600
                            hover:from-amber-600 hover:to-orange-700 text-white text-[13px] font-black shadow-md shadow-amber-200
                            transition-all disabled:opacity-50 disabled:cursor-not-allowed">
