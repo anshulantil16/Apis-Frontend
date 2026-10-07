@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Area, BarChart, Bar, PieChart, Pie, Cell, ComposedChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  ReferenceArea, ReferenceLine,
 } from 'recharts';
 import {
   Upload, Download, TrendingUp, Target, Users, Package, MapPin, Building2, Network, ChevronDown,
@@ -326,7 +327,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     if (!forecast) return [];
     const hist = (forecast.history || []).map((h: any) => ({
       label: h.label, actual: h.value, aop: h.aop ?? null,
-      forecast: null, lower: null, upper: null,
+      forecast: null, lower: null, upper: null, projected: false,
     }));
     // Bridge point: repeat the last actual as the forecast's origin so the two
     // lines visually connect instead of leaving a gap at the seam.
@@ -335,10 +336,28 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
       label: p.label || new Date(p.period).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
       actual: null, forecast: p.value, lower: p.lower, upper: p.upper,
       aop: p.aop ?? null,
-      band: [p.lower, p.upper],
+      // The band is drawn as a stacked pair rather than two overlapping
+      // areas: a base that is invisible up to `lower`, and a fill of the
+      // height between the two. Overlapping areas had to paint the lower one
+      // white, which punched a hole through the gridlines and the AOP bars
+      // underneath it.
+      bandBase: p.lower,
+      bandSpan: Math.max(0, p.upper - p.lower),
+      projected: true,
     }));
     return [...hist.slice(0, -1), ...bridge, ...fut];
   }, [forecast]);
+
+  /* Where fact stops and projection starts, for the divider and the shaded
+     half. The bridge month is the last real one, so it carries the line. */
+  const fcSeam = useMemo(() => {
+    const first = fcChart.findIndex((d: any) => d.projected);
+    return {
+      at: first > 0 ? fcChart[first - 1].label : null,
+      from: first >= 0 ? fcChart[first].label : null,
+      to: fcChart.length ? fcChart[fcChart.length - 1].label : null,
+    };
+  }, [fcChart]);
 
   /* "anshul.antil" off the end of an address is not how anybody writes their
      own name. Split on the separators a work address uses, drop anything that
@@ -721,8 +740,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                                   divide-slate-100">
                     <div className="p-6 sm:p-7">
                       <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500
-                                         to-violet-600 grid place-items-center shrink-0">
+                        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-500
+                                         to-emerald-600 grid place-items-center shrink-0">
                           <TrendingUp className="w-4 h-4 text-white" />
                         </span>
                         <span className="text-[11px] font-black tracking-[0.12em]
@@ -749,8 +768,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     </div>
                     <div className="p-6 sm:p-7">
                       <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500
-                                         to-teal-600 grid place-items-center shrink-0">
+                        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400
+                                         to-orange-500 grid place-items-center shrink-0">
                           <Target className="w-4 h-4 text-white" />
                         </span>
                         <span className="text-[11px] font-black tracking-[0.12em]
@@ -780,7 +799,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                       <div className="mt-2.5 h-2.5 rounded-full bg-slate-200/80 overflow-hidden">
                         <div className={`h-full rounded-full transition-[width] duration-700
                           ${ahead ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                                  : 'bg-gradient-to-r from-amber-500 to-rose-500'}`}
+                                  : 'bg-gradient-to-r from-rose-400 to-rose-600'}`}
                           style={{ width: `${fill}%` }} />
                       </div>
                     </div>
@@ -796,9 +815,12 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   <ResponsiveContainer width="100%" height={300}>
                     <ComposedChart data={trend.results}>
                       <defs>
+                        {/* Teal for invoiced sales and amber for the AOP,
+                            the same two roles the forecast chart uses, so the
+                            colours mean one thing across the dashboard. */}
                         <linearGradient id="gRev" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.45} />
-                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
+                          <stop offset="0%" stopColor="#0d9488" stopOpacity={0.32} />
+                          <stop offset="100%" stopColor="#0d9488" stopOpacity={0.01} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -810,7 +832,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                           dropped to the axis for the rest of the financial
                           year and read as a collapse. The dashed target line
                           carries on past it, which is the real story. */}
-                      <Area type="monotone" dataKey="revenue" name="Revenue (Sales)" stroke="#6366f1" strokeWidth={2.5}
+                      <Area type="monotone" dataKey="revenue" name="Revenue (Sales)" stroke="#0d9488" strokeWidth={2.5}
                         fill="url(#gRev)" animationDuration={1100} connectNulls={false} />
                       <Line type="monotone" dataKey="target" name="AOP" stroke="#f59e0b" strokeWidth={2}
                         strokeDasharray="5 4" dot={false} animationDuration={1300} />
@@ -1273,48 +1295,111 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               subtitle={`${forecast.spec?.name || forecast.method} · fitted on ${forecast.history_months} months`}
               right={
                 <div className="flex items-center gap-1">
-                  {[3, 6, 12].map(h => (
+                  {/* 3 and 6 only. The forecast stops at the end of the AOP
+                      whatever is asked for, so a 12M button was a control
+                      that changed nothing most of the year. */}
+                  {[3, 6].map(h => (
                     <button key={h} onClick={() => setHorizon(h)}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all
-                        ${horizon === h ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                        ${horizon === h ? 'bg-violet-600 text-white shadow-md shadow-violet-500/30'
                           : 'text-slate-400 hover:bg-slate-100'}`}>{h}M</button>
                   ))}
                 </div>
               }>
-              <ResponsiveContainer width="100%" height={360}>
-                <ComposedChart data={fcChart}>
+              {/* Three series, three KINDS of mark, because they are three
+                  kinds of thing and three shades of one colour could not say
+                  so. The AOP is a bar -- a plan is the height to clear, and
+                  it sits behind everything as the thing being measured
+                  against. Invoiced sales are a solid filled line: fact, and
+                  the only series with weight under it. The forecast is a
+                  dashed line in a different hue entirely, inside its own
+                  band, over a shaded half of the chart that says plainly
+                  where fact stops. */}
+              <ResponsiveContainer width="100%" height={380}>
+                <ComposedChart data={fcChart} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="gAct" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
+                    <linearGradient id="fcActual" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0d9488" stopOpacity={0.30} />
+                      <stop offset="100%" stopColor="#0d9488" stopOpacity={0.01} />
                     </linearGradient>
-                    <linearGradient id="gBand" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#d946ef" stopOpacity={0.18} />
-                      <stop offset="100%" stopColor="#d946ef" stopOpacity={0.02} />
+                    <linearGradient id="fcBand" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.26} />
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.10} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={shortInr} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={60} />
-                  <Tooltip content={<ChartTip />} />
-                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                  {/* The band is drawn first so every line sits on top of it.
-                      Low and High are also drawn as their own thin lines, not
-                      only as a shaded edge, because the review reads them as
-                      numbers — "worst case 4.2 crore" — and a gradient edge
-                      cannot be read off an axis. */}
-                  <Area type="monotone" dataKey="upper" name="High (95%)" stroke="#e879f9" strokeWidth={1}
-                    strokeDasharray="3 3" fill="url(#gBand)" animationDuration={900} connectNulls />
-                  <Area type="monotone" dataKey="lower" name="Low (95%)" stroke="#e879f9" strokeWidth={1}
-                    strokeDasharray="3 3" fill="#fff" animationDuration={900} connectNulls />
-                  <Area type="monotone" dataKey="actual" name="Revenue (Sales)" stroke="#6366f1" strokeWidth={2.5}
-                    fill="url(#gAct)" animationDuration={1100} connectNulls={false} />
-                  <Line type="monotone" dataKey="aop" name="AOP" stroke="#f59e0b" strokeWidth={2}
-                    dot={false} animationDuration={1200} connectNulls />
-                  <Line type="monotone" dataKey="forecast" name="Forecast" stroke="#d946ef" strokeWidth={2.5}
-                    strokeDasharray="6 4" dot={{ r: 3, fill: '#d946ef' }} animationDuration={1300} connectNulls />
+
+                  {/* The projected half, tinted. Without it the dashed line
+                      was the only clue that half this chart has not happened. */}
+                  {fcSeam.from && fcSeam.to && (
+                    <ReferenceArea x1={fcSeam.from} x2={fcSeam.to} fill="#8b5cf6"
+                      fillOpacity={0.045} ifOverflow="extendDomain" />
+                  )}
+
+                  <CartesianGrid strokeDasharray="2 6" stroke="#e2e8f0" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10.5, fill: '#94a3b8', fontWeight: 700 }}
+                    axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                  <YAxis tickFormatter={shortInr} tick={{ fontSize: 10.5, fill: '#94a3b8', fontWeight: 700 }}
+                    axisLine={false} tickLine={false} width={62} />
+                  <Tooltip content={<ChartTip />} cursor={{ fill: '#6366f10d' }} />
+                  <Legend wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 10 }}
+                    iconType="plainline" iconSize={14} />
+
+                  {/* AOP behind everything: the height to clear. */}
+                  <Bar dataKey="aop" name="AOP" fill="#fbbf24" fillOpacity={0.5}
+                    radius={[4, 4, 0, 0]} barSize={22} animationDuration={900} />
+
+                  {/* The band, as base + span so nothing is painted over. */}
+                  <Area dataKey="bandBase" stackId="band" stroke="none" fill="transparent"
+                    legendType="none" tooltipType="none" isAnimationActive={false} />
+                  <Area dataKey="bandSpan" stackId="band" name="Range (95%)" stroke="none"
+                    fill="url(#fcBand)" legendType="none" tooltipType="none"
+                    animationDuration={900} />
+
+                  {/* Fact. The only series carrying fill under it. */}
+                  <Area type="monotone" dataKey="actual" name="Revenue (Sales)" stroke="#0d9488"
+                    strokeWidth={3} fill="url(#fcActual)" connectNulls={false}
+                    dot={false} animationDuration={1100} />
+
+                  {/* Projection, and the edges of its range. */}
+                  <Line type="monotone" dataKey="upper" name="High" stroke="#a78bfa" strokeWidth={1.5}
+                    strokeDasharray="2 5" dot={false} connectNulls animationDuration={900} />
+                  <Line type="monotone" dataKey="lower" name="Low" stroke="#a78bfa" strokeWidth={1.5}
+                    strokeDasharray="2 5" dot={false} connectNulls animationDuration={900} />
+                  <Line type="monotone" dataKey="forecast" name="Forecast" stroke="#7c3aed"
+                    strokeWidth={3} strokeDasharray="7 4" connectNulls animationDuration={1300}
+                    dot={{ r: 3.5, fill: '#7c3aed', stroke: '#fff', strokeWidth: 1.5 }}
+                    activeDot={{ r: 6 }} />
+
+                  {/* The seam, named. */}
+                  {fcSeam.at && (
+                    <ReferenceLine x={fcSeam.at} stroke="#94a3b8" strokeDasharray="4 4"
+                      label={{ value: 'forecast from here', position: 'insideTopRight',
+                               fill: '#94a3b8', fontSize: 10, fontWeight: 800 }} />
+                  )}
                 </ComposedChart>
               </ResponsiveContainer>
+
+              {/* How to read it, in one line, rather than leaving the reader
+                  to work out why one series is bars and another is dashed. */}
+              <div className="mt-2 flex items-center gap-x-4 gap-y-1.5 flex-wrap
+                              text-[10.5px] font-bold text-slate-400">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-amber-400/60" />
+                  AOP — the height to clear
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-[3px] rounded-full bg-teal-600" />
+                  invoiced, actually happened
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-[3px] rounded-full bg-violet-600" />
+                  projected, has not happened
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-violet-400/25" />
+                  where it could land, 95% of the time
+                </span>
+              </div>
             </Panel>
 
             {/* Why these numbers. Somebody will be asked this in a review, so
