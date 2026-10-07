@@ -152,6 +152,9 @@ const DIM_LABEL: Record<string, string> = {
   customer_name: 'Customer',
   product_name: 'Item Name',
 };
+/** The levels that are PEOPLE, and so are counted by ID rather than by name. */
+const PEOPLE_LEVELS = new Set(['sales_head', 'rsm', 'asm', 'salesperson']);
+
 const dimLabel = (k: string) =>
   DIM_LABEL[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
@@ -1213,6 +1216,15 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               </Reveal>
             )}
 
+            {forecast.window_note && (
+              <Reveal>
+                <div className="flex items-start gap-2 rounded-xl bg-slate-50 border border-slate-200 p-3">
+                  <CalendarDays className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-slate-500 leading-relaxed">{forecast.window_note}</p>
+                </div>
+              </Reveal>
+            )}
+
             <Panel title="Projection" icon={Radar} delay={240}
               subtitle={`${forecast.spec?.name || forecast.method} · fitted on ${forecast.history_months} months`}
               right={
@@ -1739,7 +1751,8 @@ export default SalesIQPage;
  * shows the line itself, with each person's sales rolled up into whoever
  * they report to.
  */
-function OrgNode({ node, max, depth = 0 }: { node: any; max: number; depth?: number }) {
+function OrgNode({ node, max, depth = 0, reach }:
+  { node: any; max: number; depth?: number; reach?: any }) {
   // Deep branches stay closed: an org opened all the way is a wall of names.
   const [open, setOpen] = useState(depth < 1);
   const kids = node.children || [];
@@ -1784,27 +1797,47 @@ function OrgNode({ node, max, depth = 0 }: { node: any; max: number; depth?: num
               <div className={`h-full rounded-full bg-gradient-to-r ${tone} siq-grow`}
                 style={{ width: `${width}%` }} />
             </div>
-            <div className="flex items-center gap-3 flex-wrap mt-1.5 text-[10.5px] text-slate-400 font-semibold">
-              <span>{node.customers} customers</span>
-              <span>{node.areas} areas</span>
-              <span>{node.skus} SKUs</span>
-              {node.field_officers > 0 && <span>{node.field_officers} field officers</span>}
+            {/* Only what this row can actually account for. Customers and
+                SKUs come off the invoice dump; where the dump does not name
+                this level there is no figure to give, and printing a nought
+                claims nobody bought anything. The row says nothing instead,
+                and the panel explains why once, above. */}
+            <div className="flex items-center gap-x-3 gap-y-1 flex-wrap mt-1.5
+                            text-[10.5px] text-slate-400 font-semibold">
+              {node.areas > 0 && <span>{node.areas} sub-region{node.areas === 1 ? '' : 's'}</span>}
+              {node.states > 0 && <span>{node.states} state{node.states === 1 ? '' : 's'}</span>}
+              {node.detail_lines > 0 && <span>{inr(node.customers)} customers</span>}
+              {node.detail_lines > 0 && node.skus > 0 && <span>{inr(node.skus)} SKUs</span>}
+              {node.field_officers > 0 && <span>{inr(node.field_officers)} field officers</span>}
+              {node.detail_lines === 0 && reach?.lines > 0 && (
+                <span className="text-slate-300 italic">no invoice detail at this level</span>
+              )}
             </div>
           </div>
 
+          {/* The percentage is shown with the two numbers it came out of,
+              so nobody has to take it on trust: 89% of AOP means nothing
+              until you can see it is 12.28 Cr against 13.80 Cr. */}
           <div className="text-right shrink-0">
             <p className="font-black text-slate-800 tabular-nums">₹{shortInr(node.revenue)}</p>
-            {node.achievement_pct !== null && node.achievement_pct !== undefined && (
-              <p className={`text-[10.5px] font-black ${
-                node.achievement_pct >= 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {node.achievement_pct.toFixed(0)}% of plan
-              </p>
+            {node.target > 0 ? (
+              <>
+                <p className={`text-[10.5px] font-black ${
+                  (node.achievement_pct ?? 0) >= 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {(node.achievement_pct ?? 0).toFixed(0)}% of AOP
+                </p>
+                <p className="text-[10px] font-semibold text-slate-400 tabular-nums">
+                  AOP ₹{shortInr(node.target)}
+                </p>
+              </>
+            ) : (
+              <p className="text-[10px] font-semibold text-slate-300">no AOP here</p>
             )}
           </div>
         </div>
       </div>
       {open && kids.map((k: any) => (
-        <OrgNode key={`${k.level}-${k.name}`} node={k} max={max} depth={depth + 1} />
+        <OrgNode key={`${k.level}-${k.name}`} node={k} max={max} depth={depth + 1} reach={reach} />
       ))}
     </div>
   );
@@ -1849,21 +1882,38 @@ function StructureTab({ org, levels, setLevels }: {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {counts.filter((c: any) => c.count > 0).map((c: any, i: number) => (
-          <Kpi key={c.level} icon={Users} label={c.level.replace('_', ' ')}
+          <Kpi key={c.level} icon={Users} label={dimLabel(c.level)}
             value={c.count} accent="from-indigo-500 to-violet-600" delay={i * 60}
-            sub="in the current selection" />
+            sub={PEOPLE_LEVELS.has(c.level)
+                   ? 'distinct APIS / Bizom IDs'
+                   : 'distinct values in this selection'} />
         ))}
         <Kpi icon={Users} label="Customers" value={org.totals?.customers || 0}
           accent="from-emerald-500 to-teal-600" delay={counts.length * 60}
-          sub="covered" />
+          sub="distinct customer codes" />
       </div>
+
+      {/* Where these counts come from, once, rather than a footnote per card.
+          Somebody asked "why 23 RSMs" and nothing on the page could answer. */}
+      <p className="text-[11px] text-slate-400 leading-relaxed">
+        People are counted by their APIS ID, falling back to the Bizom ID, and only
+        by name where the sheet gives neither — one person spelled two ways is one
+        person, and two people sharing a name are two. Customers are counted by
+        customer code off the invoice dump.
+        {org.detail_reach && org.detail_reach.lines > 0 &&
+          org.detail_reach.levels_named.length < (org.levels || []).length && (
+          <> The dump names {org.detail_reach.levels_named.map(dimLabel).join(' and ') || 'none of these levels'},
+          so rows at the other levels show no customer or SKU figure rather than a nought.</>
+        )}
+      </p>
 
       <Panel title="Who reports to whom" icon={Users}
         subtitle="Sales roll up into whoever they report to — click a row to open its team">
         {(org.tree || []).length ? (
           <div className="max-h-[560px] overflow-y-auto pr-1">
             {org.tree.map((n: any) => (
-              <OrgNode key={`${n.level}-${n.name}`} node={n} max={max} />
+              <OrgNode key={`${n.level}-${n.name}`} node={n} max={max}
+                reach={org.detail_reach} />
             ))}
           </div>
         ) : <Empty msg="No reporting columns in your upload" />}
