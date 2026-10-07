@@ -1179,8 +1179,14 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   accent="from-indigo-500 to-blue-600" delay={60}
                   sub={`vs ₹${shortInr(forecast.vs_recent?.recent_total || 0)} last ${forecast.vs_recent?.months || 0}m`} />
               )}
-              <Kpi icon={Activity} label="Fitted on" value={forecast.history_months} format={inr}
-                accent="from-cyan-500 to-teal-600" delay={120} sub="months of actual sales" />
+              {forecast.run_rate ? (
+                <Kpi icon={Activity} label="Running at" value={forecast.run_rate.rate_pct}
+                  format={(n) => `${n.toFixed(1)}%`} accent="from-cyan-500 to-teal-600" delay={120}
+                  sub={`of AOP, over ${forecast.run_rate.months} months`} />
+              ) : (
+                <Kpi icon={Activity} label="Fitted on" value={forecast.history_months} format={inr}
+                  accent="from-cyan-500 to-teal-600" delay={120} sub="months of actual sales" />
+              )}
               <Kpi icon={BarChart3} label="Past error" value={forecast.mape || 0}
                 format={(n) => `${n.toFixed(1)}%`} accent="from-amber-500 to-orange-600" delay={180}
                 sub="how far it missed before" />
@@ -1223,6 +1229,44 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   <p className="text-[11px] text-slate-500 leading-relaxed">{forecast.window_note}</p>
                 </div>
               </Reveal>
+            )}
+
+            {/* The run rate is what the forecast's LEVEL is made of, so it
+                is shown with the months it was read from and the best and
+                worst of them. A percentage nobody can check is not usable in
+                a review. */}
+            {forecast.run_rate && (
+              <Panel title="The rate this is built on" icon={TrendingUp} delay={220}
+                subtitle={`Achievement against AOP across ${forecast.run_rate.months} months that have both figures`}>
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <p className="text-[32px] leading-none font-black text-slate-900 tabular-nums">
+                    {forecast.run_rate.rate_pct}%
+                  </p>
+                  <p className="text-[12px] font-semibold text-slate-500">
+                    of AOP — recent months weighted heaviest. The high and low lines are this
+                    rate's own month-to-month spread: {forecast.run_rate.low_pct}% to
+                    {' '}{forecast.run_rate.high_pct}% of plan.
+                  </p>
+                </div>
+                <div className="mt-4 flex items-end gap-1.5 overflow-x-auto pb-1">
+                  {(forecast.run_rate.by_month || []).map((m: any) => (
+                    <div key={m.month} className="flex flex-col items-center gap-1 min-w-[56px]">
+                      <span className="text-[10px] font-black text-slate-500 tabular-nums">{m.pct}%</span>
+                      <div className="w-full h-16 flex items-end">
+                        <div className={`w-full rounded-t-md ${
+                          m.pct >= 100 ? 'bg-emerald-400' : m.pct >= 80 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                          style={{ height: `${Math.max(4, Math.min(100, m.pct))}%` }} />
+                      </div>
+                      <span className="text-[9.5px] font-bold text-slate-400 whitespace-nowrap">{m.month}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-[11px] text-slate-400 leading-relaxed">
+                  Best month {forecast.run_rate.best.month} at {forecast.run_rate.best.pct}% of plan;
+                  worst {forecast.run_rate.worst.month} at {forecast.run_rate.worst.pct}%. A month
+                  nobody set an AOP for is skipped rather than counted as a miss.
+                </p>
+              </Panel>
             )}
 
             <Panel title="Projection" icon={Radar} delay={240}
@@ -1311,11 +1355,20 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50/70 border border-amber-100 p-3">
                   <Info className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                   <p className="text-[11px] text-amber-900/80 leading-relaxed">
-                    The forecast is fitted on invoiced sales alone. The AOP line beside it is
-                    the plan as uploaded and is <b>not</b> an input to the model — if it were,
-                    the two lines would agree with each other by construction and the chart
-                    would have nothing to say. The calendar notes below name what the business
-                    knows sits in each month; they explain the shape, they do not produce it.
+                    {forecast.run_rate ? (<>
+                      The forecast is the AOP scaled by the rate above — so it keeps the plan's
+                      own month shape and only moves the level to where the business has actually
+                      been running. It is deliberately <b>not</b> the plan copied back: at
+                      {' '}{forecast.run_rate.rate_pct}% of AOP it sits
+                      {' '}{forecast.run_rate.rate_pct >= 100 ? 'above' : 'below'} the plan by
+                      design, and it would move if the achievement rate moved. The calendar notes
+                      below name what the business knows sits in each month; they explain the
+                      shape, they do not produce it.
+                    </>) : (<>
+                      No AOP reaches these months, so this is an extrapolation of the sales
+                      history alone and has nothing anchoring it to a plan. Upload the AOP sheet
+                      for this period and the forecast will be built on it instead.
+                    </>)}
                   </p>
                 </div>
               </Panel>
