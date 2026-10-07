@@ -1,8 +1,9 @@
 /* Intelligence and Customers tabs for SalesIQ. */
+import { useMemo } from 'react';
 import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell, ComposedChart, Area, Line,
-  PieChart, Pie, ReferenceLine,
+  PieChart, Pie, ReferenceLine, Legend,
 } from 'recharts';
 import {
   Crown, TrendingUp, TrendingDown, AlertTriangle, Gauge as GaugeIcon, CalendarRange,
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 import {
   Panel, Empty, Leaderboard, ChartTip, Counter, Reveal, Gauge, HeatGrid, CohortGrid,
-  shortInr, inr, PALETTE,
+  shortInr, inr, colourFor,
 } from './SalesIQShared';
 
 const QUAD = {
@@ -42,6 +43,23 @@ export function IntelligencePanel({ data, dim, setDim }: {
   const quadCounts = (matrix?.results || []).reduce((a: any, r: any) => {
     a[r.quadrant] = (a[r.quadrant] || 0) + 1; return a;
   }, {});
+
+  /* Volume and average price, both rebased to 100 at the first month that
+     actually has a figure, so the two can share one axis.
+
+     The base is the first NON-ZERO month, not simply the first. A period
+     opening with a zero would make every later month divide by nothing;
+     rebasing on it produced Infinity, and a chart with one line missing. */
+  const priceIndexed = useMemo(() => {
+    const rows = price?.results || [];
+    const baseQty = rows.find((r: any) => +r.quantity > 0)?.quantity;
+    const basePrice = rows.find((r: any) => +r.avg_price > 0)?.avg_price;
+    return rows.map((r: any) => ({
+      label: r.label,
+      qty_idx: baseQty ? (+r.quantity / +baseQty) * 100 : null,
+      price_idx: basePrice ? (+r.avg_price / +basePrice) * 100 : null,
+    }));
+  }, [price]);
 
   return (
     <div className="space-y-5">
@@ -182,12 +200,15 @@ export function IntelligencePanel({ data, dim, setDim }: {
                 <Tooltip cursor={{ strokeDasharray: '3 3' }} content={({ active, payload }: any) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0].payload;
+                  // Guarded: a quadrant the server adds that this map has not
+                  // learned yet would otherwise throw inside the tooltip and
+                  // take the whole panel down with it.
                   const q = (QUAD as any)[d.quadrant];
                   return (
                     <div className="rounded-xl bg-slate-900/95 backdrop-blur px-3 py-2 shadow-2xl border border-white/10">
                       <p className="text-[12px] font-black text-white">{d.name}</p>
-                      <p className="text-[11px] font-bold" style={{ color: q.colour }}>{q.label}</p>
-                      <p className="text-[11px] text-slate-300">Revenue ₹{shortInr(d.revenue)}</p>
+                      {q && <p className="text-[11px] font-bold" style={{ color: q.colour }}>{q.label}</p>}
+                      <p className="text-[11px] text-slate-300">Revenue (Sales) ₹{shortInr(d.revenue)}</p>
                       <p className="text-[11px] text-slate-300">
                         Growth {d.growth_pct === null ? 'new entrant' : `${d.growth_pct}%`}
                       </p>
@@ -333,8 +354,8 @@ export function IntelligencePanel({ data, dim, setDim }: {
                   axisLine={false} tickLine={false} width={58} />
                 <YAxis yAxisId="r" orientation="right" domain={[0, 100]} unit="%"
                   tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={42} />
-                <Tooltip content={<ChartTip />} />
-                <Bar yAxisId="l" dataKey="revenue" name="Revenue" radius={[5, 5, 0, 0]} animationDuration={900}>
+                <Tooltip content={<ChartTip units={{ cumulative_pct: 'pct' }} />} />
+                <Bar yAxisId="l" dataKey="revenue" name="Revenue (Sales)" radius={[5, 5, 0, 0]} animationDuration={900}>
                   {pareto.results.slice(0, 20).map((r: any, i: number) => (
                     <Cell key={i} fill={r.class === 'A' ? '#10b981' : r.class === 'B' ? '#f59e0b' : '#cbd5e1'} />
                   ))}
@@ -409,28 +430,66 @@ export function IntelligencePanel({ data, dim, setDim }: {
                 </p>
               </div>
             )}
-            <ResponsiveContainer width="100%" height={280}>
-              <ComposedChart data={price.results}>
-                <defs>
-                  <linearGradient id="gQty" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+            {/* Volume and price on ONE axis, both indexed to 100 at the
+                first month.
+
+                They were on two: cases on the left, rupees on the right, and
+                the discount percentage sharing the rupee axis with the
+                average price. On a scale running past Rs 250 an 8% line sits
+                flat on the baseline, so the series was drawn and could not
+                be seen. Two axes also let the eye read any crossing it likes
+                — slide one scale and the story changes — which is the whole
+                reason a dual axis is the wrong tool for "did volume move
+                because price moved".
+
+                Indexed, the question answers itself: both lines start
+                together and the gap that opens between them IS the
+                trade-off. The discount rate is a percentage and gets its own
+                chart below rather than being squeezed onto someone else's
+                scale. */}
+            <ResponsiveContainer width="100%" height={260}>
+              <ComposedChart data={priceIndexed}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis yAxisId="l" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={52} />
-                <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={false} tickLine={false} width={48} />
-                <Tooltip content={<ChartTip money={false} />} />
-                <Area yAxisId="l" type="monotone" dataKey="quantity" name="Quantity"
-                  stroke="#06b6d4" strokeWidth={2} fill="url(#gQty)" animationDuration={1000} />
-                <Line yAxisId="r" type="monotone" dataKey="avg_price" name="Avg price"
+                <YAxis tickFormatter={(v: number) => `${v}`} tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  axisLine={false} tickLine={false} width={44} />
+                <Tooltip content={<ChartTip units={{ qty_idx: 'index', price_idx: 'index' }} />} />
+                <Legend wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 6 }} iconType="plainline" />
+                <ReferenceLine y={100} stroke="#cbd5e1" strokeDasharray="4 4" />
+                <Line type="monotone" dataKey="qty_idx" name="Volume (cases)"
+                  stroke="#0891b2" strokeWidth={2.5} dot={false} animationDuration={1000} />
+                <Line type="monotone" dataKey="price_idx" name="Average price"
                   stroke="#f59e0b" strokeWidth={2.5} dot={false} animationDuration={1200} />
-                <Line yAxisId="r" type="monotone" dataKey="discount_pct" name="Discount %"
-                  stroke="#ef4444" strokeWidth={2} strokeDasharray="4 4" dot={false} animationDuration={1400} />
               </ComposedChart>
             </ResponsiveContainer>
+            <p className="mt-1.5 text-[11px] text-slate-400 leading-relaxed">
+              Both lines start at 100 in {priceIndexed[0]?.label || 'the first month'}, so they can be
+              read against each other on one scale. A volume line above an average-price line means
+              more cases moved at a lower price.
+            </p>
+
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                Discount given, as a share of gross
+              </p>
+              <ResponsiveContainer width="100%" height={160}>
+                <ComposedChart data={price.results}>
+                  <defs>
+                    <linearGradient id="gDisc" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ef4444" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="#ef4444" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis unit="%" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false}
+                    tickLine={false} width={44} />
+                  <Tooltip content={<ChartTip units={{ discount_pct: 'pct' }} />} />
+                  <Area type="monotone" dataKey="discount_pct" name="Discount" stroke="#ef4444"
+                    strokeWidth={2} fill="url(#gDisc)" animationDuration={1000} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
           </>
         ) : <Empty msg="Add Quantity and Gross Amount columns to analyse price vs volume" />}
       </Panel>
@@ -486,7 +545,7 @@ export function CustomersPanel({ data }: { data: any }) {
                 <Pie data={segs} dataKey="revenue" nameKey="label" innerRadius={58}
                   outerRadius={100} paddingAngle={3} animationDuration={1000}>
                   {segs.map((s: any, i: number) => (
-                    <Cell key={i} fill={SEG_COLOUR[s.label] || PALETTE[i % PALETTE.length]}
+                    <Cell key={i} fill={SEG_COLOUR[s.label] || colourFor(s.label)}
                       stroke="#fff" strokeWidth={2} />
                   ))}
                 </Pie>

@@ -11,7 +11,8 @@ import {
   Activity, Layers, FileSpreadsheet, Trophy, Radar, Brain, UserSearch, CalendarDays,
 } from 'lucide-react';
 import {
-  API, _API_BASE, inr, shortInr, PALETTE, useCountUp, Counter, Reveal, Panel,
+  API, _API_BASE, inr, shortInr, PALETTE, colourFor, REVENUE_COLOUR,
+  useCountUp, Counter, Reveal, Panel,
   Skel, Empty, ChartTip, Leaderboard, Coverage, sqFetch, canEdit,
 } from './SalesIQShared';
 import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
@@ -924,8 +925,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     <PieChart>
                       <Pie data={breaks.channel.results} dataKey="revenue" nameKey="name"
                         innerRadius={52} outerRadius={90} paddingAngle={3} animationDuration={1000}>
-                        {breaks.channel.results.map((_: any, i: number) => (
-                          <Cell key={i} fill={PALETTE[i % PALETTE.length]} stroke="#fff" strokeWidth={2} />
+                        {breaks.channel.results.map((r: any, i: number) => (
+                          <Cell key={i} fill={colourFor(r.name)} stroke="#fff" strokeWidth={2} />
                         ))}
                       </Pie>
                       <Tooltip content={<ChartTip />} />
@@ -1002,11 +1003,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     <XAxis type="number" tickFormatter={shortInr} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <Tooltip content={<ChartTip />} cursor={{ fill: '#f8fafc' }} />
-                    <Bar dataKey="revenue" name="Revenue (Sales)" radius={[0, 6, 6, 0]} animationDuration={1000}>
-                      {breaks.state.results.map((_: any, i: number) => (
-                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
-                      ))}
-                    </Bar>
+                    {/* One colour. Ten hues down a ranked list encoded
+                        nothing — length is the measure here — and they
+                        reshuffled every time a filter reordered the rows. */}
+                    <Bar dataKey="revenue" name="Revenue (Sales)" radius={[0, 6, 6, 0]}
+                      fill={REVENUE_COLOUR} animationDuration={1000} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : <Empty msg="No state column in your upload" />}
@@ -1057,8 +1058,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     <Pie data={breaks.category.results} dataKey="revenue" nameKey="name"
                       innerRadius={60} outerRadius={105} paddingAngle={3} animationDuration={1000}
                       label={pieLabel} labelLine={false}>
-                      {breaks.category.results.map((_: any, i: number) => (
-                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} stroke="#fff" strokeWidth={2} />
+                      {breaks.category.results.map((r: any, i: number) => (
+                        <Cell key={i} fill={colourFor(r.name)} stroke="#fff" strokeWidth={2} />
                       ))}
                     </Pie>
                     <Tooltip content={<ChartTip />} />
@@ -1894,7 +1895,11 @@ function OrgNode({ node, max, depth = 0, reach }:
   // Deep branches stay closed: an org opened all the way is a wall of names.
   const [open, setOpen] = useState(depth < 1);
   const kids = node.children || [];
-  const width = max > 0 ? Math.max(2, (node.revenue / max) * 100) : 0;
+  // No floor under it. A 2% minimum width drew a visible bar under a row
+  // reading nought, which is the one case where the bar must say nothing.
+  const width = max > 0 ? Math.min(100, (node.revenue / max) * 100) : 0;
+  const aopAt = node.target > 0 && max > 0
+    ? Math.min(100, (node.target / max) * 100) : null;
   const LEVEL_TONE: Record<string, string> = {
     sales_head: 'from-violet-500 to-fuchsia-600',
     rsm: 'from-indigo-500 to-violet-600',
@@ -1931,24 +1936,21 @@ function OrgNode({ node, max, depth = 0, reach }:
                 </span>
               )}
             </div>
-            <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-              <div className={`h-full rounded-full bg-gradient-to-r ${tone} siq-grow`}
+            {/* A bullet chart, not a progress bar. One track on a scale
+                shared by every row, the bar is what was sold, and the notch
+                is where this person's own AOP sits on that same scale. So
+                the row answers both questions at once -- how big is this
+                branch next to the others, and did it clear its own plan --
+                and the two are read off one axis instead of a bar for one
+                and a number for the other. Bar past the notch is ahead. */}
+            <div className="mt-2 relative h-2.5 rounded-full bg-slate-100">
+              <div className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${tone} siq-grow`}
                 style={{ width: `${width}%` }} />
-            </div>
-            {/* Only what this row can actually account for. Customers and
-                SKUs come off the invoice dump; where the dump does not name
-                this level there is no figure to give, and printing a nought
-                claims nobody bought anything. The row says nothing instead,
-                and the panel explains why once, above. */}
-            <div className="flex items-center gap-x-3 gap-y-1 flex-wrap mt-1.5
-                            text-[10.5px] text-slate-400 font-semibold">
-              {node.areas > 0 && <span>{node.areas} sub-region{node.areas === 1 ? '' : 's'}</span>}
-              {node.states > 0 && <span>{node.states} state{node.states === 1 ? '' : 's'}</span>}
-              {node.detail_lines > 0 && <span>{inr(node.customers)} customers</span>}
-              {node.detail_lines > 0 && node.skus > 0 && <span>{inr(node.skus)} SKUs</span>}
-              {node.field_officers > 0 && <span>{inr(node.field_officers)} field officers</span>}
-              {node.detail_lines === 0 && reach?.lines > 0 && (
-                <span className="text-slate-300 italic">no invoice detail at this level</span>
+              {aopAt !== null && (
+                <span className="absolute -top-0.5 -bottom-0.5 w-[3px] rounded-sm bg-amber-400
+                                 ring-1 ring-white"
+                  style={{ left: `calc(${aopAt}% - 1.5px)` }}
+                  title={`AOP ₹${shortInr(node.target)}`} />
               )}
             </div>
           </div>
@@ -1996,7 +1998,11 @@ function StructureTab({ org, levels, setLevels }: {
   if (!org) {
     return <Panel title="Structure" icon={Users}><Empty msg="Loading the organisation…" /></Panel>;
   }
-  const max = Math.max(1, ...(org.tree || []).map((n: any) => n.revenue));
+  // The common scale every row is drawn against. It has to hold the AOP
+  // marker as well as the bar: a branch a long way behind plan would
+  // otherwise push its own tick off the end of the track.
+  const max = Math.max(1, ...(org.tree || []).flatMap(
+    (n: any) => [n.revenue || 0, n.target || 0]));
   const counts = org.level_counts || [];
 
   return (

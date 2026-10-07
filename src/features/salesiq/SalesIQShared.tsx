@@ -67,6 +67,23 @@ export const shortInr = (n: number) => {
 export const PALETTE = ['#6366f1', '#06b6d4', '#f59e0b', '#ec4899', '#10b981',
                         '#8b5cf6', '#ef4444', '#14b8a6', '#f97316', '#3b82f6'];
 
+/** A stable colour for a named thing — the same hue every time it is drawn.
+ *
+ *  Taking the colour from the row's POSITION meant a category changed colour
+ *  whenever the list reordered: filter one region out, and the slice that was
+ *  teal a moment ago is pink, while the pink one is now something else. On a
+ *  pie read against a legend that is not a cosmetic problem — the reader
+ *  carries the colour across from the last screen and reads the wrong slice.
+ *  Derived from the name instead, General Trade is one colour for good. */
+export function colourFor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return PALETTE[h % PALETTE.length];
+}
+
+/** The one colour that means invoiced sales across this dashboard. */
+export const REVENUE_COLOUR = '#0d9488';
+
 /* ── animated counter ───────────────────────────────────────────────────── */
 export function useCountUp(target: number, duration = 900) {
   const [val, setVal] = useState(0);
@@ -170,17 +187,56 @@ export const Empty = ({ msg }: { msg: string }) => (
   </div>
 );
 
+/* Series that exist only to draw a shape, and have no business being read
+   as a figure. The forecast band is a stacked base plus span: the base is an
+   invisible riser up to the low line and the span is the height between the
+   two, so neither is a number anybody asked for -- and they were appearing
+   in the tooltip as an unnamed row and as a "Range" that was really the two
+   added together, beside the High and Low that say the same thing properly. */
+const TIP_HIDDEN = new Set(['bandBase', 'bandSpan']);
+
+/** A series' colour, or nothing if it has none worth using.
+ *
+ *  An area filled with a gradient reports its fill as `url(#someId)`, which
+ *  is not a colour at all: set as a CSS colour it resolves to nothing and
+ *  the browser falls back to black — on a near-black tooltip card, an
+ *  invisible row. Stroke is tried first for exactly that reason. */
+const seriesColor = (p: any): string | undefined => {
+  for (const c of [p?.stroke, p?.color, p?.fill, p?.payload?.fill]) {
+    if (typeof c === 'string' && c && !c.startsWith('url(')) return c;
+  }
+  return undefined;
+};
+
 export function ChartTip({ active, payload, label, money = true }: any) {
   if (!active || !payload?.length) return null;
+  const rows = payload.filter((p: any) =>
+    p.value !== null && p.value !== undefined && !TIP_HIDDEN.has(p.dataKey) && p.name);
+  if (!rows.length) return null;
   return (
     <div className="rounded-xl bg-slate-900/95 backdrop-blur px-3 py-2 shadow-2xl border border-white/10">
-      <p className="text-[11px] font-black text-white mb-1">{label}</p>
-      {payload.filter((p: any) => p.value !== null && p.value !== undefined).map((p: any, i: number) => (
-        <p key={i} className="text-[11px] font-bold flex items-center gap-2" style={{ color: p.color || p.fill }}>
-          <span className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
-          {p.name}: <span className="text-white">{money ? `₹${shortInr(p.value)}` : inr(p.value)}</span>
-        </p>
-      ))}
+      <p className="text-[11px] font-black text-white mb-1.5">{label}</p>
+      <div className="space-y-1">
+        {rows.map((p: any, i: number) => {
+          const c = seriesColor(p);
+          return (
+            /* The colour identifies the series through the dot and nowhere
+               else. Written INTO the text it had to stay legible against a
+               near-black card as well as against a white chart, which no
+               single palette manages — pale series came out unreadable and
+               gradient-filled ones came out black on black. Text wears text
+               colours; the dot carries identity. */
+            <p key={i} className="text-[11px] font-bold flex items-baseline gap-2 text-slate-300">
+              <span className="w-2 h-2 rounded-full shrink-0 translate-y-[1px]"
+                style={{ background: c || '#94a3b8' }} />
+              <span className="flex-1">{p.name}</span>
+              <span className="text-white font-black tabular-nums">
+                {money ? `₹${shortInr(p.value)}` : inr(p.value)}
+              </span>
+            </p>
+          );
+        })}
+      </div>
     </div>
   );
 }
