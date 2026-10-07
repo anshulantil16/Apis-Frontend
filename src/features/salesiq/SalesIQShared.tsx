@@ -84,6 +84,40 @@ export function colourFor(name: string): string {
 /** The one colour that means invoiced sales across this dashboard. */
 export const REVENUE_COLOUR = '#0d9488';
 
+/* ── Red / Amber / Green ─────────────────────────────────────────────────
+   The server decides the band (sales/status.py, from the control tower
+   blueprint's section 7) and the screen only dresses it. Deciding it here
+   as well would mean two rules, and the day they drift the tree and the
+   leaderboard colour the same person differently.
+
+   Status colour is kept apart from the series colours above on purpose:
+   teal means invoiced sales wherever it appears and must not also mean
+   "doing well", or a chart and a badge contradict each other. */
+export const RAG: Record<string, { dot: string; chip: string; text: string }> = {
+  red:   { dot: 'bg-rose-500',    chip: 'bg-rose-50 text-rose-700 ring-rose-200',
+           text: 'text-rose-600' },
+  amber: { dot: 'bg-amber-500',   chip: 'bg-amber-50 text-amber-700 ring-amber-200',
+           text: 'text-amber-600' },
+  green: { dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+           text: 'text-emerald-600' },
+};
+
+/** A status pill. Renders nothing without a status — a branch with no AOP
+ *  against it has not passed and has not failed, and a grey "unknown" chip
+ *  on every such row is noise, not information. */
+export function StatusPill({ status, children }:
+  { status?: string | null; children?: any }) {
+  const tone = status ? RAG[status] : null;
+  if (!tone) return null;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full
+                      text-[10px] font-black ring-1 ${tone.chip}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${tone.dot}`} />
+      {children}
+    </span>
+  );
+}
+
 /* ── animated counter ───────────────────────────────────────────────────── */
 export function useCountUp(target: number, duration = 900) {
   const [val, setVal] = useState(0);
@@ -258,12 +292,15 @@ export function Leaderboard({ rows, showTarget = false }: { rows: any[]; showTar
               <span className="text-[12px] font-bold text-slate-700 truncate">{r.name}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* The band comes from the server. This row used to decide
+                  it here with its own threshold -- amber from 80% -- while
+                  the headline used 100% and the org tree used something else
+                  again, so one person could be amber on one screen and red
+                  on the next. */}
               {showTarget && r.achievement_pct !== null && r.achievement_pct !== undefined && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded
-                  ${r.achievement_pct >= 100 ? 'bg-emerald-50 text-emerald-600'
-                    : r.achievement_pct >= 80 ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'}`}>
-                  {r.achievement_pct.toFixed(0)}%
-                </span>
+                <StatusPill status={r.status}>
+                  {r.achievement_pct.toFixed(0)}% of AOP
+                </StatusPill>
               )}
               <span className="text-[12px] font-black text-slate-800 tabular-nums">₹{shortInr(r.revenue)}</span>
             </div>

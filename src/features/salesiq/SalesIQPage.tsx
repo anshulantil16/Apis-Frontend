@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import {
   API, _API_BASE, inr, shortInr, PALETTE, colourFor, REVENUE_COLOUR,
-  useCountUp, Counter, Reveal, Panel,
+  RAG, StatusPill, useCountUp, Counter, Reveal, Panel,
   Skel, Empty, ChartTip, Leaderboard, Coverage, sqFetch, canEdit,
 } from './SalesIQShared';
 import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
@@ -642,6 +642,24 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
           </Reveal>
         )}
 
+        {/* When these figures were last loaded.
+            Every number on this dashboard is as old as the last upload, and
+            without saying so the screen looks live when it may be a
+            fortnight stale. This product is uploaded to rather than
+            connected to a feed, so the upload time IS the refresh time. */}
+        {!loading && hasData && overview?.data_refreshed?.at && (
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 mb-4">
+            <RefreshCw className="w-3 h-3" />
+            Data refreshed {new Date(overview.data_refreshed.at).toLocaleString('en-IN', {
+              day: 'numeric', month: 'short', year: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })}
+            {overview.data_refreshed.file && <> · {overview.data_refreshed.file}</>}
+            {overview.data_refreshed.uploads > 1 &&
+              <> · {overview.data_refreshed.uploads} files loaded</>}
+          </p>
+        )}
+
         {/* ── loading ── */}
         {loading && (
           <div className="space-y-5">
@@ -789,8 +807,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   {tgt > 0 && (
                     <div className="px-6 sm:px-7 py-5 border-t border-slate-100 bg-slate-50/70">
                       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                        <p className="text-[13px] font-black text-slate-700">
-                          {pct !== null && pct !== undefined ? `${pct}% of plan` : 'Against plan'}
+                        <p className="text-[13px] font-black text-slate-700 flex items-center gap-2">
+                          {pct !== null && pct !== undefined ? `${pct}% of AOP` : 'Against AOP'}
+                          <StatusPill status={overview.status?.status}>
+                            {overview.status?.label}
+                          </StatusPill>
                         </p>
                         <p className={`text-[13px] font-black tabular-nums
                           ${ahead ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -808,6 +829,80 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 </div>
               );
             })()}
+
+            {/* Pace. The control tower blueprint's run rate and required
+                run rate — what the business has been doing per month, and
+                what the months still ahead each have to do to land the AOP.
+
+                Per MONTH, not per working day as the blueprint asks. The
+                review sheet is the only file carrying the plan and it has no
+                days in it: every row is a month, stored on the 1st. A daily
+                rate off it would be a monthly figure divided by a number of
+                days nobody measured. */}
+            {overview.run_rate && overview.required_run_rate && (
+              <Reveal>
+                <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm
+                                p-5 sm:p-6">
+                  <div className="flex items-baseline justify-between gap-3 flex-wrap mb-4">
+                    <p className="text-[13px] font-black text-slate-700">Pace against the AOP</p>
+                    <p className="text-[11px] font-semibold text-slate-400">
+                      per month — the plan file has no days in it
+                    </p>
+                  </div>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Running at
+                      </p>
+                      <p className="mt-1 text-[26px] leading-none font-black text-slate-900 tabular-nums">
+                        ₹{shortInr(overview.run_rate)}
+                      </p>
+                      <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                        a month, over {overview.run_rate_basis?.months_elapsed} month
+                        {overview.run_rate_basis?.months_elapsed === 1 ? '' : 's'} so far
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Needs
+                      </p>
+                      <p className="mt-1 text-[26px] leading-none font-black text-amber-600 tabular-nums">
+                        ₹{shortInr(overview.required_run_rate)}
+                      </p>
+                      <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                        a month, for the {overview.run_rate_basis?.months_ahead} month
+                        {overview.run_rate_basis?.months_ahead === 1 ? '' : 's'} still to come
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Which means
+                      </p>
+                      {overview.run_rate_basis?.lift_needed_pct !== null &&
+                       overview.run_rate_basis?.lift_needed_pct !== undefined ? (
+                        <>
+                          <p className={`mt-1 text-[26px] leading-none font-black tabular-nums
+                            ${overview.run_rate_basis.lift_needed_pct > 0
+                                ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {overview.run_rate_basis.lift_needed_pct > 0 ? '+' : ''}
+                            {overview.run_rate_basis.lift_needed_pct}%
+                          </p>
+                          <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                            {overview.run_rate_basis.lift_needed_pct > 0
+                              ? 'faster than the current pace to land the plan'
+                              : 'the current pace already clears what is left'}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-[12px] font-semibold text-slate-400">
+                          nothing left in the plan for this window
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            )}
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
               <Panel title="Revenue trend" subtitle="Monthly sales against AOP" icon={Activity}
@@ -1962,8 +2057,8 @@ function OrgNode({ node, max, depth = 0, reach }:
             <p className="font-black text-slate-800 tabular-nums">₹{shortInr(node.revenue)}</p>
             {node.target > 0 ? (
               <>
-                <p className={`text-[10.5px] font-black ${
-                  (node.achievement_pct ?? 0) >= 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                <p className={`text-[10.5px] font-black
+                  ${(RAG[node.status] || RAG.amber).text}`}>
                   {(node.achievement_pct ?? 0).toFixed(0)}% of AOP
                 </p>
                 <p className="text-[10px] font-semibold text-slate-400 tabular-nums">
