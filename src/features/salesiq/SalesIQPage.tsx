@@ -154,9 +154,6 @@ const DIM_LABEL: Record<string, string> = {
   customer_name: 'Customer',
   product_name: 'Item Name',
 };
-/** The levels that are PEOPLE, and so are counted by ID rather than by name. */
-const PEOPLE_LEVELS = new Set(['sales_head', 'rsm', 'asm', 'salesperson']);
-
 const dimLabel = (k: string) =>
   DIM_LABEL[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
@@ -735,49 +732,66 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             )}
             {/* Plan and actual, read as one relationship.
 
-                This was six equal cards -- Revenue, Target, Orders, Quantity,
-                Customers, SKUs -- which gave the plan the same weight as the
-                SKU count and left the reader to work out the one thing the
-                review actually asks: are we ahead or behind, and by how much.
-                Revenue and Target now sit either side of a single bar that
-                answers it. */}
+                Every figure on this strip is drawn from ONE comparison: the
+                months that carry both a plan and a result. It previously
+                carried three. The percentage was like-for-like, the gap
+                beneath it was the window's full revenue less the window's
+                full plan, and the bar was a third ratio again -- so the strip
+                read "79% of AOP" above a bar sitting at a third, beside
+                "behind by Rs 212.73 Cr". All three were arithmetically
+                correct and no two were answering the same question.
+
+                The AOP shown is therefore the plan for the months that have
+                results, not for the whole window. The full-window plan is
+                still here, underneath, where it informs without being
+                mistaken for the denominator of the percentage above it. */}
             {(() => {
-              const rev = Number(overview.revenue || 0);
-              const tgt = Number(overview.target || 0);
+              const basis = overview.achievement_basis || {};
+              const windowPlan = Number(overview.target || 0);
+              const tgt = Number(basis.target || 0);
+              const rev = Number(basis.revenue ?? overview.revenue ?? 0);
               const pct = overview.achievement_pct;
-              const gap = rev - tgt;
-              const ahead = gap >= 0;
-              // Clamped: 140% of plan must not render as a bar running off
-              // the end of its own track.
-              const fill = tgt ? Math.max(0, Math.min(100, (rev / tgt) * 100)) : 0;
+              // From the server, which computes it off the same basis.
+              const gap = Number(overview.gap_to_target ?? (tgt - rev));
+              const ahead = gap <= 0;
+              // The bar IS the percentage. Clamped, so 140% of plan does not
+              // render as a bar running off the end of its own track.
+              const fill = pct === null || pct === undefined
+                ? 0 : Math.max(0, Math.min(100, pct));
               const growth = overview.vs_last_year?.growth_pct
                            ?? overview.revenue_growth_pct;
+              const months = basis.months || 0;
+              const cell = 'px-5 py-5 sm:px-6';
               return (
                 <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm
                                 overflow-hidden siq-reveal">
-                  <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x
+                  {/* Three cells rather than two. The pair left half the
+                      strip empty on a wide screen, and the thing a review
+                      actually asks -- how far off are we -- was relegated to
+                      a caption under the bar. */}
+                  <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x
                                   divide-slate-100">
-                    <div className="p-6 sm:p-7">
+                    <div className={cell}>
                       <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-500
+                        <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-teal-500
                                          to-emerald-600 grid place-items-center shrink-0">
-                          <TrendingUp className="w-4 h-4 text-white" />
+                          <TrendingUp className="w-3.5 h-3.5 text-white" />
                         </span>
-                        <span className="text-[11px] font-black tracking-[0.12em]
+                        <span className="text-[10.5px] font-black tracking-[0.1em]
                                          text-slate-400 uppercase">Revenue (Sales)</span>
                         {growth !== null && growth !== undefined && (
-                          <span className={`ml-auto px-2 py-0.5 rounded-full text-[11px] font-black
+                          <span className={`ml-auto px-2 py-0.5 rounded-full text-[10.5px] font-black
                             ${growth >= 0 ? 'bg-emerald-50 text-emerald-600'
                                           : 'bg-rose-50 text-rose-600'}`}>
                             {growth >= 0 ? '+' : ''}{growth}%
                           </span>
                         )}
                       </div>
-                      <p className="mt-3 text-[34px] sm:text-[40px] leading-none font-black
+                      <p className="mt-2.5 text-[30px] sm:text-[34px] leading-none font-black
                                     text-slate-900 tabular-nums">
                         ₹{shortInr(rev)}
                       </p>
-                      <p className="mt-2 text-[12px] font-semibold text-slate-500">
+                      <p className="mt-1.5 text-[11.5px] font-semibold text-slate-500">
                         {overview.vs_last_year
                           ? `vs ₹${shortInr(overview.vs_last_year.last_year)} same ${overview.vs_last_year.months} months last year`
                           : overview.prev_period_has_data
@@ -785,40 +799,70 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                             : 'nothing loaded for the period before this'}
                       </p>
                     </div>
-                    <div className="p-6 sm:p-7">
+
+                    <div className={cell}>
                       <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400
+                        <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400
                                          to-orange-500 grid place-items-center shrink-0">
-                          <Target className="w-4 h-4 text-white" />
+                          <Target className="w-3.5 h-3.5 text-white" />
                         </span>
-                        <span className="text-[11px] font-black tracking-[0.12em]
+                        <span className="text-[10.5px] font-black tracking-[0.1em]
                                          text-slate-400 uppercase">AOP</span>
+                        <span className="text-[10px] font-semibold text-slate-300 normal-case">
+                          Annual Operating Plan
+                        </span>
                       </div>
-                      <p className="mt-3 text-[34px] sm:text-[40px] leading-none font-black
+                      <p className="mt-2.5 text-[30px] sm:text-[34px] leading-none font-black
                                     text-slate-900 tabular-nums">
                         {tgt ? `₹${shortInr(tgt)}` : '—'}
                       </p>
-                      <p className="mt-2 text-[12px] font-semibold text-slate-500">
-                        {tgt ? 'the plan for this window' : 'no AOP set for this window'}
+                      <p className="mt-1.5 text-[11.5px] font-semibold text-slate-500">
+                        {tgt
+                          ? `for the ${months} month${months === 1 ? '' : 's'} with results in`
+                          : 'no AOP set for this window'}
+                        {windowPlan > tgt &&
+                          ` · ₹${shortInr(windowPlan)} across the full window`}
+                      </p>
+                    </div>
+
+                    <div className={cell}>
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-lg grid place-items-center shrink-0
+                          ${ahead ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                  : 'bg-gradient-to-br from-rose-400 to-rose-600'}`}>
+                          {ahead ? <ArrowUpRight className="w-3.5 h-3.5 text-white" />
+                                 : <ArrowDownRight className="w-3.5 h-3.5 text-white" />}
+                        </span>
+                        <span className="text-[10.5px] font-black tracking-[0.1em]
+                                         text-slate-400 uppercase">
+                          {ahead ? 'Ahead by' : 'Behind by'}
+                        </span>
+                      </div>
+                      <p className={`mt-2.5 text-[30px] sm:text-[34px] leading-none font-black
+                                     tabular-nums ${ahead ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {tgt ? `₹${shortInr(Math.abs(gap))}` : '—'}
+                      </p>
+                      <p className="mt-1.5 text-[11.5px] font-semibold text-slate-500">
+                        {tgt ? 'against the plan for those same months'
+                             : 'nothing to measure against'}
                       </p>
                     </div>
                   </div>
 
                   {tgt > 0 && (
-                    <div className="px-6 sm:px-7 py-5 border-t border-slate-100 bg-slate-50/70">
-                      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                    <div className="px-5 sm:px-6 py-4 border-t border-slate-100 bg-slate-50/70">
+                      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
                         <p className="text-[13px] font-black text-slate-700 flex items-center gap-2">
                           {pct !== null && pct !== undefined ? `${pct}% of AOP` : 'Against AOP'}
                           <StatusPill status={overview.status?.status}>
                             {overview.status?.label}
                           </StatusPill>
                         </p>
-                        <p className={`text-[13px] font-black tabular-nums
-                          ${ahead ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {ahead ? 'ahead by ' : 'behind by '}₹{shortInr(Math.abs(gap))}
+                        <p className="text-[11px] font-semibold text-slate-400">
+                          {overview.status?.meaning}
                         </p>
                       </div>
-                      <div className="mt-2.5 h-2.5 rounded-full bg-slate-200/80 overflow-hidden">
+                      <div className="h-2.5 rounded-full bg-slate-200/80 overflow-hidden">
                         <div className={`h-full rounded-full transition-[width] duration-700
                           ${ahead ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
                                   : 'bg-gradient-to-r from-rose-400 to-rose-600'}`}
@@ -2120,18 +2164,37 @@ function StructureTab({ org, levels, setLevels }: {
         </div>
       </Reveal>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {counts.filter((c: any) => c.count > 0).map((c: any, i: number) => (
-          <Kpi key={c.level} icon={Users} label={dimLabel(c.level)}
-            value={c.count} accent="from-indigo-500 to-violet-600" delay={i * 60}
-            sub={PEOPLE_LEVELS.has(c.level)
-                   ? 'distinct APIS / Bizom IDs'
-                   : 'distinct values in this selection'} />
-        ))}
-        <Kpi icon={Users} label="Customers" value={org.totals?.customers || 0}
-          accent="from-emerald-500 to-teal-600" delay={counts.length * 60}
-          sub="distinct customer codes" />
-      </div>
+      {/* These were four big cards across the full width, each holding one
+          two-digit number and a caption -- "RSM 23" in a 400px box. The
+          number is small, the card was not, and the strip pushed the tree
+          itself below the fold on a laptop for no gain. One row of counts
+          and the same information reads faster in a sixth of the height. */}
+      <Reveal>
+        <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm
+                        px-5 py-4 flex items-end gap-x-8 gap-y-4 flex-wrap">
+          {counts.filter((c: any) => c.count > 0).map((c: any) => (
+            <div key={c.level}>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {dimLabel(c.level)}
+              </p>
+              <p className="mt-0.5 text-[26px] leading-none font-black text-slate-900 tabular-nums">
+                {inr(c.count)}
+              </p>
+            </div>
+          ))}
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Customers
+            </p>
+            <p className="mt-0.5 text-[26px] leading-none font-black text-emerald-600 tabular-nums">
+              {inr(org.totals?.customers || 0)}
+            </p>
+          </div>
+          <p className="ml-auto text-[11px] font-semibold text-slate-400 max-w-sm">
+            People by APIS ID, falling back to Bizom; customers by customer code.
+          </p>
+        </div>
+      </Reveal>
 
       {/* How the branches fall across the bands.
 
@@ -2179,10 +2242,9 @@ function StructureTab({ org, levels, setLevels }: {
       {/* Where these counts come from, once, rather than a footnote per card.
           Somebody asked "why 23 RSMs" and nothing on the page could answer. */}
       <p className="text-[11px] text-slate-400 leading-relaxed">
-        People are counted by their APIS ID, falling back to the Bizom ID, and only
-        by name where the sheet gives neither — one person spelled two ways is one
-        person, and two people sharing a name are two. Customers are counted by
-        customer code off the invoice dump.
+        One person spelled two ways is one person, and two people sharing a name are
+        two — which is why the counts above are made on the ID and only fall back to
+        the name where the sheet gives neither.
         {org.detail_reach && org.detail_reach.lines > 0 &&
           org.detail_reach.levels_named.length < (org.levels || []).length && (
           <> The dump names {org.detail_reach.levels_named.map(dimLabel).join(' and ') || 'none of these levels'},
