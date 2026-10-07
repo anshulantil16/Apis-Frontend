@@ -309,18 +309,29 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
       return out;
     });
 
-  /* merged history + forecast for the projection chart */
+  /* merged history + forecast for the projection chart.
+
+     Four lines, and they answer different questions, so none of them is
+     derived from another: actual is what was invoiced, AOP is what the
+     business committed to, forecast is what the model expects, and the low
+     and high are how wrong the model has been on months it has already
+     seen. The AOP runs the whole way across -- the plan is loaded for the
+     full financial year, so it is known for months the history has not
+     reached yet, and the distance between it and the forecast is the thing
+     the panel exists to show. */
   const fcChart = useMemo(() => {
     if (!forecast) return [];
     const hist = (forecast.history || []).map((h: any) => ({
-      label: h.label, actual: h.value, forecast: null, lower: null, upper: null,
+      label: h.label, actual: h.value, aop: h.aop ?? null,
+      forecast: null, lower: null, upper: null,
     }));
     // Bridge point: repeat the last actual as the forecast's origin so the two
     // lines visually connect instead of leaving a gap at the seam.
     const bridge = hist.length ? [{ ...hist[hist.length - 1], forecast: hist[hist.length - 1].actual }] : [];
     const fut = (forecast.points || []).map((p: any) => ({
-      label: new Date(p.period).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
+      label: p.label || new Date(p.period).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
       actual: null, forecast: p.value, lower: p.lower, upper: p.upper,
+      aop: p.aop ?? null,
       band: [p.lower, p.upper],
     }));
     return [...hist.slice(0, -1), ...bridge, ...fut];
@@ -700,7 +711,6 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               const fill = tgt ? Math.max(0, Math.min(100, (rev / tgt) * 100)) : 0;
               const growth = overview.vs_last_year?.growth_pct
                            ?? overview.revenue_growth_pct;
-              const months = overview.achievement_basis?.months ?? 0;
               return (
                 <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm
                                 overflow-hidden siq-reveal">
@@ -713,7 +723,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                           <TrendingUp className="w-4 h-4 text-white" />
                         </span>
                         <span className="text-[11px] font-black tracking-[0.12em]
-                                         text-slate-400 uppercase">Revenue</span>
+                                         text-slate-400 uppercase">Revenue (Sales)</span>
                         {growth !== null && growth !== undefined && (
                           <span className={`ml-auto px-2 py-0.5 rounded-full text-[11px] font-black
                             ${growth >= 0 ? 'bg-emerald-50 text-emerald-600'
@@ -741,16 +751,14 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                           <Target className="w-4 h-4 text-white" />
                         </span>
                         <span className="text-[11px] font-black tracking-[0.12em]
-                                         text-slate-400 uppercase">Target</span>
+                                         text-slate-400 uppercase">AOP</span>
                       </div>
                       <p className="mt-3 text-[34px] sm:text-[40px] leading-none font-black
                                     text-slate-900 tabular-nums">
                         {tgt ? `₹${shortInr(tgt)}` : '—'}
                       </p>
                       <p className="mt-2 text-[12px] font-semibold text-slate-500">
-                        {tgt
-                          ? `${months} month${months === 1 ? '' : 's'} of plan`
-                          : 'no target set for this window'}
+                        {tgt ? 'the plan for this window' : 'no AOP set for this window'}
                       </p>
                     </div>
                   </div>
@@ -779,7 +787,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             })()}
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-              <Panel title="Revenue trend" subtitle="Monthly sales against target" icon={Activity}
+              <Panel title="Revenue trend" subtitle="Monthly sales against AOP" icon={Activity}
                 delay={340} className="xl:col-span-2">
                 {trend?.results?.length ? (
                   <ResponsiveContainer width="100%" height={300}>
@@ -799,9 +807,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                           dropped to the axis for the rest of the financial
                           year and read as a collapse. The dashed target line
                           carries on past it, which is the real story. */}
-                      <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#6366f1" strokeWidth={2.5}
+                      <Area type="monotone" dataKey="revenue" name="Revenue (Sales)" stroke="#6366f1" strokeWidth={2.5}
                         fill="url(#gRev)" animationDuration={1100} connectNulls={false} />
-                      <Line type="monotone" dataKey="target" name="Target" stroke="#f59e0b" strokeWidth={2}
+                      <Line type="monotone" dataKey="target" name="AOP" stroke="#f59e0b" strokeWidth={2}
                         strokeDasharray="5 4" dot={false} animationDuration={1300} />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -813,7 +821,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   Rs 274 crore was being measured against this year's plan,
                   when 12 of those 18 months are last year and have no plan
                   at all. */}
-              <Panel title="Target achievement"
+              <Panel title="AOP achievement"
                 subtitle={monthsCompared
                   ? `Plan vs actual · ${monthsCompared} month${monthsCompared > 1 ? 's' : ''} to date`
                   : 'Actual vs plan'}
@@ -841,7 +849,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                         </div>
                       </div>
                     </>
-                  ) : <Empty msg="Add a Target column to your upload to see achievement" />}
+                  ) : <Empty msg="Add an AOP column to your upload to see achievement" />}
                 </div>
               </Panel>
             </div>
@@ -969,7 +977,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     <XAxis type="number" tickFormatter={shortInr} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <Tooltip content={<ChartTip />} cursor={{ fill: '#f8fafc' }} />
-                    <Bar dataKey="revenue" name="Revenue" radius={[0, 6, 6, 0]} animationDuration={1000}>
+                    <Bar dataKey="revenue" name="Revenue (Sales)" radius={[0, 6, 6, 0]} animationDuration={1000}>
                       {breaks.state.results.map((_: any, i: number) => (
                         <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
                       ))}
@@ -1149,23 +1157,64 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 
         {!loading && hasData && activeTab === 'forecast' && forecast && (
           <div className="space-y-5">
+            {/* Four figures, each of which somebody can be asked to account
+                for: what we expect, what we promised, what the expectation
+                was fitted on, and how wrong it has been before. */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Kpi icon={Radar} label={`Next ${horizon} months`} value={forecast.forecast_total || 0}
                 prefix="₹" accent="from-violet-500 to-fuchsia-600" delay={0}
-                sub="projected revenue" />
-              <Kpi icon={TrendingUp} label="vs recent" value={forecast.vs_recent?.projected_total || 0}
-                prefix="₹" delta={forecast.vs_recent?.change_pct}
-                accent="from-indigo-500 to-blue-600" delay={60}
-                sub={`vs ₹${shortInr(forecast.vs_recent?.recent_total || 0)} last ${forecast.vs_recent?.months || 0}m`} />
-              <Kpi icon={Activity} label="History" value={forecast.history_months} format={inr}
-                accent="from-cyan-500 to-teal-600" delay={120} sub="months of data" />
-              <Kpi icon={Target} label="Model error" value={forecast.mape || 0}
+                sub="projected revenue (sales)" />
+              {forecast.vs_aop ? (
+                <Kpi icon={Target} label="vs AOP" value={forecast.vs_aop.aop_total}
+                  prefix="₹" delta={forecast.vs_aop.cover_pct !== null
+                                      ? Math.round(forecast.vs_aop.cover_pct - 100) : undefined}
+                  accent="from-emerald-500 to-teal-600" delay={60}
+                  sub={`plan for ${forecast.vs_aop.from}–${forecast.vs_aop.to}`} />
+              ) : (
+                <Kpi icon={TrendingUp} label="vs recent" value={forecast.vs_recent?.projected_total || 0}
+                  prefix="₹" delta={forecast.vs_recent?.change_pct}
+                  accent="from-indigo-500 to-blue-600" delay={60}
+                  sub={`vs ₹${shortInr(forecast.vs_recent?.recent_total || 0)} last ${forecast.vs_recent?.months || 0}m`} />
+              )}
+              <Kpi icon={Activity} label="Fitted on" value={forecast.history_months} format={inr}
+                accent="from-cyan-500 to-teal-600" delay={120} sub="months of actual sales" />
+              <Kpi icon={BarChart3} label="Past error" value={forecast.mape || 0}
                 format={(n) => `${n.toFixed(1)}%`} accent="from-amber-500 to-orange-600" delay={180}
-                sub="mean abs. % error" />
+                sub="how far it missed before" />
             </div>
 
+            {forecast.vs_aop && (
+              <Reveal>
+                <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm p-5 sm:p-6">
+                  <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                    <p className="text-[13px] font-black text-slate-700">
+                      {forecast.vs_aop.from} to {forecast.vs_aop.to} — forecast against AOP
+                    </p>
+                    <p className={`text-[13px] font-black tabular-nums
+                      ${forecast.vs_aop.gap >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {forecast.vs_aop.gap >= 0 ? 'ahead by ' : 'short by '}
+                      ₹{shortInr(Math.abs(forecast.vs_aop.gap))}
+                    </p>
+                  </div>
+                  <div className="mt-2.5 h-2.5 rounded-full bg-slate-200/80 overflow-hidden">
+                    <div className={`h-full rounded-full transition-[width] duration-700
+                      ${forecast.vs_aop.gap >= 0 ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                                                 : 'bg-gradient-to-r from-amber-500 to-rose-500'}`}
+                      style={{ width: `${Math.max(0, Math.min(100, forecast.vs_aop.cover_pct || 0))}%` }} />
+                  </div>
+                  <p className="mt-2.5 text-[11px] font-semibold text-slate-500">
+                    ₹{shortInr(forecast.vs_aop.forecast_total)} projected against an AOP of
+                    {' '}₹{shortInr(forecast.vs_aop.aop_total)}
+                    {forecast.vs_aop.cover_pct !== null && ` — ${forecast.vs_aop.cover_pct}% of plan`}.
+                    {forecast.vs_aop.partial &&
+                      ` Totalled over the ${forecast.vs_aop.months} month${forecast.vs_aop.months === 1 ? '' : 's'} the plan reaches, not the full ${horizon}: the AOP runs out before the forecast does.`}
+                  </p>
+                </div>
+              </Reveal>
+            )}
+
             <Panel title="Projection" icon={Radar} delay={240}
-              subtitle={`${forecast.method} · ${forecast.confidence} confidence`}
+              subtitle={`${forecast.spec?.name || forecast.method} · fitted on ${forecast.history_months} months`}
               right={
                 <div className="flex items-center gap-1">
                   {[3, 6, 12].map(h => (
@@ -1176,7 +1225,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   ))}
                 </div>
               }>
-              <ResponsiveContainer width="100%" height={340}>
+              <ResponsiveContainer width="100%" height={360}>
                 <ComposedChart data={fcChart}>
                   <defs>
                     <linearGradient id="gAct" x1="0" y1="0" x2="0" y2="1">
@@ -1184,7 +1233,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                       <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
                     </linearGradient>
                     <linearGradient id="gBand" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#d946ef" stopOpacity={0.22} />
+                      <stop offset="0%" stopColor="#d946ef" stopOpacity={0.18} />
                       <stop offset="100%" stopColor="#d946ef" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
@@ -1192,50 +1241,130 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={shortInr} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={60} />
                   <Tooltip content={<ChartTip />} />
-                  <Area type="monotone" dataKey="upper" name="Upper" stroke="none" fill="url(#gBand)" animationDuration={900} />
-                  <Area type="monotone" dataKey="lower" name="Lower" stroke="none" fill="#fff" animationDuration={900} />
-                  <Area type="monotone" dataKey="actual" name="Actual" stroke="#6366f1" strokeWidth={2.5}
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                  {/* The band is drawn first so every line sits on top of it.
+                      Low and High are also drawn as their own thin lines, not
+                      only as a shaded edge, because the review reads them as
+                      numbers — "worst case 4.2 crore" — and a gradient edge
+                      cannot be read off an axis. */}
+                  <Area type="monotone" dataKey="upper" name="High (95%)" stroke="#e879f9" strokeWidth={1}
+                    strokeDasharray="3 3" fill="url(#gBand)" animationDuration={900} connectNulls />
+                  <Area type="monotone" dataKey="lower" name="Low (95%)" stroke="#e879f9" strokeWidth={1}
+                    strokeDasharray="3 3" fill="#fff" animationDuration={900} connectNulls />
+                  <Area type="monotone" dataKey="actual" name="Revenue (Sales)" stroke="#6366f1" strokeWidth={2.5}
                     fill="url(#gAct)" animationDuration={1100} connectNulls={false} />
+                  <Line type="monotone" dataKey="aop" name="AOP" stroke="#f59e0b" strokeWidth={2}
+                    dot={false} animationDuration={1200} connectNulls />
                   <Line type="monotone" dataKey="forecast" name="Forecast" stroke="#d946ef" strokeWidth={2.5}
                     strokeDasharray="6 4" dot={{ r: 3, fill: '#d946ef' }} animationDuration={1300} connectNulls />
                 </ComposedChart>
               </ResponsiveContainer>
-              <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 border border-slate-100 p-3">
-                <Info className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  <b className="text-slate-700">{forecast.method}</b> — {forecast.note} The shaded band is
-                  the 95% confidence range and widens further out, because uncertainty compounds with
-                  horizon.
-                </p>
-              </div>
             </Panel>
 
-            <Panel title="Month-by-month projection" icon={BarChart3} delay={300}>
+            {/* Why these numbers. Somebody will be asked this in a review, so
+                the panel answers it rather than leaving them to guess. */}
+            {forecast.spec && (
+              <Panel title="How this forecast is made" icon={Brain} delay={280}
+                subtitle="So the numbers above can be accounted for">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Model</p>
+                    <p className="mt-1.5 text-[14px] font-black text-slate-800">{forecast.spec.name}</p>
+                    <p className="mt-1.5 text-[12px] text-slate-500 leading-relaxed">{forecast.spec.why}</p>
+                    <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      What it reads
+                    </p>
+                    <ul className="mt-1.5 space-y-1">
+                      {(forecast.spec.reads || []).map((r: string) => (
+                        <li key={r} className="text-[12px] text-slate-600 leading-relaxed flex gap-2">
+                          <span className="text-indigo-400 font-black">·</span><span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Seasonality — {forecast.spec.seasonality}
+                    </p>
+                    <p className="mt-1.5 text-[12px] text-slate-500 leading-relaxed">
+                      {forecast.spec.seasonality_why}
+                    </p>
+                    <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      The low and high lines
+                    </p>
+                    <p className="mt-1.5 text-[12px] text-slate-500 leading-relaxed">{forecast.spec.band}</p>
+                    <p className="mt-1.5 text-[12px] text-slate-500 leading-relaxed">{forecast.spec.floor}</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50/70 border border-amber-100 p-3">
+                  <Info className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                    The forecast is fitted on invoiced sales alone. The AOP line beside it is
+                    the plan as uploaded and is <b>not</b> an input to the model — if it were,
+                    the two lines would agree with each other by construction and the chart
+                    would have nothing to say. The calendar notes below name what the business
+                    knows sits in each month; they explain the shape, they do not produce it.
+                  </p>
+                </div>
+              </Panel>
+            )}
+
+            <Panel title="Month by month" icon={BarChart3} delay={300}
+              subtitle="Each month, against its plan, and what is in it">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="text-slate-400">
-                    <tr>{['Month', 'Forecast', 'Low', 'High', 'Range'].map(h => (
-                      <th key={h} className="text-left text-[10px] font-black uppercase tracking-widest px-3 py-2">{h}</th>
+                    <tr>{['Month', 'Forecast', 'Low', 'High', 'AOP', 'Gap', "What's in this month"].map(h => (
+                      <th key={h} className="text-left text-[10px] font-black uppercase tracking-widest px-3 py-2 whitespace-nowrap">{h}</th>
                     ))}</tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {(forecast.points || []).map((p: any, i: number) => (
-                      <tr key={p.period} className="siq-reveal hover:bg-slate-50" style={{ animationDelay: `${i * 50}ms` }}>
-                        <td className="px-3 py-2.5 font-bold text-slate-700">
-                          {new Date(p.period).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                        </td>
-                        <td className="px-3 py-2.5 font-black text-indigo-600 tabular-nums">₹{shortInr(p.value)}</td>
-                        <td className="px-3 py-2.5 text-slate-400 tabular-nums">₹{shortInr(p.lower)}</td>
-                        <td className="px-3 py-2.5 text-slate-400 tabular-nums">₹{shortInr(p.upper)}</td>
-                        <td className="px-3 py-2.5 w-1/3">
-                          <div className="h-1.5 rounded-full bg-gradient-to-r from-fuchsia-200 via-fuchsia-500 to-fuchsia-200 siq-grow"
-                            style={{ width: `${Math.min(100, (p.upper - p.lower) / (p.value || 1) * 100)}%` }} />
-                        </td>
-                      </tr>
-                    ))}
+                    {(forecast.points || []).map((p: any, i: number) => {
+                      const gap = p.aop === null || p.aop === undefined ? null : p.value - p.aop;
+                      return (
+                        <tr key={p.period} className="siq-reveal hover:bg-slate-50 align-top"
+                          style={{ animationDelay: `${i * 50}ms` }}>
+                          <td className="px-3 py-3 font-bold text-slate-700 whitespace-nowrap">
+                            {new Date(p.period).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                          </td>
+                          <td className="px-3 py-3 font-black text-indigo-600 tabular-nums whitespace-nowrap">₹{shortInr(p.value)}</td>
+                          <td className="px-3 py-3 text-slate-400 tabular-nums whitespace-nowrap">₹{shortInr(p.lower)}</td>
+                          <td className="px-3 py-3 text-slate-400 tabular-nums whitespace-nowrap">₹{shortInr(p.upper)}</td>
+                          <td className="px-3 py-3 font-bold text-amber-600 tabular-nums whitespace-nowrap">
+                            {gap === null ? <span className="text-slate-300">—</span> : `₹${shortInr(p.aop)}`}
+                          </td>
+                          <td className={`px-3 py-3 font-black tabular-nums whitespace-nowrap
+                            ${gap === null ? 'text-slate-300' : gap >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {gap === null ? '—' : `${gap >= 0 ? '+' : '−'}₹${shortInr(Math.abs(gap))}`}
+                          </td>
+                          <td className="px-3 py-3 min-w-[260px]">
+                            {p.seasonal_pct !== undefined && p.seasonal_pct !== null && (
+                              <span className={`inline-block mb-1 px-2 py-0.5 rounded-full text-[10px] font-black
+                                ${p.seasonal_pct >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                                {p.seasonal_pct >= 0 ? '+' : ''}{p.seasonal_pct}% vs an average month
+                                <span className="font-semibold"> · from your own history</span>
+                              </span>
+                            )}
+                            <ul className="space-y-0.5">
+                              {(p.calendar || []).map((c: string) => (
+                                <li key={c} className="text-[11px] text-slate-500 leading-relaxed flex gap-1.5">
+                                  <CalendarDays className="w-3 h-3 text-slate-300 mt-0.5 flex-shrink-0" />
+                                  <span>{c}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+              <p className="mt-3 text-[11px] text-slate-400 leading-relaxed">
+                Gap is forecast minus AOP. A dash means the plan does not reach that month —
+                the AOP is loaded to the end of the financial year, and the forecast can run
+                past it.
+              </p>
             </Panel>
           </div>
         )}

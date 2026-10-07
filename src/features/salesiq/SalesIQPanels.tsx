@@ -65,11 +65,11 @@ export function IntelligencePanel({ data, dim, setDim }: {
 
       {/* pacing + anomalies */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        <Panel title="Target pacing" icon={GaugeIcon} delay={0}
+        <Panel title="AOP pacing" icon={GaugeIcon} delay={0}
           subtitle="Are we on track to finish on plan?">
           {pacing?.has_target ? (
             <div className="space-y-4">
-              <Gauge value={pacing.projected_vs_target_pct} label="Projected vs target"
+              <Gauge value={pacing.projected_vs_target_pct} label="Projected vs AOP"
                 sublabel={pacing.on_track
                   ? 'On track to finish at or above plan'
                   : `Short by ₹${shortInr(Math.abs(pacing.target - pacing.projected_total))} at current pace`} />
@@ -93,12 +93,12 @@ export function IntelligencePanel({ data, dim, setDim }: {
                   <p className="text-[11px] text-rose-800 leading-relaxed">
                     Daily sales need to rise{' '}
                     <b>{((pacing.required_per_day / (pacing.run_rate_per_day || 1) - 1) * 100).toFixed(0)}%</b>
-                    {' '}for the rest of the period to hit target.
+                    {' '}for the rest of the period to hit the AOP.
                   </p>
                 </div>
               )}
             </div>
-          ) : <Empty msg={pacing?.note || 'Add a Target column to your upload to enable pacing'} />}
+          ) : <Empty msg={pacing?.note || 'Add an AOP column to your upload to enable pacing'} />}
         </Panel>
 
         <Panel title="Anomaly radar" icon={Zap} delay={60} className="xl:col-span-2"
