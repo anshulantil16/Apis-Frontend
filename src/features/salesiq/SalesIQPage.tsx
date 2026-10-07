@@ -2172,7 +2172,7 @@ function StructureTab({ org, levels, setLevels }: {
       <Reveal>
         <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm
                         px-5 py-4 flex items-end gap-x-8 gap-y-4 flex-wrap">
-          {counts.filter((c: any) => c.count > 0).map((c: any) => (
+          {counts.filter((c: any) => c.count > 0 || c.vacant > 0).map((c: any) => (
             <div key={c.level}>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                 {dimLabel(c.level)}
@@ -2180,6 +2180,15 @@ function StructureTab({ org, levels, setLevels }: {
               <p className="mt-0.5 text-[26px] leading-none font-black text-slate-900 tabular-nums">
                 {inr(c.count)}
               </p>
+              {/* Beside the headcount, never inside it. The sheet writes
+                  VACANT-TRI where a territory has no manager, and counting
+                  those made this the number of territories — a figure that
+                  rises as the company leaves more seats open. */}
+              {c.vacant > 0 && (
+                <p className="mt-0.5 text-[10px] font-bold text-amber-600">
+                  +{inr(c.vacant)} vacant
+                </p>
+              )}
             </div>
           ))}
           <div>
