@@ -13,7 +13,8 @@ import {
 import {
   API, _API_BASE, inr, shortInr, colourFor, REVENUE_COLOUR,
   RAG, StatusPill, useCountUp, Counter, Reveal, Panel,
-  Skel, Empty, ChartTip, Leaderboard, Coverage, sqFetch, canEdit,
+  Skel, Empty, NoData, ChartTip, Leaderboard, Coverage, sqFetch, canEdit,
+  dimLabel,
 } from './SalesIQShared';
 import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
 
@@ -135,25 +136,6 @@ type Tab = 'overview' | 'intelligence' | 'geography' | 'products' | 'customers' 
  * translate, and "State" in particular named something the sheet does not
  * have. Renaming the columns would be a migration across both files for a
  * wording problem, so the mapping lives here instead. */
-const DIM_LABEL: Record<string, string> = {
-  zone: 'Region',
-  // The sheet's Sub-Region lives in `subzone`, verbatim -- MH-1, KA-5, Lulu.
-  // `state` holds a state name DERIVED from that code (MH-1 -> Maharashtra)
-  // so the sheet and the invoice dump name states the same way. Labelling
-  // `state` Sub-Region showed the derivation in place of the sheet's own
-  // words, which is not what the column says.
-  subzone: 'Sub-Region',
-  state: 'State',
-  rsm: 'RSM',
-  asm: 'ASM',
-  sales_head: 'Head',
-  salesperson: 'Salesperson',
-  prod_group: 'Product Group',
-  sub_category: 'Sub Category',
-  item_alt_code: 'I-Code',
-  customer_name: 'Customer',
-  product_name: 'Item Name',
-};
 /** Dropdown options with the coded entries kept together.
 
  *  The Region list is a mix of two things: nine-odd territory codes
@@ -176,8 +158,6 @@ export const groupedOptions = (vals: string[] = []): string[] => {
   return [...codes.sort(by), ...named.sort(by)];
 };
 
-const dimLabel = (k: string) =>
-  DIM_LABEL[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
 const PIE_LABEL_MIN_PCT = 4;
 const pieLabel = (e: any) =>
@@ -1232,11 +1212,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <Panel title="Top states" icon={MapPin} delay={520} right={<Coverage coverage={breaks.state?.coverage} />}>
                 {breaks.state?.results?.length ? <Leaderboard rows={breaks.state.results.slice(0, 7)} showTarget />
-                  : <Empty msg="No state data" />}
+                  : <NoData empty={breaks.state?.empty} label={dimLabel}
+                    fallback="No state data" />}
               </Panel>
               <Panel title="Top categories" icon={Package} delay={560} right={<Coverage coverage={breaks.category?.coverage} />}>
                 {breaks.category?.results?.length ? <Leaderboard rows={breaks.category.results.slice(0, 7)} />
-                  : <Empty msg="No category data" />}
+                  : <NoData empty={breaks.category?.empty} label={dimLabel}
+                    fallback="No category data" />}
               </Panel>
               <Panel title="Channel mix" icon={ShoppingCart} delay={600}>
                 {breaks.channel?.results?.length ? (
@@ -1251,7 +1233,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                       <Tooltip content={<ChartTip />} />
                     </PieChart>
                   </ResponsiveContainer>
-                ) : <Empty msg="No channel data" />}
+                ) : <NoData empty={breaks.channel?.empty} label={dimLabel}
+                    fallback="No channel data" />}
               </Panel>
             </div>
           </div>
@@ -1290,11 +1273,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                       fill={REVENUE_COLOUR} animationDuration={1000} />
                   </BarChart>
                 </ResponsiveContainer>
-              ) : <Empty msg="No state column in your upload" />}
+              ) : <NoData empty={breaks.state?.empty} label={dimLabel}
+                    fallback="No state column in your upload" />}
             </Panel>
             <Panel title="Zone performance" icon={Globe2} delay={60} right={<Coverage coverage={breaks.zone?.coverage} />}>
               {breaks.zone?.results?.length ? <Leaderboard rows={breaks.zone.results} showTarget />
-                : <Empty msg="No zone column in your upload" />}
+                : <NoData empty={breaks.zone?.empty} label={dimLabel}
+                    fallback="No zone column in your upload" />}
             </Panel>
             {/* Neither primary-sales file carries an Area column, so this
                 drew an empty box on every load. A panel with nothing to put
@@ -1307,7 +1292,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             )}
             <Panel title="Top customers" icon={Users} delay={180} right={<Coverage coverage={breaks.customer?.coverage} />}>
               {breaks.customer?.results?.length ? <Leaderboard rows={breaks.customer.results.slice(0, 12)} />
-                : <Empty msg="No customer column in your upload" />}
+                : <NoData empty={breaks.customer?.empty} label={dimLabel}
+                    fallback="No customer column in your upload" />}
             </Panel>
             {breaks.subzone?.results?.length > 0 && (
               <Panel title="Sub-zone performance" icon={MapPin} delay={240}>
@@ -1345,19 +1331,23 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     <Tooltip content={<ChartTip />} />
                   </PieChart>
                 </ResponsiveContainer>
-              ) : <Empty msg="No category column in your upload" />}
+              ) : <NoData empty={breaks.category?.empty} label={dimLabel}
+                    fallback="No category column in your upload" />}
             </Panel>
             <Panel title="Top products" icon={Boxes} subtitle="By revenue" delay={60}>
               {breaks.product?.results?.length ? <Leaderboard rows={breaks.product.results.slice(0, 12)} />
-                : <Empty msg="No product column in your upload" />}
+                : <NoData empty={breaks.product?.empty} label={dimLabel}
+                    fallback="No product column in your upload" />}
             </Panel>
             <Panel title="Top SKUs" icon={Layers} delay={120}>
               {breaks.sku?.results?.length ? <Leaderboard rows={breaks.sku.results.slice(0, 12)} />
-                : <Empty msg="No SKU column in your upload" />}
+                : <NoData empty={breaks.sku?.empty} label={dimLabel}
+                    fallback="No SKU column in your upload" />}
             </Panel>
             <Panel title="Channel split" icon={ShoppingCart} delay={180}>
               {breaks.channel?.results?.length ? <Leaderboard rows={breaks.channel.results} showTarget />
-                : <Empty msg="No channel column in your upload" />}
+                : <NoData empty={breaks.channel?.empty} label={dimLabel}
+                    fallback="No channel column in your upload" />}
             </Panel>
             {breaks.prod_group?.results?.length > 0 && (
               <Panel title="Product group" icon={Boxes} delay={240}>

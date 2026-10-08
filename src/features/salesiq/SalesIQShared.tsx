@@ -81,6 +81,34 @@ export function colourFor(name: string): string {
   return PALETTE[h % PALETTE.length];
 }
 
+/* ── what a column is called on screen ───────────────────────────────────
+   Shared, because the panels need it too. It lived in SalesIQPage, so the
+   Customers and Intelligence panels could not say which filter had emptied
+   them without naming the raw field -- "no data for this chanel" rather
+   than "for this Channel". */
+export const DIM_LABEL: Record<string, string> = {
+  zone: 'Region',
+  // The sheet's Sub-Region lives in `subzone`, verbatim -- MH-1, KA-5, Lulu.
+  // `state` holds a state name DERIVED from that code (MH-1 -> Maharashtra)
+  // so the sheet and the invoice dump name states the same way. Labelling
+  // `state` Sub-Region showed the derivation in place of the sheet's own
+  // words, which is not what the column says.
+  subzone: 'Sub-Region',
+  state: 'State',
+  rsm: 'RSM',
+  asm: 'ASM',
+  sales_head: 'Head',
+  salesperson: 'Salesperson',
+  prod_group: 'Product Group',
+  sub_category: 'Sub Category',
+  item_alt_code: 'I-Code',
+  customer_name: 'Customer',
+  product_name: 'Item Name',
+};
+
+export const dimLabel = (k: string) =>
+  DIM_LABEL[k] || k.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+
 /** The one colour that means invoiced sales across this dashboard. */
 export const REVENUE_COLOUR = '#0d9488';
 
@@ -214,12 +242,42 @@ export const Skel = ({ className = '' }: { className?: string }) => (
   <div className={`siq-shimmer rounded-xl bg-slate-100 ${className}`} />
 );
 
-export const Empty = ({ msg }: { msg: string }) => (
+export const Empty = ({ msg, hint }: { msg: string; hint?: string }) => (
   <div className="flex flex-col items-center justify-center py-10 text-slate-300">
     <Boxes className="w-8 h-8 mb-2" />
     <p className="text-[12px] font-semibold text-slate-400 text-center max-w-xs">{msg}</p>
+    {hint && (
+      <p className="mt-1 text-[11px] text-slate-400/80 text-center max-w-sm">{hint}</p>
+    )}
   </div>
 );
+
+/** An empty panel, saying why it is empty.
+
+ *  An empty panel is a sentence the reader finishes themselves, and they
+ *  finish it wrongly: "No categories" under a Channel filter reads as
+ *  "nothing sold in GT", when what it means is that the invoice file has no
+ *  channel column and the question could not be put to it. Those two are
+ *  opposite in meaning and identical on screen.
+ *
+ *  The server says WHICH of the three it is — the file cannot answer this
+ *  filter, the filter matched nothing, or nothing is loaded — and the
+ *  wording is built here, where the labels already live. */
+export function NoData({ empty, fallback, label = (k: string) => k }:
+  { empty?: { reason: string; fields: string[] } | null;
+    fallback: string; label?: (k: string) => string }) {
+  if (!empty) return <Empty msg={fallback} />;
+  const names = (empty.fields || []).map(label).join(' and ');
+  if (empty.reason === 'no_column') {
+    return <Empty msg={`No data available for this ${names} filter`}
+      hint={`The invoice file has no ${names} column, so this panel cannot be narrowed by it. Revenue and AOP above are still correct — they come off the review sheet, which does carry it.`} />;
+  }
+  if (empty.reason === 'filtered_out') {
+    return <Empty msg="No data for this filter"
+      hint={names ? `Nothing matched the ${names} you selected. Clear it to see everything.` : undefined} />;
+  }
+  return <Empty msg={fallback} />;
+}
 
 /* Series that exist only to draw a shape, and have no business being read
    as a figure. The forecast band is a stacked base plus span: the base is an

@@ -11,8 +11,8 @@ import {
   ArrowDownRight, Flame, Snowflake, Info,
 } from 'lucide-react';
 import {
-  Panel, Empty, Leaderboard, ChartTip, Counter, Reveal, Gauge, HeatGrid, CohortGrid,
-  shortInr, inr, colourFor,
+  Panel, Empty, NoData, Leaderboard, ChartTip, Counter, Reveal, Gauge, HeatGrid, CohortGrid,
+  shortInr, inr, colourFor, dimLabel,
 } from './SalesIQShared';
 
 const QUAD = {
@@ -491,7 +491,8 @@ export function IntelligencePanel({ data, dim, setDim }: {
               </ResponsiveContainer>
             </div>
           </>
-        ) : <Empty msg="Add Quantity and Gross Amount columns to analyse price vs volume" />}
+        ) : <NoData empty={price?.empty} label={dimLabel}
+                 fallback="Add Quantity and Gross Amount columns to analyse price vs volume" />}
       </Panel>
     </div>
   );
@@ -552,7 +553,7 @@ export function CustomersPanel({ data }: { data: any }) {
                 <Tooltip content={<ChartTip />} />
               </PieChart>
             </ResponsiveContainer>
-          ) : <Empty msg={rfm?.note || 'No customer column in your upload'} />}
+          ) : <NoData empty={rfm?.empty} label={dimLabel} fallback={rfm?.note || "No customer column in your upload"} />}
         </Panel>
 
         <Panel title="New vs repeat revenue" icon={Repeat} delay={240} className="xl:col-span-2"
@@ -569,7 +570,7 @@ export function CustomersPanel({ data }: { data: any }) {
                 <Bar dataKey="new" name="New" stackId="a" fill="#10b981" radius={[5, 5, 0, 0]} animationDuration={900} />
               </ComposedChart>
             </ResponsiveContainer>
-          ) : <Empty msg={newRepeat?.note || 'No customer column in your upload'} />}
+          ) : <NoData empty={newRepeat?.empty} label={dimLabel} fallback={newRepeat?.note || "No customer column in your upload"} />}
         </Panel>
       </div>
 
@@ -593,7 +594,7 @@ export function CustomersPanel({ data }: { data: any }) {
               </div>
               <Leaderboard rows={paretoCustomer.results.slice(0, 10)} />
             </>
-          ) : <Empty msg="No customer column in your upload" />}
+          ) : <NoData empty={cohorts?.empty} label={dimLabel} fallback="No customer column in your upload" />}
         </Panel>
 
         <Panel title="At-risk accounts" icon={AlertTriangle} delay={360}
@@ -628,7 +629,7 @@ export function CustomersPanel({ data }: { data: any }) {
                 </p>
               </div>
             ) : <Empty msg="No at-risk accounts — everyone valuable is still active" />;
-          })() : <Empty msg={rfm?.note || 'No customer column in your upload'} />}
+          })() : <NoData empty={rfm?.empty} label={dimLabel} fallback={rfm?.note || "No customer column in your upload"} />}
         </Panel>
       </div>
 
