@@ -682,47 +682,31 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col">
-        {/* One flat APIS golden amber (#e2b12f, picked from the brand panel behind "APIS INDIA") under
-            the panel's honeycomb — a solid colour rather than a gradient, so
-            the full-width bar reads the same from end to end. */}
-        <header className="sticky top-0 z-30 overflow-visible border-b border-orange-600/30 shadow-sm">
-          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-[#e2b12f]" />
-            <svg className="absolute inset-0 w-full h-full opacity-[0.13]">
-              <defs>
-                <pattern id="ih-comb-header" width="28" height="24" patternUnits="userSpaceOnUse">
-                  <path d="M0 12 L7 0 L21 0 L28 12 L21 24 L7 24 Z" fill="none" stroke="#fff" strokeWidth="1" />
-                  <path d="M-14 24 L-7 12 L7 12 L14 24 L7 36 L-7 36 Z" fill="none" stroke="#fff" strokeWidth="1" />
-                  <path d="M14 24 L21 12 L35 12 L42 24 L35 36 L21 36 Z" fill="none" stroke="#fff" strokeWidth="1" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#ih-comb-header)" />
-            </svg>
-          </div>
-          <div className="relative px-7 py-3 flex items-center gap-5">
+        <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-slate-200">
+          <div className="px-7 py-3 flex items-center gap-5">
             {active === 'home' ? (
               // Greeting header for the dashboard itself. The name comes from
               // the portal session — before that existed there was no app-wide
               // identity, so this deliberately greeted nobody by name rather
               // than showing every teammate the same hardcoded one.
-              <div className="hidden lg:block pr-5 border-r border-[#2b2005]/15 leading-tight">
-                <p className="text-[15px] font-black text-[#2b2005] tracking-tight flex items-center gap-1.5">
+              <div className="hidden lg:block pr-5 border-r border-slate-200 leading-tight">
+                <p className="text-[15px] font-black text-slate-900 tracking-tight flex items-center gap-1.5">
                   {now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'}
-                  {userName ? <span className="text-white drop-shadow-sm">{userName.trim().split(/\s+/)[0]}</span> : null}
+                  {userName ? <span className="text-amber-600">{userName.trim().split(/\s+/)[0]}</span> : null}
                   <span aria-hidden></span>
                 </p>
-                <p className="text-[11px] font-semibold text-[#2b2005]/70 mt-0.5">
+                <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
                   Here's what's happening across your workspace today.
                 </p>
               </div>
             ) : (
-              <div className="hidden lg:flex items-center gap-3 pr-5 border-r border-[#2b2005]/15">
+              <div className="hidden lg:flex items-center gap-3 pr-5 border-r border-slate-200">
                 <img src="/logo.png" alt="APIS" className="w-9 h-9 object-contain flex-shrink-0" />
                 <div className="leading-none">
-                  <p className="text-[13px] font-black text-[#2b2005] tracking-tight">
+                  <p className="text-[13px] font-black text-slate-900 tracking-tight">
                     {title || 'APIS Intranet Tools'}
                   </p>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#2b2005]/60 mt-1">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">
                     {subtitle || 'Enterprise Platform'}
                   </p>
                 </div>
@@ -730,9 +714,9 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
             )}
 
             <button onClick={openPalette}
-              className="relative flex-1 max-w-md flex items-center gap-2 pl-9 pr-3 py-2 rounded-xl bg-white/75
-                         border border-white/60 text-sm text-[#2b2005]/60 hover:bg-white transition-all text-left">
-              <Search className="w-4 h-4 text-[#2b2005]/50 absolute left-3 top-1/2 -translate-y-1/2" />
+              className="relative flex-1 max-w-md flex items-center gap-2 pl-9 pr-3 py-2 rounded-xl bg-slate-100
+                         border border-transparent text-sm text-slate-400 hover:bg-slate-200/70 transition-all text-left">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               Search tools…
               <span className="ml-auto hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white
                                border border-slate-200 text-[10px] font-bold text-slate-400">
@@ -749,14 +733,14 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                 into the mustard theme while each icon keeps its own real
                 brand colour underneath. */}
             {active === 'home' && (
-              <div className="hidden md:flex items-center gap-1.5 pl-4 ml-1 border-l border-[#2b2005]/15">
+              <div className="hidden md:flex items-center gap-1.5 pl-4 ml-1 border-l border-slate-200">
                 {SOCIAL_LINKS.map(s => {
                   const Icon = s.icon;
                   return (
                     <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" title={s.label}
                       style={{ ['--ih-neon' as string]: 'rgba(245,158,11,.5)' }}
                       className={`ih-tilt ih-neon w-7 h-7 rounded-full ${s.bg} flex items-center justify-center text-white
-                                 ring-1 ring-white/70 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-110`}>
+                                 ring-1 ring-amber-300/50 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-110`}>
                       <Icon className="w-3.5 h-3.5" />
                     </a>
                   );
@@ -770,7 +754,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                   <button onClick={() => setQuoteOpen(o => !o)} title="Quote of the Day"
                     style={{ ['--ih-neon' as string]: 'rgba(245,158,11,.5)' }}
                     className="ih-tilt ih-neon w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500
-                               flex items-center justify-center text-white ring-1 ring-white/70 shadow-sm
+                               flex items-center justify-center text-white ring-1 ring-amber-300/50 shadow-sm
                                transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                     <Quote className="w-3.5 h-3.5" />
                   </button>
@@ -806,7 +790,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                   Announcements/Celebrations cards on the dashboard. */}
               <div className="relative">
                 <button onClick={() => setNotifOpen(o => !o)} title="Notifications"
-                  className="relative p-2 rounded-lg text-[#2b2005]/70 hover:text-[#2b2005] hover:bg-white/50 transition-all">
+                  className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                   <Bell className="w-4 h-4" />
                   <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500" />
                 </button>
@@ -844,13 +828,13 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                   </>
                 )}
               </div>
-              <button title="Help & Support — not available yet" className="p-2 rounded-lg text-[#2b2005]/70 hover:text-[#2b2005] hover:bg-white/50 transition-all">
+              <button title="Help & Support — not available yet" className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                 <HelpCircle className="w-4 h-4" />
               </button>
               {isSuperadmin && (
                 <button onClick={() => go('admin-console' as ShellView)} title="Administrator console"
                   className={`p-2 rounded-lg transition-all ${active === 'admin-console'
-                    ? 'text-amber-800 bg-white/70' : 'text-[#2b2005]/70 hover:text-amber-800 hover:bg-white/50'}`}>
+                    ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}>
                   <Crown className="w-4 h-4" />
                 </button>
               )}
@@ -863,9 +847,9 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               <div className="relative">
                 <button onClick={() => setMenuOpen(o => !o)}
                   title={userName || 'Signed in'}
-                  className={`w-8 h-8 rounded-full bg-white ring-1 flex items-center justify-center
+                  className={`w-8 h-8 rounded-full bg-amber-100 ring-1 flex items-center justify-center
                               text-[11px] font-black text-amber-700 transition-all hover:ring-amber-400
-                              ${menuOpen ? 'ring-amber-700 ring-2' : 'ring-white/80'}`}>
+                              ${menuOpen ? 'ring-amber-500 ring-2' : 'ring-amber-200'}`}>
                   {userName
                     ? userName.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
                     : <User className="w-4 h-4" />}
