@@ -2593,7 +2593,7 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
               </p>
               <textarea id="recipients-paste" value={paste}
                 onChange={ev => setPaste(ev.target.value)} rows={6}
-                placeholder={'head,GTR01,Mohinder Sharma,mohinder@apisindia.com\nmanager,GTR01;GTR02,North Manager,manager@apisindia.com'}
+                placeholder={'head,GTR01,,Mohinder Sharma,mohinder@apisindia.com,\nmanager,,,North Manager,manager@apisindia.com,GTR01;GTR02'}
                 className="w-full rounded-xl border border-slate-200 p-3 text-[12px]
                            font-mono text-slate-700 focus:border-indigo-400 focus:outline-none" />
               <div className="flex items-center gap-3 mt-2">
