@@ -682,14 +682,12 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col">
-        {/* The sidebar brand panel's colour, as it actually appears on screen
-            (measured: #eaba32 → #e9a730 → #e88824), plus its honeycomb. Not
-            the panel's Tailwind classes: that gradient runs over 256px, and
-            stretched across the full-width bar it turns a much darker orange
-            than anything the panel shows. */}
+        {/* One flat APIS orange (#e8932b, picked from the brand panel) under
+            the panel's honeycomb — a solid colour rather than a gradient, so
+            the full-width bar reads the same from end to end. */}
         <header className="sticky top-0 z-30 overflow-visible border-b border-orange-600/30 shadow-sm">
           <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-[#eaba32] via-[#e9a730] to-[#e88824]" />
+            <div className="absolute inset-0 bg-[#e8932b]" />
             <svg className="absolute inset-0 w-full h-full opacity-[0.13]">
               <defs>
                 <pattern id="ih-comb-header" width="28" height="24" patternUnits="userSpaceOnUse">
