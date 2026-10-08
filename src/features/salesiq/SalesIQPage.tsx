@@ -2520,6 +2520,16 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
     w.document.close();
   };
 
+  /* Starting over. Nothing here is inferred from the sheet, so a list that
+     holds the wrong people is cleared and re-entered rather than corrected
+     row by row. */
+  const clearAll = async () => {
+    if (!window.confirm(`Remove all ${list.length} recipients? Nobody is sent `
+                        + `anything until the list is filled in again.`)) return;
+    await sqFetch('/recipients/edit/', { method: 'DELETE' });
+    onChanged();
+  };
+
   const remove = async (r: any) => {
     if (!window.confirm(`Stop sending to ${r.email}?`)) return;
     await sqFetch(`/recipients/edit/${r.id}/`, { method: 'DELETE' });
@@ -2527,15 +2537,26 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
   };
 
   return (
-    <Panel title="Who gets the reports" icon={Users}
-      subtitle={`${heads.length} head${heads.length === 1 ? '' : 's'} · ${managers.length} manager${managers.length === 1 ? '' : 's'}`}
+    <Panel title="Email setup — who gets which report" icon={Users}
+      subtitle={list.length
+        ? `${heads.length} head${heads.length === 1 ? '' : 's'} · ${managers.length} manager${managers.length === 1 ? '' : 's'}`
+        : 'Nobody set up yet — download the list, fill it in, paste it back'}
       right={mayEdit && (
-        <button onClick={() => downloadFile('/recipients/template/',
-                                            'report_recipients.csv')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
-                     text-slate-600 text-[12px] font-bold hover:bg-slate-50 transition-all">
-          <Download className="w-3.5 h-3.5" />Get the list to fill in
-        </button>
+        <div className="flex items-center gap-2">
+          {list.length > 0 && (
+            <button onClick={clearAll}
+              className="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600
+                         text-[12px] font-bold hover:bg-rose-50 transition-all">
+              Clear the list
+            </button>
+          )}
+          <button onClick={() => downloadFile('/recipients/template/',
+                                              'report_recipients.csv')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
+                       text-slate-600 text-[12px] font-bold hover:bg-slate-50 transition-all">
+            <Download className="w-3.5 h-3.5" />Get the list to fill in
+          </button>
+        </div>
       )}>
 
       {/* Said plainly rather than left to be noticed: a head with nobody
