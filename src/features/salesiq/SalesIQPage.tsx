@@ -202,6 +202,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   const [filterOpts, setFilterOpts] = useState<any>(null);
   const [uploads, setUploads] = useState<any>(null);
   const [review, setReview] = useState<any>(null);
+  const [recipients, setRecipients] = useState<any>(null);
+  const [uploaders, setUploaders] = useState<any>(null);
   const [intel, setIntel] = useState<any>({});
   const [cust, setCust] = useState<any>({});
   const [intelDim, setIntelDim] = useState('state');
@@ -366,11 +368,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
       } else if (t === 'data') {
         /* The review sheet is loaded here rather than with the dashboard:
            nothing on the dashboard reads it, by design. */
-        const [up, rev] = await Promise.all([
+        const [up, rev, rcp, upl] = await Promise.all([
           sqFetch('/uploads/').then(r => r.json()),
           sqFetch('/review/').then(r => r.json()).catch(() => null),
+          sqFetch('/recipients/').then(r => r.json()).catch(() => null),
+          sqFetch('/uploaders/').then(r => r.json()).catch(() => null),
         ]);
-        setUploads(up); setReview(rev);
+        setUploads(up); setReview(rev); setRecipients(rcp); setUploaders(upl);
       } else if (dims.length) {
         const bs = await Promise.all(bd);
         setBreaks(b => ({ ...b, ...Object.fromEntries(dims.map((d, i) => [d, bs[i]])) }));
@@ -1857,7 +1861,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 
         {/* ══ DATA ══ */}
         {!loading && !busyFirstLoad && activeTab === 'data' && (
-          <DataPanel uploads={uploads} review={review} onChanged={loadAll}
+          <DataPanel uploads={uploads} review={review} recipients={recipients}
+            uploaders={uploaders} onChanged={loadAll}
             absentDims={filterOpts?.absent_dimensions || []}
             absentDetail={filterOpts?.absent_detail || []} />
         )}
@@ -1867,8 +1872,10 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 }
 
 /* ── data / upload tab ──────────────────────────────────────────────────── */
-function DataPanel({ uploads, review, onChanged, absentDims = [], absentDetail = [] }:
-  { uploads: any; review?: any; onChanged: () => void; absentDims?: string[];
+function DataPanel({ uploads, review, recipients, uploaders, onChanged,
+                    absentDims = [], absentDetail = [] }:
+  { uploads: any; review?: any; recipients?: any; uploaders?: any;
+    onChanged: () => void; absentDims?: string[];
     // Why each dark breakdown is dark — 'missing' wants a new column,
     // 'empty' wants the existing one filled in upstream.
     absentDetail?: { dim: string; reason: 'empty' | 'missing' }[] }) {
@@ -2168,6 +2175,10 @@ function DataPanel({ uploads, review, onChanged, absentDims = [], absentDetail =
 
       <ReviewPanel review={review} mayEdit={mayEdit} onChanged={onChanged} />
 
+      <RecipientsPanel data={recipients} mayEdit={mayEdit} onChanged={onChanged} />
+
+      <AccessPanel data={uploaders} onChanged={onChanged} />
+
       <Panel title="Uploaded files" icon={FileSpreadsheet}
         subtitle={`${uploads?.total_rows?.toLocaleString() || 0} rows in total`}
         right={mayEdit && uploads?.count > 0 && (
@@ -2453,6 +2464,297 @@ function ReportBuilder({ rows, snap }: { rows: any[]; snap: any }) {
         ))}
       </div>
     </div>
+  );
+}
+
+/* ── who gets which report ────────────────────────────────────────────────
+ *
+ * Two kinds of recipient, and the difference is what they are allowed to
+ * see. A head gets their own territory. A manager gets one rolled-up report
+ * across the territories they cover, plus each of those heads' own files.
+ *
+ * A manager's coverage is stated here, not inferred: the Region Summary tab
+ * carries channel, region and head, but not who those heads report to, and
+ * guessing a reporting line from a spreadsheet is how somebody receives a
+ * territory that is not theirs.
+ */
+function RecipientsPanel({ data, mayEdit, onChanged }:
+  { data: any; mayEdit: boolean; onChanged: () => void }) {
+  const [paste, setPaste] = useState('');
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const list: any[] = data?.recipients || [];
+  const heads = list.filter(r => r.role === 'head');
+  const managers = list.filter(r => r.role === 'manager');
+  const missing: any[] = data?.heads_without_a_recipient || [];
+
+  const doImport = async () => {
+    setBusy(true); setResult(null);
+    try {
+      const r = await sqFetch('/recipients/import/', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: paste }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Could not read that');
+      setResult(j);
+      if (j.added || j.updated) { setPaste(''); onChanged(); }
+    } catch (e) {
+      setResult({ error: e instanceof Error ? e.message : 'Could not read that' });
+    } finally { setBusy(false); }
+  };
+
+  /* Fetched and written into the new window rather than linked to: every
+     SalesIQ endpoint wants the session header, which a plain link cannot
+     carry, so the tab would open on a 401. */
+  const previewTeam = async (r: any) => {
+    const q = `regions=${encodeURIComponent((r.covers || []).join(','))}`
+            + `&name=${encodeURIComponent(r.name || 'Group')}`;
+    const res = await sqFetch(`/review/team/file/?${q}`);
+    if (!res.ok) { setResult({ error: await res.text() || 'Could not build it' }); return; }
+    const w = window.open('', '_blank');
+    if (!w) { setResult({ error: 'Your browser blocked the preview window.' }); return; }
+    w.document.write(await res.text());
+    w.document.close();
+  };
+
+  const remove = async (r: any) => {
+    if (!window.confirm(`Stop sending to ${r.email}?`)) return;
+    await sqFetch(`/recipients/edit/${r.id}/`, { method: 'DELETE' });
+    onChanged();
+  };
+
+  return (
+    <Panel title="Who gets the reports" icon={Users}
+      subtitle={`${heads.length} head${heads.length === 1 ? '' : 's'} · ${managers.length} manager${managers.length === 1 ? '' : 's'}`}
+      right={mayEdit && (
+        <button onClick={() => downloadFile('/recipients/template/',
+                                            'report_recipients.csv')}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
+                     text-slate-600 text-[12px] font-bold hover:bg-slate-50 transition-all">
+          <Download className="w-3.5 h-3.5" />Get the list to fill in
+        </button>
+      )}>
+
+      {/* Said plainly rather than left to be noticed: a head with nobody
+          against them has a report built every morning and sent to no one. */}
+      {missing.length > 0 && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-50/70 border
+                        border-amber-100 p-3 mb-4">
+          <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+          <p className="text-[11.5px] text-amber-900/80 leading-relaxed min-w-0">
+            <b>{missing.length} head{missing.length === 1 ? ' has' : 's have'} no
+            email against {missing.length === 1 ? 'them' : 'them'} yet</b> —{' '}
+            {missing.slice(0, 6).map(m => m.region).join(', ')}
+            {missing.length > 6 && `, and ${missing.length - 6} more`}. Their
+            reports are built each morning and go nowhere.
+          </p>
+        </div>
+      )}
+
+      {mayEdit && (
+        <>
+          <button onClick={() => setOpen(o => !o)}
+            className="text-[12px] font-bold text-indigo-600 hover:text-indigo-700">
+            {open ? 'Close' : 'Paste the filled-in list'}
+          </button>
+
+          {open && (
+            <div className="mt-3">
+              <p className="text-[11.5px] text-slate-500 leading-relaxed mb-2">
+                Download the list above, fill in the email column, and paste the
+                whole thing back here. Four columns:{' '}
+                <code className="text-slate-700">role, key, name, email</code>.
+                For a manager, put the regions they cover in column two separated
+                by semicolons — or the word <b>ALL</b>.
+              </p>
+              <textarea id="recipients-paste" value={paste}
+                onChange={ev => setPaste(ev.target.value)} rows={6}
+                placeholder={'head,GTR01,Mohinder Sharma,mohinder@apisindia.com\nmanager,GTR01;GTR02,North Manager,manager@apisindia.com'}
+                className="w-full rounded-xl border border-slate-200 p-3 text-[12px]
+                           font-mono text-slate-700 focus:border-indigo-400 focus:outline-none" />
+              <div className="flex items-center gap-3 mt-2">
+                <button onClick={doImport} disabled={busy || !paste.trim()}
+                  className="px-3.5 py-2 rounded-lg bg-indigo-600 text-white text-[12px]
+                             font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all">
+                  {busy ? 'Reading…' : 'Add these'}
+                </button>
+                {result && !result.error && (
+                  <span className="text-[11.5px] text-emerald-600 font-semibold">
+                    {result.added} added, {result.updated} updated
+                  </span>
+                )}
+                {result?.error && (
+                  <span className="text-[11.5px] text-rose-600 font-semibold">{result.error}</span>
+                )}
+              </div>
+              {/* One bad line must not throw away the good ones, so each is
+                  reported on its own rather than as a failed import. */}
+              {result?.skipped?.length > 0 && (
+                <ul className="mt-2 space-y-0.5">
+                  {result.skipped.map((m: string, i: number) => (
+                    <li key={i} className="text-[11px] text-amber-700">{m}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {list.length > 0 && (
+        <div className="mt-4 space-y-4">
+          {[['Heads — their own territory', heads],
+            ['Managers — everyone they cover', managers]].map(([label, rows]: any) =>
+            rows.length > 0 && (
+              <div key={label}>
+                <p className="text-[10px] font-black uppercase tracking-widest
+                              text-slate-400 mb-2">{label}</p>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {rows.map((r: any) => (
+                    <div key={r.id}
+                      className="flex items-center gap-2.5 rounded-xl border
+                                 border-slate-200 p-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-bold text-slate-800 truncate">
+                          {r.name || r.email}
+                        </p>
+                        <p className="text-[10.5px] text-slate-400 truncate">
+                          {r.email}
+                          {r.role === 'head'
+                            ? (r.matched
+                                ? ` · ${r.matched_to}`
+                                : <span className="text-amber-600"> · no row on the sheet for "{r.head_key}"</span>)
+                            : ` · ${r.covers_all ? 'every region' : (r.covers || []).join(', ') || 'no region yet'}`}
+                        </p>
+                      </div>
+                      {r.role === 'manager' && (
+                        <button
+                          onClick={() => previewTeam(r)}
+                          title="Open their rolled-up report"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600
+                                     hover:bg-indigo-50 transition-all">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
+                      {mayEdit && (
+                        <button onClick={() => remove(r)}
+                          className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600
+                                     hover:bg-rose-50 transition-all">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
+      <p className="mt-4 text-[11px] text-slate-400 leading-relaxed">
+        Nothing is sent from this screen. Building the list and emailing sixteen
+        people are separate decisions.
+      </p>
+    </Panel>
+  );
+}
+
+
+/* ── who may load the morning file ────────────────────────────────────────
+ *
+ * Uploading is a daily chore; owning the data is not the same thing. An
+ * uploader loads the workbook and builds the reports, and can undo a wrong
+ * morning file. Clearing everything, and granting this to somebody else,
+ * both stay with the owner — those are the two actions with no way back.
+ */
+function AccessPanel({ data, onChanged }: { data: any; onChanged: () => void }) {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [err, setErr] = useState('');
+  const isOwner = data?.you?.role === 'super_admin';
+  const rows: any[] = data?.uploaders || [];
+
+  const add = async () => {
+    setErr('');
+    const r = await sqFetch('/uploaders/edit/', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), name: name.trim() }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { setErr(j.error || 'Could not add them'); return; }
+    setEmail(''); setName(''); onChanged();
+  };
+
+  const revoke = async (g: any) => {
+    if (!window.confirm(`Remove upload access for ${g.email}?`)) return;
+    await sqFetch(`/uploaders/edit/${g.id}/`, { method: 'DELETE' });
+    onChanged();
+  };
+
+  return (
+    <Panel title="Who may upload" icon={UserSearch}
+      subtitle={`${rows.length + 1} ${rows.length === 0 ? 'person' : 'people'} can load the morning file`}>
+      <div className="flex items-center gap-2.5 rounded-xl border border-slate-200
+                      bg-slate-50/60 p-2.5">
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-bold text-slate-800 truncate">{data?.owner}</p>
+          <p className="text-[10.5px] text-slate-400">Owner · can also clear the data</p>
+        </div>
+      </div>
+
+      {rows.map(g => (
+        <div key={g.id}
+          className="mt-2 flex items-center gap-2.5 rounded-xl border border-slate-200 p-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-bold text-slate-800 truncate">
+              {g.name || g.email}
+            </p>
+            <p className="text-[10.5px] text-slate-400 truncate">
+              {g.email} · can upload and build reports
+            </p>
+          </div>
+          {isOwner && (
+            <button onClick={() => revoke(g)}
+              className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600
+                         hover:bg-rose-50 transition-all">
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      ))}
+
+      {isOwner ? (
+        <>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <input id="uploader-name" value={name} onChange={e => setName(e.target.value)}
+              placeholder="Name"
+              className="flex-1 min-w-[120px] rounded-lg border border-slate-200 px-3 py-2
+                         text-[12px] focus:border-indigo-400 focus:outline-none" />
+            <input id="uploader-email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="name@apisindia.com" type="email"
+              className="flex-[2] min-w-[180px] rounded-lg border border-slate-200 px-3 py-2
+                         text-[12px] focus:border-indigo-400 focus:outline-none" />
+            <button onClick={add} disabled={!email.includes('@')}
+              className="px-3.5 py-2 rounded-lg bg-slate-900 text-white text-[12px]
+                         font-bold hover:bg-slate-800 disabled:opacity-40 transition-all">
+              Give access
+            </button>
+          </div>
+          {err && <p className="mt-2 text-[11px] text-rose-600 font-semibold">{err}</p>}
+          <p className="mt-2.5 text-[11px] text-slate-400 leading-relaxed">
+            They can load the daily workbook, build the reports, and undo a file they
+            loaded by mistake. They cannot clear the data or give this to anybody else.
+          </p>
+        </>
+      ) : (
+        <p className="mt-3 text-[11px] text-slate-400">
+          Only the owner can give somebody upload access.
+        </p>
+      )}
+    </Panel>
   );
 }
 
