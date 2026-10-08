@@ -1466,9 +1466,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         {!loading && !busyFirstLoad && hasData && activeTab === 'forecast' && forecast && (
           <div className="space-y-5">
             {/* Four figures, each of which somebody can be asked to account
-                for: what we expect, what we promised, what the expectation
-                was fitted on, and how wrong it has been before. */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                for: what we expect, what we promised, and the rate that
+                expectation is built on. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Kpi icon={Radar} label={`Next ${horizon} months`} value={forecast.forecast_total || 0}
                 prefix="₹" accent="from-violet-500 to-fuchsia-600" delay={0}
                 sub="projected revenue (sales)" />
@@ -1492,9 +1492,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                 <Kpi icon={Activity} label="Fitted on" value={forecast.history_months} format={inr}
                   accent="from-cyan-500 to-teal-600" delay={120} sub="months of actual sales" />
               )}
-              <Kpi icon={BarChart3} label="Past error" value={forecast.mape || 0}
-                format={(n) => `${n.toFixed(1)}%`} accent="from-amber-500 to-orange-600" delay={180}
-                sub="how far it missed before" />
+              {/* "Past error 44.5%" was here: the mean absolute percentage
+                  error, which is how far the model missed on months it had
+                  already seen. It is a modelling statistic, not a business
+                  one, and on its own it alarms without informing. What it
+                  is actually for is sizing the high and low lines, and it
+                  is explained in those terms in the band note below, where
+                  it has something to be read against. */}
             </div>
 
             {forecast.vs_aop && (
