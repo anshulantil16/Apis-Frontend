@@ -82,6 +82,27 @@ function AchievementRing({ value }: { value: number }) {
 }
 
 /* ── KPI card ───────────────────────────────────────────────────────────── */
+/** A short bulleted list. The forecast explanations were paragraphs, which
+ *  is the one shape nobody can scan while being asked a question about the
+ *  number beside them. Accepts a string too, so an older response that still
+ *  sends prose renders as a single point rather than as nothing. */
+function Bullets({ items, className = '' }:
+  { items?: string[] | string; className?: string }) {
+  const list = Array.isArray(items) ? items : items ? [items] : [];
+  if (!list.length) return null;
+  return (
+    <ul className={`space-y-1 ${className}`}>
+      {list.map((t, i) => (
+        <li key={i} className="text-[12px] text-slate-600 leading-relaxed flex gap-2">
+          <span className="text-indigo-400 font-black leading-[1.35]">·</span>
+          <span className="min-w-0">{t}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+
 function Kpi({ icon: Icon, label, value, format = shortInr, prefix = '', sub, delta, accent, delay }: {
   icon: any; label: string; value: number; format?: (n: number) => string;
   prefix?: string; sub?: string; delta?: number | null; accent: string; delay: number;
@@ -1551,11 +1572,20 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   <p className="text-[32px] leading-none font-black text-slate-900 tabular-nums">
                     {forecast.run_rate.rate_pct}%
                   </p>
-                  <p className="text-[12px] font-semibold text-slate-500">
-                    of AOP — recent months weighted heaviest. The high and low lines are this
-                    rate's own month-to-month spread: {forecast.run_rate.low_pct}% to
-                    {' '}{forecast.run_rate.high_pct}% of plan.
-                  </p>
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-semibold text-slate-500">
+                      of AOP, recent months weighted heaviest
+                    </p>
+                    <p className="text-[12px] font-semibold text-slate-500">
+                      High and low: {forecast.run_rate.low_pct}% to
+                      {' '}{forecast.run_rate.high_pct}% of plan
+                      {forecast.run_rate.capped && (
+                        <span className="ml-1.5 text-[11px] font-bold text-amber-600">
+                          — held at the widest the band is allowed to be
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
                 <div className="mt-4 flex items-end gap-1.5 overflow-x-auto pb-1">
                   {(forecast.run_rate.by_month || []).map((m: any) => (
@@ -1570,11 +1600,17 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-[11px] text-slate-400 leading-relaxed">
-                  Best month {forecast.run_rate.best.month} at {forecast.run_rate.best.pct}% of plan;
-                  worst {forecast.run_rate.worst.month} at {forecast.run_rate.worst.pct}%. A month
-                  nobody set an AOP for is skipped rather than counted as a miss.
-                </p>
+                <ul className="mt-3 space-y-1">
+                  <li className="text-[11px] text-slate-400 leading-relaxed">
+                    Best month: {forecast.run_rate.best.month} at {forecast.run_rate.best.pct}% of plan.
+                  </li>
+                  <li className="text-[11px] text-slate-400 leading-relaxed">
+                    Worst month: {forecast.run_rate.worst.month} at {forecast.run_rate.worst.pct}%.
+                  </li>
+                  <li className="text-[11px] text-slate-400 leading-relaxed">
+                    A month nobody set an AOP for is skipped, not counted as a miss.
+                  </li>
+                </ul>
               </Panel>
             )}
 
@@ -1694,55 +1730,59 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             {forecast.spec && (
               <Panel title="How this forecast is made" icon={Brain} delay={280}
                 subtitle="So the numbers above can be accounted for">
+                {/* Short lines throughout. This panel is read by somebody
+                    being asked a question in a review, and a paragraph is
+                    the one shape nobody can scan under that pressure. */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Model</p>
                     <p className="mt-1.5 text-[14px] font-black text-slate-800">{forecast.spec.name}</p>
-                    <p className="mt-1.5 text-[12px] text-slate-500 leading-relaxed">{forecast.spec.why}</p>
-                    <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <Bullets items={forecast.spec.why} className="mt-2" />
+                    <p className="mt-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       What it reads
                     </p>
-                    <ul className="mt-1.5 space-y-1">
-                      {(forecast.spec.reads || []).map((r: string) => (
-                        <li key={r} className="text-[12px] text-slate-600 leading-relaxed flex gap-2">
-                          <span className="text-indigo-400 font-black">·</span><span>{r}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <Bullets items={forecast.spec.reads} className="mt-1.5" />
                   </div>
                   <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Seasonality — {forecast.spec.seasonality}
                     </p>
-                    <p className="mt-1.5 text-[12px] text-slate-500 leading-relaxed">
-                      {forecast.spec.seasonality_why}
-                    </p>
-                    <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <Bullets items={forecast.spec.seasonality_why} className="mt-1.5" />
+                    <p className="mt-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       The low and high lines
                     </p>
-                    <p className="mt-1.5 text-[12px] text-slate-500 leading-relaxed">{forecast.spec.band}</p>
-                    <p className="mt-1.5 text-[12px] text-slate-500 leading-relaxed">{forecast.spec.floor}</p>
+                    <Bullets items={forecast.spec.band} className="mt-1.5" />
+                    <Bullets items={forecast.spec.floor} className="mt-1.5" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50/70 border border-amber-100 p-3">
                   <Info className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-[11px] text-amber-900/80 leading-relaxed">
-                    {forecast.run_rate ? (<>
-                      The forecast is the AOP scaled by the rate above — so it keeps the plan's
-                      own month shape and only moves the level to where the business has actually
-                      been running. It is deliberately <b>not</b> the plan copied back: at
-                      {' '}{forecast.run_rate.rate_pct}% of AOP it sits
-                      {' '}{forecast.run_rate.rate_pct >= 100 ? 'above' : 'below'} the plan by
-                      design, and it would move if the achievement rate moved. The notes against each
-                      month below are dated calendar events — festivals, the year boundary, the
-                      monsoon — and nothing more: they are there to sit beside the number, not
-                      to claim what it means for APIS.
-                    </>) : (<>
-                      No AOP reaches these months, so this is an extrapolation of the sales
-                      history alone and has nothing anchoring it to a plan. Upload the AOP sheet
-                      for this period and the forecast will be built on it instead.
-                    </>)}
-                  </p>
+                  <div className="min-w-0">
+                    {forecast.run_rate ? (
+                      <ul className="space-y-1">
+                        <li className="text-[11px] text-amber-900/80 leading-relaxed">
+                          The forecast is the AOP scaled by the rate above — the plan's
+                          month shape, the business's level.
+                        </li>
+                        <li className="text-[11px] text-amber-900/80 leading-relaxed">
+                          It is deliberately <b>not</b> the plan copied back: at
+                          {' '}{forecast.run_rate.rate_pct}% of AOP it sits
+                          {' '}{forecast.run_rate.rate_pct >= 100 ? 'above' : 'below'} the
+                          plan by design, and moves when the achievement rate moves.
+                        </li>
+                        <li className="text-[11px] text-amber-900/80 leading-relaxed">
+                          The notes against each month below are dated calendar events —
+                          festivals, the year boundary, the monsoon — and nothing more.
+                        </li>
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                        No AOP reaches these months, so this is an extrapolation of the
+                        sales history alone with nothing anchoring it to a plan. Upload the
+                        AOP sheet for this period and the forecast will be built on it.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </Panel>
             )}
