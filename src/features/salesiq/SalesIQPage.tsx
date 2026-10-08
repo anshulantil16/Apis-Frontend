@@ -9,6 +9,7 @@ import {
   Zap, RefreshCw, Trash2, AlertTriangle, CheckCircle2, Info,
   BarChart3, Globe2, ShoppingCart, Boxes, X, Filter, ArrowUpRight, ArrowDownRight,
   Activity, Layers, FileSpreadsheet, Trophy, Radar, Brain, UserSearch, CalendarDays,
+  Eye,
 } from 'lucide-react';
 import {
   API, _API_BASE, inr, shortInr, colourFor, REVENUE_COLOUR,
@@ -200,6 +201,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   const [orgLevels, setOrgLevels] = useState('sales_head,rsm,asm');
   const [filterOpts, setFilterOpts] = useState<any>(null);
   const [uploads, setUploads] = useState<any>(null);
+  const [review, setReview] = useState<any>(null);
   const [intel, setIntel] = useState<any>({});
   const [cust, setCust] = useState<any>({});
   const [intelDim, setIntelDim] = useState('state');
@@ -362,7 +364,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
       } else if (t === 'forecast') {
         setForecast(await get(`forecast/?periods=${horizon}`));
       } else if (t === 'data') {
-        setUploads(await sqFetch('/uploads/').then(r => r.json()));
+        /* The review sheet is loaded here rather than with the dashboard:
+           nothing on the dashboard reads it, by design. */
+        const [up, rev] = await Promise.all([
+          sqFetch('/uploads/').then(r => r.json()),
+          sqFetch('/review/').then(r => r.json()).catch(() => null),
+        ]);
+        setUploads(up); setReview(rev);
       } else if (dims.length) {
         const bs = await Promise.all(bd);
         setBreaks(b => ({ ...b, ...Object.fromEntries(dims.map((d, i) => [d, bs[i]])) }));
@@ -1849,7 +1857,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 
         {/* ══ DATA ══ */}
         {!loading && !busyFirstLoad && activeTab === 'data' && (
-          <DataPanel uploads={uploads} onChanged={loadAll}
+          <DataPanel uploads={uploads} review={review} onChanged={loadAll}
             absentDims={filterOpts?.absent_dimensions || []}
             absentDetail={filterOpts?.absent_detail || []} />
         )}
@@ -1859,8 +1867,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
 }
 
 /* ── data / upload tab ──────────────────────────────────────────────────── */
-function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
-  { uploads: any; onChanged: () => void; absentDims?: string[];
+function DataPanel({ uploads, review, onChanged, absentDims = [], absentDetail = [] }:
+  { uploads: any; review?: any; onChanged: () => void; absentDims?: string[];
     // Why each dark breakdown is dark — 'missing' wants a new column,
     // 'empty' wants the existing one filled in upstream.
     absentDetail?: { dim: string; reason: 'empty' | 'missing' }[] }) {
@@ -2158,6 +2166,8 @@ function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
         );
       })()}
 
+      <ReviewPanel review={review} mayEdit={mayEdit} onChanged={onChanged} />
+
       <Panel title="Uploaded files" icon={FileSpreadsheet}
         subtitle={`${uploads?.total_rows?.toLocaleString() || 0} rows in total`}
         right={mayEdit && uploads?.count > 0 && (
@@ -2203,6 +2213,245 @@ function DataPanel({ uploads, onChanged, absentDims = [], absentDetail = [] }:
           </div>
         )}
       </Panel>
+    </div>
+  );
+}
+
+/* ── the daily GTR-head review sheet ──────────────────────────────────────
+ *
+ * Kept apart from the uploaded-files list above it, and from every figure on
+ * the dashboard, because it is a different KIND of thing. The AOP sheet and
+ * the invoice dump are transactions; this is the business's own published
+ * statement of where each head stood on a given morning. Its money is the
+ * same money, already counted once, so it is read by the per-head report and
+ * by nothing else.
+ */
+function ReviewPanel({ review, mayEdit, onChanged }:
+  { review: any; mayEdit: boolean; onChanged: () => void }) {
+  // The same bands the rest of SalesIQ uses, so a head reading amber here
+  // reads amber on every other screen too.
+  const ragOf = (pct: number) => pct >= 100 ? 'green' : pct < 70 ? 'red' : 'amber';
+
+  const snap = review?.snapshot;
+  const rows: any[] = review?.rows || [];
+  const [open, setOpen] = useState(false);
+
+  const removeSnapshot = async (id: number) => {
+    if (!window.confirm('Remove this review sheet? The report built from it '
+                        + 'will fall back to the previous one.')) return;
+    await sqFetch(`/review/${id}/`, { method: 'DELETE' });
+    onChanged();
+  };
+
+  // Lakhs, because that is the unit the sheet itself is written and read in.
+  // Converting it to crore on screen would mean the person checking this
+  // against their own copy has to do arithmetic to agree with it.
+  const lakh = (v: number) => (v / 100000).toLocaleString('en-IN',
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  return (
+    <Panel title="Daily review sheet" icon={CalendarDays}
+      subtitle={snap
+        ? `${snap.row_count} heads · ${snap.as_of_month_label || 'month not read'}`
+        : 'The morning sheet, one row per GTR head'}
+      right={snap && mayEdit && (
+        <button onClick={() => removeSnapshot(snap.id)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200
+                     text-rose-600 text-[12px] font-bold hover:bg-rose-50 transition-all">
+          <Trash2 className="w-3.5 h-3.5" />Remove
+        </button>
+      )}>
+      {!snap ? (
+        <Empty msg="No review sheet uploaded yet"
+          hint="Upload it the same way as the others. It is recognised by its own
+                columns — NO OF SFO, Backlog TGT FTM — and loaded separately from
+                the sales figures, because every rupee on it is already counted." />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-slate-500">
+            <span><b className="text-slate-700">{snap.filename}</b></span>
+            {snap.as_of_date && <span>as at {snap.as_of_date}</span>}
+            {snap.source_unit && <span>read as {snap.source_unit}</span>}
+          </div>
+
+          <Bullets items={snap.notes} className="mt-3" />
+          {snap.warnings?.length > 0 && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50/70
+                            border border-amber-100 p-3">
+              <Info className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+              <ul className="space-y-1 min-w-0">
+                {snap.warnings.map((w: string, i: number) => (
+                  <li key={i} className="text-[11px] text-amber-900/80 leading-relaxed">{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <button onClick={() => setOpen(o => !o)}
+            className="mt-3 text-[12px] font-bold text-indigo-600 hover:text-indigo-700">
+            {open ? 'Hide the rows' : `Show all ${rows.length} heads`}
+          </button>
+
+          {open && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-[11px] border-collapse"
+                style={{ fontVariantNumeric: 'tabular-nums' }}>
+                <thead>
+                  <tr className="text-slate-400 text-[10px] uppercase tracking-widest">
+                    <th className="text-left font-black py-2 pr-3">Region</th>
+                    <th className="text-left font-black py-2 pr-3">Head</th>
+                    <th className="text-right font-black py-2 pr-3">SFO</th>
+                    <th className="text-right font-black py-2 pr-3">MTD AOP</th>
+                    <th className="text-right font-black py-2 pr-3">MTD Pri</th>
+                    <th className="text-right font-black py-2 pr-3">ACH</th>
+                    <th className="text-right font-black py-2 pr-3">YTD</th>
+                    <th className="text-right font-black py-2">FY</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(r => (
+                    <tr key={r.id} className="border-t border-slate-100">
+                      <td className="py-2 pr-3 font-bold text-slate-700">{r.region}</td>
+                      <td className="py-2 pr-3 text-slate-600 truncate max-w-[180px]">{r.head_name}</td>
+                      <td className="py-2 pr-3 text-right text-slate-500">{r.sfo_count || '—'}</td>
+                      <td className="py-2 pr-3 text-right text-slate-500">{lakh(r.month_target)}</td>
+                      <td className="py-2 pr-3 text-right text-slate-700 font-semibold">{lakh(r.mtd_primary)}</td>
+                      {/* No plan is not nought per cent. The handover row on
+                          the real sheet bills against a blank AOP. */}
+                      <td className="py-2 pr-3 text-right">
+                        {r.month_pct === null ? <span className="text-slate-300">no plan</span>
+                          : <StatusPill status={ragOf(r.month_pct)}>
+                              {Math.round(r.month_pct)}%
+                            </StatusPill>}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-slate-500">
+                        {r.ytd_pct === null ? '—' : `${Math.round(r.ytd_pct)}%`}
+                      </td>
+                      <td className="py-2 text-right text-slate-400">
+                        {r.fy_pct === null ? '—' : `${Math.round(r.fy_pct)}%`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <ReportBuilder rows={rows} snap={snap} />
+
+          {review?.snapshots?.length > 1 && (
+            <p className="mt-3 text-[11px] text-slate-400">
+              {review.snapshots.length} sheets on file. The report is built from
+              the most recent.
+            </p>
+          )}
+        </>
+      )}
+    </Panel>
+  );
+}
+
+/* ── one report per head ──────────────────────────────────────────────────
+ *
+ * A file for each person rather than one document with everybody in it. A
+ * head who can read the whole sheet is being shown their peers' numbers
+ * whether or not that was intended, and these go out individually.
+ *
+ * The preview and the downloaded file are the same bytes: both come from
+ * /review/report/file/, so what is approved on screen is what is sent.
+ */
+function ReportBuilder({ rows, snap }: { rows: any[]; snap: any }) {
+  const [busy, setBusy] = useState('');
+  const [err, setErr] = useState('');
+
+  const key = (r: any) => r.head_code || r.region || r.head_name;
+
+  // downloadFile, above: a bare <a href> cannot carry the session header
+  // every SalesIQ endpoint wants, and silently does nothing when it fails.
+  const save = async (path: string, filename: string, tag: string) => {
+    setBusy(tag); setErr('');
+    try {
+      await downloadFile(path, filename);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not build it');
+    } finally { setBusy(''); }
+  };
+
+  const preview = async (r: any) => {
+    setBusy(`p${r.id}`); setErr('');
+    try {
+      const res = await sqFetch(`/review/report/file/?snapshot=${snap.id}&head=${encodeURIComponent(key(r))}`);
+      if (!res.ok) throw new Error(await res.text() || 'Could not build it');
+      const w = window.open('', '_blank');
+      if (!w) { setErr('Your browser blocked the preview window.'); return; }
+      w.document.write(await res.text());
+      w.document.close();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not build it');
+    } finally { setBusy(''); }
+  };
+
+  const stamp = snap?.as_of_date || 'latest';
+
+  return (
+    <div className="mt-5 pt-5 border-t border-slate-200">
+      <div className="flex flex-wrap items-center gap-3 mb-1">
+        <div className="min-w-0">
+          <p className="text-[13px] font-black text-slate-800">Reports for each head</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            One file per person, built from this sheet. Open it to check it, then
+            download.
+          </p>
+        </div>
+        <button
+          onClick={() => save(`/review/bundle/?snapshot=${snap.id}`,
+                              `reports_${stamp}.zip`, 'all')}
+          disabled={!!busy}
+          className="ml-auto flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600
+                     text-white text-[12px] font-bold hover:bg-indigo-700 disabled:opacity-50
+                     transition-all">
+          <Download className="w-3.5 h-3.5" />
+          {busy === 'all' ? `Building ${rows.length}…` : `Download all ${rows.length}`}
+        </button>
+      </div>
+
+      {err && (
+        <p className="text-[11px] text-rose-600 font-semibold mt-2">{err}</p>
+      )}
+
+      <div className="mt-3 grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {rows.map(r => (
+          <div key={r.id}
+            className="flex items-center gap-2.5 rounded-xl border border-slate-200 p-2.5
+                       hover:border-slate-300 transition-all">
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-bold text-slate-800 truncate">{r.head_name}</p>
+              <p className="text-[10.5px] text-slate-400 truncate">
+                {r.region}
+                {/* Said here rather than only at import: a head with no ID is
+                    one whose report cannot be addressed automatically later. */}
+                {!r.head_code && <span className="text-amber-600"> · no APIS ID</span>}
+              </p>
+            </div>
+            <button onClick={() => preview(r)} disabled={!!busy}
+              title="Open the report"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600
+                         hover:bg-indigo-50 disabled:opacity-40 transition-all">
+              <Eye className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => save(
+                `/review/report/file/?snapshot=${snap.id}&head=${encodeURIComponent(key(r))}&download=1`,
+                `${r.region || r.head_name}_${stamp}.html`.replace(/[^\w.-]/g, '_'),
+                `d${r.id}`)}
+              disabled={!!busy} title="Download the report"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600
+                         hover:bg-emerald-50 disabled:opacity-40 transition-all">
+              <Download className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
