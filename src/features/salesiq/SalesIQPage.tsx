@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Area, BarChart, Bar, PieChart, Pie, Cell, ComposedChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -237,70 +237,164 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     return p.toString();
   }, [mFrom, mTo, sel, span]);
 
-  const loadAll = useCallback(async () => {
-    setLoading(true); setErr('');
+  /* ── what each tab actually needs ───────────────────────────────────────
+
+     This was one Promise.all of THIRTY-NINE requests, fired again in full on
+     every filter change, every tab switch, and every click of the forecast's
+     3M/6M buttons. Three things made that slow, and they compounded:
+
+       * A browser opens about six connections to one origin, so thirty-nine
+         requests queue into roughly seven rounds.
+       * Promise.all resolves on the slowest of them, so nothing at all
+         appeared until the last of the thirty-nine came back -- the Overview
+         waited on the customer cohort analysis it does not show.
+       * Changing the forecast horizon re-fetched the org tree, every
+         breakdown and the whole of Intelligence, none of which can change
+         when you ask for three months instead of six.
+
+     Now: the overview call alone is the core, because `has_data` gates every
+     tab on it, and each tab fetches its own panels the first time it is
+     opened under a given set of filters. Opening the dashboard goes from
+     thirty-nine requests to seven; switching to Forecast asks for one; and
+     changing the horizon asks for that one again rather than for everything.
+
+     Results are kept per tab and per query, so going back to a tab you have
+     already looked at under the same filters costs nothing. */
+  /* Which tab is really on screen. 'data' is the only conditional one --
+     it is not offered to a reader who cannot upload -- so a stored tab of
+     'data' falls back to the overview. Computed here rather than below the
+     TABS array, because the loaders key their caching off it. */
+  const activeTab: Tab = (tab === 'data' && !canEdit()) ? 'overview' : tab;
+
+  const TAB_DIMS: Record<string, string[]> = {
+    overview:  ['state', 'channel', 'category'],
+    geography: ['state', 'zone', 'area', 'subzone', 'district', 'location', 'customer'],
+    products:  ['category', 'product', 'sku', 'channel', 'variant', 'prod_group',
+                'business_type', 'warehouse_type'],
+    team:      ['salesperson', 'asm', 'rsm', 'sales_head'],
+  };
+
+  const get = useCallback(async (path: string) => {
     const q = qs();
-    const get = async (path: string) => {
-      const r = await sqFetch(`/${path}${path.includes('?') ? '&' : '?'}${q}`);
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Failed: ${path}`);
-      return r.json();
-    };
+    const r = await sqFetch(`/${path}${path.includes('?') ? '&' : '?'}${q}`);
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Failed: ${path}`);
+    return r.json();
+  }, [qs]);
+
+  /* The filter dropdowns describe what is LOADED, not what is selected, so
+     they do not change when a filter does. Fetched once rather than on every
+     one of the thirty-nine rounds. */
+  useEffect(() => {
+    if (!session) return;
+    sqFetch('/filters/').then(r => r.json()).then(setFilterOpts).catch(() => {});
+  }, [session]);
+
+  const loadCore = useCallback(async () => {
+    setLoading(true); setErr('');
     try {
-      // The two primary-sales files carry more hierarchy than the original
-      // template did. Panels for these hide themselves when a dimension comes
-      // back empty, so a file that does not have one costs a card rather than
-      // showing an empty one.
-      const dims = ['state', 'zone', 'area', 'category', 'product', 'sku', 'channel',
-                    'salesperson', 'asm', 'rsm', 'customer',
-                    'sales_head', 'subzone', 'district', 'location',
-                    'business_type', 'warehouse_type', 'variant', 'prod_group'];
-      const [ov, tr, ins, fc, fo, up,
-             pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price,
-             rfm, cohorts, newRepeat, paretoCustomer, orgTree, yoyData,
-             ...bs] = await Promise.all([
-        get('overview/'), get('trend/'), get('insights/'),
-        get(`forecast/?periods=${horizon}`), sqFetch('/filters/').then(r => r.json()),
-        sqFetch('/uploads/').then(r => r.json()),
-        // intelligence tab
-        get(`pareto/?dim=${intelDim}`), get(`matrix/?dim=${intelDim}`),
-        get(`movers/?dim=${intelDim}`), get('anomalies/'), get('seasonality/'),
-        get(`heatmap/?dim=${intelDim}`), get('pacing/'), get('price/'),
-        // customers tab
-        get('rfm/'), get('cohorts/'), get('new-repeat/'), get('pareto/?dim=customer'),
-        get(`org/?levels=${orgLevels}`), get('yoy/'),
-        ...dims.map(d => get(`breakdown/?dim=${d}&limit=12`)),
-      ]);
-      setOverview(ov); setTrend(tr); setInsights(ins.insights || []);
-      setForecast(fc); setFilterOpts(fo); setUploads(up);
-      setIntel({ pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price });
-      setCust({ rfm, cohorts, newRepeat, paretoCustomer });
-      setOrg(orgTree); setYoy(yoyData);
-      const map: Record<string, any> = {};
-      dims.forEach((d, i) => { map[d] = bs[i]; });
-      setBreaks(map);
+      setOverview(await get('overview/'));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load dashboard');
     } finally { setLoading(false); }
-  }, [qs, horizon, intelDim, orgLevels]);
+  }, [get]);
 
-  /* Nothing is fetched until there IS a session, and everything is fetched
-     again the moment one arrives.
-
-     This fired on mount regardless. The morning after a session expired, the
-     login screen was on screen and this still sent every request without a
-     token -- twenty-odd 401s, which set the error to "Please sign in to
-     SalesIQ." Then signing in flipped `session` to truthy and the dashboard
-     rendered around that stale error and a null overview, because `loadAll`
-     does not depend on `session`, so its identity never changed and this
-     effect never ran again. You were looking at the answer to the question
-     asked BEFORE you signed in. A refresh fixed it by remounting with a
-     token in hand, which is exactly why it only ever happened once a day. */
   useEffect(() => {
     if (!session) { setLoading(false); return; }
-    loadAll();
-  }, [loadAll, session]);
+    loadCore();
+  }, [loadCore, session]);
+
+  /* Which slice of a tab's data is already in hand. Keyed by the query plus
+     whichever control belongs to that tab, so changing the horizon marks the
+     forecast stale and leaves everything else alone. */
+  const loadedRef = useRef<Record<string, string>>({});
+  const [tabBusy, setTabBusy] = useState(false);
+
+  const tabKey = useCallback((t: Tab) => [
+    qs(),
+    t === 'forecast' ? horizon : '',
+    t === 'intelligence' ? intelDim : '',
+    t === 'structure' ? orgLevels : '',
+  ].join('|'), [qs, horizon, intelDim, orgLevels]);
+
+  const loadTab = useCallback(async (t: Tab) => {
+    const dims = TAB_DIMS[t] || [];
+    const bd = dims.map(d => get(`breakdown/?dim=${d}&limit=12`));
+    try {
+      if (t === 'overview') {
+        const [tr, ins, yoyData, ...bs] = await Promise.all([
+          get('trend/'), get('insights/'), get('yoy/'), ...bd]);
+        setTrend(tr); setInsights(ins.insights || []); setYoy(yoyData);
+        setBreaks(b => ({ ...b, ...Object.fromEntries(dims.map((d, i) => [d, bs[i]])) }));
+      } else if (t === 'intelligence') {
+        const [pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price] =
+          await Promise.all([
+            get(`pareto/?dim=${intelDim}`), get(`matrix/?dim=${intelDim}`),
+            get(`movers/?dim=${intelDim}`), get('anomalies/'), get('seasonality/'),
+            get(`heatmap/?dim=${intelDim}`), get('pacing/'), get('price/')]);
+        setIntel({ pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price });
+      } else if (t === 'customers') {
+        const [rfm, cohorts, newRepeat, paretoCustomer] = await Promise.all([
+          get('rfm/'), get('cohorts/'), get('new-repeat/'), get('pareto/?dim=customer')]);
+        setCust({ rfm, cohorts, newRepeat, paretoCustomer });
+      } else if (t === 'structure') {
+        setOrg(await get(`org/?levels=${orgLevels}`));
+      } else if (t === 'forecast') {
+        setForecast(await get(`forecast/?periods=${horizon}`));
+      } else if (t === 'data') {
+        setUploads(await sqFetch('/uploads/').then(r => r.json()));
+      } else if (dims.length) {
+        const bs = await Promise.all(bd);
+        setBreaks(b => ({ ...b, ...Object.fromEntries(dims.map((d, i) => [d, bs[i]])) }));
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to load this tab');
+    }
+  }, [get, intelDim, orgLevels, horizon]);
+
+  /* A filter change invalidates every tab, not just the one on screen --
+     otherwise going back to Geography after narrowing to one region would
+     show the figures for the whole country and look perfectly convincing.
+
+     Declared BEFORE the fetch below, because effects run in source order:
+     after it, this wiped the entry the fetch had just recorded, and every
+     tab was then refetched once more on the way back to it. */
+  useEffect(() => { loadedRef.current = {}; }, [qs]);
+
+  useEffect(() => {
+    if (!session) return;
+    const key = tabKey(activeTab);
+    if (loadedRef.current[activeTab] === key) return;
+    loadedRef.current[activeTab] = key;
+    setTabBusy(true);
+    loadTab(activeTab).finally(() => setTabBusy(false));
+  }, [session, activeTab, tabKey, loadTab]);
+
+  /* An explicit refresh, and what runs after an upload. Everything is stale
+     then, including the filter dropdowns -- a new file can introduce a region
+     or a brand the lists have never seen. */
+  const loadAll = useCallback(() => {
+    loadedRef.current = {};
+    sqFetch('/filters/').then(r => r.json()).then(setFilterOpts).catch(() => {});
+    loadCore();
+    return loadTab(activeTab);
+  }, [loadCore, loadTab, activeTab]);
+
 
   const hasData = overview?.has_data;
+
+  /* Whether the tab on screen has its own panels yet.
+     A tab now fetches when it is opened, so for a moment it has none -- and
+     its panels say things like "No state column in your upload", which is a
+     statement about the FILE and is simply false while a request is still in
+     flight. Skeletons are shown instead until the first answer lands; after
+     that a refetch leaves the old figures up rather than blanking the page. */
+  const tabHasData: boolean = ({
+    overview: !!trend, intelligence: !!intel?.pareto, customers: !!cust?.rfm,
+    geography: !!breaks.state, products: !!breaks.category,
+    team: !!breaks.salesperson, structure: !!org, forecast: !!forecast,
+    data: !!uploads,
+  } as Record<string, boolean>)[activeTab] ?? true;
+  const busyFirstLoad = tabBusy && !tabHasData;
   // Achievement is measured only over months that carry both a plan and a
   // result, so the panel says how many that is rather than leaving the
   // reader to assume it is the whole span on screen.
@@ -418,7 +512,6 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
       : []),
   ];
 
-  const activeTab: Tab = TABS.some(t => t.id === tab) ? tab : 'overview';
 
   if (!session) {
     return (
@@ -521,7 +614,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             <button onClick={loadAll} disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
                          text-[12px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />Refresh
+              {/* Spins for a tab's own fetch as well as for the core one.
+                  A tab now loads its panels when it is opened, so without
+                  this the only sign anything was happening was the panels
+                  themselves changing a moment later. */}
+              <RefreshCw className={`w-3.5 h-3.5 ${loading || tabBusy ? 'animate-spin' : ''}`} />Refresh
             </button>
             <button
               onClick={async () => {
@@ -687,7 +784,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ── loading ── */}
-        {loading && (
+        {(loading || busyFirstLoad) && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               {Array.from({ length: 6 }).map((_, i) => <Skel key={i} className="h-32" />)}
@@ -726,7 +823,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ OVERVIEW ══ */}
-        {!loading && hasData && activeTab === 'overview' && (
+        {!loading && !busyFirstLoad && hasData && activeTab === 'overview' && (
           <div className="space-y-5">
             {/* A dashboard built on a handful of leftover rows looks exactly
                 as confident as one built on the real file — same tiles, same
@@ -1107,7 +1204,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ INTELLIGENCE ══ */}
-        {!loading && hasData && activeTab === 'overview' && yoy?.results?.length > 1
+        {!loading && !busyFirstLoad && hasData && activeTab === 'overview' && yoy?.results?.length > 1
           && (yoy.years?.length || 0) > 1 && (
           <Panel title="Year on year" icon={CalendarDays}
             subtitle={`Same month, ${yoy.years.join(' vs ')} · April to March — where the year is actually being won or lost`}>
@@ -1153,15 +1250,15 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
           </Panel>
         )}
 
-        {!loading && hasData && activeTab === 'intelligence' && (
+        {!loading && !busyFirstLoad && hasData && activeTab === 'intelligence' && (
           <IntelligencePanel data={intel} dim={intelDim} setDim={setIntelDim} />
         )}
 
         {/* ══ CUSTOMERS ══ */}
-        {!loading && hasData && activeTab === 'customers' && <CustomersPanel data={cust} />}
+        {!loading && !busyFirstLoad && hasData && activeTab === 'customers' && <CustomersPanel data={cust} />}
 
         {/* ══ GEOGRAPHY ══ */}
-        {!loading && hasData && activeTab === 'geography' && (
+        {!loading && !busyFirstLoad && hasData && activeTab === 'geography' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             <Panel title="Revenue by state" icon={MapPin} subtitle="Ranked by contribution" delay={0} right={<Coverage coverage={breaks.state?.coverage} />}>
               {breaks.state?.results?.length ? (
@@ -1217,7 +1314,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ PRODUCTS ══ */}
-        {!loading && hasData && activeTab === 'products' && (
+        {!loading && !busyFirstLoad && hasData && activeTab === 'products' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             <Panel title="Category contribution" icon={Package} delay={0} right={<Coverage coverage={breaks.category?.coverage} />}>
               {breaks.category?.results?.length ? (
@@ -1272,7 +1369,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ TEAM ══ */}
-        {!loading && hasData && activeTab === 'team' && (
+        {!loading && !busyFirstLoad && hasData && activeTab === 'team' && (
           <div className="space-y-5">
             {/* The three hierarchy panels below used to be nested inside this
                 salesperson check, so a file with RSM, ASM and Head but no
@@ -1345,11 +1442,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ FORECAST ══ */}
-        {!loading && hasData && activeTab === 'structure' && (
+        {!loading && !busyFirstLoad && hasData && activeTab === 'structure' && (
           <StructureTab org={org} levels={orgLevels} setLevels={setOrgLevels} />
         )}
 
-        {!loading && hasData && activeTab === 'forecast' && forecast && (
+        {!loading && !busyFirstLoad && hasData && activeTab === 'forecast' && forecast && (
           <div className="space-y-5">
             {/* Four figures, each of which somebody can be asked to account
                 for: what we expect, what we promised, what the expectation
@@ -1690,7 +1787,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         )}
 
         {/* ══ DATA ══ */}
-        {!loading && activeTab === 'data' && (
+        {!loading && !busyFirstLoad && activeTab === 'data' && (
           <DataPanel uploads={uploads} onChanged={loadAll}
             absentDims={filterOpts?.absent_dimensions || []}
             absentDetail={filterOpts?.absent_detail || []} />
