@@ -166,14 +166,6 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   // 12-hour expiry, so a stale localStorage entry can't grant access.
   const [session, setSession] = useState(() => loadSession());
 
-  // The server can end a session before its 12 hours are up — a restart
-  // clears the cache it lives in. sqFetch raises this on the first 401 so
-  // the page returns to the login instead of showing a wall of dead panels.
-  useEffect(() => {
-    const out = () => setSession(null);
-    window.addEventListener('salesiq-signed-out', out);
-    return () => window.removeEventListener('salesiq-signed-out', out);
-  }, []);
   const [tab, setTab] = useState<Tab>('overview');
   const [filterList, setFilterList] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -191,6 +183,28 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   const [cust, setCust] = useState<any>({});
   const [intelDim, setIntelDim] = useState('state');
   const [err, setErr] = useState('');
+
+  // The server can end a session before its 12 hours are up — a restart
+  // clears the cache it lives in. sqFetch raises this on the first 401 so
+  // the page returns to the login instead of showing a wall of dead panels.
+  //
+  // Declared below the state it resets, not above it. Up there the handler
+  // closed over setters still in their temporal dead zone when it was
+  // created; it happened to work, because nothing can fire the event until
+  // the component body has finished running, and that is too fine a thread
+  // to hang a sign-out on.
+  useEffect(() => {
+    const out = () => {
+      setSession(null);
+      // Drop what the old session fetched. Without this, signing back in as
+      // somebody else showed the previous person’s figures until the first
+      // request returned.
+      setOverview(null); setTrend(null); setInsights([]); setForecast(null);
+      setBreaks({}); setOrg(null); setYoy(null); setErr('');
+    };
+    window.addEventListener('salesiq-signed-out', out);
+    return () => window.removeEventListener('salesiq-signed-out', out);
+  }, []);
 
   // filters
   // Months ('YYYY-MM'), not days. See the note on `span` below.
@@ -269,7 +283,22 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     } finally { setLoading(false); }
   }, [qs, horizon, intelDim, orgLevels]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  /* Nothing is fetched until there IS a session, and everything is fetched
+     again the moment one arrives.
+
+     This fired on mount regardless. The morning after a session expired, the
+     login screen was on screen and this still sent every request without a
+     token -- twenty-odd 401s, which set the error to "Please sign in to
+     SalesIQ." Then signing in flipped `session` to truthy and the dashboard
+     rendered around that stale error and a null overview, because `loadAll`
+     does not depend on `session`, so its identity never changed and this
+     effect never ran again. You were looking at the answer to the question
+     asked BEFORE you signed in. A refresh fixed it by remounting with a
+     token in hand, which is exactly why it only ever happened once a day. */
+  useEffect(() => {
+    if (!session) { setLoading(false); return; }
+    loadAll();
+  }, [loadAll, session]);
 
   const hasData = overview?.has_data;
   // Achievement is measured only over months that carry both a plan and a
