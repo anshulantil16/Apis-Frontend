@@ -682,12 +682,12 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col">
-        {/* One flat APIS orange (#eba147: the brand panel's #e8932b one shade lighter) under
+        {/* One flat APIS golden amber (#e2b12f, picked from the brand panel behind "APIS INDIA") under
             the panel's honeycomb — a solid colour rather than a gradient, so
             the full-width bar reads the same from end to end. */}
         <header className="sticky top-0 z-30 overflow-visible border-b border-orange-600/30 shadow-sm">
           <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-[#eba147]" />
+            <div className="absolute inset-0 bg-[#e2b12f]" />
             <svg className="absolute inset-0 w-full h-full opacity-[0.13]">
               <defs>
                 <pattern id="ih-comb-header" width="28" height="24" patternUnits="userSpaceOnUse">
