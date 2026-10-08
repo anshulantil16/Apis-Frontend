@@ -31,6 +31,16 @@ const monthLabel = (m: string) => {
 };
 import { SalesIQLogin, loadSession, clearSession } from './SalesIQLogin';
 
+/** The filename off Content-Disposition, if the server sent one. Handles
+ *  both `filename="x.xlsx"` and the RFC 5987 `filename*=UTF-8''x.xlsx`. */
+function serverFilename(res: Response): string {
+  const cd = res.headers.get('Content-Disposition') || '';
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(cd);
+  if (star) { try { return decodeURIComponent(star[1]); } catch { /* fall through */ } }
+  const plain = /filename="?([^";]+)"?/i.exec(cd);
+  return plain ? plain[1].trim() : '';
+}
+
 /** Download via fetch+blob rather than a bare <a href>. A plain anchor to a
  *  failing endpoint silently navigates away or does nothing at all, which is
  *  indistinguishable from a broken button — this surfaces the actual reason. */
@@ -52,7 +62,11 @@ async function downloadFile(url: string, filename: string) {
   const href = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = href;
-  a.download = filename;
+  // The server's own name wins when it sends one. The endpoint changed from
+  // CSV to XLSX and this side kept saving it as .csv, so Excel refused to
+  // open it -- "the file format and extension don't match". The caller's
+  // name is the fallback, not the authority.
+  a.download = serverFilename(res) || filename;
   document.body.appendChild(a);
   a.click();
   window.URL.revokeObjectURL(href);
@@ -2480,8 +2494,6 @@ function ReportBuilder({ rows, snap }: { rows: any[]; snap: any }) {
  */
 function RecipientsPanel({ data, mayEdit, onChanged }:
   { data: any; mayEdit: boolean; onChanged: () => void }) {
-  const [paste, setPaste] = useState('');
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<any>(null);
 
@@ -2490,19 +2502,22 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
   const managers = list.filter(r => r.role === 'manager');
   const missing: any[] = data?.heads_without_a_recipient || [];
 
-  const doImport = async () => {
+  /* The filled-in workbook, sent as a file. There is no paste box: what
+     comes out of Excel on a copy is TAB separated, and the importer reads
+     commas -- so pasting reported every one of nineteen rows as needing more
+     columns. Sending the file itself has no such edge. */
+  const upload = async (file: File) => {
     setBusy(true); setResult(null);
     try {
-      const r = await sqFetch('/recipients/import/', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: paste }),
-      });
+      const body = new FormData();
+      body.append('file', file);
+      const r = await sqFetch('/recipients/import/', { method: 'POST', body });
       const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'Could not read that');
+      if (!r.ok) throw new Error(j.error || 'Could not read that file');
       setResult(j);
-      if (j.added || j.updated) { setPaste(''); onChanged(); }
+      if (j.added || j.updated) onChanged();
     } catch (e) {
-      setResult({ error: e instanceof Error ? e.message : 'Could not read that' });
+      setResult({ error: e instanceof Error ? e.message : 'Could not read that file' });
     } finally { setBusy(false); }
   };
 
@@ -2551,11 +2566,26 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
             </button>
           )}
           <button onClick={() => downloadFile('/recipients/template/',
-                                              'report_recipients.csv')}
+                                              'report recipients.xlsx')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
                        text-slate-600 text-[12px] font-bold hover:bg-slate-50 transition-all">
-            <Download className="w-3.5 h-3.5" />Get the list to fill in
+            <Download className="w-3.5 h-3.5" />Download the list
           </button>
+          <label className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600
+                            text-white text-[12px] font-bold hover:bg-indigo-700
+                            cursor-pointer transition-all">
+            <Upload className="w-3.5 h-3.5" />
+            {busy ? 'Reading…' : 'Upload the filled list'}
+            <input id="recipients-file" type="file" className="hidden"
+              accept=".xlsx,.xls,.csv"
+              onChange={ev => {
+                const f = ev.target.files?.[0];
+                // Cleared so choosing the same file twice still fires, which
+                // it must after a correction in the same spreadsheet.
+                ev.target.value = '';
+                if (f) upload(f);
+              }} />
+          </label>
         </div>
       )}>
 
@@ -2576,53 +2606,39 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
       )}
 
       {mayEdit && (
-        <>
-          <button onClick={() => setOpen(o => !o)}
-            className="text-[12px] font-bold text-indigo-600 hover:text-indigo-700">
-            {open ? 'Close' : 'Paste the filled-in list'}
-          </button>
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+          <p className="text-[12px] text-slate-600 leading-relaxed">
+            <b className="text-slate-800">1.</b> Download the list &nbsp;
+            <b className="text-slate-800">2.</b> Fill in the <b>email</b> column in
+            Excel and save &nbsp;
+            <b className="text-slate-800">3.</b> Upload it back with the button above.
+          </p>
+          <p className="mt-1.5 text-[11.5px] text-slate-500 leading-relaxed">
+            Do it in as many sittings as you like — rows already set up are updated,
+            not duplicated, and a row with no email is simply not set up yet.
+          </p>
 
-          {open && (
-            <div className="mt-3">
-              <p className="text-[11.5px] text-slate-500 leading-relaxed mb-2">
-                Download the list above, fill in the email column, and paste the
-                whole thing back here. Four columns:{' '}
-                <code className="text-slate-700">role, key, name, email</code>.
-                For a manager, put the regions they cover in column two separated
-                by semicolons — or the word <b>ALL</b>.
-              </p>
-              <textarea id="recipients-paste" value={paste}
-                onChange={ev => setPaste(ev.target.value)} rows={6}
-                placeholder={'head,GTR01,,Mohinder Sharma,mohinder@apisindia.com,\nmanager,,,North Manager,manager@apisindia.com,GTR01;GTR02'}
-                className="w-full rounded-xl border border-slate-200 p-3 text-[12px]
-                           font-mono text-slate-700 focus:border-indigo-400 focus:outline-none" />
-              <div className="flex items-center gap-3 mt-2">
-                <button onClick={doImport} disabled={busy || !paste.trim()}
-                  className="px-3.5 py-2 rounded-lg bg-indigo-600 text-white text-[12px]
-                             font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all">
-                  {busy ? 'Reading…' : 'Add these'}
-                </button>
-                {result && !result.error && (
-                  <span className="text-[11.5px] text-emerald-600 font-semibold">
-                    {result.added} added, {result.updated} updated
-                  </span>
-                )}
-                {result?.error && (
-                  <span className="text-[11.5px] text-rose-600 font-semibold">{result.error}</span>
-                )}
-              </div>
-              {/* One bad line must not throw away the good ones, so each is
-                  reported on its own rather than as a failed import. */}
-              {result?.skipped?.length > 0 && (
-                <ul className="mt-2 space-y-0.5">
-                  {result.skipped.map((m: string, i: number) => (
-                    <li key={i} className="text-[11px] text-amber-700">{m}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
+          {busy && (
+            <p className="mt-2.5 text-[12px] font-bold text-indigo-600">Reading the file…</p>
           )}
-        </>
+          {result && !result.error && !busy && (
+            <p className="mt-2.5 text-[12px] font-bold text-emerald-600">
+              {result.added} added, {result.updated} updated
+            </p>
+          )}
+          {result?.error && (
+            <p className="mt-2.5 text-[12px] font-bold text-rose-600">{result.error}</p>
+          )}
+          {/* One bad row must not throw away the good ones, so each is
+              reported on its own rather than as a failed import. */}
+          {result?.skipped?.length > 0 && (
+            <ul className="mt-2 space-y-0.5">
+              {result.skipped.map((m: string, i: number) => (
+                <li key={i} className="text-[11px] text-amber-700">{m}</li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {list.length > 0 && (
