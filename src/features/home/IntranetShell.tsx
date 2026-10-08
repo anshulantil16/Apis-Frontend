@@ -682,8 +682,25 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-30 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-300 border-b border-amber-500/40 shadow-sm">
-          <div className="px-7 py-3 flex items-center gap-5">
+        {/* A soft honey-beige with the brand panel's honeycomb drawn faintly
+            in amber — ties the bar to the sidebar without competing with it.
+            The panel's own full-strength amber was too loud across the
+            whole width of the screen. */}
+        <header className="sticky top-0 z-30 overflow-visible border-b border-amber-200/80 shadow-sm">
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-[#f7e4bf] via-[#fbf0d9] to-[#f6e0c2]" />
+            <svg className="absolute inset-0 w-full h-full opacity-[0.10]">
+              <defs>
+                <pattern id="ih-comb-header" width="28" height="24" patternUnits="userSpaceOnUse">
+                  <path d="M0 12 L7 0 L21 0 L28 12 L21 24 L7 24 Z" fill="none" stroke="#b45309" strokeWidth="1" />
+                  <path d="M-14 24 L-7 12 L7 12 L14 24 L7 36 L-7 36 Z" fill="none" stroke="#b45309" strokeWidth="1" />
+                  <path d="M14 24 L21 12 L35 12 L42 24 L35 36 L21 36 Z" fill="none" stroke="#b45309" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#ih-comb-header)" />
+            </svg>
+          </div>
+          <div className="relative px-7 py-3 flex items-center gap-5">
             {active === 'home' ? (
               // Greeting header for the dashboard itself. The name comes from
               // the portal session — before that existed there was no app-wide
@@ -692,7 +709,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               <div className="hidden lg:block pr-5 border-r border-[#2b2005]/15 leading-tight">
                 <p className="text-[15px] font-black text-[#2b2005] tracking-tight flex items-center gap-1.5">
                   {now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'}
-                  {userName ? <span className="text-orange-800">{userName.trim().split(/\s+/)[0]}</span> : null}
+                  {userName ? <span className="text-amber-700">{userName.trim().split(/\s+/)[0]}</span> : null}
                   <span aria-hidden></span>
                 </p>
                 <p className="text-[11px] font-semibold text-[#2b2005]/70 mt-0.5">
