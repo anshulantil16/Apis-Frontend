@@ -682,13 +682,14 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col">
-        {/* The sidebar brand panel's amber and honeycomb, one step lighter
-            (amber-300→orange-400 against its amber-400→orange-600): the
-            panel's full strength was too loud across the whole screen, and
-            a pale beige lost the connection to it. */}
-        <header className="sticky top-0 z-30 overflow-visible border-b border-amber-500/40 shadow-sm">
+        {/* The sidebar brand panel's colour, as it actually appears on screen
+            (measured: #eaba32 → #e9a730 → #e88824), plus its honeycomb. Not
+            the panel's Tailwind classes: that gradient runs over 256px, and
+            stretched across the full-width bar it turns a much darker orange
+            than anything the panel shows. */}
+        <header className="sticky top-0 z-30 overflow-visible border-b border-orange-600/30 shadow-sm">
           <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-300 via-amber-400 to-orange-400" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#eaba32] via-[#e9a730] to-[#e88824]" />
             <svg className="absolute inset-0 w-full h-full opacity-[0.13]">
               <defs>
                 <pattern id="ih-comb-header" width="28" height="24" patternUnits="userSpaceOnUse">
@@ -709,7 +710,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               <div className="hidden lg:block pr-5 border-r border-[#2b2005]/15 leading-tight">
                 <p className="text-[15px] font-black text-[#2b2005] tracking-tight flex items-center gap-1.5">
                   {now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening'}
-                  {userName ? <span className="text-orange-900">{userName.trim().split(/\s+/)[0]}</span> : null}
+                  {userName ? <span className="text-white drop-shadow-sm">{userName.trim().split(/\s+/)[0]}</span> : null}
                   <span aria-hidden></span>
                 </p>
                 <p className="text-[11px] font-semibold text-[#2b2005]/70 mt-0.5">
