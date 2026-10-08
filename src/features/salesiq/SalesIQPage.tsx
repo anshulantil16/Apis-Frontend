@@ -1107,6 +1107,16 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                         a month, for the {overview.run_rate_basis?.months_ahead} month
                         {overview.run_rate_basis?.months_ahead === 1 ? '' : 's'} still to come
                       </p>
+                      {/* The two numbers it is made of. "Needs X a month" is
+                          a figure somebody will be challenged on in a review,
+                          and it should not have to be taken on trust. */}
+                      {overview.run_rate_basis?.full_plan > 0 && (
+                        <p className="mt-1 text-[10.5px] text-slate-400 leading-relaxed">
+                          ₹{shortInr(overview.run_rate_basis.still_owed)} still owed on a
+                          ₹{shortInr(overview.run_rate_basis.full_plan)} plan — the months
+                          left, plus what the year is already behind.
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -1122,9 +1132,11 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                             {overview.run_rate_basis.lift_needed_pct}%
                           </p>
                           <p className="mt-1 text-[11px] font-semibold text-slate-500">
-                            {overview.run_rate_basis.lift_needed_pct > 0
-                              ? 'faster than the current pace to land the plan'
-                              : 'the current pace already clears what is left'}
+                            {overview.run_rate_basis.already_ahead
+                              ? 'the plan is already covered at the current pace'
+                              : overview.run_rate_basis.lift_needed_pct > 0
+                                ? 'faster than the current pace, to land the plan in full'
+                                : 'the current pace already clears what is left'}
                           </p>
                         </>
                       ) : (
