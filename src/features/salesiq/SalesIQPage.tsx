@@ -6,12 +6,12 @@ import {
 } from 'recharts';
 import {
   Upload, Download, TrendingUp, Target, Users, Package, MapPin, Building2, Network, ChevronDown,
-  Zap, RefreshCw, Trash2, AlertTriangle, CheckCircle2, Info, Sparkles,
+  Zap, RefreshCw, Trash2, AlertTriangle, CheckCircle2, Info,
   BarChart3, Globe2, ShoppingCart, Boxes, X, Filter, ArrowUpRight, ArrowDownRight,
   Activity, Layers, FileSpreadsheet, Trophy, Radar, Brain, UserSearch, CalendarDays,
 } from 'lucide-react';
 import {
-  API, _API_BASE, inr, shortInr, PALETTE, colourFor, REVENUE_COLOUR,
+  API, _API_BASE, inr, shortInr, colourFor, REVENUE_COLOUR,
   RAG, StatusPill, useCountUp, Counter, Reveal, Panel,
   Skel, Empty, ChartTip, Leaderboard, Coverage, sqFetch, canEdit,
 } from './SalesIQShared';
@@ -154,6 +154,28 @@ const DIM_LABEL: Record<string, string> = {
   customer_name: 'Customer',
   product_name: 'Item Name',
 };
+/** Dropdown options with the coded entries kept together.
+
+ *  The Region list is a mix of two things: nine-odd territory codes
+ *  (GTR01 … GTR09, some split A/B) and a handful of named businesses
+ *  (E-COM, Govt. Bus., MT). Sorted as plain text they interleave — the
+ *  named ones land either side of the codes, so "Govt. Bus." sits above
+ *  GTR01 and "MT" below GTR09, and a reader scanning for one of the three
+ *  names has to look in two places with nine rows in between.
+ *
+ *  Codes first, because there are far more of them and they are what gets
+ *  picked; names after, as their own block. Within the codes a plain sort
+ *  is already right — they are zero-padded, so GTR03 A precedes GTR03 B
+ *  precedes GTR04 A. */
+const CODE_LIKE = /^[A-Z]{2,}\s?\d/;
+
+export const groupedOptions = (vals: string[] = []): string[] => {
+  const codes = vals.filter(v => CODE_LIKE.test(String(v).trim().toUpperCase()));
+  const named = vals.filter(v => !CODE_LIKE.test(String(v).trim().toUpperCase()));
+  const by = (a: string, b: string) => String(a).localeCompare(String(b), 'en');
+  return [...codes.sort(by), ...named.sort(by)];
+};
+
 const dimLabel = (k: string) =>
   DIM_LABEL[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
@@ -171,11 +193,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<any>(null);
   const [trend, setTrend] = useState<any>(null);
-  const [insights, setInsights] = useState<any[]>([]);
   const [forecast, setForecast] = useState<any>(null);
   const [breaks, setBreaks] = useState<Record<string, any>>({});
   const [org, setOrg] = useState<any>(null);
-  const [yoy, setYoy] = useState<any>(null);
   const [orgLevels, setOrgLevels] = useState('sales_head,rsm,asm');
   const [filterOpts, setFilterOpts] = useState<any>(null);
   const [uploads, setUploads] = useState<any>(null);
@@ -199,8 +219,8 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
       // Drop what the old session fetched. Without this, signing back in as
       // somebody else showed the previous person’s figures until the first
       // request returned.
-      setOverview(null); setTrend(null); setInsights([]); setForecast(null);
-      setBreaks({}); setOrg(null); setYoy(null); setErr('');
+      setOverview(null); setTrend(null); setForecast(null);
+      setBreaks({}); setOrg(null); setErr('');
     };
     window.addEventListener('salesiq-signed-out', out);
     return () => window.removeEventListener('salesiq-signed-out', out);
@@ -223,7 +243,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
      answered by the dump -- which carries no target at all, so the same
      stretch of time asked by month and by day came back with two different
      figures and only one of them had a plan to measure against. */
-  const [span, setSpan] = useState<'fy' | 'months'>('fy');
+  const [span, setSpan] = useState<'fy' | 'months'>('months');
   const [sel, setSel] = useState<Record<string, string[]>>({});
   const [horizon, setHorizon] = useState(6);
 
@@ -321,9 +341,9 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     const bd = dims.map(d => get(`breakdown/?dim=${d}&limit=12`));
     try {
       if (t === 'overview') {
-        const [tr, ins, yoyData, ...bs] = await Promise.all([
-          get('trend/'), get('insights/'), get('yoy/'), ...bd]);
-        setTrend(tr); setInsights(ins.insights || []); setYoy(yoyData);
+        const [tr, ...bs] = await Promise.all([
+          get('trend/'), ...bd]);
+        setTrend(tr);
         setBreaks(b => ({ ...b, ...Object.fromEntries(dims.map((d, i) => [d, bs[i]])) }));
       } else if (t === 'intelligence') {
         const [pareto, matrix, movers, anomalies, seasonality, heatmap, pacing, price] =
@@ -379,6 +399,30 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
     return loadTab(activeTab);
   }, [loadCore, loadTab, activeTab]);
 
+
+  /* The month pair opens already filled with the financial year to date.
+     Empty, it read as a control nobody had used — "From…" / "To…" beside
+     figures that were in fact the year to date, because the server applies
+     that window when none is given. Same numbers either way; the difference
+     is that the screen now states the window it is showing instead of
+     leaving it to be assumed.
+
+     Taken from the window the SERVER reports rather than worked out here, so
+     the pair cannot disagree with the figures beside it, and clamped to the
+     months the files actually hold so neither box lands on an option that is
+     not in its own list. Once only — the reader's own choice must not be
+     overwritten by the next response. */
+  const pickedWindow = useRef(false);
+  useEffect(() => {
+    if (pickedWindow.current || mFrom || mTo) return;
+    const w = overview?.filters?.window;
+    const all: string[] = [...(filterOpts?.months || [])].sort();
+    if (!w?.from || !w?.to || !all.length) return;
+    pickedWindow.current = true;
+    const lo = String(w.from).slice(0, 7), hi = String(w.to).slice(0, 7);
+    setMFrom(all.find(m => m >= lo) || all[0]);
+    setMTo([...all].reverse().find(m => m <= hi) || all[all.length - 1]);
+  }, [overview, filterOpts, mFrom, mTo]);
 
   const hasData = overview?.has_data;
 
@@ -743,14 +787,19 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                   </>
                 );
               })()}
-              {(['zone', 'subzone', 'channel', 'category', 'salesperson'] as const).map(k => (
+              {/* Channel, then Region, then Sub-Region, then Category — the
+                  order the business narrows in, rather than the order the
+                  columns happen to sit in on the sheet. Sub-Region follows
+                  Region because it sits inside it. */}
+              {(['channel', 'zone', 'subzone', 'category', 'salesperson'] as const).map(k => (
                 (filterOpts[k] || []).length > 0 && (
                   <select key={k} value=""
                     onChange={e => e.target.value && toggle(k, e.target.value)}
                     className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-semibold
                                text-slate-600 bg-white max-w-[150px]">
                     <option value="">{dimLabel(k)}</option>
-                    {filterOpts[k].map((v: string) => <option key={v} value={v}>{v}</option>)}
+                    {groupedOptions(filterOpts[k]).map((v: string) =>
+                      <option key={v} value={v}>{v}</option>)}
                   </select>
                 )
               ))}
@@ -781,6 +830,36 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
             {overview.data_refreshed.uploads > 1 &&
               <> · {overview.data_refreshed.uploads} files loaded</>}
           </p>
+        )}
+
+        {/* A filter the invoice file has no column for.
+
+            The review sheet carries CHANEL TYPE; the dump's export does not,
+            so every invoice row holds a blank channel. Filter to GT and the
+            money narrows correctly off the sheet while customers, SKUs,
+            categories, cities and order sizes all empty — and an empty panel
+            reads as "nothing sold in GT", which is false. The dashboard says
+            which filter did it, because the remedy is a column in an export
+            rather than anything on this screen. */}
+        {!loading && hasData && (overview?.filters_blind_to_invoices?.length > 0) && (
+          <div className="mb-5 flex items-start gap-3 rounded-2xl bg-amber-50
+                          border-2 border-amber-300 px-4 py-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-black text-amber-900">
+                The invoice file has no
+                {' '}{overview.filters_blind_to_invoices.map(dimLabel).join(' or ')}
+                {' '}column, so it cannot be narrowed by it.
+              </p>
+              <p className="text-[11.5px] text-amber-700 font-semibold mt-0.5">
+                Revenue and AOP are correct for this selection — they come off the
+                review sheet, which does carry it. Anything counted off invoices —
+                customers, SKUs, categories, orders, quantity — is empty here because
+                the file cannot answer the question, not because nothing sold. Add the
+                column to the export and these fill in.
+              </p>
+            </div>
+          </div>
         )}
 
         {/* ── loading ── */}
@@ -918,10 +997,15 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
                         ₹{shortInr(rev)}
                       </p>
                       <p className="mt-1.5 text-[11.5px] font-semibold text-slate-500">
+                        {/* The GROWTH is kept and last year's rupees are not.
+                            The percentage is arithmetic done on data the floor
+                            keeps off the screen — which is what that data is
+                            loaded for — while printing the figure itself put
+                            last year back on the page by another route. */}
                         {overview.vs_last_year
-                          ? `vs ₹${shortInr(overview.vs_last_year.last_year)} same ${overview.vs_last_year.months} months last year`
+                          ? `on the same ${overview.vs_last_year.months} months last year`
                           : overview.prev_period_has_data
-                            ? `vs ₹${shortInr(overview.prev_revenue)} prior period`
+                            ? 'against the period before this'
                             : 'nothing loaded for the period before this'}
                       </p>
                     </div>
@@ -1145,36 +1229,6 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
               </Panel>
             </div>
 
-            {/* insights */}
-            {insights.length > 0 && (
-              <Panel title="What the data is telling you" icon={Sparkles}
-                subtitle="Generated from the current selection" delay={460}>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {insights.map((ins, i) => {
-                    const style = ins.type === 'risk'
-                      ? { wrap: 'border-rose-200 bg-rose-50/60', ic: 'text-rose-500', I: AlertTriangle }
-                      : ins.type === 'win'
-                        ? { wrap: 'border-emerald-200 bg-emerald-50/60', ic: 'text-emerald-500', I: CheckCircle2 }
-                        : { wrap: 'border-blue-200 bg-blue-50/60', ic: 'text-blue-500', I: Info };
-                    const I = style.I;
-                    return (
-                      <div key={i} className={`siq-reveal rounded-xl border p-3.5 ${style.wrap}
-                                               transition-transform hover:-translate-y-0.5`}
-                        style={{ animationDelay: `${i * 70}ms` }}>
-                        <div className="flex items-start gap-2">
-                          <I className={`w-4 h-4 mt-0.5 flex-shrink-0 ${style.ic}`} />
-                          <div className="min-w-0">
-                            <p className="text-[12px] font-black text-slate-800 mb-0.5">{ins.title}</p>
-                            <p className="text-[11px] text-slate-600 leading-relaxed">{ins.body}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Panel>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <Panel title="Top states" icon={MapPin} delay={520} right={<Coverage coverage={breaks.state?.coverage} />}>
                 {breaks.state?.results?.length ? <Leaderboard rows={breaks.state.results.slice(0, 7)} showTarget />
@@ -1203,52 +1257,13 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
           </div>
         )}
 
-        {/* ══ INTELLIGENCE ══ */}
-        {!loading && !busyFirstLoad && hasData && activeTab === 'overview' && yoy?.results?.length > 1
-          && (yoy.years?.length || 0) > 1 && (
-          <Panel title="Year on year" icon={CalendarDays}
-            subtitle={`Same month, ${yoy.years.join(' vs ')} · April to March — where the year is actually being won or lost`}>
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={yoy.results} margin={{ left: 4, right: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false}
-                  tickLine={false} tickFormatter={(v: number) => shortInr(v)} width={64} />
-                <Tooltip content={<ChartTip />} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                {yoy.years.map((y: string, i: number) => (
-                  i === yoy.years.length - 1 ? (
-                    <Area key={y} type="monotone" dataKey={y} name={y}
-                      stroke={PALETTE[i % PALETTE.length]} strokeWidth={2.5}
-                      fill={PALETTE[i % PALETTE.length]} fillOpacity={0.12}
-                      animationDuration={900} connectNulls={false} />
-                  ) : (
-                    <Line key={y} type="monotone" dataKey={y} name={y}
-                      stroke={PALETTE[i % PALETTE.length]} strokeWidth={2}
-                      strokeDasharray="5 4" dot={false} animationDuration={900}
-                      connectNulls={false} />
-                  )
-                ))}
-              </ComposedChart>
-            </ResponsiveContainer>
-            {(() => {
-              const latest = yoy.years[yoy.years.length - 1];
-              const g = yoy.growth?.[latest];
-              if (!g || g.pct === null || g.pct === undefined) return null;
-              return (
-                <p className="text-[12px] font-bold text-slate-500 mt-3">
-                  {latest} is{' '}
-                  <span className={g.pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                    {g.pct >= 0 ? 'up' : 'down'} {Math.abs(g.pct).toFixed(1)}%
-                  </span>{' '}
-                  on {yoy.years[yoy.years.length - 2]}, over the {g.months} month
-                  {g.months === 1 ? '' : 's'} both years have.
-                </p>
-              );
-            })()}
-          </Panel>
-        )}
+        {/* The year-on-year chart lived here. It plotted FY25-26 as its
+            second series, which is last year on screen -- the one thing
+            the display floor exists to prevent. Last year is still loaded
+            and still does its job: the growth figure in the headline band
+            is computed from it, which is the backend work it is for.
+            Bringing the chart back means lifting the floor for it alone,
+            which is a decision rather than an oversight. */}
 
         {!loading && !busyFirstLoad && hasData && activeTab === 'intelligence' && (
           <IntelligencePanel data={intel} dim={intelDim} setDim={setIntelDim} />
