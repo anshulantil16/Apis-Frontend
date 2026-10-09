@@ -80,6 +80,19 @@ export function SendPanel({ mayEdit, recipients }:
         </div>
       )}
 
+      {box && box.attachment_format === 'html' && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-50/70 border
+                        border-amber-100 p-3 mb-4">
+          <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+          <p className="text-[11.5px] text-amber-900/80 leading-relaxed min-w-0">
+            <b>Reports will be attached as .html, not PDF.</b> Gmail shows an
+            .html attachment as its own source code, so readers have to
+            download it before they see the report. Installing WeasyPrint on
+            the server fixes it — the mail still sends either way.
+          </p>
+        </div>
+      )}
+
       {broken.length > 0 && (
         <div className="flex items-start gap-2 rounded-xl bg-amber-50/70 border
                         border-amber-100 p-3 mb-4">
