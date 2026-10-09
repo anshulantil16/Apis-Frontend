@@ -11,7 +11,7 @@ import {
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
   Globe2, CalendarClock, Landmark, Database,
   Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp,
-  Info, PartyPopper, AlertTriangle,
+  Info, PartyPopper, AlertTriangle, FileText,
 } from 'lucide-react';
 import { apiBase } from '../../apiBase';
 
@@ -210,6 +210,7 @@ export interface NewJoiner { name: string; date: string; department?: string; da
 const _API_BASE = apiBase();
 const VACANCIES_API = `${_API_BASE}/api/vacancies`;
 const NOTICEBOARD_API = `${_API_BASE}/api/noticeboard`;
+const POLICIES_API = `${_API_BASE}/api/policies`;
 
 /* Backed by the real `vacancies` Django app — the current hiring plan (23
    roles, seeded from the same sheet this used to hold as a static array),
@@ -370,11 +371,30 @@ export function useCelebrations(scope: 'card' | 'all' = 'card') {
 }
 
 export interface HomeAnnouncement {
+  /* Unique across both sources — an announcement and a document can share
+     a numeric id. */
+  key: string;
   id: number; title: string; body: string; date: string;
   tone: string; pinned: boolean;
   icon: ComponentType<{ className?: string }>;
   moderationStatus: 'pending' | 'approved' | 'rejected';
   submittedBy: string; isMine: boolean;
+  /* Set on rows that are a document newly filed on Policies & Guidelines:
+     the card adds a red "(New release)" tag and links to the file. */
+  newRelease?: boolean;
+  href?: string;
+  /* ISO timestamp, for ordering the two sources together. */
+  sortAt: string;
+}
+
+/* How long an uploaded policy document is announced as a new release. */
+const NEW_RELEASE_DAYS = 30;
+
+/* The fields of a `policies` API row this card reads — see
+   policies/views.py `_serialize`. */
+interface PolicyDocRow {
+  id: number; title: string; category: string; department: string;
+  file: string; moderationStatus: string; submittedAt: string | null; submittedBy: string;
 }
 
 /* The backend stores a short tone key rather than a component, so that it
@@ -395,22 +415,58 @@ export function useAnnouncements() {
 
   useEffect(() => {
     let alive = true;
+    const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-IN',
+      { day: '2-digit', month: 'short', year: 'numeric' });
     (async () => {
-      try {
-        const r = await apiFetch(`${NOTICEBOARD_API}/announcements/`);
-        const d = r.ok ? await r.json() : [];
-        if (alive) {
-          setAnnouncements((d as any[]).map(a => ({
-            ...a,
-            icon: TONE_ICON[a.tone] ?? Megaphone,
-            date: new Date(a.date).toLocaleDateString('en-IN',
-              { day: '2-digit', month: 'short', year: 'numeric' }),
-          })));
-        }
-      } catch {
-        /* Leaves the card empty rather than breaking the dashboard. */
-      } finally {
-        if (alive) setLoading(false);
+      /* Each source fails on its own: no notices must not hide new
+         releases, and the other way round. */
+      const [notices, releases] = await Promise.all([
+        (async (): Promise<HomeAnnouncement[]> => {
+          try {
+            const r = await apiFetch(`${NOTICEBOARD_API}/announcements/`);
+            const d = r.ok ? await r.json() : [];
+            return (d as any[]).map(a => ({
+              ...a,
+              key: `a${a.id}`,
+              icon: TONE_ICON[a.tone] ?? Megaphone,
+              date: fmt(a.date),
+              sortAt: a.date,
+            }));
+          } catch { return []; }
+        })(),
+        /* Documents filed on Policies & Guidelines in the last
+           NEW_RELEASE_DAYS, announced to everyone as a new release. Only
+           approved ones — a pending upload is visible to its uploader on
+           that page, never on the company dashboard. Read live from the
+           register rather than copied into announcements, so deleting a
+           document takes its announcement with it. */
+        (async (): Promise<HomeAnnouncement[]> => {
+          try {
+            const r = await apiFetch(`${POLICIES_API}/documents/`);
+            const d: PolicyDocRow[] = r.ok ? await r.json() : [];
+            const since = Date.now() - NEW_RELEASE_DAYS * 24 * 60 * 60 * 1000;
+            return d
+              .filter((p): p is PolicyDocRow & { submittedAt: string } =>
+                p.moderationStatus === 'approved' && !!p.submittedAt
+                && new Date(p.submittedAt).getTime() >= since)
+              .map(p => ({
+                key: `p${p.id}`, id: p.id, title: p.title,
+                body: [p.category, p.department].filter(Boolean).join(' · '),
+                date: fmt(p.submittedAt), sortAt: p.submittedAt,
+                tone: 'update', pinned: false, icon: FileText,
+                moderationStatus: 'approved' as const,
+                submittedBy: p.submittedBy || '', isMine: false,
+                newRelease: true, href: p.file || undefined,
+              }));
+          } catch { return []; }
+        })(),
+      ]);
+      if (alive) {
+        /* Pinned notices stay on top; everything else newest first. */
+        setAnnouncements([...notices, ...releases].sort((a, b) =>
+          Number(b.pinned) - Number(a.pinned)
+          || new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime()));
+        setLoading(false);
       }
     })();
     return () => { alive = false; };

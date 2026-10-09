@@ -1091,7 +1091,7 @@ function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {loading ? 'Loading…'
-                : announcements.length ? `${announcements.length} notice${announcements.length === 1 ? '' : 's'} from HR`
+                : announcements.length ? `${announcements.length} ${announcements.length === 1 ? 'item' : 'items'} · notices from HR and new document releases`
                 : 'Nothing posted yet'}
             </p>
           </div>
@@ -1107,17 +1107,22 @@ function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
           )}
           {announcements.map(a => {
             const Icon = a.icon;
+            const Row = a.href ? 'a' : 'div';
             return (
-              <div key={a.id} className="flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+              <Row key={a.key} {...(a.href ? { href: a.href, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                className="flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
                   <Icon className="w-5 h-5 text-amber-500" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-slate-800 leading-snug">{a.title}</p>
+                  <p className="text-sm font-bold text-slate-800 leading-snug">
+                    {a.title}
+                    {a.newRelease && <span className="text-rose-600 font-black"> (New release)</span>}
+                  </p>
                   <p className="text-[12px] text-slate-400 leading-snug mt-0.5">{a.body}</p>
                   <p className="text-[11px] font-bold text-slate-300 mt-1.5">{a.date}</p>
                 </div>
-              </div>
+              </Row>
             );
           })}
         </div>
@@ -2279,17 +2284,22 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                 )}
                 {announcements.slice(0, 3).map(a => {
                   const Icon = a.icon;
+                  const Row = a.href ? 'a' : 'div';
                   return (
-                    <div key={a.id} className="flex items-start gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
+                    <Row key={a.key} {...(a.href ? { href: a.href, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                      className="flex items-start gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
                       <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
                         <Icon className="w-4 h-4 text-amber-500" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-bold text-slate-800 leading-snug">{a.title}</p>
+                        <p className="text-[12px] font-bold text-slate-800 leading-snug">
+                          {a.title}
+                          {a.newRelease && <span className="text-rose-600 font-black"> (New release)</span>}
+                        </p>
                         <p className="text-[10.5px] text-slate-400 leading-snug mt-0.5">{a.body}</p>
                         <p className="text-[9.5px] font-bold text-slate-300 mt-1">{a.date}</p>
                       </div>
-                    </div>
+                    </Row>
                   );
                 })}
               </div>
