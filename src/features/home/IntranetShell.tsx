@@ -747,14 +747,14 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                 })}
 
                 {/* AmbitionBox — what employees say about working at APIS.
-                    Same circle and neon-tilt as the icons beside it; white
-                    behind the logo because the mark is AmbitionBox's own blue. */}
+                    Just the blue mark, no circle behind it: the logo is its
+                    own shape. Same footprint and hover lift as the icons
+                    beside it. */}
                 <a href="https://www.ambitionbox.com/reviews/apis-india-limited-reviews"
                   target="_blank" rel="noopener noreferrer" title="APIS India reviews on AmbitionBox"
-                  style={{ ['--ih-neon' as string]: 'rgba(245,158,11,.5)' }}
-                  className="ih-tilt ih-neon w-7 h-7 rounded-full bg-white overflow-hidden flex items-center justify-center
-                             ring-1 ring-amber-300/50 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
-                  <img src="/AmbitionBox.png" alt="AmbitionBox" className="w-[26px] h-[26px] max-w-none object-contain" />
+                  className="w-7 h-7 flex items-center justify-center transition-all duration-300
+                             hover:-translate-y-0.5 hover:scale-110">
+                  <img src="/AmbitionBox.png" alt="AmbitionBox" className="w-6 h-6 object-contain drop-shadow-sm" />
                 </a>
 
                 {/* Quote of the day — same neon-tilt treatment as the social
