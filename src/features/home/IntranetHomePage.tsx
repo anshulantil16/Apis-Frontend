@@ -4,7 +4,7 @@ import {
   ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw, Clock,
-  Newspaper, Users, Database, Headphones, Network, BookOpen,
+  Newspaper, Users, Database, Headphones, Network, BookOpen, Star, MessageSquareText,
 } from 'lucide-react';
 import type { StateHolidayGroup } from './IntranetHomeShared';
 import {
@@ -35,6 +35,19 @@ const LEADERSHIP_SLIDES: LeadershipSlide[] = [
     bio: 'Driven by his passion and conviction, Mr. Vimal Anand received formal training in beekeeping and honey processing from the University of Warmia, Poland. He gradually built a global presence and a robust structure supported by a state-of-the-art production factory to cater to global markets — his undeterred leadership and vision have led the company to reach its heights today, becoming a leading player in the world\'s organized honey trade.',
   },
 ];
+
+/* "APIS at AmbitionBox" hero slide — APIS India's standing on AmbitionBox,
+   the employee-review site the header's AmbitionBox icon links to. The
+   figures are typed in from that page, not fetched: AmbitionBox has no
+   public API. Update them here when the page changes. */
+const AMBITIONBOX_URL = 'https://www.ambitionbox.com/reviews/apis-india-limited-reviews';
+const AMBITIONBOX_STATS: { icon: typeof Users; label: string; value: string }[] = [
+  { icon: Star, label: 'Rating', value: '4.4' },
+  { icon: MessageSquareText, label: 'Reviews', value: '300+' },
+  { icon: TrendingUp, label: 'Above Industry Average', value: '16%' },
+];
+/* The staircase on that slide, bottom step first. */
+const GROWTH_STEPS = ['Learn', 'Grow', 'Achieve'];
 
 /* Floating tool badges on the "Everything You Need, One Place" hero slide
    — a handful of real, distinct tools (not all of them; the point is a
@@ -1256,9 +1269,10 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
   );
   // Top-level hero carousel: slide 0 is the "Our Products" showcase, with
   // its own continuously-sliding product strip; the next LEADERSHIP_SLIDES
-  // are the leadership profiles; the last slide is the "Everything You
-  // Need, One Place" tools showcase.
-  const heroSlideCount = 1 + LEADERSHIP_SLIDES.length + 1;
+  // are the leadership profiles; then the "Everything You Need, One Place"
+  // tools showcase; the last slide is "APIS at AmbitionBox".
+  const toolsSlide = 1 + LEADERSHIP_SLIDES.length;
+  const heroSlideCount = toolsSlide + 2;
   const [heroSlide, setHeroSlide] = useState(0);
 
   const recentEntries = useMemo(() => getRecentToolsWithTime(), []);
@@ -1474,6 +1488,80 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                     </div>
                   );
                 })()
+              ) : heroSlide > toolsSlide ? (
+                /* "APIS at AmbitionBox" — same dark hero shell/glow/particles
+                   and amber type as every other slide. The APIS logo sits in
+                   a glowing gold ring (the oval logo is sized to the circle's
+                   width so it fits inside with an even margin); the three
+                   AMBITIONBOX_STATS cards and the button open the review
+                   page; the LEARN / GROW / ACHIEVE staircase only shows on
+                   wide screens, where there is room beside the text. */
+                <div key="ambitionbox" className="ih-fade relative z-10 p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-6 md:gap-8 h-[281px]">
+                  <div className="relative shrink-0 mx-auto md:mx-0 md:ml-6 w-36 h-36 md:w-44 md:h-44">
+                    <div aria-hidden className="absolute -inset-3 rounded-full bg-amber-500/30 blur-2xl" />
+                    <div className="relative w-full h-full rounded-full p-[3px]
+                                    bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600
+                                    shadow-[0_0_40px_rgba(245,158,11,.55)]">
+                      <div className="w-full h-full rounded-full bg-gradient-to-b from-slate-900 to-black
+                                      ring-1 ring-amber-300/30 flex flex-col items-center justify-center gap-2 px-5">
+                        <img src="/logo.png" alt="APIS"
+                          className="w-[78%] h-auto object-contain drop-shadow-[0_6px_14px_rgba(245,158,11,.35)]" />
+                        <p className="text-[9.5px] md:text-[10.5px] font-bold text-slate-200 text-center leading-tight">
+                          Together for a<br />Healthier Tomorrow
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex-1 text-center md:text-left md:pr-10">
+                    <h1 className="text-2xl md:text-[30px] font-black text-amber-400 uppercase tracking-wide leading-[1.1]">
+                      APIS at AmbitionBox
+                    </h1>
+                    <p className="text-[15px] md:text-base font-bold text-white mt-1 mb-2.5">Build Your Future with APIS</p>
+                    <p className="text-slate-300 text-[12px] leading-relaxed line-clamp-4 max-w-2xl">
+                      Team members benefit from helpful senior guidance and clear opportunities to take on new
+                      responsibilities for steady professional advancement. The workplace provides extensive
+                      opportunities to gain expertise in distribution and consumer handling while developing new
+                      professional skills.
+                    </p>
+                    <div className="mt-3.5 flex flex-wrap justify-center md:justify-start gap-2.5">
+                      {AMBITIONBOX_STATS.map(s => {
+                        const Icon = s.icon;
+                        return (
+                          <a key={s.label} href={AMBITIONBOX_URL} target="_blank" rel="noopener noreferrer"
+                            title="See APIS India on AmbitionBox"
+                            className="group inline-flex items-center gap-2.5 pl-1.5 pr-4 py-1.5 rounded-full bg-white/[0.04]
+                                       ring-1 ring-amber-400/50 hover:ring-amber-300 hover:bg-amber-400/10 transition-all">
+                            <span className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center
+                                             shadow-[0_0_12px_rgba(245,158,11,.5)] shrink-0">
+                              <Icon className="w-4 h-4 text-slate-900" />
+                            </span>
+                            <span className="text-left leading-tight">
+                              <span className="block text-[10px] font-bold text-slate-300">{s.label}</span>
+                              <span className="block text-[15px] font-black text-amber-300">{s.value}</span>
+                            </span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* LEARN / GROW / ACHIEVE — three rising gold-edged steps
+                      with an arrow climbing past the top one. */}
+                  <div aria-hidden className="relative hidden min-[1800px]:block shrink-0 w-56 h-full">
+                    <div className="absolute inset-x-0 bottom-2 h-10 rounded-[100%] bg-amber-500/25 blur-xl" />
+                    {GROWTH_STEPS.map((step, i) => (
+                      <div key={step}
+                        className="ih-pop-in absolute flex items-center justify-center rounded-md
+                                   bg-gradient-to-b from-slate-800 to-slate-950 ring-1 ring-amber-400/70
+                                   shadow-[0_0_18px_rgba(245,158,11,.25)] text-[11px] font-black tracking-[0.18em] text-amber-300 uppercase"
+                        style={{ left: `${i * 26}%`, bottom: `${8 + i * 26}%`, width: '46%', height: '22%', animationDelay: `${i * 120}ms` }}>
+                        {step}
+                      </div>
+                    ))}
+                    <TrendingUp className="absolute right-0 top-1 w-10 h-10 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,.7)]" />
+                  </div>
+                </div>
               ) : (
                 /* "Everything You Need, One Place" — same dark hero shell/
                    glow/particles as every other slide, a small app-window
