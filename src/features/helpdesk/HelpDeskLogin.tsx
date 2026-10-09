@@ -297,9 +297,6 @@ export function HelpDeskLogin({ onSuccess }: {
           </div>
         </div>
       </div>
-      <p className="absolute bottom-5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-700/70 z-10">
-        APIS India Limited · Admin Requests &amp; Facilities
-      </p>
     </div>
   );
 }
