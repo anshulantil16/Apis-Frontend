@@ -2555,7 +2555,7 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
     <Panel title="Email setup — who gets which report" icon={Users}
       subtitle={list.length
         ? `${heads.length} head${heads.length === 1 ? '' : 's'} · ${managers.length} manager${managers.length === 1 ? '' : 's'}`
-        : 'Nobody set up yet — download the list, fill it in, paste it back'}
+        : 'Nobody set up yet — download the list, fill in the emails, upload it back'}
       right={mayEdit && (
         <div className="flex items-center gap-2">
           {list.length > 0 && (
@@ -2616,6 +2616,14 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
           <p className="mt-1.5 text-[11.5px] text-slate-500 leading-relaxed">
             Do it in as many sittings as you like — rows already set up are updated,
             not duplicated, and a row with no email is simply not set up yet.
+          </p>
+          {/* The workbook carried a second tab explaining this. One line here
+              is read; a tab nobody clicks is not. */}
+          <p className="mt-1.5 text-[11.5px] text-slate-500 leading-relaxed">
+            A <b>head</b> gets their own territory — fill in the email only. A{' '}
+            <b>manager</b> gets one report across several — fill in the name, the
+            email, and <b>regions_covered</b>: <code>GTR01;GTR02</code>, or the
+            word <code>ALL</code>.
           </p>
 
           {busy && (
