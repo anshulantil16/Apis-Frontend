@@ -2625,8 +2625,9 @@ function RecipientsPanel({ data, mayEdit, onChanged }:
           <p className="mt-1.5 text-[11.5px] text-slate-500 leading-relaxed">
             A <b>head</b> gets their own territory — fill in the email only. A{' '}
             <b>manager</b> gets one report across several — fill in the name, the
-            email, and <b>regions_covered</b>: <code>GTR01;GTR02</code>, or the
-            word <code>ALL</code>.
+            email, and <b>regions_covered</b> — one region per line in the cell,
+            or separated by <code>;</code> or <code>,</code>, or the single word{' '}
+            <code>ALL</code> for every territory.
           </p>
 
           {busy && (
