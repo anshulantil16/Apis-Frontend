@@ -2456,9 +2456,19 @@ function ReportBuilder({ rows, snap }: { rows: any[]; snap: any }) {
               <p className="text-[12px] font-bold text-slate-800 truncate">{r.head_name}</p>
               <p className="text-[10.5px] text-slate-400 truncate">
                 {r.region}
-                {/* Said here rather than only at import: a head with no ID is
-                    one whose report cannot be addressed automatically later. */}
-                {!r.head_code && <span className="text-amber-600"> · no APIS ID</span>}
+                {/* Every row used to be flagged in amber when it had no APIS
+                    ID. That mattered when the ID was the only key; a head
+                    with no ID is now addressed by region, or by name where
+                    the region is shared, and nothing is held up — so the tag
+                    marked working rows as faulty and trained people to
+                    ignore the colour. What is left is the row that genuinely
+                    cannot be told apart from another. */}
+                {r.addressable === false && (
+                  <span className="text-amber-600" title={
+                    `Cannot be told apart from ${(r.clashes_with || []).join(', ')}`}>
+                    {' '}· same as {(r.clashes_with || []).join(', ')}
+                  </span>
+                )}
               </p>
             </div>
             <button onClick={() => preview(r)} disabled={!!busy}
