@@ -1497,8 +1497,9 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                    page; the LEARN / GROW / ACHIEVE staircase only shows on
                    wide screens, where there is room beside the text. */
                 <div key="ambitionbox" className="ih-fade relative z-10 p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-6 md:gap-8 h-[281px]">
-                  <div className="relative shrink-0 mx-auto md:mx-0 md:ml-6 w-36 h-36 md:w-44 md:h-44">
-                    <div aria-hidden className="absolute -inset-3 rounded-full bg-amber-500/30 blur-2xl" />
+                  <div className="ih-float relative shrink-0 mx-auto md:mx-0 md:ml-6 w-36 h-36 md:w-44 md:h-44"
+                    style={{ animationDuration: '6s' }}>
+                    <div aria-hidden className="ih-pulse-glow absolute -inset-3 rounded-full bg-amber-500/30 blur-2xl" />
                     <div className="relative w-full h-full rounded-full p-[3px]
                                     bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600
                                     shadow-[0_0_40px_rgba(245,158,11,.55)]">
@@ -1525,13 +1526,23 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                       professional skills.
                     </p>
                     <div className="mt-3.5 flex flex-wrap justify-center md:justify-start gap-2.5">
-                      {AMBITIONBOX_STATS.map(s => {
+                      {AMBITIONBOX_STATS.map((s, i) => {
                         const Icon = s.icon;
+                        /* Three layers, because each CSS animation needs its
+                           own element: the outer one pops in (staggered), the
+                           middle one floats — at a different pace and phase
+                           per card so they never bob in step — and the link
+                           itself keeps the hover state. */
                         return (
-                          <a key={s.label} href={AMBITIONBOX_URL} target="_blank" rel="noopener noreferrer"
+                          <span key={s.label} className="ih-pop-in inline-block" style={{ animationDelay: `${150 + i * 140}ms` }}>
+                          <span className="ih-float inline-block"
+                            style={{ animationDuration: `${3.8 + i * 0.7}s`, animationDelay: `${-i * 1.3}s` }}>
+                          <a href={AMBITIONBOX_URL} target="_blank" rel="noopener noreferrer"
                             title="See APIS India on AmbitionBox"
-                            className="group inline-flex items-center gap-2.5 pl-1.5 pr-4 py-1.5 rounded-full bg-white/[0.04]
-                                       ring-1 ring-amber-400/50 hover:ring-amber-300 hover:bg-amber-400/10 transition-all">
+                            className="group inline-flex items-center gap-2.5 pl-1.5 pr-4 py-1.5 rounded-full bg-slate-950/60 backdrop-blur-sm
+                                       ring-1 ring-amber-400/50 hover:ring-amber-300 hover:bg-amber-400/10
+                                       shadow-[0_10px_24px_-10px_rgba(0,0,0,.7),0_0_18px_-6px_rgba(245,158,11,.45)]
+                                       hover:shadow-[0_14px_28px_-10px_rgba(0,0,0,.7),0_0_26px_-4px_rgba(245,158,11,.7)] transition-all">
                             <span className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center
                                              shadow-[0_0_12px_rgba(245,158,11,.5)] shrink-0">
                               <Icon className="w-4 h-4 text-slate-900" />
@@ -1541,6 +1552,8 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                               <span className="block text-[15px] font-black text-amber-300">{s.value}</span>
                             </span>
                           </a>
+                          </span>
+                          </span>
                         );
                       })}
                     </div>
@@ -1550,16 +1563,22 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
                       with an arrow climbing past the top one. */}
                   <div aria-hidden className="relative hidden min-[1800px]:block shrink-0 w-56 h-full">
                     <div className="absolute inset-x-0 bottom-2 h-10 rounded-[100%] bg-amber-500/25 blur-xl" />
+                    {/* Outer box places and pops in each step; the inner
+                        one floats, each at its own pace, so the staircase
+                        drifts rather than moving as one block. */}
                     {GROWTH_STEPS.map((step, i) => (
-                      <div key={step}
-                        className="ih-pop-in absolute flex items-center justify-center rounded-md
-                                   bg-gradient-to-b from-slate-800 to-slate-950 ring-1 ring-amber-400/70
-                                   shadow-[0_0_18px_rgba(245,158,11,.25)] text-[11px] font-black tracking-[0.18em] text-amber-300 uppercase"
+                      <div key={step} className="ih-pop-in absolute"
                         style={{ left: `${i * 26}%`, bottom: `${8 + i * 26}%`, width: '46%', height: '22%', animationDelay: `${i * 120}ms` }}>
-                        {step}
+                        <div className="ih-float w-full h-full flex items-center justify-center rounded-md
+                                        bg-gradient-to-b from-slate-800 to-slate-950 ring-1 ring-amber-400/70
+                                        shadow-[0_0_18px_rgba(245,158,11,.25)] text-[11px] font-black tracking-[0.18em] text-amber-300 uppercase"
+                          style={{ animationDuration: `${4.2 + i * 0.6}s`, animationDelay: `${-i * 1.1}s` }}>
+                          {step}
+                        </div>
                       </div>
                     ))}
-                    <TrendingUp className="absolute right-0 top-1 w-10 h-10 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,.7)]" />
+                    <TrendingUp className="ih-float absolute right-0 top-1 w-10 h-10 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,.7)]"
+                      style={{ animationDuration: '3.2s' }} />
                   </div>
                 </div>
               ) : (
