@@ -779,6 +779,17 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                     </>
                   )}
                 </div>
+
+                {/* AmbitionBox — what employees say about working at APIS.
+                    Same circle and neon-tilt as the icons beside it; white
+                    behind the logo because the mark is AmbitionBox's own blue. */}
+                <a href="https://www.ambitionbox.com/reviews/apis-india-limited-reviews"
+                  target="_blank" rel="noopener noreferrer" title="APIS India reviews on AmbitionBox"
+                  style={{ ['--ih-neon' as string]: 'rgba(245,158,11,.5)' }}
+                  className="ih-tilt ih-neon w-7 h-7 rounded-full bg-white flex items-center justify-center
+                             ring-1 ring-amber-300/50 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
+                  <img src="/icons/ambitionbox.png" alt="AmbitionBox" className="w-[18px] h-[18px] object-contain" />
+                </a>
               </div>
             )}
 
