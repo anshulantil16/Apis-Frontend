@@ -18,6 +18,7 @@ import {
   dimLabel,
 } from './SalesIQShared';
 import { IntelligencePanel, CustomersPanel } from './SalesIQPanels';
+import { SendPanel } from './SalesIQSend';
 
 /** '2026-04' -> 'Apr 26', which is how the review sheet heads its columns.
  *  A chip reading "2026-04" makes the reader translate; the sheet's own
@@ -2190,6 +2191,8 @@ function DataPanel({ uploads, review, recipients, uploaders, onChanged,
       <ReviewPanel review={review} mayEdit={mayEdit} onChanged={onChanged} />
 
       <RecipientsPanel data={recipients} mayEdit={mayEdit} onChanged={onChanged} />
+
+      <SendPanel mayEdit={mayEdit} recipients={recipients} />
 
       <AccessPanel data={uploaders} onChanged={onChanged} />
 
