@@ -754,7 +754,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                   target="_blank" rel="noopener noreferrer" title="APIS India reviews on AmbitionBox"
                   className="w-7 h-7 flex items-center justify-center transition-all duration-300
                              hover:-translate-y-0.5 hover:scale-110">
-                  <img src="/AmbitionBox.png" alt="AmbitionBox" className="w-6 h-6 object-contain drop-shadow-sm" />
+                  <img src="/AmbitionBox.png" alt="AmbitionBox" className="w-7 h-7 max-w-none object-contain drop-shadow-sm" />
                 </a>
 
                 {/* Quote of the day — same neon-tilt treatment as the social
