@@ -15,28 +15,11 @@ import { portalFetch } from '../portal/session';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
   HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images,
-  CheckCircle2, Clock, AlertTriangle,
   Users, Landmark, MapPin, Mail, Phone, CalendarClock, Gift,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, dailyQuote, type QuickAccessId,
 } from './IntranetHomeShared';
-
-/* Sample rows for the header's notification bell — no real notifications
-   backend exists yet, same "shaped like the real thing, explicitly flagged"
-   pattern as SAMPLE_BIRTHDAYS/ANNOUNCEMENTS etc. in IntranetHomeShared. */
-interface HeaderNotification {
-  title: string; body: string; time: string;
-  icon: typeof Bell; tone: 'emerald' | 'amber' | 'sky';
-}
-const SAMPLE_NOTIFICATIONS: HeaderNotification[] = [
-  { title: 'Leave request approved', body: 'Your leave for 5–6 Sep was approved by your manager.', time: '2h ago', icon: CheckCircle2, tone: 'emerald' },
-  { title: 'Appraisal window closes soon', body: 'Submit your self-appraisal before the window shuts on 10 Sep.', time: '5h ago', icon: Clock, tone: 'amber' },
-  { title: 'New policy document uploaded', body: 'The updated Travel & Reimbursement policy is now live.', time: '1d ago', icon: AlertTriangle, tone: 'sky' },
-];
-const NOTIF_TONE: Record<HeaderNotification['tone'], string> = {
-  emerald: 'bg-emerald-50 text-emerald-600', amber: 'bg-amber-50 text-amber-600', sky: 'bg-sky-50 text-sky-600',
-};
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
    sub-views that live under a parent tool (approvals sits under letters). */
@@ -795,15 +778,13 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
 
             <div className="ml-auto flex items-center gap-2">
               {/* Notifications — same fixed-overlay/dropdown pattern as the
-                  Quote of the Day popup above, just with a list instead of
-                  one line. No real notifications backend exists yet, so the
-                  rows are flagged sample data, same convention as the
-                  Announcements/Celebrations cards on the dashboard. */}
+                  Quote of the Day popup above. No notifications backend
+                  exists yet, so it says so rather than showing made-up
+                  rows, and the bell carries no unread dot. */}
               <div className="relative">
                 <button onClick={() => setNotifOpen(o => !o)} title="Notifications"
                   className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                   <Bell className="w-4 h-4" />
-                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500" />
                 </button>
 
                 {notifOpen && (
@@ -820,20 +801,12 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <p className="text-[10.5px] text-slate-400 mb-3">Sample data — not yet connected to a real notifications feed</p>
-                      <div className="space-y-2">
-                        {SAMPLE_NOTIFICATIONS.map((n, i) => (
-                          <div key={i} className="flex items-start gap-2.5 rounded-xl hover:bg-slate-50 p-2 transition-colors">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${NOTIF_TONE[n.tone]}`}>
-                              <n.icon className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[12.5px] font-bold text-slate-800 leading-snug">{n.title}</p>
-                              <p className="text-[11.5px] text-slate-400 leading-snug mt-0.5">{n.body}</p>
-                              <p className="text-[10px] font-bold text-slate-300 mt-1">{n.time}</p>
-                            </div>
-                          </div>
-                        ))}
+                      <div className="flex flex-col items-center text-center py-6">
+                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+                          <Bell className="w-4.5 h-4.5 text-slate-300" />
+                        </div>
+                        <p className="text-[12.5px] font-bold text-slate-600">No notifications yet</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">You're all caught up.</p>
                       </div>
                     </div>
                   </>
