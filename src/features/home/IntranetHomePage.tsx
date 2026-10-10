@@ -44,7 +44,7 @@ const AMBITIONBOX_URL = 'https://www.ambitionbox.com/reviews/apis-india-limited-
 const AMBITIONBOX_STATS: { icon: typeof Users; label: string; value: string }[] = [
   { icon: Star, label: 'Rating', value: '4.4' },
   { icon: MessageSquareText, label: 'Reviews', value: '300+' },
-  { icon: TrendingUp, label: 'Above Industry Average', value: '16%' },
+  { icon: TrendingUp, label: 'Above Industry Average', value: '18%' },
 ];
 /* The staircase on that slide, bottom step first. */
 const GROWTH_STEPS = ['Learn', 'Grow', 'Achieve'];
