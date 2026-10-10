@@ -368,10 +368,8 @@ const SUB_TREES: Record<string, TeamMember[]> = {
   // F&A / Internal Audit (Ankit Nagar) — same two-department-group shape as
   // r-manigandan above (Internal Audit / Finance & Accounting), each
   // recursing through its own manager(s). Nischal Bhardwaj sits at the same
-  // level as Prateek Aggarwal and Amit Madan under Finance & Accounting but
-  // has no reports of his own, per the org chart supplied — ReportBoxCard
-  // already renders a childless node as a plain box with no line below, so
-  // no special-casing is needed for that.
+  // level as Prateek Aggarwal and Amit Madan under Finance & Accounting, and
+  // like them has his own single-line list of reports below him.
   'ankit-nagar': [
     {
       name: 'Internal Audit', role: 'Department', stemLabel: 'Functional Reporting',
@@ -415,6 +413,14 @@ const SUB_TREES: Record<string, TeamMember[]> = {
         },
         {
           name: 'Nischal Bhardwaj', role: 'M4- Sr. Manager- Plant Costing & Budgeting- Factory',
+          // Finance & Accounts team list supplied by HR — name and
+          // designation only, as given (no grade codes on that list).
+          reports: [
+            { name: 'Mohd. Alim', role: 'Senior Executive' },
+            { name: 'Vipul Kumar', role: 'Executive' },
+            { name: 'Mohd Ashraf', role: 'Senior Executive' },
+            { name: 'Rahul Kumar', role: 'Assistant Manager' },
+          ],
         },
       ],
     },
