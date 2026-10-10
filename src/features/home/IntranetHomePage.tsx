@@ -42,7 +42,7 @@ const LEADERSHIP_SLIDES: LeadershipSlide[] = [
    public API. Update them here when the page changes. */
 const AMBITIONBOX_URL = 'https://www.ambitionbox.com/reviews/apis-india-limited-reviews';
 const AMBITIONBOX_STATS: { icon: typeof Users; label: string; value: string }[] = [
-  { icon: Star, label: 'Rating', value: '4.4' },
+  { icon: Star, label: 'Rating', value: '4.5' },
   { icon: MessageSquareText, label: 'Reviews', value: '300+' },
   { icon: TrendingUp, label: 'Above Industry Average', value: '18%' },
 ];
