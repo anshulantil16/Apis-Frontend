@@ -4,7 +4,7 @@ import {
   ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
   X, Trophy, Eye, Flag, CheckCircle2, Heart, TrendingUp, TrendingDown, Package, Rocket, UserPlus, Briefcase, Megaphone, Send,
   Info, Scale, CalendarClock as ShelfLifeIcon, MapPin, Warehouse, Tag, Plus, XCircle, RotateCcw, Clock,
-  Newspaper, Users, Database, Headphones, Network, BookOpen, Star, MessageSquareText,
+  Newspaper, Users, Database, Headphones, Network, BookOpen, Star, MessageSquareText, Lock,
 } from 'lucide-react';
 import type { StateHolidayGroup } from './IntranetHomeShared';
 import {
@@ -136,6 +136,9 @@ interface IntranetHomePageProps {
    *  that it becomes visible here, not just enforced silently after a click. */
   allowedApps?: string[];
   isSuperadmin?: boolean;
+  /** Granted from the admin console; shows the Confidential Vacancies tab.
+   *  The server enforces it either way. */
+  canViewConfidentialVacancies?: boolean;
 }
 
 /* Pointer handlers come from the shared kit: it measures once per
@@ -535,10 +538,19 @@ const vacFieldCls = 'w-full px-3 py-2 rounded-lg border border-slate-200 bg-whit
   'placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10 transition-all';
 const vacFieldLabelCls = 'block text-[11.5px] font-bold text-slate-600 mb-1.5';
 
-function VacanciesPopup({ onClose, isSuperadmin = false }:
-  { onClose: () => void; isSuperadmin?: boolean }) {
-  const [tab, setTab] = useState<'vacancies' | 'referral'>('vacancies');
-  const { vacancies, loading, addVacancy, setVacancyStatus } = useVacancies();
+/* "Confidential Vacancies" is a third tab, shown only to superadmins and to
+   people granted it in the admin console. Its rows come from their own
+   server read (useVacancies({ confidential: true })) and never appear in the
+   ordinary list, the dashboard card, or the referral form's dropdown — so it
+   has no referral banner, and anything added from it is filed confidential. */
+function VacanciesPopup({ onClose, isSuperadmin = false, canViewConfidential = false }:
+  { onClose: () => void; isSuperadmin?: boolean; canViewConfidential?: boolean }) {
+  const [tab, setTab] = useState<'vacancies' | 'confidential' | 'referral'>('vacancies');
+  const open = useVacancies();
+  const secret = useVacancies({ confidential: true, enabled: canViewConfidential });
+  const isConfidential = tab === 'confidential';
+  // Whichever list the tab is showing; the referral tab keeps the ordinary one.
+  const { vacancies, loading, addVacancy, setVacancyStatus } = isConfidential ? secret : open;
   const [addVacancyOpen, setAddVacancyOpen] = useState(false);
   const [newType, setNewType] = useState<'New' | 'Replacement'>('New');
   const [error, setError] = useState('');
@@ -605,6 +617,7 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {tab === 'referral' ? 'Refer a candidate and help us build a stronger team.'
+                : isConfidential ? `${openCount} open confidential position${openCount === 1 ? '' : 's'}${closedCount ? ` · ${closedCount} closed` : ''}`
                 : closedCount > 0 ? `${openCount} open · ${closedCount} closed, out of ${vacancies.length} positions`
                 : `${openCount} open positions across the current hiring plan`}
             </p>
@@ -617,17 +630,21 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
         <div className="flex items-center justify-between gap-3 px-6 border-b border-slate-100">
           <div className="flex items-center gap-5">
             {([
-              { id: 'vacancies' as const, label: 'Available Vacancies' },
-              { id: 'referral' as const, label: 'Referral Form' },
-            ]).map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                className={`py-3 text-[12.5px] font-black border-b-2 transition-colors ${
-                  tab === t.id ? 'text-amber-600 border-amber-500' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+              { id: 'vacancies' as const, label: 'Available Vacancies', show: true },
+              { id: 'confidential' as const, label: 'Confidential Vacancies', show: canViewConfidential },
+              { id: 'referral' as const, label: 'Referral Form', show: true },
+            ]).filter(t => t.show).map(t => (
+              <button key={t.id} onClick={() => { setTab(t.id); setError(''); setNotice(''); }}
+                className={`py-3 text-[12.5px] font-black border-b-2 transition-colors inline-flex items-center gap-1.5 ${
+                  tab === t.id
+                    ? (t.id === 'confidential' ? 'text-rose-600 border-rose-500' : 'text-amber-600 border-amber-500')
+                    : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+                {t.id === 'confidential' && <Lock className="w-3.5 h-3.5" />}
                 {t.label}
               </button>
             ))}
           </div>
-          {tab === 'vacancies' && (
+          {tab !== 'referral' && (
             <button onClick={() => setAddVacancyOpen(true)}
               className="ih-sheen flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600
                 text-white text-[11.5px] font-black shadow-sm transition-colors shrink-0">
@@ -636,8 +653,22 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
           )}
         </div>
 
-        {tab === 'vacancies' ? (
+        {tab !== 'referral' ? (
           <div className="p-6">
+            {isConfidential && (
+              <div className="flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-[12px] text-rose-800 font-semibold mb-4">
+                <Lock className="w-4 h-4 shrink-0 mt-px" />
+                <span>
+                  Confidential — visible only to administrators and people they have given access to.
+                  These positions are not on the dashboard and not in the referral form.
+                </span>
+              </div>
+            )}
+            {isConfidential && !loading && vacancies.length === 0 && (
+              <p className="text-center text-sm text-slate-400 py-10">
+                No confidential vacancies yet. Use <span className="font-bold text-slate-500">Add Vacancy</span> to file one.
+              </p>
+            )}
             {error && (
               <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-[12.5px] text-rose-700 font-semibold mb-4">
                 <XCircle className="w-4 h-4 shrink-0" />{error}
@@ -714,7 +745,7 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
                     <p className="text-[10.5px] text-slate-400 truncate" title={v.education}>{v.education}</p>
                     <div className="flex items-center justify-between gap-2 mt-1.5">
                       <p className="text-[10px] text-slate-300">Reporting to {v.reportingManager}</p>
-                      {isSuperadmin && !pending && !rejected && (
+                      {(isSuperadmin || isConfidential) && !pending && !rejected && (
                         <button type="button" onClick={() => toggleVacancyStatus(v)}
                           title={closed ? 'Reopen this vacancy' : 'Mark this vacancy as closed/filled'}
                           className={`flex items-center gap-1 text-[10px] font-black shrink-0 transition-colors ${
@@ -730,7 +761,9 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
             </div>
 
             {/* Referral CTA — every open role is a reminder that referrals are
-                how most of these seats get filled. */}
+                how most of these seats get filled. Not on the confidential
+                tab: those positions are not open to referrals. */}
+            {!isConfidential && (
             <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
@@ -749,6 +782,7 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
                 <Send className="w-3.5 h-3.5" />Employee Referral Form
               </button>
             </div>
+            )}
           </div>
         ) : (
           <ReferralForm onCancel={() => setTab('vacancies')} vacancies={vacancies} />
@@ -767,7 +801,9 @@ function VacanciesPopup({ onClose, isSuperadmin = false }:
                        rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
             <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
               <p className="text-[14px] font-black text-slate-900 flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-amber-500" />Add Vacancy
+                {isConfidential
+                  ? <><Lock className="w-4 h-4 text-rose-500" />Add Confidential Vacancy</>
+                  : <><Briefcase className="w-4 h-4 text-amber-500" />Add Vacancy</>}
               </p>
               <button type="button" onClick={() => setAddVacancyOpen(false)} title="Close"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
@@ -1241,7 +1277,7 @@ function Particles() {
   );
 }
 
-export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: IntranetHomePageProps) {
+export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canViewConfidentialVacancies }: IntranetHomePageProps) {
   /* Birthdays, anniversaries and new joiners, live from the employee master.
      Only currently-employed people; the server enforces that. */
   const cel = useCelebrations();
@@ -1917,7 +1953,8 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin }: Intr
 
             {openProduct && <PackagingPopup product={openProduct} onClose={() => setOpenProduct(null)} />}
             {openListPopup === 'joiners' && <NewJoinersPopup onClose={() => setOpenListPopup(null)} />}
-            {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} isSuperadmin={isSuperadmin} />}
+            {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} isSuperadmin={isSuperadmin}
+              canViewConfidential={!!isSuperadmin || !!canViewConfidentialVacancies} />}
             {openListPopup === 'announcements' && <AnnouncementsPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'news' && <DailyNewsPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'celebrations' && <CelebrationsPopup initialTab={celebrationTab} onClose={() => setOpenListPopup(null)} />}

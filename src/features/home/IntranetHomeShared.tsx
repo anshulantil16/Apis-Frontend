@@ -231,25 +231,34 @@ export interface VacancyListing {
   moderationStatus: ModerationStatus;
   submittedBy: string; submittedByEmail: string;
   reviewNote: string; isMine: boolean;
+  /* Only ever true in the `scope: 'confidential'` list — the ordinary list
+     the dashboard and referral form read never contains these rows. */
+  confidential?: boolean;
 }
 
 /* Fetches the live list once on mount and exposes add/close mutations that
    update both the server and local state together — every consumer (the
    home-dashboard preview widget, the full Vacancies popup, the referral
    form's dropdown) calls this independently rather than sharing one lifted
-   instance, same convention as useCelebrations elsewhere in this file. */
-export function useVacancies() {
+   instance, same convention as useCelebrations elsewhere in this file.
+
+   `{ confidential: true }` reads the confidential list instead (superadmins
+   and people granted access only — anyone else gets an empty list) and
+   files new vacancies as confidential. `enabled: false` skips the fetch,
+   for a viewer who has no access to ask for it. */
+export function useVacancies({ confidential = false, enabled = true }: { confidential?: boolean; enabled?: boolean } = {}) {
   const [vacancies, setVacancies] = useState<VacancyListing[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
 
   const load = useCallback(async () => {
+    if (!enabled) return [];
     try {
-      const r = await apiFetch(`${VACANCIES_API}/`);
+      const r = await apiFetch(`${VACANCIES_API}/${confidential ? '?scope=confidential' : ''}`);
       return r.ok ? ((await r.json()) as VacancyListing[]) : [];
     } catch {
       return [];
     }
-  }, []);
+  }, [confidential, enabled]);
 
   useEffect(() => {
     let alive = true;
@@ -263,9 +272,9 @@ export function useVacancies() {
      new vacancy is published at once or queued for approval depends on who
      is adding it, and only the server knows that. */
   async function addVacancy(payload: Omit<VacancyListing, 'id' | 'status' | 'moderationStatus'
-    | 'submittedBy' | 'submittedByEmail' | 'reviewNote' | 'isMine'>) {
+    | 'submittedBy' | 'submittedByEmail' | 'reviewNote' | 'isMine' | 'confidential'>) {
     const res = await apiFetch(`${VACANCIES_API}/`, {
-      method: 'POST', body: JSON.stringify(payload),
+      method: 'POST', body: JSON.stringify({ ...payload, confidential }),
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error || 'Could not add the vacancy. Please try again.');

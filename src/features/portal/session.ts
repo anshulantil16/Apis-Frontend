@@ -34,6 +34,8 @@ export type PortalUser = {
   // second wants one or two people. Managing implies editing.
   can_edit_tree: boolean;
   can_manage_tree: boolean;
+  // Sees and may add confidential vacancies. A superadmin always does.
+  can_view_confidential_vacancies: boolean;
   allowed_apps: string[];
   from_hrms: boolean;
   last_login_at: string | null;

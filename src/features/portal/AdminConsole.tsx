@@ -878,6 +878,10 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
                     does not need to be on as well.
                   </p>
                 )}
+                <GrantRow on={u.can_view_confidential_vacancies}
+                  label="Confidential vacancies"
+                  note="See the Confidential Vacancies tab in the Vacancies popup, add confidential positions and close them. Nobody else sees these."
+                  onToggle={() => onPatch(u, { can_view_confidential_vacancies: !u.can_view_confidential_vacancies })} />
               </div>
             )}
           </div>
@@ -1251,6 +1255,8 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
       note: 'Correct a name, designation, department or photo on an existing card' },
     { field: 'can_manage_tree', label: 'Add / remove on APIS Tree',
       note: 'Put someone on the chart, take someone off, move them under another HOD — includes editing' },
+    { field: 'can_view_confidential_vacancies', label: 'Confidential vacancies',
+      note: 'See, add and close confidential vacancies — hidden from everyone else' },
   ];
   // Managing carries editing with it on the server too (require_tree_editor),
   // so the smaller cell reads as on rather than contradicting the page.
