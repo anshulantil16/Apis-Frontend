@@ -35,11 +35,14 @@ import { hods } from '../tree/hods';
 const POLICIES_API = `${apiBase()}/api/policies`;
 const ACCEPTED_FILES = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
 
-/* Who signs a document off is one of these four. Who reviews it is any
-   Head of Department on the APIS Tree — read from the tree's own list, so
-   it follows the tree when a HOD changes. */
+/* Who signs a document off is one of these four. Who reviews it is Human
+   Resources or any Head of Department on the APIS Tree — read from the
+   tree's own list, so it follows the tree when a HOD changes. */
 const APPROVERS = ['Managing Director', 'Amit Anand', 'Vimal Anand', 'Pankaj Tripathi'];
-const REVIEWERS = hods;
+const REVIEWERS: { id: string; name: string; department?: string }[] = [
+  { id: 'human-resources', name: 'Human Resources' },
+  ...hods,
+];
 
 /* Real files dropped in public/Policies/ — served as static assets and part
    of the build, so they sit beside the uploaded documents and can't be
