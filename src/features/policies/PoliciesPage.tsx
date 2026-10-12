@@ -30,9 +30,16 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../portal/session';
 import { apiBase } from '../../apiBase';
+import { hods } from '../tree/hods';
 
 const POLICIES_API = `${apiBase()}/api/policies`;
 const ACCEPTED_FILES = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
+
+/* Who signs a document off is one of these three. Who reviews it is any
+   Head of Department on the APIS Tree — read from the tree's own list, so
+   it follows the tree when a HOD changes. */
+const APPROVERS = ['Amit Anand', 'Vimal Anand', 'Pankaj Tripathi'];
+const REVIEWERS = hods;
 
 /* Real files dropped in public/Policies/ — served as static assets and part
    of the build, so they sit beside the uploaded documents and can't be
@@ -933,17 +940,27 @@ export function PoliciesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Approved By<span className="text-rose-500"> *</span></label>
-                  <input value={newApprovedBy} onChange={e => setNewApprovedBy(e.target.value)} required
-                    placeholder="e.g. Vimal Anand"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
-                               placeholder:text-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
+                  <select value={newApprovedBy} onChange={e => setNewApprovedBy(e.target.value)} required
+                    className={`w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white
+                               outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all
+                               ${newApprovedBy ? 'text-slate-800' : 'text-slate-400'}`}>
+                    <option value="" disabled>Select approver…</option>
+                    {APPROVERS.map(n => <option key={n} value={n} className="text-slate-800">{n}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">Reviewed By<span className="text-rose-500"> *</span></label>
-                  <input value={newReviewedBy} onChange={e => setNewReviewedBy(e.target.value)} required
-                    placeholder="e.g. Pankaj"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800
-                               placeholder:text-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all" />
+                  <select value={newReviewedBy} onChange={e => setNewReviewedBy(e.target.value)} required
+                    className={`w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white
+                               outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all
+                               ${newReviewedBy ? 'text-slate-800' : 'text-slate-400'}`}>
+                    <option value="" disabled>Select HOD…</option>
+                    {REVIEWERS.map(h => (
+                      <option key={h.id} value={h.name} className="text-slate-800">
+                        {h.department ? `${h.name} — ${h.department}` : h.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
