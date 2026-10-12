@@ -9,13 +9,24 @@
  * uploader sees their own row marked "Awaiting approval" and nobody else
  * sees it. The uploader can delete their own row; a superadmin can delete
  * any uploaded row.
+ *
+ * Documents are read here, not taken away. A title opens the reader below
+ * rather than a new tab: the server sends the PDF marked `inline` (see the
+ * policies views module) and the frame asks the browser's PDF viewer for
+ * #toolbar=0, which is where its Download, Print and Save buttons are. So
+ * there is no button to take a copy with and no address to pass on.
+ *
+ * It is a closed door, not a locked one — the file has to reach the browser
+ * to be read at all, so anyone determined can still get at it. What this
+ * stops is the copy taken in passing, which is the one that goes stale in
+ * somebody's Downloads folder and gets forwarded a year later.
  */
 import { useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent } from 'react';
 import {
   ChevronRight, ChevronDown, Plus, Search, FileText, ClipboardList,
   LayoutTemplate, ListChecks, FolderOpen, CalendarClock,
   CheckCircle2, BarChart3, ArrowUpRight, FileStack,
-  X, Eye, UploadCloud, Trash2, Loader2,
+  X, Eye, UploadCloud, Trash2, Loader2, ArrowLeft,
 } from 'lucide-react';
 import { apiFetch } from '../portal/session';
 import { apiBase } from '../../apiBase';
@@ -41,11 +52,23 @@ const MANUAL_POLICIES: ManualPolicyDoc[] = [
   { title: 'Variable Pay Policy', version: 'v1.0.0 · 2024', file: 'Variale Pay policy 1.0.0 2024.pdf' },
   { title: 'Workplace Affair Policy', version: '2025-26', file: 'Workplace Affair Policy 2025-26.pdf' },
 ];
-/* An uploaded document's file is a full URL from the server, not a path
-   under public/Policies/ — pass those straight through. */
+/* Where to fetch a document from.
+   - `/api/...` is an uploaded document's reader URL. The server sends it
+     root-relative, which is right on Live (same origin) but wrong on QA,
+     where the API answers on its own port — so the API base goes in front.
+   - anything else absolute (a full URL, a blob) passes straight through.
+   - a bare filename is one of the built-in PDFs in public/Policies/. */
 function policyHref(file: string) {
+  if (file.startsWith('/api/')) return `${apiBase()}${file}`;
   return /^(blob:|https?:|\/)/.test(file) ? file : encodeURI(`/Policies/${file}`);
 }
+
+/* Switches off the browser PDF viewer's own toolbar — the strip carrying
+   Download, Print and Save — and opens the page fitted to the frame's width.
+   Honoured by Chrome, Edge and Firefox; Safari ignores it and shows its own
+   controls, so this is one layer of the "read it here" behaviour, not the
+   whole of it. */
+const READER_VIEW = '#toolbar=0&navpanes=0&statusbar=0&view=FitH';
 
 /* Counts up from 0 to `target` on mount — same easing/technique as the home
    page's useCountUp, kept as a small local copy since this page has no
@@ -231,6 +254,46 @@ export function PoliciesPage() {
   const browseDocs = rows
     .filter(r => r.category === browseCategory && r.file)
     .map(r => ({ row: r, title: r.doc, version: r.id ? `v${r.version}` : MANUAL_POLICIES.find(m => m.file === r.file)?.version, file: r.file! }));
+
+  /* The document being read, if any, and the in-memory copy the frame is
+     showing. Opening one here rather than in a new tab is the point — see
+     the file header.
+
+     The bytes are fetched rather than handed to the frame as a URL, for two
+     reasons. The reader endpoint checks who is asking, and the portal's
+     session lives in an Authorization header, which a frame's own request
+     would not carry — so an upload still awaiting approval would not open
+     for the person who uploaded it. And a blob URL belongs to this tab
+     alone: there is no address in the frame worth copying or passing on. */
+  const [reading, setReading] = useState<{ title: string; file: string } | null>(null);
+  const [readingUrl, setReadingUrl] = useState('');
+  const [readingError, setReadingError] = useState('');
+  useEffect(() => {
+    if (!reading) { setReadingUrl(''); setReadingError(''); return; }
+    let url = '';
+    let cancelled = false;
+    setReadingUrl(''); setReadingError('');
+    (async () => {
+      try {
+        const r = await apiFetch(policyHref(reading.file));
+        if (!r.ok) throw new Error(String(r.status));
+        const blob = await r.blob();
+        if (cancelled) return;
+        url = URL.createObjectURL(blob);
+        setReadingUrl(url);
+      } catch {
+        if (!cancelled) setReadingError("That document couldn't be opened. Please try again, or ask P & C.");
+      }
+    })();
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [reading]);
+  /* Escape closes the reader, since the frame swallows most clicks. */
+  useEffect(() => {
+    if (!reading) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setReading(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [reading]);
 
   /* 'All', or one category — set by the tabs above the table. */
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -531,10 +594,11 @@ export function PoliciesPage() {
                     <td className="px-4 py-3 text-slate-400 font-bold">{String(i + 1).padStart(2, '0')}</td>
                     <td className="px-4 py-3 font-black text-slate-900">
                       {r.file ? (
-                        <a href={policyHref(r.file)} target="_blank" rel="noopener noreferrer"
-                          className="hover:text-amber-600 hover:underline">
+                        <button type="button" title="Open to read"
+                          onClick={() => setReading({ title: r.doc, file: r.file! })}
+                          className="text-left hover:text-amber-600 hover:underline">
                           {r.department ? `${r.department} / ${r.doc}` : r.doc}
-                        </a>
+                        </button>
                       ) : (r.department ? `${r.department} / ${r.doc}` : r.doc)}
                       {r.moderationStatus === 'pending' && (
                         <span title="Only you can see this until an administrator approves it"
@@ -668,7 +732,7 @@ export function PoliciesPage() {
                   <div className="min-w-0">
                     <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">{browseCategory} Documents</h2>
                     <p className="text-white/85 text-sm font-medium mt-0.5">
-                      {browseDocs.length} {browseDocs.length === 1 ? 'document' : 'documents'} · view or download any of them below
+                      {browseDocs.length} {browseDocs.length === 1 ? 'document' : 'documents'} · open any of them to read
                     </p>
                   </div>
                 </div>
@@ -733,16 +797,62 @@ export function PoliciesPage() {
                       </div>
                     </div>
                     <div className="mt-auto pt-2">
-                      <a href={policyHref(doc.file)} target="_blank" rel="noopener noreferrer"
+                      <button type="button"
+                        onClick={() => { setBrowseCategory(null); setReading({ title: doc.title, file: doc.file }); }}
                         className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200
                                    text-slate-600 hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50 text-[11px] font-black transition-all">
-                        <Eye className="w-3.5 h-3.5" />View
-                      </a>
+                        <Eye className="w-3.5 h-3.5" />Read
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reader — the document itself, shown in place. The frame carries no
+          controls of its own and the PDF viewer's toolbar is switched off by
+          READER_VIEW, so the way out is the Back button, Escape, or a click
+          on the backdrop. */}
+      {reading && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6"
+          onClick={() => setReading(null)}>
+          <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" />
+          <div onClick={e => e.stopPropagation()}
+            className="ih-pop-in relative w-full max-w-5xl h-[92vh] flex flex-col rounded-2xl bg-white
+                       shadow-[0_60px_120px_-30px_rgba(0,0,0,.5)] ring-1 ring-black/5 overflow-hidden">
+            <div className="flex-shrink-0 flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-slate-200 bg-slate-50">
+              <button type="button" onClick={() => setReading(null)}
+                className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-white text-slate-700 ring-1 ring-slate-200
+                           hover:bg-slate-100 text-[12px] font-black transition-all flex-shrink-0">
+                <ArrowLeft className="w-4 h-4" />Back
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-black text-slate-900 truncate">{reading.title}</p>
+                <p className="text-[11px] font-bold text-slate-400">Read-only · please don't save or circulate copies</p>
+              </div>
+              <button type="button" onClick={() => setReading(null)} title="Close"
+                className="w-9 h-9 rounded-xl text-slate-400 hover:bg-slate-200 hover:text-slate-600
+                           flex items-center justify-center transition-all flex-shrink-0">
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+            {readingError ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 bg-slate-50 px-6 text-center">
+                <FileText className="w-8 h-8 text-slate-300" />
+                <p className="text-[13px] font-bold text-slate-500">{readingError}</p>
+              </div>
+            ) : readingUrl ? (
+              <iframe src={`${readingUrl}${READER_VIEW}`} title={reading.title}
+                className="flex-1 w-full border-0 bg-slate-100" />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 bg-slate-50">
+                <Loader2 className="w-6 h-6 text-slate-300 animate-spin" />
+                <p className="text-[12px] font-bold text-slate-400">Opening…</p>
+              </div>
+            )}
           </div>
         </div>
       )}
