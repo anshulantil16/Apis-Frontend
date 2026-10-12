@@ -846,6 +846,7 @@ export function PoliciesPage() {
 
               <div>
                 <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1.5">File · PDF, Word, Excel or PowerPoint, up to 25 MB<span className="text-rose-500"> *</span></label>
+                <p className="text-[11px] font-semibold text-slate-400 -mt-1 mb-1.5">Word, Excel and PowerPoint files are converted to PDF when uploaded.</p>
                 <button type="button" onClick={() => fileInputRef.current?.click()}
                   className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-dashed transition-all text-left
                              ${newFile ? 'border-amber-300 bg-amber-50' : 'border-slate-200 hover:border-amber-300 hover:bg-amber-50/50'}`}>
