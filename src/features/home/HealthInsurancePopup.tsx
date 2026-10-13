@@ -143,8 +143,13 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
           {/* 2 · Policy number — laid out like the insurance e-card. */}
           <section className="relative overflow-hidden rounded-2xl bg-white ring-1 ring-amber-200 shadow-sm">
             <div className="h-1.5 bg-gradient-to-r from-amber-400 to-orange-500" />
-            <div className="flex flex-col sm:flex-row">
-              <div className="flex-1 min-w-0 p-5">
+            {/* HR's banner, full width so its logos and number are legible. */}
+            <div className="bg-amber-50/50 p-3 sm:p-4 border-b border-amber-100">
+              <img src={policyBanner} alt={`APIS × ${INSURER} health insurance, policy number ${POLICY_NUMBER}`}
+                className="w-full rounded-xl ring-1 ring-amber-100 shadow-sm" />
+            </div>
+            <div className="p-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Policy number</p>
                 <p id="hi-policy-number"
                   className="mt-1 font-mono text-[28px] sm:text-[34px] leading-none font-bold tracking-[.1em] text-slate-900 select-all">
@@ -154,19 +159,14 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
                   <span><span className="font-black text-slate-700">Insurer</span> · {INSURER}</span>
                   <span><span className="font-black text-slate-700">Cover</span> · Group health, APIS employees</span>
                 </div>
-                <button type="button" onClick={copyNumber}
-                  className={`mt-4 inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[12.5px] font-black transition-all
-                             ${copied
-                               ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                               : 'bg-amber-500 text-white shadow-md shadow-amber-500/30 hover:bg-amber-600'}`}>
-                  {copied ? <><Check className="w-4 h-4" />Copied</> : <><Copy className="w-4 h-4" />Copy policy number</>}
-                </button>
               </div>
-              {/* HR's banner, as a thumbnail of the card they sent round. */}
-              <div className="sm:w-56 shrink-0 border-t sm:border-t-0 sm:border-l border-amber-100 bg-amber-50/50 p-3 flex items-center">
-                <img src={policyBanner} alt={`APIS × ${INSURER} health insurance, policy number ${POLICY_NUMBER}`}
-                  className="w-full rounded-lg ring-1 ring-amber-100 shadow-sm" />
-              </div>
+              <button type="button" onClick={copyNumber}
+                className={`shrink-0 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-[13px] font-black transition-all
+                           ${copied
+                             ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
+                             : 'bg-amber-500 text-white shadow-md shadow-amber-500/30 hover:bg-amber-600'}`}>
+                {copied ? <><Check className="w-4 h-4" />Copied</> : <><Copy className="w-4 h-4" />Copy policy number</>}
+              </button>
             </div>
           </section>
 
