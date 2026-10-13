@@ -488,7 +488,6 @@ export const COMING_SOON = [
   { label: 'Budget', icon: Wallet, soft: 'bg-emerald-50', accent: 'text-emerald-500' },
   { label: 'Compliance', icon: Scale, soft: 'bg-violet-50', accent: 'text-violet-500' },
   { label: 'Sanction Approvals', icon: Stamp, soft: 'bg-indigo-50', accent: 'text-indigo-500' },
-  { label: 'Announcements', icon: Megaphone, soft: 'bg-amber-50', accent: 'text-amber-500' },
 ];
 
 /* Real APIS India Limited product photography, sourced from apisindia.com —
