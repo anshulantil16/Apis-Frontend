@@ -10,8 +10,10 @@
  * print is unreadable on a phone and its QR code is the only way to the app
  * it gives.
  *
- * The images live under src/assets rather than public/ so they are only
- * reachable from inside the app, not as a bare file address.
+ * The images live under src/assets rather than public/, so the build gives
+ * them hashed names instead of a guessable /Health_Insurance/ address. They
+ * are still plain files once built — this keeps them out of sight, it does
+ * not put them behind sign-in.
  */
 import { useEffect, useState } from 'react';
 import {
