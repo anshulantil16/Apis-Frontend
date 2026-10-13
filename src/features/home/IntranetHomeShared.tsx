@@ -11,7 +11,7 @@ import {
   TrendingUp, Sparkles, BarChart3, Radar, Zap, Plane, Megaphone,
   Globe2, CalendarClock, Landmark, Database,
   Shield, BookOpen, Lightbulb, Target, Heart, Wallet, Scale, Stamp,
-  Info, PartyPopper, AlertTriangle, FileText,
+  Info, PartyPopper, AlertTriangle, FileText, HeartPulse,
 } from 'lucide-react';
 import { apiBase } from '../../apiBase';
 
@@ -763,13 +763,18 @@ export const APIS_GLANCE = [
    file is still one click away from inside that page. */
 export interface QuickPortal {
   label: string; sub: string; href: string | null; download?: boolean;
+  /* Opens a popup on the home page instead of following href. */
+  opens?: 'health-insurance';
   icon: ComponentType<SVGProps<SVGSVGElement>>; ring: string; soft: string; accent: string;
 }
 export const QUICK_PORTALS: QuickPortal[] = [
   { label: 'Pocket HRMS', sub: 'Access your HR services, leave & attendance', href: 'https://ess.pockethrms.com/', icon: Users, ring: 'ring-amber-200', soft: 'bg-amber-50', accent: 'text-amber-600' },
   { label: 'Bizom', sub: 'Track sales, orders & market data in real time', href: 'https://apisindia.bizom.in', icon: BarChart3, ring: 'ring-emerald-200', soft: 'bg-emerald-50', accent: 'text-emerald-600' },
   { label: 'ERP', sub: 'Manage your enterprise resources & operations', href: 'https://erp.apisindia.com/APISLIVE25/SignIn?ReturnUrl=%2FAPISLIVE25%2F', icon: Database, ring: 'ring-violet-200', soft: 'bg-violet-50', accent: 'text-violet-600' },
-  { label: 'Hospital List', sub: 'View list of Hospitals associated with APIS', href: '/hospital_list/ProviderNetwork.html', icon: Building2, ring: 'ring-rose-200', soft: 'bg-rose-50', accent: 'text-rose-600' },
+  /* Was "Hospital List". The hospital list is still one click away, inside
+     the popup (HealthInsurancePopup), next to the policy number and the
+     TATA AIG app steps. */
+  { label: 'Health Insurance', sub: 'Policy number, TATA AIG app steps & network hospitals', href: '/hospital_list/ProviderNetwork.html', opens: 'health-insurance', icon: HeartPulse, ring: 'ring-rose-200', soft: 'bg-rose-50', accent: 'text-rose-600' },
 ];
 
 /* Scrolling ticker strip above the home page hero. Same "static,

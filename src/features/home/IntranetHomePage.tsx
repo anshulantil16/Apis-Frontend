@@ -19,6 +19,7 @@ import {
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
 import { ReferralForm } from './ReferralFormPopup';
 import { DocumentReader } from '../policies/DocumentReader';
+import { HealthInsurancePopup } from './HealthInsurancePopup';
 import type { ReaderDoc } from '../policies/policyHref';
 
 /* Leadership hero slides — real APIS India leadership. Amit Anand's photo
@@ -1337,6 +1338,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
   /* A new-release document opened from the Announcements card — shown in
      the read-only reader, never as a file in a new tab. */
   const [readingAnnouncement, setReadingAnnouncement] = useState<ReaderDoc | null>(null);
+  const [healthInsuranceOpen, setHealthInsuranceOpen] = useState(false);
 
   // Statewise holiday widget — APIS's own zones, now served from the
   // `noticeboard` app rather than a hard-coded array, so next year's circular
@@ -1764,6 +1766,13 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
                   const cardCls = `ih-inview ih-tilt3d ih-spotlight ih-sweep group relative rounded-2xl bg-white border
                     border-slate-200 p-4 shadow-sm overflow-hidden flex items-start gap-3 text-left transition-all
                     ${p.href ? 'hover:border-amber-300 hover:shadow-lg hover:-translate-y-0.5' : 'opacity-70'}`;
+                  if (p.opens === 'health-insurance') return (
+                    <button key={p.label} type="button" onClick={() => setHealthInsuranceOpen(true)}
+                      onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
+                      className={cardCls} style={{ transitionDelay: `${i * 60}ms` }}>
+                      {inner}
+                    </button>
+                  );
                   return p.href ? (
                     <a key={p.label} href={p.href} {...(p.download ? { download: true } : { target: '_blank', rel: 'noopener noreferrer' })}
                       onMouseMove={onTilt3dMove} onMouseLeave={onTilt3dLeave}
@@ -1968,6 +1977,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
             {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} isSuperadmin={isSuperadmin}
               canViewConfidential={!!isSuperadmin || !!canViewConfidentialVacancies} />}
             {openListPopup === 'announcements' && <AnnouncementsPopup onClose={() => setOpenListPopup(null)} />}
+            {healthInsuranceOpen && <HealthInsurancePopup onClose={() => setHealthInsuranceOpen(false)} />}
             {readingAnnouncement && (
               <DocumentReader key={readingAnnouncement.file} doc={readingAnnouncement}
                 onClose={() => setReadingAnnouncement(null)} />
