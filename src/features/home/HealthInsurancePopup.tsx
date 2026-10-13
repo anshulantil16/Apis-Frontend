@@ -24,6 +24,7 @@ import {
   Hospital, ExternalLink, X, Maximize2, BadgeCheck,
   type LucideIcon,
 } from 'lucide-react';
+import { copyText } from '../../utils/copyText';
 import policyBanner from '../../assets/health-insurance/policy-number.jpeg';
 import appStepsSheet from '../../assets/health-insurance/app-steps.jpeg';
 
@@ -43,6 +44,10 @@ const APP_STEPS: { title: string; detail: string; icon: LucideIcon }[] = [
 
 export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
+  /* Shown when the browser will not let us write to the clipboard at all.
+     The digits are selected on screen at that point, so this says the one
+     thing left to do rather than letting the button look broken. */
+  const [copyFailed, setCopyFailed] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
@@ -55,26 +60,32 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
   }, [onClose, sheetOpen]);
 
   useEffect(() => {
-    if (!copied) return;
-    const t = window.setTimeout(() => setCopied(false), 1800);
+    if (!copied && !copyFailed) return;
+    const t = window.setTimeout(() => { setCopied(false); setCopyFailed(false); }, 3000);
     return () => window.clearTimeout(t);
-  }, [copied]);
+  }, [copied, copyFailed]);
 
   const copyNumber = async () => {
-    try {
-      await navigator.clipboard.writeText(POLICY_NUMBER);
+    /* copyText falls back to execCommand for plain http, where
+       navigator.clipboard does not exist at all — see that module. The
+       intranet is http, so without the fallback this button did nothing
+       anywhere except a developer's localhost. */
+    if (await copyText(POLICY_NUMBER)) {
       setCopied(true);
-    } catch {
-      /* Clipboard blocked (plain http, old browser): select the digits so
-         Ctrl+C still works. */
-      const el = document.getElementById('hi-policy-number');
-      if (el) {
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        const sel = window.getSelection();
-        sel?.removeAllRanges(); sel?.addRange(range);
-      }
+      setCopyFailed(false);
+      return;
     }
+    /* Nothing worked. Select the digits so Ctrl+C still gets them, and say
+       so — a button that quietly does nothing is worse than one that
+       admits it. */
+    const el = document.getElementById('hi-policy-number');
+    if (el) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel?.removeAllRanges(); sel?.addRange(range);
+    }
+    setCopyFailed(true);
   };
 
   return (
@@ -151,13 +162,20 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
                   <span><span className="font-black text-slate-700">Cover</span> · Group health, APIS employees</span>
                 </div>
               </div>
-              <button type="button" onClick={copyNumber}
-                className={`shrink-0 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-[13px] font-black transition-all
-                           ${copied
-                             ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                             : 'bg-amber-500 text-white shadow-md shadow-amber-500/30 hover:bg-amber-600'}`}>
-                {copied ? <><Check className="w-4 h-4" />Copied</> : <><Copy className="w-4 h-4" />Copy policy number</>}
-              </button>
+              <div className="shrink-0 flex flex-col items-stretch gap-1">
+                <button type="button" onClick={copyNumber}
+                  className={`inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-[13px] font-black transition-all
+                             ${copied
+                               ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
+                               : 'bg-amber-500 text-white shadow-md shadow-amber-500/30 hover:bg-amber-600'}`}>
+                  {copied ? <><Check className="w-4 h-4" />Copied</> : <><Copy className="w-4 h-4" />Copy policy number</>}
+                </button>
+                {copyFailed && (
+                  <p role="status" className="text-[11px] font-bold text-amber-700 text-center max-w-[200px]">
+                    Selected the number — press Ctrl+C to copy it.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
 
