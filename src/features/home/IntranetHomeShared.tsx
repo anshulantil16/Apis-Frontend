@@ -771,10 +771,9 @@ export const QUICK_PORTALS: QuickPortal[] = [
   { label: 'Pocket HRMS', sub: 'Access your HR services, leave & attendance', href: 'https://ess.pockethrms.com/', icon: Users, ring: 'ring-amber-200', soft: 'bg-amber-50', accent: 'text-amber-600' },
   { label: 'Bizom', sub: 'Track sales, orders & market data in real time', href: 'https://apisindia.bizom.in', icon: BarChart3, ring: 'ring-emerald-200', soft: 'bg-emerald-50', accent: 'text-emerald-600' },
   { label: 'ERP', sub: 'Manage your enterprise resources & operations', href: 'https://erp.apisindia.com/APISLIVE25/SignIn?ReturnUrl=%2FAPISLIVE25%2F', icon: Database, ring: 'ring-violet-200', soft: 'bg-violet-50', accent: 'text-violet-600' },
-  /* Was "Hospital List". The hospital list is still one click away, inside
-     the popup (HealthInsurancePopup), next to the policy number and the
-     TATA AIG app steps. */
-  { label: 'Health Insurance', sub: 'Policy number, TATA AIG app steps & network hospitals', href: '/hospital_list/ProviderNetwork.html', opens: 'health-insurance', icon: HeartPulse, ring: 'ring-rose-200', soft: 'bg-rose-50', accent: 'text-rose-600' },
+  /* Was "Hospital List". Opens HealthInsurancePopup: the eWATPA hospital
+     network, the policy number and the TATA AIG app steps. */
+  { label: 'Health Insurance', sub: 'Network hospitals, policy number & TATA AIG app steps', href: 'https://www.ewatpa.com/hospital-network', opens: 'health-insurance', icon: HeartPulse, ring: 'ring-rose-200', soft: 'bg-rose-50', accent: 'text-rose-600' },
 ];
 
 /* Scrolling ticker strip above the home page hero. Same "static,

@@ -1,7 +1,10 @@
 /* Health Insurance — opened from the "Health Insurance" card under APIS at a
- * Glance. Three things an employee needs, top to bottom: the group policy
- * number (as text, so it can be copied into the insurer's app), how to add
- * the policy in the TATA AIG app, and where the network hospitals are.
+ * Glance. Three things an employee needs, top to bottom: where the network
+ * hospitals are, the group policy number (as text, so it can be copied into
+ * the insurer's app), and how to add the policy in the TATA AIG app.
+ *
+ * Styled in the intranet's own amber family (same as Policies & Guidelines
+ * and the APIS Tree): white cards, amber/orange accents.
  *
  * Everything here is taken from the two images HR supplied (in
  * src/assets/health-insurance/): the policy-number banner and the
@@ -26,6 +29,7 @@ import appStepsSheet from '../../assets/health-insurance/app-steps.jpeg';
 
 const POLICY_NUMBER = '0239818772';
 const INSURER = 'TATA AIG';
+const HOSPITAL_NETWORK_URL = 'https://www.ewatpa.com/hospital-network';
 
 /* "Mobile App Journey for Employees", step for step. */
 const APP_STEPS: { title: string; detail: string; icon: LucideIcon }[] = [
@@ -44,11 +48,6 @@ const APP_FEATURES: { label: string; icon: LucideIcon }[] = [
   { label: 'Add & edit insured member contact details', icon: Users },
   { label: 'Claim intimation & real-time tracking', icon: Bell },
   { label: 'Value-added services', icon: Sparkles },
-];
-
-const HOSPITAL_LINKS = [
-  { label: 'APIS hospital list', sub: 'Network hospitals associated with APIS', href: '/hospital_list/ProviderNetwork.html' },
-  { label: 'eWATPA hospital network', sub: 'Search the TPA’s full hospital network', href: 'https://www.ewatpa.com/hospital-network' },
 ];
 
 export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
@@ -89,99 +88,117 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6" onClick={onClose}>
-      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
       <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Health Insurance"
-        className="ih-pop-in relative w-full max-w-3xl max-h-[92vh] overflow-y-auto ih-scroll-clean rounded-3xl bg-slate-50
-                   shadow-[0_60px_120px_-30px_rgba(0,0,0,.55)] ring-1 ring-black/5">
+        className="ih-pop-in relative w-full max-w-3xl max-h-[92vh] overflow-y-auto ih-scroll-clean rounded-3xl bg-white
+                   shadow-[0_60px_120px_-30px_rgba(0,0,0,.5)] ring-1 ring-black/5">
 
-        {/* Header — the HR banner, dimmed under a glass title bar. */}
-        <div className="relative h-36 sm:h-44 overflow-hidden rounded-t-3xl bg-slate-900">
-          <img src={policyBanner} alt="" className="absolute inset-0 w-full h-full object-cover object-top opacity-45" />
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-sky-950/70 to-teal-900/40" />
-          <div aria-hidden className="ih-drift absolute -top-16 -right-10 w-64 h-64 rounded-full bg-teal-400/20 blur-3xl" />
-          <div aria-hidden className="ih-drift absolute -bottom-20 left-10 w-72 h-72 rounded-full bg-sky-500/20 blur-3xl" style={{ animationDelay: '-4s' }} />
-          <div className="relative h-full flex items-end justify-between gap-4 px-5 sm:px-7 pb-5">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 ring-1 ring-white/25 backdrop-blur-md flex items-center justify-center">
-                <HeartPulse className="w-6 h-6 text-teal-300" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[.2em] text-teal-300/90">Group Health Insurance</p>
-                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">Your health cover, in one place</h2>
-              </div>
+        {/* Header — same amber panel as the Policies & APIS Tree heroes. */}
+        <div className="ih-sweep relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-white via-amber-50/70 to-white
+                        border-b border-amber-100 px-5 sm:px-7 py-5">
+          <div className="ih-drift pointer-events-none absolute -top-20 -right-16 w-64 h-64 rounded-full bg-amber-300/30 blur-[90px]" />
+          <div className="ih-aurora pointer-events-none absolute -bottom-24 -left-10 w-56 h-56 rounded-full bg-orange-200/30 blur-[90px]" />
+          <div className="relative flex items-center gap-4 pr-10">
+            <div className="ih-float w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30 shrink-0">
+              <HeartPulse className="w-7 h-7 text-white" />
             </div>
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 ring-1 ring-white/20 text-[10.5px] font-black text-white/90">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-300" />Insured by {INSURER}
-            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">Health Insurance</h2>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-[10px] font-black text-amber-600">
+                  <ShieldCheck className="w-3 h-3" />{INSURER}
+                </span>
+              </div>
+              <p className="text-[12.5px] text-slate-500 mt-0.5">Group health cover for APIS employees — hospitals, your policy number and how to get it on your phone.</p>
+            </div>
           </div>
           <button type="button" onClick={onClose} title="Close"
-            className="absolute top-3 right-3 w-9 h-9 rounded-xl bg-white/10 ring-1 ring-white/20 text-white/80
-                       hover:bg-white/20 hover:text-white flex items-center justify-center transition-all">
-            <X className="w-4.5 h-4.5" />
+            className="absolute top-4 right-4 w-9 h-9 rounded-xl text-slate-400 hover:bg-amber-100 hover:text-slate-700
+                       flex items-center justify-center transition-all">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-4 sm:p-6 space-y-4">
-          {/* 1 · Policy number */}
-          <section className="ih-sweep relative overflow-hidden rounded-2xl p-[1.5px] bg-gradient-to-r from-teal-400 via-sky-500 to-indigo-500">
-            <div className="relative rounded-[14px] bg-slate-950 px-5 sm:px-6 py-5 overflow-hidden">
-              <div aria-hidden className="absolute inset-0 opacity-[0.07]"
-                style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.8) 1px,transparent 1px)', backgroundSize: '22px 22px' }} />
-              <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-[.2em] text-sky-300/80 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 ih-pulse-glow" />Policy number
-                  </p>
-                  <p id="hi-policy-number"
-                    className="mt-1.5 font-mono text-[30px] sm:text-[38px] leading-none font-bold tracking-[.12em]
-                               text-transparent bg-clip-text bg-gradient-to-r from-white via-sky-100 to-teal-200 select-all">
-                    {POLICY_NUMBER}
-                  </p>
-                  <p className="mt-2 text-[11.5px] text-slate-400">
-                    {INSURER} group health policy for APIS employees. You'll need it in step 4 below.
-                  </p>
+          {/* 1 · Network hospitals — first, because finding a hospital is
+              the most urgent reason anyone opens this. */}
+          <a href={HOSPITAL_NETWORK_URL} target="_blank" rel="noopener noreferrer"
+            className="ih-sweep group relative flex items-center gap-4 overflow-hidden rounded-2xl p-4 sm:p-5
+                       bg-gradient-to-r from-amber-400 via-amber-400 to-orange-500 text-white
+                       shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 hover:-translate-y-0.5 transition-all">
+            <div className="w-12 h-12 shrink-0 rounded-xl bg-white/25 ring-1 ring-white/40 flex items-center justify-center">
+              <Hospital className="w-6 h-6 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-50/90">Cashless treatment</p>
+              <p className="text-[16px] sm:text-[17px] font-black leading-tight">Find a network hospital</p>
+              <p className="text-[11.5px] font-semibold text-amber-50/90 mt-0.5">Search the full hospital network on eWATPA</p>
+            </div>
+            <span className="shrink-0 inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-white text-amber-700 text-[12.5px] font-black
+                             shadow-sm group-hover:bg-amber-50 transition-colors">
+              <span className="hidden sm:inline">Open</span><ExternalLink className="w-4 h-4" />
+            </span>
+          </a>
+
+          {/* 2 · Policy number — laid out like the insurance e-card. */}
+          <section className="relative overflow-hidden rounded-2xl bg-white ring-1 ring-amber-200 shadow-sm">
+            <div className="h-1.5 bg-gradient-to-r from-amber-400 to-orange-500" />
+            <div className="flex flex-col sm:flex-row">
+              <div className="flex-1 min-w-0 p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Policy number</p>
+                <p id="hi-policy-number"
+                  className="mt-1 font-mono text-[28px] sm:text-[34px] leading-none font-bold tracking-[.1em] text-slate-900 select-all">
+                  {POLICY_NUMBER}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-slate-500">
+                  <span><span className="font-black text-slate-700">Insurer</span> · {INSURER}</span>
+                  <span><span className="font-black text-slate-700">Cover</span> · Group health, APIS employees</span>
                 </div>
                 <button type="button" onClick={copyNumber}
-                  className={`shrink-0 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-[13px] font-black transition-all
+                  className={`mt-4 inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[12.5px] font-black transition-all
                              ${copied
-                               ? 'bg-teal-400 text-slate-950 shadow-[0_0_24px_rgba(45,212,191,.55)]'
-                               : 'bg-white text-slate-900 hover:bg-sky-50 hover:shadow-[0_0_24px_rgba(56,189,248,.45)]'}`}>
-                  {copied ? <><Check className="w-4 h-4" />Copied</> : <><Copy className="w-4 h-4" />Copy number</>}
+                               ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
+                               : 'bg-amber-500 text-white shadow-md shadow-amber-500/30 hover:bg-amber-600'}`}>
+                  {copied ? <><Check className="w-4 h-4" />Copied</> : <><Copy className="w-4 h-4" />Copy policy number</>}
                 </button>
+              </div>
+              {/* HR's banner, as a thumbnail of the card they sent round. */}
+              <div className="sm:w-56 shrink-0 border-t sm:border-t-0 sm:border-l border-amber-100 bg-amber-50/50 p-3 flex items-center">
+                <img src={policyBanner} alt={`APIS × ${INSURER} health insurance, policy number ${POLICY_NUMBER}`}
+                  className="w-full rounded-lg ring-1 ring-amber-100 shadow-sm" />
               </div>
             </div>
           </section>
 
-          {/* 2 · How to add your policy */}
+          {/* 3 · How to add your policy */}
           <section className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-5 sm:px-6 pt-5">
+            <div className="flex items-center justify-between gap-3 px-5 pt-5">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[.2em] text-sky-600">Mobile app journey</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Mobile app journey</p>
                 <h3 className="text-[16px] font-black text-slate-900">Add your policy in the {INSURER} app</h3>
               </div>
-              <span className="shrink-0 text-[10.5px] font-black text-slate-400 bg-slate-100 rounded-full px-2.5 py-1">6 steps</span>
+              <span className="shrink-0 text-[10.5px] font-black text-amber-700 bg-amber-50 ring-1 ring-amber-200 rounded-full px-2.5 py-1">6 steps</span>
             </div>
 
-            <ol className="relative px-5 sm:px-6 pt-4 pb-2">
-              <span aria-hidden className="absolute left-[39px] sm:left-[43px] top-7 bottom-8 w-px bg-gradient-to-b from-sky-300 via-teal-300 to-emerald-300" />
+            <ol className="relative px-5 pt-4 pb-1">
+              <span aria-hidden className="absolute left-[37px] top-8 bottom-9 w-0.5 rounded-full bg-amber-200" />
               {APP_STEPS.map((s, i) => {
                 const Icon = s.icon;
                 const last = i === APP_STEPS.length - 1;
                 return (
-                  <li key={s.title} className="ih-reveal relative flex items-start gap-4 pb-4" style={{ animationDelay: `${i * 70}ms` }}>
-                    <div className={`relative z-[1] w-9 h-9 shrink-0 rounded-xl flex items-center justify-center ring-4 ring-white
-                                     ${last ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-[0_0_18px_rgba(16,185,129,.45)]'
-                                            : 'bg-gradient-to-br from-sky-500 to-indigo-500 text-white shadow-md shadow-sky-500/25'}`}>
-                      <Icon className="w-4 h-4" />
+                  <li key={s.title} className="relative flex items-start gap-3.5 pb-3">
+                    <div className={`relative z-[1] w-9 h-9 shrink-0 rounded-full flex items-center justify-center ring-4 ring-white text-[13px] font-black
+                                     ${last ? 'bg-emerald-500 text-white' : 'bg-gradient-to-br from-amber-400 to-orange-500 text-white'}`}>
+                      {last ? <Check className="w-4 h-4" /> : i + 1}
                     </div>
-                    <div className="min-w-0 flex-1 rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5 hover:ring-sky-200 hover:bg-sky-50/40 transition-all">
-                      <p className="text-[13px] font-black text-slate-800">
-                        <span className="text-sky-600 font-mono mr-1.5">0{i + 1}</span>{s.title}
+                    <div className="min-w-0 flex-1 rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5 hover:ring-amber-200 hover:bg-amber-50/40 transition-all">
+                      <p className="text-[13px] font-black text-slate-800 flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-amber-500 shrink-0" />{s.title}
                       </p>
                       <p className="text-[11.5px] text-slate-500 leading-snug mt-0.5">{s.detail}</p>
                       {i === 3 && (
                         <button type="button" onClick={copyNumber}
-                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-black text-sky-600 hover:text-sky-700">
+                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-black text-amber-600 hover:text-amber-700">
                           {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                           {copied ? 'Copied' : `Copy ${POLICY_NUMBER}`}
                         </button>
@@ -192,15 +209,15 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
               })}
             </ol>
 
-            <div className="px-5 sm:px-6 pb-5">
-              <p className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400 mb-2">What you can do in the app</p>
+            <div className="px-5 pb-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">What you can do in the app</p>
               <div className="flex flex-wrap gap-1.5">
                 {APP_FEATURES.map(f => {
                   const Icon = f.icon;
                   return (
                     <span key={f.label}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-50 ring-1 ring-sky-100 text-[11px] font-bold text-sky-800">
-                      <Icon className="w-3.5 h-3.5 text-sky-500" />{f.label}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 ring-1 ring-amber-100 text-[11px] font-bold text-amber-800">
+                      <Icon className="w-3.5 h-3.5 text-amber-500" />{f.label}
                     </span>
                   );
                 })}
@@ -211,36 +228,11 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
                 className="group mt-4 relative block w-full overflow-hidden rounded-xl ring-1 ring-slate-200 bg-white text-left">
                 <img src={appStepsSheet} alt={`${INSURER} mobile app journey for employees, with QR code to download the app`}
                   className="w-full h-56 sm:h-72 object-cover object-[50%_42%] transition-transform duration-500 group-hover:scale-[1.02]" />
-                <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-slate-950/80 to-transparent" />
-                <span className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
-                  <span className="text-[12px] font-black">Visual guide &amp; QR code to download the app</span>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/15 ring-1 ring-white/25 backdrop-blur text-[11px] font-black">
-                    <Maximize2 className="w-3.5 h-3.5" />View full size
-                  </span>
+                <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white
+                                 text-[11px] font-black shadow-md shadow-amber-500/30 group-hover:bg-amber-600 transition-colors">
+                  <Maximize2 className="w-3.5 h-3.5" />View full guide &amp; QR code
                 </span>
               </button>
-            </div>
-          </section>
-
-          {/* 3 · Network hospitals */}
-          <section className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 sm:p-6">
-            <p className="text-[10px] font-black uppercase tracking-[.2em] text-rose-500">Cashless treatment</p>
-            <h3 className="text-[16px] font-black text-slate-900">Network hospitals</h3>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {HOSPITAL_LINKS.map(h => (
-                <a key={h.href} href={h.href} target="_blank" rel="noopener noreferrer"
-                  className="group flex items-center gap-3 rounded-xl ring-1 ring-slate-200 bg-gradient-to-br from-white to-rose-50/50 p-3.5
-                             hover:ring-rose-300 hover:shadow-md hover:-translate-y-0.5 transition-all">
-                  <div className="w-10 h-10 shrink-0 rounded-xl bg-rose-50 ring-4 ring-rose-100 flex items-center justify-center">
-                    <Hospital className="w-5 h-5 text-rose-500" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-black text-slate-800">{h.label}</p>
-                    <p className="text-[11px] text-slate-500 leading-snug">{h.sub}</p>
-                  </div>
-                  <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-rose-500 transition-colors shrink-0" />
-                </a>
-              ))}
             </div>
           </section>
 
@@ -252,13 +244,13 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
 
       {/* Full-size steps sheet */}
       {sheetOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-8 bg-slate-950/85 backdrop-blur-sm"
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-8 bg-slate-900/85 backdrop-blur-sm"
           onClick={e => { e.stopPropagation(); setSheetOpen(false); }}>
           <img src={appStepsSheet} alt={`${INSURER} mobile app journey for employees`}
             onClick={e => e.stopPropagation()}
             className="ih-pop-in max-w-full max-h-full rounded-xl bg-white shadow-2xl" />
           <button type="button" onClick={e => { e.stopPropagation(); setSheetOpen(false); }} title="Close"
-            className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 ring-1 ring-white/25 text-white hover:bg-white/20 flex items-center justify-center">
+            className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/15 ring-1 ring-white/25 text-white hover:bg-white/25 flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
