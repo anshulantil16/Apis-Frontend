@@ -18,6 +18,8 @@ import {
 } from './IntranetHomeShared';
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
 import { ReferralForm } from './ReferralFormPopup';
+import { DocumentReader } from '../policies/DocumentReader';
+import type { ReaderDoc } from '../policies/policyHref';
 
 /* Leadership hero slides — real APIS India leadership. Amit Anand's photo
    reuses the same asset imported on the APIS Tree page; Vimal Anand's is
@@ -1128,7 +1130,11 @@ function DailyNewsPopup({ onClose }: { onClose: () => void }) {
 
 function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
   const { announcements, loading } = useAnnouncements();
+  /* A new-release document opens in the read-only reader, over this popup,
+     never as a file in a new tab. */
+  const [reading, setReading] = useState<ReaderDoc | null>(null);
   return (
+    <>
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
@@ -1156,10 +1162,11 @@ function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
           )}
           {announcements.map(a => {
             const Icon = a.icon;
-            const Row = a.href ? 'a' : 'div';
+            const Row = a.href ? 'button' : 'div';
             return (
-              <Row key={a.key} {...(a.href ? { href: a.href, target: '_blank', rel: 'noopener noreferrer' } : {})}
-                className="flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
+              <Row key={a.key}
+                {...(a.href ? { type: 'button' as const, onClick: () => setReading({ title: a.title, file: a.href! }) } : {})}
+                className="w-full text-left flex items-start gap-4 rounded-xl hover:bg-slate-50 p-3 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
                   <Icon className="w-5 h-5 text-amber-500" />
                 </div>
@@ -1177,6 +1184,8 @@ function AnnouncementsPopup({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+    {reading && <DocumentReader key={reading.file} doc={reading} onClose={() => setReading(null)} />}
+    </>
   );
 }
 
@@ -1325,6 +1334,9 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
   const filteredTools = category === 'All' ? VISIBLE_TOOLS : VISIBLE_TOOLS.filter(t => t.category === category);
 
   const { announcements, loading: announcementsLoading } = useAnnouncements();
+  /* A new-release document opened from the Announcements card — shown in
+     the read-only reader, never as a file in a new tab. */
+  const [readingAnnouncement, setReadingAnnouncement] = useState<ReaderDoc | null>(null);
 
   // Statewise holiday widget — APIS's own zones, now served from the
   // `noticeboard` app rather than a hard-coded array, so next year's circular
@@ -1956,6 +1968,10 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
             {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} isSuperadmin={isSuperadmin}
               canViewConfidential={!!isSuperadmin || !!canViewConfidentialVacancies} />}
             {openListPopup === 'announcements' && <AnnouncementsPopup onClose={() => setOpenListPopup(null)} />}
+            {readingAnnouncement && (
+              <DocumentReader key={readingAnnouncement.file} doc={readingAnnouncement}
+                onClose={() => setReadingAnnouncement(null)} />
+            )}
             {openListPopup === 'news' && <DailyNewsPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'celebrations' && <CelebrationsPopup initialTab={celebrationTab} onClose={() => setOpenListPopup(null)} />}
 
@@ -2428,10 +2444,11 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
                 )}
                 {announcements.slice(0, 3).map(a => {
                   const Icon = a.icon;
-                  const Row = a.href ? 'a' : 'div';
+                  const Row = a.href ? 'button' : 'div';
                   return (
-                    <Row key={a.key} {...(a.href ? { href: a.href, target: '_blank', rel: 'noopener noreferrer' } : {})}
-                      className="flex items-start gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
+                    <Row key={a.key}
+                      {...(a.href ? { type: 'button' as const, onClick: () => setReadingAnnouncement({ title: a.title, file: a.href! }) } : {})}
+                      className="w-full text-left flex items-start gap-3 rounded-xl hover:bg-slate-50 p-1.5 transition-colors">
                       <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
                         <Icon className="w-4 h-4 text-amber-500" />
                       </div>
