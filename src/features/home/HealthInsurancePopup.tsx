@@ -21,7 +21,7 @@
 import { useEffect, useState } from 'react';
 import {
   ShieldCheck, Copy, Check, Smartphone, LogIn, FilePlus2, Hash, IdCard, HeartPulse,
-  Hospital, ExternalLink, X, Maximize2, BadgeCheck, CreditCard, Users, Bell, Sparkles,
+  Hospital, ExternalLink, X, Maximize2, BadgeCheck,
   type LucideIcon,
 } from 'lucide-react';
 import policyBanner from '../../assets/health-insurance/policy-number.jpeg';
@@ -39,15 +39,6 @@ const APP_STEPS: { title: string; detail: string; icon: LucideIcon }[] = [
   { title: 'Enter the policy number', detail: `Type ${POLICY_NUMBER} — copy it from the card above.`, icon: Hash },
   { title: 'Enter your EMP ID and date of birth', detail: 'On the Enter Policy Details screen, along with the policy number.', icon: IdCard },
   { title: 'Your policy appears under the Health tab', detail: 'Open it to see your cover and insured members.', icon: BadgeCheck },
-];
-
-/* "Important Features of the Mobile App". */
-const APP_FEATURES: { label: string; icon: LucideIcon }[] = [
-  { label: 'Basic policy information', icon: ShieldCheck },
-  { label: 'View, download & share health e-cards', icon: CreditCard },
-  { label: 'Add & edit insured member contact details', icon: Users },
-  { label: 'Claim intimation & real-time tracking', icon: Bell },
-  { label: 'Value-added services', icon: Sparkles },
 ];
 
 export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
@@ -210,22 +201,9 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
             </ol>
 
             <div className="px-5 pb-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">What you can do in the app</p>
-              <div className="flex flex-wrap gap-1.5">
-                {APP_FEATURES.map(f => {
-                  const Icon = f.icon;
-                  return (
-                    <span key={f.label}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 ring-1 ring-amber-100 text-[11px] font-bold text-amber-800">
-                      <Icon className="w-3.5 h-3.5 text-amber-500" />{f.label}
-                    </span>
-                  );
-                })}
-              </div>
-
               {/* The original sheet — carries the QR code to the app. */}
               <button type="button" onClick={() => setSheetOpen(true)}
-                className="group mt-4 relative block w-full overflow-hidden rounded-xl ring-1 ring-slate-200 bg-white text-left">
+                className="group mt-2 relative block w-full overflow-hidden rounded-xl ring-1 ring-slate-200 bg-white text-left">
                 <img src={appStepsSheet} alt={`${INSURER} mobile app journey for employees, with QR code to download the app`}
                   className="w-full h-56 sm:h-72 object-cover object-[50%_42%] transition-transform duration-500 group-hover:scale-[1.02]" />
                 <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white
