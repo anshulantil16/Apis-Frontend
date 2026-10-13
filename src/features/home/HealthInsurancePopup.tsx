@@ -205,10 +205,10 @@ export function HealthInsurancePopup({ onClose }: { onClose: () => void }) {
               <button type="button" onClick={() => setSheetOpen(true)}
                 className="group mt-2 relative block w-full overflow-hidden rounded-xl ring-1 ring-slate-200 bg-white text-left">
                 <img src={appStepsSheet} alt={`${INSURER} mobile app journey for employees, with QR code to download the app`}
-                  className="w-full h-56 sm:h-72 object-cover object-[50%_42%] transition-transform duration-500 group-hover:scale-[1.02]" />
+                  className="w-full h-auto transition-transform duration-500 group-hover:scale-[1.01]" />
                 <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white
                                  text-[11px] font-black shadow-md shadow-amber-500/30 group-hover:bg-amber-600 transition-colors">
-                  <Maximize2 className="w-3.5 h-3.5" />View full guide &amp; QR code
+                  <Maximize2 className="w-3.5 h-3.5" />View larger
                 </span>
               </button>
             </div>
