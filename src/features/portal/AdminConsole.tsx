@@ -16,7 +16,7 @@
  * portal maps: a wrong department or a missing email needs to be traceable to
  * upstream, not guessed at.
  */
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Fragment, useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
   Users, RefreshCw, Database, Monitor, Search, ShieldCheck, X, Check, AlertCircle,
   Loader2, LogOut, Eye, Crown, UserPlus, Trash2, Grid3x3, ClipboardCheck, ScrollText, Megaphone,
@@ -978,6 +978,11 @@ function HrmsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void
   const [info, setInfo] = useState<any>(null);
   const [preview, setPreview] = useState<any>(null);
   const [busy, setBusy] = useState('');
+  /* Which run's full message is open. A sync that fails, or that refuses
+     rows, writes what went wrong into `message`, and until now the only way
+     to read it was a shell on the server — which is why a sync that had
+     been failing twice a day went unnoticed for a day. */
+  const [openLog, setOpenLog] = useState<number | null>(null);
 
   const load = () => portalFetch('/admin/sync/').then(r => r.json()).then(setInfo).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -1095,12 +1100,15 @@ function HrmsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void
         <div className="overflow-x-auto max-w-full">
           <table className="w-full min-w-[900px] text-xs">
             <thead className="bg-slate-50 text-slate-400">
-              <tr>{['When', 'By', 'Fetched', 'New', 'Updated', 'Disabled', 'No email', 'Result'].map(h => (
+              <tr>{['When', 'By', 'Fetched', 'New', 'Updated', 'Disabled', 'No email', 'Refused', 'Result'].map(h => (
                 <th key={h} className="px-3 py-2 text-left font-black">{h}</th>))}</tr>
             </thead>
             <tbody>
               {(info.logs || []).map((l: any) => (
-                <tr key={l.id} className="border-t border-slate-100">
+                <Fragment key={l.id}>
+                <tr onClick={() => setOpenLog(openLog === l.id ? null : l.id)}
+                  title="Click to see what this run reported"
+                  className="border-t border-slate-100 cursor-pointer hover:bg-slate-50">
                   <td className="px-3 py-2 text-slate-600 font-semibold whitespace-nowrap">{l.started_at}</td>
                   <td className="px-3 py-2 text-slate-400 truncate max-w-[140px]">{l.triggered_by}</td>
                   <td className="px-3 py-2 text-slate-600">{l.fetched}</td>
@@ -1108,16 +1116,35 @@ function HrmsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void
                   <td className="px-3 py-2 text-sky-600 font-bold">{l.updated}</td>
                   <td className="px-3 py-2 text-rose-600 font-bold">{l.deactivated}</td>
                   <td className="px-3 py-2 text-amber-600 font-bold">{l.skipped_no_email}</td>
+                  {/* Rows upstream sent that the database would not take. A
+                      run with these finished, so it is not "Failed" — but a
+                      plain green OK over a handful of people who quietly
+                      stopped updating is worse than no column at all. */}
+                  <td className={`px-3 py-2 font-bold ${l.skipped_bad_row ? 'text-rose-600' : 'text-slate-300'}`}>
+                    {l.skipped_bad_row || 0}
+                  </td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${
-                      l.ok ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                      {l.ok ? 'OK' : 'Failed'}
+                      !l.ok ? 'bg-rose-50 text-rose-600'
+                        : l.skipped_bad_row ? 'bg-amber-50 text-amber-700'
+                        : 'bg-emerald-50 text-emerald-600'}`}>
+                      {!l.ok ? 'Failed' : l.skipped_bad_row ? 'OK, with problems' : 'OK'}
                     </span>
                   </td>
                 </tr>
+                {openLog === l.id && (
+                  <tr className="border-t border-slate-100 bg-slate-50">
+                    <td colSpan={9} className="px-4 py-3">
+                      <pre className="whitespace-pre-wrap text-[11px] leading-relaxed text-slate-600 font-mono">
+                        {l.message || 'Nothing recorded for this run.'}
+                      </pre>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
               {(info.logs || []).length === 0 && (
-                <tr><td colSpan={8} className="px-3 py-10 text-center text-slate-300 font-semibold">
+                <tr><td colSpan={9} className="px-3 py-10 text-center text-slate-300 font-semibold">
                   No syncs yet.
                 </td></tr>
               )}
