@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../portal/session';
+import { openFile } from '../../utils/downloadFile';
 import {
   Download, Upload, Send, CheckCircle, AlertCircle, Loader, XCircle,
   History, Trash2, Search, RefreshCw, FileWarning, UserPlus,
@@ -178,11 +179,11 @@ function SingleLetterPanel() {
         )}
         <div className="flex items-center justify-center gap-3 mt-7">
           {result.pdf_url && (
-            <a href={`${_API_BASE}${result.pdf_url}`} target="_blank" rel="noreferrer"
+            <button type="button" onClick={() => openFile(`${_API_BASE}${result.pdf_url}`)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 text-white
                          text-sm font-bold hover:bg-slate-900 transition-all hover:-translate-y-0.5">
               <FileWarning className="w-4 h-4" />View PDF
-            </a>
+            </button>
           )}
           <button
             onClick={() => { setResult(null); setForm({ ...EMPTY_FORM }); setSendEmail(false); }}
@@ -441,8 +442,8 @@ function BulkUploadPanel() {
                   {labelFor(r.status)}
                 </span>
                 {r.pdf_url && (
-                  <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer"
-                    className="text-xs font-bold text-amber-600 hover:underline">PDF</a>
+                  <button type="button" onClick={() => openFile(`${_API_BASE}${r.pdf_url}`)}
+                    className="text-xs font-bold text-amber-600 hover:underline">PDF</button>
                 )}
               </div>
             </div>
@@ -755,10 +756,10 @@ function WarningHistoryPanel() {
                   </td>
                   <td className="px-3 py-2">
                     {r.pdf_url && (
-                      <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer"
+                      <button type="button" onClick={() => openFile(`${_API_BASE}${r.pdf_url}`)}
                         className="text-xs font-bold text-amber-600 hover:underline whitespace-nowrap">
                         View PDF
-                      </a>
+                      </button>
                     )}
                   </td>
                 </tr>

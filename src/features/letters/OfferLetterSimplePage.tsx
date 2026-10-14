@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../portal/session';
+import { openFile } from '../../utils/downloadFile';
 import { Download, Upload, Send, CheckCircle, AlertCircle, Loader, XCircle, History, Trash2, Search, RefreshCw } from 'lucide-react';
 import { apiBase } from '../../apiBase';
 
@@ -152,7 +153,7 @@ function LettersHistoryPanel() {
                 <td className="py-2.5 px-3 text-slate-500 text-xs">{new Date(r.created_at).toLocaleString()}</td>
                 <td className="py-2.5 px-3">
                   {r.pdf_url
-                    ? <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer" className="text-amber-600 font-semibold hover:underline">View PDF</a>
+                    ? <button type="button" onClick={() => openFile(`${_API_BASE}${r.pdf_url}`)} className="text-amber-600 font-semibold hover:underline">View PDF</button>
                     : <span className="text-slate-400">—</span>}
                 </td>
               </tr>
@@ -492,7 +493,7 @@ export function OfferLetterSimplePage() {
                         </td>
                         <td className="py-3 px-4 text-xs">
                           {r.pdf_url
-                            ? <a href={`${_API_BASE}${r.pdf_url}`} target="_blank" rel="noreferrer" className="text-amber-600 font-semibold hover:underline">View PDF</a>
+                            ? <button type="button" onClick={() => openFile(`${_API_BASE}${r.pdf_url}`)} className="text-amber-600 font-semibold hover:underline">View PDF</button>
                             : <span className="text-slate-400">—</span>}
                         </td>
                       </tr>

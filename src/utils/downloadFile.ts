@@ -38,3 +38,37 @@ export async function downloadFile(url: string, fallbackName = 'download'): Prom
   setTimeout(() => URL.revokeObjectURL(href), 0);
   return '';
 }
+
+
+/* Open a file in a new tab, from an endpoint that needs the session.
+ *
+ * Same problem as downloadFile and one extra: the tab has to be opened in
+ * the click itself. Open it after awaiting the fetch and the browser treats
+ * it as an unprompted popup and blocks it, so the tab is opened empty first
+ * and pointed at the blob once it arrives. If it was blocked anyway, the
+ * file is saved instead of silently doing nothing.
+ */
+export async function openFile(url: string, fallbackName = 'document.pdf'): Promise<string> {
+  const tab = window.open('', '_blank');
+  const r = await apiFetch(url);
+  if (!r.ok) {
+    tab?.close();
+    if (r.status === 401) return 'Your session has ended. Please sign in again.';
+    return 'That file could not be opened. Please try again.';
+  }
+  const href = URL.createObjectURL(await r.blob());
+  if (tab) {
+    tab.location.href = href;
+  } else {
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = fallbackName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  // Long enough for the new tab to have loaded it; revoking at once leaves
+  // that tab showing nothing.
+  setTimeout(() => URL.revokeObjectURL(href), 60000);
+  return '';
+}
