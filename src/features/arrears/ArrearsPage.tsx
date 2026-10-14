@@ -4,6 +4,8 @@
    Same shape as the Letters Generator next door on purpose: an admin who has
    run one of these should not have to learn the other. */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { apiFetch } from '../portal/session';
+import { downloadFile } from '../../utils/downloadFile';
 import {
   Download, Upload, FileSpreadsheet, Mail, Loader2, CheckCircle2, AlertCircle,
   X, Search, Trash2, RefreshCw, Archive, IndianRupee,
@@ -55,7 +57,7 @@ export function ArrearsPage() {
 
   const loadHistory = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/history/`);
+      const r = await apiFetch(`${API}/history/`);
       const d = await r.json();
       setLetters(d.letters || []);
       setTotal(d.total ?? (d.letters || []).length);
@@ -71,7 +73,7 @@ export function ArrearsPage() {
     if (!batchId) return;
     const tick = async () => {
       try {
-        const r = await fetch(`${API}/batch/${batchId}/`);
+        const r = await apiFetch(`${API}/batch/${batchId}/`);
         const d: Batch = await r.json();
         setBatch(d);
         if (d.status !== 'running') {
@@ -94,7 +96,7 @@ export function ArrearsPage() {
     body.append('file', file);
     body.append('send_emails', String(sendEmails));
     try {
-      const r = await fetch(`${API}/upload/`, { method: 'POST', body });
+      const r = await apiFetch(`${API}/upload/`, { method: 'POST', body });
       const d = await r.json();
       if (!r.ok) {
         setError(d.error || 'That upload did not work.');
@@ -112,7 +114,7 @@ export function ArrearsPage() {
 
   const clearAll = async () => {
     try {
-      const r = await fetch(`${API}/history/`, {
+      const r = await apiFetch(`${API}/history/`, {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirm_count: confirmCount }),
       });
@@ -157,11 +159,14 @@ export function ArrearsPage() {
               upload, so you can leave them in.
             </p>
           </div>
-          <a href={`${API}/template/`}
+          {/* Fetched with the session rather than linked: these endpoints
+              require one now, and a plain link sends no Authorization
+              header. See utils/downloadFile. */}
+          <button type="button" onClick={() => downloadFile(`${API}/template/`, 'arrears-template.xlsx')}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800
                        text-white text-[13px] font-bold shadow-sm transition-colors shrink-0">
             <Download className="w-4 h-4" />Download template
-          </a>
+          </button>
         </div>
       </div>
 
@@ -267,11 +272,12 @@ export function ArrearsPage() {
             </ul>
           )}
           {batch.status !== 'running' && batch.generated > 0 && (
-            <a href={`${API}/download-all/?batch_id=${batchId}`}
+            <button type="button"
+              onClick={() => downloadFile(`${API}/download-all/?batch_id=${batchId}`, 'arrears-letters.zip')}
               className="inline-flex items-center gap-2 mt-3.5 px-4 py-2 rounded-xl bg-slate-900
                          hover:bg-slate-800 text-white text-[12.5px] font-bold transition-colors">
               <Archive className="w-4 h-4" />Download all {batch.generated} as a zip
-            </a>
+            </button>
           )}
         </div>
       )}
@@ -369,10 +375,11 @@ export function ArrearsPage() {
                     )}
                   </td>
                   <td className="px-4 py-2.5">
-                    <a href={`${API}/${l.id}/pdf/`}
+                    <button type="button"
+                      onClick={() => downloadFile(`${API}/${l.id}/pdf/`, `arrears-${l.id}.pdf`)}
                       className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 font-bold">
                       <Download className="w-3.5 h-3.5" />PDF
-                    </a>
+                    </button>
                   </td>
                 </tr>
               ))}

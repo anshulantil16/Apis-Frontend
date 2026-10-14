@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../portal/session';
+import { downloadFile } from '../../utils/downloadFile';
 import {
   Upload, Download, TrendingUp, Users, DollarSign, Award, ChevronDown,
   ChevronUp, Search, X, BarChart3, PieChart, Zap, Star,
@@ -215,7 +217,7 @@ export default function PMSPage() {
 
   const load = async () => {
     try {
-      const res = await fetch(`${PMS}/employees/`);
+      const res = await apiFetch(`${PMS}/employees/`);
       const d = await res.json();
       setData(d);
     } catch {}
@@ -244,7 +246,7 @@ export default function PMSPage() {
     setImporting(true); setMsg(null);
     const fd = new FormData(); fd.append('file', file);
     try {
-      const res = await fetch(`${PMS}/import/`, { method: 'POST', body: fd });
+      const res = await apiFetch(`${PMS}/import/`, { method: 'POST', body: fd });
       const d = await res.json();
       setMsg({ text: d.message || d.error, ok: res.ok });
       if (res.ok) { setData({ employees: d.employees || [], summary: d.summary || {} }); load(); }
@@ -253,7 +255,7 @@ export default function PMSPage() {
   };
 
   const update = async (empId: number, updates: any) => {
-    const res = await fetch(`${PMS}/employees/${empId}/`, {
+    const res = await apiFetch(`${PMS}/employees/${empId}/`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates),
     });
     if (res.ok) {
@@ -266,7 +268,7 @@ export default function PMSPage() {
 
   const clearAll = async () => {
     if (!confirm('Clear all PMS data? This cannot be undone.')) return;
-    await fetch(`${PMS}/employees/`, { method: 'DELETE' });
+    await apiFetch(`${PMS}/employees/`, { method: 'DELETE' });
     setData({ employees: [], summary: {} });
     setMsg({ text: 'All data cleared.', ok: true });
   };
@@ -278,7 +280,7 @@ export default function PMSPage() {
     }
     setOtpLoading(true);
     try {
-      const res = await fetch(`${PMS}/login/`, {
+      const res = await apiFetch(`${PMS}/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'send_otp', email: adminEmail }),
@@ -305,7 +307,7 @@ export default function PMSPage() {
     }
     setOtpLoading(true);
     try {
-      const res = await fetch(`${PMS}/login/`, {
+      const res = await apiFetch(`${PMS}/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'verify_otp', email: adminEmail, otp }),
@@ -522,10 +524,13 @@ export default function PMSPage() {
 
           {/* Action buttons on right */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
+            {/* Fetched with the session, not linked: a plain link carries
+                no Authorization header and these endpoints now need one.
+                See utils/downloadFile. */}
+            <button type="button" onClick={() => downloadFile(`${PMS}/template/`, 'pms-template.xlsx')}
               className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 rounded-xl text-xs font-bold transition-all hover:-translate-y-0.5 hover:shadow-lg">
               <FileSpreadsheet className="w-3.5 h-3.5" /> Template
-            </a>
+            </button>
             <button onClick={() => fileRef.current?.click()} disabled={importing}
               title="Adds to existing employees and merges by Employee Code (matching codes update, new codes are added). You can import Sales, then HQ, etc. — no need to Clear first."
               className="ih-sheen flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-600 hover:from-violet-600 hover:to-fuchsia-700 text-white rounded-xl text-xs font-black shadow-md shadow-violet-200 transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60">
@@ -534,10 +539,10 @@ export default function PMSPage() {
             </button>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
             {emps.length > 0 && (
-              <a href={`${PMS}/export/`} target="_blank" rel="noopener noreferrer"
+              <button type="button" onClick={() => downloadFile(`${PMS}/export/`, 'pms-export.xlsx')}
                 className="ih-sheen flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-200 transition-all hover:-translate-y-0.5 hover:shadow-lg">
                 <Download className="w-3.5 h-3.5" /> Export
-              </a>
+              </button>
             )}
             {emps.length > 0 && (
               <button onClick={clearAll}
@@ -598,10 +603,10 @@ export default function PMSPage() {
             <p className="ih-grad-text font-black text-2xl bg-gradient-to-r from-slate-900 via-violet-600 to-fuchsia-600">Ready to Simulate!</p>
             <p className="text-slate-500 text-sm mt-2 max-w-sm mx-auto">Download the template → fill employee data with scores → Import to start live simulation</p>
             <div className="flex items-center justify-center gap-3 mt-6">
-              <a href={`${PMS}/template/`} target="_blank" rel="noopener noreferrer"
+              <button type="button" onClick={() => downloadFile(`${PMS}/template/`, 'pms-template.xlsx')}
                 className="flex items-center gap-2 px-5 py-2.5 border border-violet-300 text-violet-600 rounded-xl text-sm font-bold hover:bg-violet-50 transition-all hover:-translate-y-0.5 hover:shadow-lg">
                 <Download className="w-4 h-4" /> Download Template
-              </a>
+              </button>
               <button onClick={() => fileRef.current?.click()}
                 className="ih-sheen flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white rounded-xl text-sm font-black shadow-md shadow-violet-200 transition-all hover:-translate-y-0.5 hover:shadow-lg">
                 <Upload className="w-4 h-4" /> Import Data

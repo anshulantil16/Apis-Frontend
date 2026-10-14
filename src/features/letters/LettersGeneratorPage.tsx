@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../portal/session';
 import {
   FileText, FileWarning, ArrowLeft, ArrowRight, BarChart3,
   Mail, CheckCircle2, Layers, IndianRupee,
@@ -102,7 +103,7 @@ export function LettersGeneratorPage({ onNavigateToApprovals }: Props) {
       const out: Stats = {};
       await Promise.all(LETTERS.map(async l => {
         try {
-          const r = await fetch(`${PMS_API}/${l.statsPath}/history/?limit=1`);
+          const r = await apiFetch(`${PMS_API}/${l.statsPath}/history/?limit=1`);
           if (!r.ok) return;
           const d = await r.json();
           out[l.id] = { total: d.summary?.total ?? 0, sent: d.summary?.sent ?? 0 };

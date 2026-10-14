@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../portal/session';
 import { Download, Upload, Send, CheckCircle, AlertCircle, Loader, XCircle, History, Trash2, Search, RefreshCw } from 'lucide-react';
 import { apiBase } from '../../apiBase';
 
@@ -22,7 +23,7 @@ function LettersHistoryPanel() {
       if (search.trim()) params.set('search', search.trim());
       if (statusFilter) params.set('status', statusFilter);
       params.set('limit', '200');
-      const res = await fetch(`${PMS_API}/offer-letter/history/?${params.toString()}`);
+      const res = await apiFetch(`${PMS_API}/offer-letter/history/?${params.toString()}`);
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Failed to load letters history');
       setRows(d.results || []);
@@ -38,7 +39,7 @@ function LettersHistoryPanel() {
     if (!confirm(`This permanently deletes ALL ${summary.total} stored letter record(s) and their PDF files. This cannot be undone. Continue?`)) return;
     setClearing(true);
     try {
-      const res = await fetch(`${PMS_API}/offer-letter/history/`, { method: 'DELETE' });
+      const res = await apiFetch(`${PMS_API}/offer-letter/history/`, { method: 'DELETE' });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Failed to clear');
       alert(d.message || 'Cleared.');
@@ -54,7 +55,7 @@ function LettersHistoryPanel() {
       const params = new URLSearchParams();
       if (search.trim()) params.set('search', search.trim());
       if (statusFilter) params.set('status', statusFilter);
-      const res = await fetch(`${PMS_API}/offer-letter/download-all/?${params.toString()}`);
+      const res = await apiFetch(`${PMS_API}/offer-letter/download-all/?${params.toString()}`);
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error || 'Failed to build ZIP');
@@ -180,7 +181,7 @@ export function OfferLetterSimplePage() {
 
   const downloadTemplate = async () => {
     try {
-      const response = await fetch(`${PMS_API}/offer-letter/template/`);
+      const response = await apiFetch(`${PMS_API}/offer-letter/template/`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -202,7 +203,7 @@ export function OfferLetterSimplePage() {
       return;
     }
     try {
-      const r = await fetch(`${PMS_API}/offer-letter/batch/${batchId}/`);
+      const r = await apiFetch(`${PMS_API}/offer-letter/batch/${batchId}/`);
       const d = await r.json();
       if (!r.ok) { setError(d.error || 'Status check failed'); setLoading(false); return; }
       setProgress(d);
@@ -241,7 +242,7 @@ export function OfferLetterSimplePage() {
       formData.append('file', file);
       formData.append('send_emails', sendEmails.toString());
 
-      const response = await fetch(`${PMS_API}/offer-letter/upload/`, {
+      const response = await apiFetch(`${PMS_API}/offer-letter/upload/`, {
         method: 'POST',
         body: formData,
       });

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../portal/session';
 import {
   Download, Upload, Send, CheckCircle, AlertCircle, Loader, XCircle,
   History, Trash2, Search, RefreshCw, FileWarning, UserPlus,
@@ -130,7 +131,7 @@ function SingleLetterPanel() {
     }
     setBusy(true); setErr(''); setResult(null);
     try {
-      const res = await fetch(`${PMS_API}/warning-letter/create/`, {
+      const res = await apiFetch(`${PMS_API}/warning-letter/create/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, send_email: sendEmail ? 'true' : 'false' }),
@@ -317,7 +318,7 @@ function BulkUploadPanel() {
 
   const downloadTemplate = async () => {
     try {
-      const res = await fetch(`${PMS_API}/warning-letter/template/`);
+      const res = await apiFetch(`${PMS_API}/warning-letter/template/`);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -333,7 +334,7 @@ function BulkUploadPanel() {
       setLoading(false); return;
     }
     try {
-      const r = await fetch(`${PMS_API}/warning-letter/batch/${batchId}/`);
+      const r = await apiFetch(`${PMS_API}/warning-letter/batch/${batchId}/`);
       const d = await r.json();
       if (!r.ok) { setError(d.error || 'Status check failed'); setLoading(false); return; }
       setProgress(d);
@@ -358,7 +359,7 @@ function BulkUploadPanel() {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('send_emails', String(sendEmails));
-      const res = await fetch(`${PMS_API}/warning-letter/upload/`, { method: 'POST', body: fd });
+      const res = await apiFetch(`${PMS_API}/warning-letter/upload/`, { method: 'POST', body: fd });
       const d = await res.json();
       if (!res.ok) {
         setColumnError(d.detected_columns ? d : null);
@@ -606,7 +607,7 @@ function WarningHistoryPanel() {
     setLoading(true); setErr('');
     try {
       const p = params(); p.set('limit', '200');
-      const res = await fetch(`${PMS_API}/warning-letter/history/?${p.toString()}`);
+      const res = await apiFetch(`${PMS_API}/warning-letter/history/?${p.toString()}`);
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Failed to load history');
       setRows(d.results || []);
@@ -622,7 +623,7 @@ function WarningHistoryPanel() {
     if (!confirm(`This permanently deletes ALL ${summary.total} warning letter record(s) and their PDF files. Appraisal letters are NOT affected. This cannot be undone. Continue?`)) return;
     setClearing(true);
     try {
-      const res = await fetch(`${PMS_API}/warning-letter/history/`, { method: 'DELETE' });
+      const res = await apiFetch(`${PMS_API}/warning-letter/history/`, { method: 'DELETE' });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Failed to clear');
       alert(d.message || 'Cleared.');
@@ -635,7 +636,7 @@ function WarningHistoryPanel() {
   const downloadZip = async () => {
     setZipping(true); setErr('');
     try {
-      const res = await fetch(`${PMS_API}/warning-letter/download-all/?${params().toString()}`);
+      const res = await apiFetch(`${PMS_API}/warning-letter/download-all/?${params().toString()}`);
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error || 'Failed to build ZIP');
