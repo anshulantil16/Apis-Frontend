@@ -496,7 +496,7 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {loading ? 'Loading…'
-                : `Joined this month · ${joiners.length} ${joiners.length === 1 ? 'person' : 'people'}`}
+                : `Joined in the last 30 days · ${joiners.length} ${joiners.length === 1 ? 'person' : 'people'}`}
             </p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
@@ -507,7 +507,7 @@ function NewJoinersPopup({ onClose }: { onClose: () => void }) {
           {!loading && joiners.length === 0 && (
             <p className="text-sm text-slate-400 py-6 text-center">
               {has_data
-                ? 'Nobody has joined this month yet.'
+                ? 'Nobody has joined in the last 30 days.'
                 : 'No joining dates on record yet — run a Pocket HRMS sync from the admin console.'}
             </p>
           )}
@@ -2327,7 +2327,7 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
                 <div className="flex-1 flex flex-col justify-evenly gap-1">
                   {!cel.loading && cel.new_joiners.length === 0 && (
                     <p className="text-[10px] text-slate-400 py-3">
-                      {cel.has_data ? 'Nobody joined this week.' : 'Directory not synced yet.'}
+                      {cel.has_data ? 'Nobody joined in the last 30 days.' : 'Directory not synced yet.'}
                     </p>
                   )}
                   {cel.new_joiners.slice(0, 4).map((j, i) => (
