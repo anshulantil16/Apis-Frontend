@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { eomFetch } from '../../../utils/appSession';
 import {
   ChevronDown, ChevronUp, CheckCircle2,
   Loader2, AlertCircle, Users, Clock, CheckCircle, Award,
@@ -89,7 +90,7 @@ function NominationCard({ entry, cycle, onUpdate }: {
   const save = async (action?: string) => {
     action ? setSubmitting(true) : setSaving(true);
     try {
-      const res  = await fetch(`${EOM_API}/nominations/${nom.id}/hod-review/`, {
+      const res  = await eomFetch(`${EOM_API}/nominations/${nom.id}/hod-review/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload(action)),
       });
@@ -376,7 +377,7 @@ export function EOMHodView({ hod }: { hod: any }) {
   const [loading,       setLoading]       = useState(true);
 
   useEffect(() => {
-    fetch(`${EOM_API}/cycles/active/`)
+    eomFetch(`${EOM_API}/cycles/active/`)
       .then(r => r.json())
       .then(data => { setCycles(data); if (data.length === 1) setSelectedCycle(data[0]); })
       .catch(() => {})
@@ -385,7 +386,7 @@ export function EOMHodView({ hod }: { hod: any }) {
 
   useEffect(() => {
     if (!selectedCycle) return;
-    fetch(`${EOM_API}/hod/${hod.employee_id}/team/?cycle_id=${selectedCycle.id}`)
+    eomFetch(`${EOM_API}/hod/${hod.employee_id}/team/?cycle_id=${selectedCycle.id}`)
       .then(r => r.json()).then(setTeam).catch(() => {});
   }, [selectedCycle, hod.employee_id]);
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { appraisalFetch } from '../../utils/appSession';
 import {
   ArrowLeft, Users, Shield, BarChart3, LineChart, Zap, Mail,
   Target, MessageSquare, Trophy,
@@ -206,7 +207,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
     if (!inputId.trim() || !role) return;
     setLoading(true); setError('');
     try {
-      const res = await fetch(`${APPRAISAL_API}/auth/send-otp/`, {
+      const res = await appraisalFetch(`${APPRAISAL_API}/auth/send-otp/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: inputId.trim() }),
       });
@@ -223,7 +224,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
     if (!otpInput.trim()) return;
     setLoading(true); setError('');
     try {
-      const res = await fetch(`${APPRAISAL_API}/auth/verify-otp/`, {
+      const res = await appraisalFetch(`${APPRAISAL_API}/auth/verify-otp/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: inputId.trim(), otp: otpInput.trim() }),
       });
@@ -251,7 +252,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
   const handleAdminOtp = async () => {
     setLoading(true); setError('');
     try {
-      const res = await fetch(`${APPRAISAL_API}/auth/admin-otp/`, { method: 'POST' });
+      const res = await appraisalFetch(`${APPRAISAL_API}/auth/admin-otp/`, { method: 'POST' });
       const data = await parseJsonSafe(res);
       if (!res.ok) throw new Error(data.error || 'Failed to send OTP.');
       setMaskedEmail(data.masked_email);
@@ -265,7 +266,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
     if (!otpInput.trim()) return;
     setLoading(true); setError('');
     try {
-      const res = await fetch(`${APPRAISAL_API}/auth/admin-verify/`, {
+      const res = await appraisalFetch(`${APPRAISAL_API}/auth/admin-verify/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp: otpInput.trim() }),
       });

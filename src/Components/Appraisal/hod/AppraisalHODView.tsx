@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { appraisalFetch } from '../../../utils/appSession';
 import {
   Users, CheckCircle, Clock, ChevronDown, ChevronUp, AlertCircle,
   Target, MessageSquare, BookOpen, Send, ArrowLeft, FileText, Download,
@@ -183,13 +184,13 @@ function EmployeeAppraisalDetail({ card, hod, onBack, onRefresh }: {
           }
         });
       });
-      await fetch(`${PERF_API}/goal-cards/${gc.id}/hod-kpi-scores/`, {
+      await appraisalFetch(`${PERF_API}/goal-cards/${gc.id}/hod-kpi-scores/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kpi_scores: kpiScores }),
       });
 
-      const res = await fetch(`${PERF_API}/goal-cards/${gc.id}/hod-review/`, {
+      const res = await appraisalFetch(`${PERF_API}/goal-cards/${gc.id}/hod-review/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -700,7 +701,7 @@ export function AppraisalHODView({ hod }: { hod: any }) {
   const [selectedCard, setSelectedCard] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`${PERF_API}/cycles/active/`)
+    appraisalFetch(`${PERF_API}/cycles/active/`)
       .then(r => r.json())
       .then(data => {
         setCycles(data);
@@ -712,7 +713,7 @@ export function AppraisalHODView({ hod }: { hod: any }) {
   const fetchTeam = () => {
     if (!selectedCycle) return;
     setLoading(true);
-    fetch(`${PERF_API}/hod/${hod.employee_id}/team/?cycle_id=${selectedCycle.id}&t=${Date.now()}`)
+    appraisalFetch(`${PERF_API}/hod/${hod.employee_id}/team/?cycle_id=${selectedCycle.id}&t=${Date.now()}`)
       .then(r => r.json())
       .then(data => {
         const cards = Array.isArray(data) ? data : (data.results || data.team || []);

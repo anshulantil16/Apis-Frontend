@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { eomFetch } from '../../../utils/appSession';
 import {
   ChevronDown, ChevronUp, CheckCircle2,
   Loader2, AlertCircle, Clock, CheckCircle, Award,
@@ -122,7 +123,7 @@ function NominationCard({ nom, cycle, onUpdate }: {
   const save = async (action?: string) => {
     action ? setSubmitting(true) : setSaving(true);
     try {
-      const res  = await fetch(`${EOM_API}/nominations/${nom.id}/panel-review/`, {
+      const res  = await eomFetch(`${EOM_API}/nominations/${nom.id}/panel-review/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload(action)),
       });
@@ -464,7 +465,7 @@ export function EOMPanelView({ panelUser }: { panelUser: any }) {
   const [loading,       setLoading]       = useState(true);
 
   useEffect(() => {
-    fetch(`${EOM_API}/cycles/active/`)
+    eomFetch(`${EOM_API}/cycles/active/`)
       .then(r => r.json())
       .then(data => { setCycles(data); if (data.length === 1) setSelectedCycle(data[0]); })
       .catch(() => {})
@@ -473,7 +474,7 @@ export function EOMPanelView({ panelUser }: { panelUser: any }) {
 
   useEffect(() => {
     if (!selectedCycle) return;
-    fetch(`${EOM_API}/panel/nominations/?cycle_id=${selectedCycle.id}`)
+    eomFetch(`${EOM_API}/panel/nominations/?cycle_id=${selectedCycle.id}`)
       .then(r => r.json()).then(setNominations).catch(() => {});
   }, [selectedCycle]);
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { eomFetch } from '../../../utils/appSession';
 import { CheckCircle2, ChevronRight, ChevronLeft, AlertCircle, Loader2, Award, FileText, Upload } from 'lucide-react';
 import { EOM_API } from '../../../features/eom/EOMPage';
 import { TOOL_STYLES } from '../../toolStyles';
@@ -133,7 +134,7 @@ export function EOMEmployeeView({ employee }: Props) {
 
   // ── Load active cycles ──
   useEffect(() => {
-    fetch(`${EOM_API}/cycles/active/`)
+    eomFetch(`${EOM_API}/cycles/active/`)
       .then(r => r.json())
       .then(data => {
         setCycles(data);
@@ -146,7 +147,7 @@ export function EOMEmployeeView({ employee }: Props) {
   // ── Load existing nomination when cycle selected ──
   useEffect(() => {
     if (!selectedCycle) return;
-    fetch(`${EOM_API}/nominations/${employee.employee_id}/${selectedCycle.id}/`)
+    eomFetch(`${EOM_API}/nominations/${employee.employee_id}/${selectedCycle.id}/`)
       .then(async r => {
         if (r.status === 404) return null;
         return r.json();
@@ -193,7 +194,7 @@ export function EOMEmployeeView({ employee }: Props) {
     if (!selectedCycle) return null;
     setSaving(true);
     try {
-      const res  = await fetch(`${EOM_API}/nominations/${employee.employee_id}/${selectedCycle.id}/`, {
+      const res  = await eomFetch(`${EOM_API}/nominations/${employee.employee_id}/${selectedCycle.id}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload()),
@@ -233,7 +234,7 @@ export function EOMEmployeeView({ employee }: Props) {
 
     setSubmitting(true);
     try {
-      const res  = await fetch(`${EOM_API}/nominations/${saved.id}/submit/`, { method: 'PATCH' });
+      const res  = await eomFetch(`${EOM_API}/nominations/${saved.id}/submit/`, { method: 'PATCH' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed.');
       setNomination(data);
@@ -499,7 +500,7 @@ export function EOMEmployeeView({ employee }: Props) {
                     {!isReadonly && (
                       <button type="button" onClick={async () => {
                         if (!nomination?.id) return;
-                        await fetch(`${EOM_API}/nominations/${nomination.id}/upload-document/`, { method: 'DELETE' });
+                        await eomFetch(`${EOM_API}/nominations/${nomination.id}/upload-document/`, { method: 'DELETE' });
                         setNomination((n: any) => ({ ...n, support_document_name: '', support_document_url: null }));
                       }} className="shrink-0 text-xs font-bold text-rose-500 hover:text-rose-700 px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 transition-all">
                         Remove
@@ -541,7 +542,7 @@ export function EOMEmployeeView({ employee }: Props) {
                           try {
                             const fd = new FormData();
                             fd.append('document', docFile);
-                            const res = await fetch(`${EOM_API}/nominations/${nomination.id}/upload-document/`, { method: 'POST', body: fd });
+                            const res = await eomFetch(`${EOM_API}/nominations/${nomination.id}/upload-document/`, { method: 'POST', body: fd });
                             const data = await res.json();
                             if (!res.ok) throw new Error(data.error || 'Upload failed');
                             setNomination(data);

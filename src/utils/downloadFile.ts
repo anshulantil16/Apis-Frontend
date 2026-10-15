@@ -13,8 +13,14 @@
  */
 import { apiFetch } from '../features/portal/session';
 
-export async function downloadFile(url: string, fallbackName = 'download'): Promise<string> {
-  const r = await apiFetch(url);
+type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
+
+export async function downloadFile(url: string, fallbackName = 'download',
+                                   fetcher: Fetcher = apiFetch): Promise<string> {
+  // `fetcher` is how the caller says WHICH session to send. The portal's own
+  // is the default; Appraisal and EOM pass their own, because somebody who
+  // signed in at those tools' OTP login has no portal token at all.
+  const r = await fetcher(url);
   if (!r.ok) {
     if (r.status === 401) return 'Your session has ended. Please sign in again.';
     return 'That file could not be downloaded. Please try again.';
@@ -48,9 +54,10 @@ export async function downloadFile(url: string, fallbackName = 'download'): Prom
  * and pointed at the blob once it arrives. If it was blocked anyway, the
  * file is saved instead of silently doing nothing.
  */
-export async function openFile(url: string, fallbackName = 'document.pdf'): Promise<string> {
+export async function openFile(url: string, fallbackName = 'document.pdf',
+                               fetcher: Fetcher = apiFetch): Promise<string> {
   const tab = window.open('', '_blank');
-  const r = await apiFetch(url);
+  const r = await fetcher(url);
   if (!r.ok) {
     tab?.close();
     if (r.status === 401) return 'Your session has ended. Please sign in again.';

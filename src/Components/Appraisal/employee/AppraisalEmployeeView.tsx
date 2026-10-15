@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { appraisalFetch } from '../../../utils/appSession';
 import {
   Target, Star, CheckCircle, Clock, Plus, Trash2, Send,
   AlertCircle, Award, Lock, Unlock, ChevronDown,
@@ -458,7 +459,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
   };
 
   useEffect(() => {
-    fetch(`${PERF_API}/cycles/active/`)
+    appraisalFetch(`${PERF_API}/cycles/active/`)
       .then(r => r.json())
       .then(data => {
         setCycles(data);
@@ -469,7 +470,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
   useEffect(() => {
     if (!selectedCycle) return;
-    fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/?t=${Date.now()}`)
+    appraisalFetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/?t=${Date.now()}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {
@@ -513,7 +514,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
           feedback_organization_rating: feedbackOrganizationRating || null,
         };
         if (formStep === 1) autoPayload.goals = goals;
-        const res = await fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
+        const res = await appraisalFetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(autoPayload),
         });
@@ -603,7 +604,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
       payload.goals = goals;
     }
 
-    const res = await fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
+    const res = await appraisalFetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
@@ -717,7 +718,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
     try {
       const data = await saveDraftGoals();
       if (!data) return;
-      await fetch(`${PERF_API}/goal-cards/${data.id}/submit/`, {
+      await appraisalFetch(`${PERF_API}/goal-cards/${data.id}/submit/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comment: 'Submitted for manager review.' }),
       });
@@ -729,7 +730,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
 
   const refreshData = () => {
     if (!selectedCycle) return;
-    fetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/?t=${Date.now()}`)
+    appraisalFetch(`${PERF_API}/goal-cards/${employee.employee_id}/${selectedCycle.id}/?t=${Date.now()}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {
@@ -1124,7 +1125,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                     try {
                       const fd = new FormData();
                       fd.append('document', file);
-                      const res = await fetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/`, {
+                      const res = await appraisalFetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/`, {
                         method: 'POST', body: fd,
                       });
                       const data = await res.json();
@@ -1157,7 +1158,7 @@ export function AppraisalEmployeeView({ employee }: { employee: any }) {
                         if (!goalCard) return;
                         setUploading(true);
                         try {
-                          const res = await fetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/`, { method: 'DELETE' });
+                          const res = await appraisalFetch(`${PERF_API}/goal-cards/${goalCard.id}/upload-document/`, { method: 'DELETE' });
                           if (!res.ok) throw new Error('Delete failed');
                           setGoalCard((prev: any) => prev ? { ...prev, support_document_name: '', support_document_url: null } : null);
                           showMsg('Document removed', 'success');

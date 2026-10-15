@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { eomFetch } from '../../utils/appSession';
 import { ArrowLeft, Users, BarChart3, LineChart, Mail, Zap, Star } from 'lucide-react';
 import { EOMEmployeeView }  from '../../Components/EOM/employee/EOMEmployeeView';
 import { EOMHodView }       from '../../Components/EOM/hod/EOMHodView';
@@ -145,7 +146,7 @@ export function EOMPage({}: EOMPageProps) {
     if (!inputId.trim() || !role) return;
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${EOM_API}/auth/send-otp/`, {
+      const res  = await eomFetch(`${EOM_API}/auth/send-otp/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: inputId.trim() }),
       });
@@ -161,7 +162,7 @@ export function EOMPage({}: EOMPageProps) {
     if (!otpInput.trim()) return;
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${EOM_API}/auth/verify-otp/`, {
+      const res  = await eomFetch(`${EOM_API}/auth/verify-otp/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: inputId.trim(), otp: otpInput.trim() }),
       });
@@ -184,7 +185,7 @@ export function EOMPage({}: EOMPageProps) {
   const handleAdminOtp = async () => {
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${EOM_API}/auth/admin-otp/`, { method: 'POST' });
+      const res  = await eomFetch(`${EOM_API}/auth/admin-otp/`, { method: 'POST' });
       const data = await parseJson(res);
       if (!res.ok) throw new Error(data.error || 'Failed to send OTP.');
       setMaskedEmail(data.masked_email);
@@ -197,7 +198,7 @@ export function EOMPage({}: EOMPageProps) {
     if (!otpInput.trim()) return;
     setLoading(true); setError('');
     try {
-      const res  = await fetch(`${EOM_API}/auth/admin-verify/`, {
+      const res  = await eomFetch(`${EOM_API}/auth/admin-verify/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp: otpInput.trim() }),
       });

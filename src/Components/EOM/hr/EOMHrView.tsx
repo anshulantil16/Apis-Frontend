@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { eomFetch } from '../../../utils/appSession';
+import { downloadFile } from '../../../utils/downloadFile';
 import {
   Upload, Trophy, BarChart3, CheckCircle, Calendar,
   Users, TrendingUp, FileText, Award, Clock,
@@ -78,19 +80,19 @@ export function EOMHrView({ hrUser }: Props) {
   const [panelMsg,      setPanelMsg]      = useState('');
 
   useEffect(() => {
-    fetch(`${EOM_API}/cycles/`)
+    eomFetch(`${EOM_API}/cycles/`)
       .then(r => r.json())
       .then(data => { setCycles(data); if (data.length > 0) setSelectedCycle(data[0]); })
       .catch(() => {});
-    fetch(`${EOM_API}/employees/`).then(r => r.json()).then(setEmployees).catch(() => {});
+    eomFetch(`${EOM_API}/employees/`).then(r => r.json()).then(setEmployees).catch(() => {});
   }, []);
 
   const fetchEmployees = () =>
-    fetch(`${EOM_API}/employees/`).then(r => r.json()).then(setEmployees).catch(() => {});
+    eomFetch(`${EOM_API}/employees/`).then(r => r.json()).then(setEmployees).catch(() => {});
 
   const handleSaveEmp = async (emp: any) => {
     setEmpSaving(true);
-    await fetch(`${EOM_API}/employees/${emp.employee_id}/`, {
+    await eomFetch(`${EOM_API}/employees/${emp.employee_id}/`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(emp),
     });
@@ -99,14 +101,14 @@ export function EOMHrView({ hrUser }: Props) {
 
   const handleDeactivateEmp = async (employee_id: string, name: string) => {
     if (!window.confirm(`Deactivate ${name}? They won't be able to log in or submit nominations.`)) return;
-    await fetch(`${EOM_API}/employees/${employee_id}/`, { method: 'DELETE' });
+    await eomFetch(`${EOM_API}/employees/${employee_id}/`, { method: 'DELETE' });
     fetchEmployees();
   };
 
   const handleAddEmp = async () => {
     if (!newEmp.employee_id || !newEmp.name) return;
     setEmpSaving(true);
-    await fetch(`${EOM_API}/employees/`, {
+    await eomFetch(`${EOM_API}/employees/`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newEmp),
     });
@@ -124,7 +126,7 @@ export function EOMHrView({ hrUser }: Props) {
     setPanelSaving(true);
     setPanelMsg('');
     try {
-      const res = await fetch(`${EOM_API}/cycles/${selectedCycle.id}/panel-members/`, {
+      const res = await eomFetch(`${EOM_API}/cycles/${selectedCycle.id}/panel-members/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ panel_members: panelMembers.filter(m => m) }),
@@ -146,8 +148,8 @@ export function EOMHrView({ hrUser }: Props) {
     if (!silent) setRefreshing(true);
     const h = { headers: { 'Cache-Control': 'no-cache' } };
     Promise.all([
-      fetch(`${EOM_API}/org/overview/?cycle_id=${cycle.id}`, h).then(r => r.json()).then(setOverview),
-      fetch(`${EOM_API}/all-nominations/?cycle_id=${cycle.id}`, h).then(r => r.json()).then((data: any[]) => {
+      eomFetch(`${EOM_API}/org/overview/?cycle_id=${cycle.id}`, h).then(r => r.json()).then(setOverview),
+      eomFetch(`${EOM_API}/all-nominations/?cycle_id=${cycle.id}`, h).then(r => r.json()).then((data: any[]) => {
         setNominations(data);
         const rem: Record<number,string>  = {};
         const win: Record<number,boolean> = {};
@@ -173,7 +175,7 @@ export function EOMHrView({ hrUser }: Props) {
     setImporting(true); setImportMsg('');
     const fd = new FormData(); fd.append('file', importFile);
     try {
-      const res  = await fetch(`${EOM_API}/employees/import/`, { method: 'POST', body: fd });
+      const res  = await eomFetch(`${EOM_API}/employees/import/`, { method: 'POST', body: fd });
       const data = await res.json();
       setImportMsg(`✅ ${data.message}${data.errors?.length ? ` · ${data.errors.length} error(s)` : ''}`);
       setImportFile(null);
@@ -202,7 +204,7 @@ export function EOMHrView({ hrUser }: Props) {
     const name = newCycleName.trim() || `Employee of the Month — ${MONTH_NAMES[newCycleMonth]} ${newCycleYear}`;
     setCreatingCycle(true); setCycleMsg('');
     try {
-      const res  = await fetch(`${EOM_API}/cycles/`, {
+      const res  = await eomFetch(`${EOM_API}/cycles/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, month: newCycleMonth, year: newCycleYear, status: 'open', created_by: hrUser.name }),
       });
@@ -215,7 +217,7 @@ export function EOMHrView({ hrUser }: Props) {
 
   const toggleCycle = async (c: any) => {
     const s = c.status === 'open' ? 'closed' : 'open';
-    await fetch(`${EOM_API}/cycles/${c.id}/`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: s }) });
+    await eomFetch(`${EOM_API}/cycles/${c.id}/`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: s }) });
     setCycles(p => p.map(x => x.id === c.id ? { ...x, status: s } : x));
     if (selectedCycle?.id === c.id) setSelectedCycle((p: any) => ({ ...p, status: s }));
   };
@@ -224,7 +226,7 @@ export function EOMHrView({ hrUser }: Props) {
     setFinalizing(p => ({ ...p, [nomId]: true }));
     setFinalMsg(p => ({ ...p, [nomId]: '' }));
     try {
-      const res  = await fetch(`${EOM_API}/nominations/${nomId}/hr-finalize/`, {
+      const res  = await eomFetch(`${EOM_API}/nominations/${nomId}/hr-finalize/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hr_remarks: hrRemarks[nomId] || '', is_winner: isWinner[nomId] || false }),
       });
@@ -279,18 +281,24 @@ export function EOMHrView({ hrUser }: Props) {
                 <span className="opacity-60">· {selectedCycle.status}</span>
               </div>
             )}
-            <a href={`${EOM_API}/export/${selectedCycle ? `?cycle_id=${selectedCycle.id}` : ''}`}
-              target="_blank" rel="noreferrer"
+            {/* Fetched with the session rather than linked: a link is a
+                browser navigation and carries no Authorization header, so
+                once /api/eom/ requires one this would open a 401 instead of
+                the spreadsheet. See utils/downloadFile. */}
+            <button type="button"
+              onClick={() => downloadFile(
+                `${EOM_API}/export/${selectedCycle ? `?cycle_id=${selectedCycle.id}` : ''}`,
+                'eom-nominations.xlsx', eomFetch)}
               className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all tp-tilt tp-sheen">
               <Download className="w-3.5 h-3.5" />
               Export Excel
-            </a>
+            </button>
             <button
               onClick={async () => {
                 if (!window.confirm('⚠️ WARNING: This will permanently delete ALL EOM data (employees, cycles, nominations). This CANNOT be undone.\n\nAre you sure?')) return;
                 setResetting(true);
                 try {
-                  const res = await fetch(`${EOM_API}/admin/reset-database/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'RESET_EOM_DATABASE' }) });
+                  const res = await eomFetch(`${EOM_API}/admin/reset-database/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'RESET_EOM_DATABASE' }) });
                   if (res.ok) { alert('✅ Database reset successfully!'); window.location.reload(); }
                   else alert('❌ Reset failed.');
                 } catch { alert('❌ Failed to connect.'); }

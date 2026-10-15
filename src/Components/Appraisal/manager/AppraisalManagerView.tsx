@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { appraisalFetch } from '../../../utils/appSession';
 import {
   Users, CheckCircle, Clock, ChevronDown, ChevronUp, AlertCircle,
   Target, MessageSquare, BookOpen, Send, ArrowLeft, FileText, Download,
@@ -167,7 +168,7 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
       });
     });
     try {
-      const res = await fetch(`${PERF_API}/goal-cards/${gc.id}/manager-kpi-scores/`, {
+      const res = await appraisalFetch(`${PERF_API}/goal-cards/${gc.id}/manager-kpi-scores/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kpi_scores: kpiScores }),
@@ -202,7 +203,7 @@ function EmployeeAppraisalDetail({ card, manager, onBack, onRefresh }: {
     try {
       const saved = await saveRatings();
       if (!saved) { showMsg('Failed to save KPI scores. Try again.', false); setSaving(false); return; }
-      const res = await fetch(`${PERF_API}/goal-cards/${gc.id}/manager-review/`, {
+      const res = await appraisalFetch(`${PERF_API}/goal-cards/${gc.id}/manager-review/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -713,7 +714,7 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
   const [selectedCard, setSelectedCard] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`${PERF_API}/cycles/active/`)
+    appraisalFetch(`${PERF_API}/cycles/active/`)
       .then(r => r.json())
       .then(data => {
         setCycles(data);
@@ -725,7 +726,7 @@ export function AppraisalManagerView({ manager }: { manager: any }) {
   const fetchTeam = () => {
     if (!selectedCycle) return;
     setLoading(true);
-    fetch(`${PERF_API}/manager/${manager.employee_id}/team/?cycle_id=${selectedCycle.id}`)
+    appraisalFetch(`${PERF_API}/manager/${manager.employee_id}/team/?cycle_id=${selectedCycle.id}`)
       .then(r => r.json())
       .then(data => {
         // Normalize: backend may return array of members with goal_card embedded
