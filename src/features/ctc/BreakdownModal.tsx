@@ -88,7 +88,10 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
               <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Compensation Break-up · Annexure A</p>
               <h2 className="text-xl font-black text-slate-900 truncate">{candidate.candidateName}</h2>
               <p className="text-[12px] text-slate-500 mt-0.5">
-                {[candidate.designation, candidate.department, candidate.category, candidate.workLocation].filter(Boolean).join(' · ')}
+                {[candidate.employeeCode, candidate.designation, candidate.department, candidate.category,
+                  candidate.workLocation,
+                  candidate.dateOfJoining && `Joining ${new Date(`${candidate.dateOfJoining}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+                ].filter(Boolean).join(' · ')}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px] font-black">
                 <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">Cadre {b?.cadre || candidate.cadre}{b?.cadreName ? ` · ${b.cadreName}` : ''}</span>

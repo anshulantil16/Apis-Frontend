@@ -7,6 +7,9 @@ const CTC_API = `${apiBase()}/api/ctc`;
 
 export interface CtcCandidate {
   id: number; rowNumber: number;
+  employeeCode: string;
+  /* ISO date ("2026-07-01"), or null when not given. */
+  dateOfJoining: string | null;
   candidateName: string; category: string; department: string; designation: string;
   grade: string; cadre: string; workLocation: string;
   /* Annual, in rupees, as a decimal string ("1200000.00"). */

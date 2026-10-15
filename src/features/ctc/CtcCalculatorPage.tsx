@@ -21,17 +21,22 @@ import { SettingsPanel } from './SettingsPanel';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 const fmtCtc = (v: string | null) => (v == null ? '—' : inr.format(Number(v)));
+const fmtDate = (iso: string | null) => (iso
+  ? new Date(`${iso}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  : '—');
 const fmtWhen = (iso: string | null) => (iso
   ? new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   : '');
 
 const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => string; align?: 'right' }[] = [
+  { label: 'Employee Code',  render: c => c.employeeCode || '—' },
   { label: 'Candidate Name', render: c => c.candidateName },
   { label: 'Category',       render: c => c.category || '—' },
   { label: 'Department',     render: c => c.department || '—' },
   { label: 'Designation',    render: c => c.designation || '—' },
   { label: 'Grade',          render: c => c.grade || '—' },
   { label: 'Cadre',          render: c => c.cadre || '—' },
+  { label: 'Date of Joining', render: c => fmtDate(c.dateOfJoining) },
   { label: 'Work Location',  render: c => c.workLocation || '—' },
   { label: 'CTC (Annual)',   render: c => fmtCtc(c.ctc), align: 'right' },
 ];
@@ -209,8 +214,9 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
             </div>
             <h2 className="mt-4 text-lg font-black text-slate-900">No candidates uploaded yet</h2>
             <p className="mt-1.5 max-w-md text-[13px] text-slate-500 leading-relaxed">
-              Download the template, fill in Candidate Name, Category, Department, Designation, Grade,
-              Cadre, Work Location and CTC for each candidate, then upload it. Click a candidate to see
+              Download the template, fill in Employee Code, Candidate Name, Category, Department,
+              Designation, Grade, Cadre, Date of Joining, Work Location and CTC for each candidate,
+              then upload it. Click a candidate to see
               their salary break-up.
             </p>
           </div>
@@ -252,10 +258,10 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
                       <tr key={c.id} onClick={() => setSelected(c)} title="View salary break-up"
                         className="cursor-pointer hover:bg-amber-50/60 transition-colors">
                         <td className="px-4 py-2.5 text-slate-400 font-bold">{String(i + 1).padStart(2, '0')}</td>
-                        {COLUMNS.map((col, j) => (
+                        {COLUMNS.map(col => (
                           <td key={col.label}
                             className={`px-4 py-2.5 whitespace-nowrap ${col.align === 'right' ? 'text-right font-mono font-bold text-slate-800' : ''}
-                                        ${j === 0 ? 'font-black text-slate-900' : 'text-slate-600 font-semibold'}`}>
+                                        ${col.label === 'Candidate Name' ? 'font-black text-slate-900' : 'text-slate-600 font-semibold'}`}>
                             {col.render(c)}
                           </td>
                         ))}
