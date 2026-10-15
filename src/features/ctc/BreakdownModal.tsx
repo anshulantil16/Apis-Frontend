@@ -139,14 +139,14 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     <Rows rows={b.earnings} />
-                    <Total label="Gross Earnings" monthly={b.grossEarnings} annual={b.grossEarnings * 12} />
+                    <Total label="Gross Earnings" monthly={b.grossEarnings} annual={b.grossEarningsAnnual} />
                     {b.reimbursements.some(r => r.monthly > 0) && (
                       <><Heading label="Reimbursements" /><Rows rows={b.reimbursements.filter(r => r.monthly > 0)} /></>
                     )}
-                    <Total label="Gross Salary" monthly={b.grossSalary} annual={b.grossSalary * 12} />
+                    <Total label="Gross Salary" monthly={b.grossSalary} annual={b.grossSalaryAnnual} />
                     <Heading label="Annual Benefits" />
                     <Rows rows={b.benefits} />
-                    <Total label="Total Annual Benefits" monthly={b.benefitsTotal} annual={b.benefitsTotal * 12} />
+                    <Total label="Total Annual Benefits" monthly={b.benefitsTotal} annual={b.benefitsTotalAnnual} />
                     <Total label="Total Salary / Compensation (Fixed)" monthly={b.fixedMonthly} annual={b.fixedAnnual} />
                     <Heading label="Other Payments (Payout on Quarterly Basis)" />
                     <Rows rows={b.otherPayments} />

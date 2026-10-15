@@ -79,9 +79,9 @@ export interface CtcBreakdown {
   cadre: string; cadreName: string; grade: string; category: string;
   state: string; minWage: number;
   ctcAnnual: number; vppPercent: number;
-  earnings: BreakdownLine[]; grossEarnings: number;
-  reimbursements: BreakdownLine[]; grossSalary: number;
-  benefits: BreakdownLine[]; benefitsTotal: number;
+  earnings: BreakdownLine[]; grossEarnings: number; grossEarningsAnnual: number;
+  reimbursements: BreakdownLine[]; grossSalary: number; grossSalaryAnnual: number;
+  benefits: BreakdownLine[]; benefitsTotal: number; benefitsTotalAnnual: number;
   fixedMonthly: number; fixedAnnual: number;
   otherPayments: BreakdownLine[];
   totalCtcMonthly: number; totalCtcAnnual: number;
