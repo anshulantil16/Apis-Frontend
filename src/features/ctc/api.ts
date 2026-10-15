@@ -9,6 +9,8 @@ export interface CtcCandidate {
   id: number; rowNumber: number;
   employeeCode: string;
   numberOfChildren: number;
+  /* Gross Earnings answered on the template, { meal: true, car: false, ... }. */
+  grossEarnings?: Record<string, boolean>;
   /* ISO date ("2026-07-01"), or null when not given. */
   dateOfJoining: string | null;
   candidateName: string; category: string; department: string; designation: string;
@@ -85,6 +87,8 @@ export interface CtcBreakdown {
   fixedMonthly: number; fixedAnnual: number;
   otherPayments: BreakdownLine[];
   totalCtcMonthly: number; totalCtcAnnual: number;
+  /* Car Lease picked on the template — as per the car lease policy, outside the CTC. */
+  carLease?: boolean;
   notes: string[];
 }
 

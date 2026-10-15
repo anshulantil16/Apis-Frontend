@@ -143,6 +143,13 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
                     {b.reimbursements.some(r => r.monthly > 0) && (
                       <><Heading label="Reimbursements" /><Rows rows={b.reimbursements.filter(r => r.monthly > 0)} /></>
                     )}
+                    {b.carLease && (
+                      <tr className="hover:bg-amber-50/30">
+                        <td className="px-4 py-2 text-slate-700">Car Lease / Company Car Benefit</td>
+                        <td colSpan={2} className="px-4 py-2 text-right font-semibold text-slate-800">As per policy</td>
+                        <td className="px-4 py-2 text-[11px] text-slate-400">Car lease policy</td>
+                      </tr>
+                    )}
                     <Total label="Gross Salary" monthly={b.grossSalary} annual={b.grossSalaryAnnual} />
                     <Heading label="Annual Benefits" />
                     <Rows rows={b.benefits} />
