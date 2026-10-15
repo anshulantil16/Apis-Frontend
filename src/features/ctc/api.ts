@@ -68,7 +68,7 @@ export async function deleteCtcUpload(id: number): Promise<string> {
 
 /* ── Break-up (worked out by the server: ctc/calculator.py) ──────────── */
 
-export interface BreakdownLine { label: string; monthly: number; annual: number; note: string }
+export interface BreakdownLine { label: string; monthly: number; annual: number; note: string; key?: string }
 
 export interface CtcBreakdown {
   error?: string;

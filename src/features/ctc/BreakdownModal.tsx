@@ -134,7 +134,9 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
                   <tbody className="divide-y divide-slate-100">
                     <Rows rows={b.earnings} />
                     <Total label="Gross Earnings" monthly={b.grossEarnings} annual={b.grossEarnings * 12} />
-                    {b.reimbursements.length > 0 && <><Heading label="Reimbursements" /><Rows rows={b.reimbursements} /></>}
+                    {b.reimbursements.some(r => r.monthly > 0) && (
+                      <><Heading label="Reimbursements" /><Rows rows={b.reimbursements.filter(r => r.monthly > 0)} /></>
+                    )}
                     <Total label="Gross Salary" monthly={b.grossSalary} annual={b.grossSalary * 12} />
                     <Heading label="Annual Benefits" />
                     <Rows rows={b.benefits} />
