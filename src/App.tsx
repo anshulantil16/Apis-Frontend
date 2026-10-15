@@ -27,6 +27,7 @@ const HelpDeskPage = lazy(() => import('./features/helpdesk').then(m => ({ defau
 const ApisTreePage = lazy(() => import('./features/tree').then(m => ({ default: m.ApisTreePage })));
 const PoliciesPage = lazy(() => import('./features/policies').then(m => ({ default: m.PoliciesPage })));
 const ApisWallPage = lazy(() => import('./features/wall').then(m => ({ default: m.ApisWallPage })));
+const CtcCalculatorPage = lazy(() => import('./features/ctc').then(m => ({ default: m.CtcCalculatorPage })));
 /* Straight at the file, not the barrel: PortalGate is imported eagerly from
    './features/portal' below, so going through the barrel here would pull
    AdminConsole into the entry chunk anyway and the lazy() would buy nothing. */
@@ -41,7 +42,7 @@ import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHome
 import { PortalGate } from './features/portal/PortalGate';
 import type { PortalUser } from './features/portal/session';
 
-type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'helpdesk' | 'apis-tree' | 'policies' | 'apis-wall' | 'admin-console';
+type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'helpdesk' | 'apis-tree' | 'policies' | 'apis-wall' | 'ctc-calculator' | 'admin-console';
 
 /* Header caption per view. The shell renders the sidebar and header for every
    screen, so tools never draw their own top-level chrome. */
@@ -61,6 +62,7 @@ const VIEW_META: Record<AppView, { title: string; subtitle: string }> = {
   'apis-tree':       { title: 'APIS Tree',           subtitle: 'Organisation Structure' },
   'policies':        { title: 'Policies',            subtitle: 'Policies & Guidelines' },
   'apis-wall':       { title: 'APIS Wall',            subtitle: 'Moments & Memories' },
+  'ctc-calculator':  { title: 'CTC Calculator',       subtitle: 'Salary Breakup' },
   'admin-console':   { title: 'Administrator',       subtitle: 'People, Access & Master Data' },
 };
 
@@ -152,7 +154,10 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
      screen from drawing something the API will then refuse. */
   const mayOpen = (v: AppView) =>
     v === 'admin-console' ? session.user.is_superadmin
-                          : session.user.allowed_apps.includes(v);
+    /* Only a "Coming soon" page so far — nothing behind it to protect, and
+       nothing on the server grants it yet. */
+    : v === 'ctc-calculator' ? true
+    : session.user.allowed_apps.includes(v);
 
   if (view !== 'home' && !mayOpen(view)) {
     return (
@@ -217,6 +222,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
         <PoliciesPage />
       ) : view === 'apis-wall' ? (
         <ApisWallPage isSuperadmin={session.user.is_superadmin} />
+      ) : view === 'ctc-calculator' ? (
+        <CtcCalculatorPage />
       ) : view === 'goal-setting' ? (
         <GoalSettingPage onNavigateBack={() => navigate('home')} />
       ) : (

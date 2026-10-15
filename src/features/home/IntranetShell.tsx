@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEven
 import { portalFetch } from '../portal/session';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
-  HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images,
+  HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images, Calculator,
   Users, Landmark, MapPin, Mail, Phone, CalendarClock, Gift,
 } from 'lucide-react';
 import {
@@ -23,7 +23,7 @@ import {
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
    sub-views that live under a parent tool (approvals sits under letters). */
-export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies' | 'apis-wall' | 'admin-console';
+export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies' | 'apis-wall' | 'ctc-calculator' | 'admin-console';
 
 interface Props {
   active: ShellView;
@@ -634,6 +634,14 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                              ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
                              : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
                 <Images className="w-3.5 h-3.5" />APIS Wall
+              </button>
+
+              <button onClick={() => go('ctc-calculator')} title="CTC Calculator"
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
+                           ${active === 'ctc-calculator'
+                             ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
+                             : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
+                <Calculator className="w-3.5 h-3.5" />CTC Calculator
               </button>
 
               {/* These are genuinely not built yet. They're dimmed and
