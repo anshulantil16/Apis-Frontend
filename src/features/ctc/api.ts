@@ -7,7 +7,7 @@ const CTC_API = `${apiBase()}/api/ctc`;
 
 export interface CtcCandidate {
   id: number; rowNumber: number;
-  candidateName: string; department: string; designation: string;
+  candidateName: string; category: string; department: string; designation: string;
   grade: string; cadre: string; workLocation: string;
   /* Annual, in rupees, as a decimal string ("1200000.00"). */
   ctc: string | null;
@@ -64,4 +64,54 @@ export async function deleteCtcUpload(id: number): Promise<string> {
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || 'Could not remove that upload.');
   return data.message || 'Upload removed.';
+}
+
+/* ── Break-up (worked out by the server: ctc/calculator.py) ──────────── */
+
+export interface BreakdownLine { label: string; monthly: number; annual: number; note: string }
+
+export interface CtcBreakdown {
+  error?: string;
+  cadre: string; cadreName: string; grade: string; category: string;
+  ctcAnnual: number; vppPercent: number;
+  earnings: BreakdownLine[]; grossEarnings: number;
+  reimbursements: BreakdownLine[]; grossSalary: number;
+  benefits: BreakdownLine[]; benefitsTotal: number;
+  fixedMonthly: number; fixedAnnual: number;
+  otherPayments: BreakdownLine[];
+  totalCtcMonthly: number; totalCtcAnnual: number;
+  notes: string[];
+}
+
+export async function getCtcBreakdown(id: number): Promise<{ candidate: CtcCandidate; breakdown: CtcBreakdown }> {
+  const r = await apiFetch(`${CTC_API}/candidates/${id}/breakdown/`);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Could not work out the break-up.');
+  return data;
+}
+
+export function downloadCtcPdf(id: number, name: string) {
+  const safe = name.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'candidate';
+  return downloadFile(`${CTC_API}/candidates/${id}/pdf/`, `CTC_Breakup_${safe}.pdf`);
+}
+
+/* ── Settings: the values P & C's workbook leaves open ───────────────── */
+
+export interface CtcSettings {
+  values: Record<string, number | string>;
+  labels: Record<string, string>;
+  updatedBy: string; updatedAt: string | null; canEdit: boolean;
+}
+
+export async function getCtcSettings(): Promise<CtcSettings> {
+  const r = await apiFetch(`${CTC_API}/settings/`);
+  if (!r.ok) throw new Error('Could not load the calculation settings.');
+  return r.json();
+}
+
+export async function saveCtcSettings(values: Record<string, string>): Promise<CtcSettings & { message: string }> {
+  const r = await apiFetch(`${CTC_API}/settings/`, { method: 'PUT', body: JSON.stringify(values) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Could not save the settings.');
+  return data;
 }

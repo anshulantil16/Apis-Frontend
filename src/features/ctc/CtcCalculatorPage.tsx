@@ -1,23 +1,23 @@
 /* CTC Calculator — linked from the sidebar's Resources section, under APIS
    Wall.
 
-   The inputs side is live: download the Excel template, fill in one row per
-   candidate (name, department, designation, grade, cadre, work location,
-   CTC), and upload it back here. Each upload is listed with its rows. All
-   of it goes through the `ctc` Django app — see api.ts.
-
-   The breakup itself (Basic, HRA, PF, gratuity…) is still to come: it waits
-   on APIS's own CTC structure from P & C, and the page says so rather than
-   working numbers out from generic percentages nobody here has signed off. */
+   Download the Excel template, fill in one row per candidate (name,
+   category, department, designation, grade, cadre, work location, CTC) and
+   upload it back here. Each upload is listed with its rows; clicking a row
+   opens that candidate's compensation break-up (BreakdownModal), and the PDF
+   button on the row downloads the same break-up as Annexure A. The numbers
+   are worked out by the `ctc` Django app (ctc/calculator.py) — see api.ts. */
 import { useEffect, useRef, useState } from 'react';
 import {
-  ChevronRight, Calculator, Clock, Download, UploadCloud, Loader2, FileSpreadsheet,
-  Trash2, AlertTriangle, CheckCircle2, Users, RotateCcw,
+  ChevronRight, Calculator, Download, UploadCloud, Loader2, FileSpreadsheet,
+  Trash2, AlertTriangle, CheckCircle2, Users, RotateCcw, FileDown, Info,
 } from 'lucide-react';
 import {
-  CtcUploadError, deleteCtcUpload, downloadCtcTemplate, listCtcUploads, resetCtcData, uploadCtcSheet,
-  type CtcUpload,
+  CtcUploadError, deleteCtcUpload, downloadCtcPdf, downloadCtcTemplate, listCtcUploads, resetCtcData,
+  uploadCtcSheet, type CtcCandidate, type CtcUpload,
 } from './api';
+import { BreakdownModal } from './BreakdownModal';
+import { SettingsPanel } from './SettingsPanel';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 const fmtCtc = (v: string | null) => (v == null ? '—' : inr.format(Number(v)));
@@ -27,6 +27,7 @@ const fmtWhen = (iso: string | null) => (iso
 
 const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => string; align?: 'right' }[] = [
   { label: 'Candidate Name', render: c => c.candidateName },
+  { label: 'Category',       render: c => c.category || '—' },
   { label: 'Department',     render: c => c.department || '—' },
   { label: 'Designation',    render: c => c.designation || '—' },
   { label: 'Grade',          render: c => c.grade || '—' },
@@ -41,6 +42,16 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
   const [busy, setBusy] = useState<'template' | 'upload' | null>(null);
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string; problems?: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  /* The candidate whose break-up is open, and whose PDF is downloading. */
+  const [selected, setSelected] = useState<CtcCandidate | null>(null);
+  const [pdfFor, setPdfFor] = useState<number | null>(null);
+
+  const onPdf = async (c: CtcCandidate) => {
+    setPdfFor(c.id);
+    const problem = await downloadCtcPdf(c.id, c.candidateName);
+    setPdfFor(null);
+    if (problem) setNotice({ tone: 'error', text: `${c.candidateName}: ${problem}` });
+  };
 
   const refresh = async () => {
     try {
@@ -198,8 +209,9 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
             </div>
             <h2 className="mt-4 text-lg font-black text-slate-900">No candidates uploaded yet</h2>
             <p className="mt-1.5 max-w-md text-[13px] text-slate-500 leading-relaxed">
-              Download the template, fill in Candidate Name, Department, Designation, Grade, Cadre,
-              Work Location and CTC for each candidate, then upload it.
+              Download the template, fill in Candidate Name, Category, Department, Designation, Grade,
+              Cadre, Work Location and CTC for each candidate, then upload it. Click a candidate to see
+              their salary break-up.
             </p>
           </div>
         ) : (
@@ -232,11 +244,13 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
                       {COLUMNS.map(c => (
                         <th key={c.label} className={`px-4 py-2.5 whitespace-nowrap ${c.align === 'right' ? 'text-right' : 'text-left'}`}>{c.label}</th>
                       ))}
+                      <th className="text-center px-4 py-2.5">Break-up</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {u.candidates.map((c, i) => (
-                      <tr key={c.id} className="hover:bg-amber-50/40 transition-colors">
+                      <tr key={c.id} onClick={() => setSelected(c)} title="View salary break-up"
+                        className="cursor-pointer hover:bg-amber-50/60 transition-colors">
                         <td className="px-4 py-2.5 text-slate-400 font-bold">{String(i + 1).padStart(2, '0')}</td>
                         {COLUMNS.map((col, j) => (
                           <td key={col.label}
@@ -245,6 +259,14 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
                             {col.render(c)}
                           </td>
                         ))}
+                        <td className="px-4 py-2 text-center whitespace-nowrap">
+                          <button type="button" title={`Download ${c.candidateName}'s break-up as PDF`}
+                            onClick={e => { e.stopPropagation(); onPdf(c); }} disabled={pdfFor === c.id}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 ring-1 ring-amber-200
+                                       text-amber-700 text-[11px] font-black hover:bg-amber-100 transition-all disabled:opacity-60">
+                            {pdfFor === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}PDF
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -253,6 +275,8 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
             </section>
           ))
         )}
+
+        <SettingsPanel onSaved={text => setNotice({ tone: 'ok', text })} />
 
         {/* Danger Zone — same look as Help Desk / TA-DA: set apart in red so
             it can't be mistaken for a normal action, and only armed once
@@ -286,11 +310,13 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
           </div>
         )}
 
-        <p className="flex items-center justify-center gap-1.5 text-[11.5px] text-slate-400 font-semibold pb-2">
-          <Clock className="w-3.5 h-3.5" />
-          Salary breakup (Basic, HRA, PF, gratuity…) is coming soon, once P &amp; C confirms APIS's CTC structure.
+        <p className="flex items-center justify-center gap-1.5 text-[11.5px] text-slate-400 font-semibold pb-2 text-center">
+          <Info className="w-3.5 h-3.5 shrink-0" />
+          Break-ups follow APIS's Salary Fixation Model 2026 (P &amp; C). Click any candidate to see theirs.
         </p>
       </div>
+
+      {selected && <BreakdownModal key={selected.id} candidate={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
