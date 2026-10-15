@@ -1,8 +1,8 @@
 /* Calculation settings — the values P & C's compensation workbook leaves
-   open (LTA by cadre, Gratuity, the D cadre's "Actual" reimbursements, the
-   W cadre's minimum wage) plus the two statutory limits. Everyone signed in
-   can read them; only a super admin can change them. A change applies to
-   every candidate's break-up straight away. */
+   open (LTA by cadre, Gratuity, the D cadre's "Actual" reimbursements)
+   plus the two statutory limits. Minimum wages are by state, in the
+   server's rules. Everyone signed in can read these; only a super admin can
+   change them. A change applies to every candidate's break-up straight away. */
 import { useEffect, useState } from 'react';
 import { ChevronDown, Loader2, Save, Settings2 } from 'lucide-react';
 import { getCtcSettings, saveCtcSettings, type CtcSettings } from './api';
@@ -10,7 +10,7 @@ import { getCtcSettings, saveCtcSettings, type CtcSettings } from './api';
 const GROUPS: { title: string; keys: string[] }[] = [
   { title: 'Leave Travel Allowance (monthly)', keys: ['ltaD', 'ltaC', 'ltaM', 'ltaO', 'ltaW'] },
   { title: 'Cadre D "Actual" reimbursements (monthly)', keys: ['dFuel', 'dDriver', 'dHealth'] },
-  { title: 'Other', keys: ['gratuityPercent', 'wMinWage', 'pfWageCeiling', 'esiBonusGrossLimit'] },
+  { title: 'Other', keys: ['gratuityPercent', 'pfWageCeiling', 'esiBonusGrossLimit'] },
 ];
 
 export function SettingsPanel({ onSaved }: { onSaved: (message: string) => void }) {
@@ -56,7 +56,7 @@ export function SettingsPanel({ onSaved }: { onSaved: (message: string) => void 
           <span>
             <span className="block text-[13px] font-black text-slate-800">Calculation settings</span>
             <span className="block text-[11px] text-slate-400 font-semibold">
-              LTA, Gratuity, cadre D actuals, W minimum wage, PF &amp; ESI limits
+              LTA, Gratuity, cadre D actuals, PF &amp; ESI limits
               {s?.updatedBy ? ` · last changed by ${s.updatedBy}` : ''}
             </span>
           </span>

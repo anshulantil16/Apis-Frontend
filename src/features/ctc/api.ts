@@ -73,6 +73,7 @@ export interface BreakdownLine { label: string; monthly: number; annual: number;
 export interface CtcBreakdown {
   error?: string;
   cadre: string; cadreName: string; grade: string; category: string;
+  state: string; minWage: number;
   ctcAnnual: number; vppPercent: number;
   earnings: BreakdownLine[]; grossEarnings: number;
   reimbursements: BreakdownLine[]; grossSalary: number;
