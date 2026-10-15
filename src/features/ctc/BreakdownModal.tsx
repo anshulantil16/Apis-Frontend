@@ -96,6 +96,9 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
               <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px] font-black">
                 <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">Cadre {b?.cadre || candidate.cadre}{b?.cadreName ? ` · ${b.cadreName}` : ''}</span>
                 <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">Grade {candidate.grade}</span>
+                <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">
+                  {candidate.numberOfChildren ?? 0} child{(candidate.numberOfChildren ?? 0) === 1 ? '' : 'ren'}
+                </span>
                 {b && !b.error && <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">VPP {b.vppPercent}%</span>}
                 {b && !b.error && b.state && (
                   <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">
