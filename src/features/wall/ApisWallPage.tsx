@@ -68,6 +68,7 @@ const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall15.jpeg', title: 'APIS Product Hamper', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall07.jpeg', title: 'Lunch Break Bonding', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall08.jpeg', title: 'Cutting the Cake', category: 'Celebrations' },
+  { src: '/Apis_wall/Apiswall18.jpeg', title: 'The Mindset Wall', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall12.png', title: 'Celebrating Team Spirit', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall13.png', title: 'Team Moments', category: 'Events' },
 ];
