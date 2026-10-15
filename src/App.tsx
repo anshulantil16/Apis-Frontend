@@ -224,7 +224,7 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       ) : view === 'apis-wall' ? (
         <ApisWallPage isSuperadmin={session.user.is_superadmin} />
       ) : view === 'ctc-calculator' ? (
-        <CtcCalculatorPage />
+        <CtcCalculatorPage isSuperadmin={session.user.is_superadmin} />
       ) : view === 'goal-setting' ? (
         <GoalSettingPage onNavigateBack={() => navigate('home')} />
       ) : (

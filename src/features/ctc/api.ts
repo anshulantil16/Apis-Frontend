@@ -48,6 +48,17 @@ export async function uploadCtcSheet(file: File): Promise<CtcUpload & { message:
   return data;
 }
 
+/* Danger zone: erase every upload the caller can see (their own, or
+   everyone's for a super admin). The server wants the word as well. */
+export async function resetCtcData(): Promise<string> {
+  const r = await apiFetch(`${CTC_API}/reset/`, {
+    method: 'POST', body: JSON.stringify({ confirm: 'RESET' }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Reset failed. Please try again.');
+  return data.message || 'Reset done.';
+}
+
 export async function deleteCtcUpload(id: number): Promise<string> {
   const r = await apiFetch(`${CTC_API}/uploads/${id}/`, { method: 'DELETE' });
   const data = await r.json().catch(() => ({}));

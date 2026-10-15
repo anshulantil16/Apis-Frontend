@@ -12,10 +12,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ChevronRight, Calculator, Clock, Download, UploadCloud, Loader2, FileSpreadsheet,
-  Trash2, AlertTriangle, CheckCircle2, Users,
+  Trash2, AlertTriangle, CheckCircle2, Users, RotateCcw,
 } from 'lucide-react';
 import {
-  CtcUploadError, deleteCtcUpload, downloadCtcTemplate, listCtcUploads, uploadCtcSheet,
+  CtcUploadError, deleteCtcUpload, downloadCtcTemplate, listCtcUploads, resetCtcData, uploadCtcSheet,
   type CtcUpload,
 } from './api';
 
@@ -35,7 +35,7 @@ const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => 
   { label: 'CTC (Annual)',   render: c => fmtCtc(c.ctc), align: 'right' },
 ];
 
-export function CtcCalculatorPage() {
+export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boolean } = {}) {
   const [uploads, setUploads] = useState<CtcUpload[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<'template' | 'upload' | null>(null);
@@ -92,6 +92,27 @@ export function CtcCalculatorPage() {
   };
 
   const totalCandidates = uploads.reduce((n, u) => n + u.rowCount, 0);
+
+  /* Danger zone — erase the current candidates to start a fresh set. */
+  const [resetTyped, setResetTyped] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const onReset = async () => {
+    if (resetTyped !== 'RESET') return;
+    const whose = isSuperadmin ? 'ALL candidates uploaded by everyone' : 'all the candidates you uploaded';
+    if (!window.confirm(`This permanently deletes ${whose} (${totalCandidates} candidate`
+                        + `${totalCandidates === 1 ? '' : 's'} in ${uploads.length} upload`
+                        + `${uploads.length === 1 ? '' : 's'}). This cannot be undone. Continue?`)) return;
+    setResetting(true); setNotice(null);
+    try {
+      setNotice({ tone: 'ok', text: await resetCtcData() });
+      setResetTyped('');
+      await refresh();
+    } catch (e) {
+      setNotice({ tone: 'error', text: (e as Error).message });
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <div className="min-h-full bg-[#fdfbf6] relative overflow-x-hidden">
@@ -231,6 +252,38 @@ export function CtcCalculatorPage() {
               </div>
             </section>
           ))
+        )}
+
+        {/* Danger Zone — same look as Help Desk / TA-DA: set apart in red so
+            it can't be mistaken for a normal action, and only armed once
+            RESET is typed. */}
+        {uploads.length > 0 && (
+          <div className="rounded-2xl bg-rose-50/60 border-2 border-rose-200 p-5">
+            <div className="flex items-center gap-2.5 mb-1">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+              </div>
+              <h3 className="text-sm font-black text-rose-700 tracking-tight">Danger Zone</h3>
+            </div>
+            <p className="text-[12px] text-rose-600/80 mb-4 ml-[42px]">
+              {isSuperadmin
+                ? 'Permanently deletes every candidate uploaded by anyone, so a fresh set can be uploaded. Cannot be undone.'
+                : "Permanently deletes all the candidates you have uploaded, so a fresh set can be uploaded. Other people's uploads are not touched. Cannot be undone."}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 ml-[42px]">
+              <input value={resetTyped} onChange={e => setResetTyped(e.target.value)}
+                placeholder='Type "RESET" to enable'
+                className="px-3 py-2 rounded-lg bg-white border border-rose-200 text-slate-800 text-sm
+                           focus:outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-400/10" />
+              <button type="button" onClick={onReset} disabled={resetTyped !== 'RESET' || resetting}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-600 text-white
+                           text-[12px] font-black hover:bg-rose-700 hover:-translate-y-0.5 transition-all
+                           disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0">
+                {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                {resetting ? 'Resetting…' : 'Reset candidate data'}
+              </button>
+            </div>
+          </div>
         )}
 
         <p className="flex items-center justify-center gap-1.5 text-[11.5px] text-slate-400 font-semibold pb-2">
