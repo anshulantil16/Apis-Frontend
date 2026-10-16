@@ -9,12 +9,19 @@ export interface CtcCandidate {
   id: number; rowNumber: number;
   employeeCode: string;
   numberOfChildren: number;
+  /* Gross Earnings answered on the template, { meal: true, car: false, ... }. */
+  grossEarnings?: Record<string, boolean>;
+  /* "Old Regime", "New Regime", "Both Regime", or "" when not given. */
+  taxRegime?: string;
   /* ISO date ("2026-07-01"), or null when not given. */
   dateOfJoining: string | null;
   candidateName: string; category: string; department: string; designation: string;
   grade: string; cadre: string; workLocation: string;
   /* Annual, in rupees, as a decimal string ("1200000.00"). */
   ctc: string | null;
+  /* Set when the CTC entered is below the work location's minimum wage: the
+     annual CTC the break-up and PDF use instead. */
+  ctcCorrected?: string | null;
 }
 
 export interface CtcUpload {
@@ -79,12 +86,16 @@ export interface CtcBreakdown {
   cadre: string; cadreName: string; grade: string; category: string;
   state: string; minWage: number;
   ctcAnnual: number; vppPercent: number;
+  /* Set when the CTC entered was raised to the state minimum wage. */
+  ctcAdjusted?: { enteredAnnual: number; correctedAnnual: number; state: string; minWage: number } | null;
   earnings: BreakdownLine[]; grossEarnings: number; grossEarningsAnnual: number;
   reimbursements: BreakdownLine[]; grossSalary: number; grossSalaryAnnual: number;
   benefits: BreakdownLine[]; benefitsTotal: number; benefitsTotalAnnual: number;
   fixedMonthly: number; fixedAnnual: number;
   otherPayments: BreakdownLine[];
   totalCtcMonthly: number; totalCtcAnnual: number;
+  /* Car Lease picked on the template — as per the car lease policy, outside the CTC. */
+  carLease?: boolean;
   notes: string[];
 }
 

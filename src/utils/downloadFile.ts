@@ -23,7 +23,9 @@ export async function downloadFile(url: string, fallbackName = 'download',
   const r = await fetcher(url);
   if (!r.ok) {
     if (r.status === 401) return 'Your session has ended. Please sign in again.';
-    return 'That file could not be downloaded. Please try again.';
+    // A refusal with a reason ({"error": "..."}) says why; show that.
+    const reason = await r.json().then((d: { error?: unknown }) => d?.error, () => null);
+    return typeof reason === 'string' && reason ? reason : 'That file could not be downloaded. Please try again.';
   }
 
   const disposition = r.headers.get('Content-Disposition') || '';

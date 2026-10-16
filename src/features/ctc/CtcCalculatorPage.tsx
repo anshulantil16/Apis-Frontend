@@ -21,15 +21,11 @@ import { SettingsPanel } from './SettingsPanel';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 const fmtCtc = (v: string | null) => (v == null ? '—' : inr.format(Number(v)));
-const fmtDate = (iso: string | null) => (iso
-  ? new Date(`${iso}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-  : '—');
 const fmtWhen = (iso: string | null) => (iso
   ? new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   : '');
 
 const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => string; align?: 'right' }[] = [
-  { label: 'Employee Code',  render: c => c.employeeCode || '—' },
   { label: 'Candidate Name', render: c => c.candidateName },
   { label: 'Category',       render: c => c.category || '—' },
   { label: 'Department',     render: c => c.department || '—' },
@@ -37,9 +33,11 @@ const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => 
   { label: 'Grade',          render: c => c.grade || '—' },
   { label: 'Cadre',          render: c => c.cadre || '—' },
   { label: 'Children',       render: c => String(c.numberOfChildren ?? 0) },
-  { label: 'Date of Joining', render: c => fmtDate(c.dateOfJoining) },
   { label: 'Work Location',  render: c => c.workLocation || '—' },
-  { label: 'CTC (Annual)',   render: c => fmtCtc(c.ctc), align: 'right' },
+  { label: 'CTC (Annual)',   render: c => (c.ctcCorrected
+      ? `${fmtCtc(c.ctc)} → ${fmtCtc(c.ctcCorrected)} ⚠`
+      : fmtCtc(c.ctc)), align: 'right' },
+  { label: 'Tax Regime',     render: c => c.taxRegime || '—' },
 ];
 
 export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boolean } = {}) {
@@ -57,6 +55,10 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
     const problem = await downloadCtcPdf(c.id, c.candidateName);
     setPdfFor(null);
     if (problem) setNotice({ tone: 'error', text: `${c.candidateName}: ${problem}` });
+    else if (c.ctcCorrected) {
+      setNotice({ tone: 'error', text: `${c.candidateName}: you had put a CTC below the minimum wage, so it was `
+        + `automatically corrected to the state's minimum wage (${fmtCtc(c.ctcCorrected)} a year) in this PDF.` });
+    }
   };
 
   const refresh = async () => {
@@ -215,9 +217,9 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
             </div>
             <h2 className="mt-4 text-lg font-black text-slate-900">No candidates uploaded yet</h2>
             <p className="mt-1.5 max-w-md text-[13px] text-slate-500 leading-relaxed">
-              Download the template, fill in Employee Code, Candidate Name, Category, Department,
-              Designation, Grade, Cadre, Number of Children, Date of Joining, Work Location and CTC for
-              each candidate,
+              Download the template, fill in Candidate Name, Category, Department,
+              Designation, Grade, Cadre, Number of Children, Work Location, CTC and Tax Regime for
+              each candidate, pick Yes / No for LTA and the reimbursements (cadres D, C and M, CTC above ₹12 lakh),
               then upload it. Click a candidate to see
               their salary break-up.
             </p>
@@ -264,7 +266,11 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
                           <td key={col.label}
                             className={`px-4 py-2.5 whitespace-nowrap ${col.align === 'right' ? 'text-right font-mono font-bold text-slate-800' : ''}
                                         ${col.label === 'Candidate Name' ? 'font-black text-slate-900' : 'text-slate-600 font-semibold'}`}>
-                            {col.render(c)}
+                            <span className={col.label === 'CTC (Annual)' && c.ctcCorrected ? 'text-amber-700' : undefined}
+                              title={col.label === 'CTC (Annual)' && c.ctcCorrected
+                                ? 'Below the state minimum wage - automatically corrected to it' : undefined}>
+                              {col.render(c)}
+                            </span>
                           </td>
                         ))}
                         <td className="px-4 py-2 text-center whitespace-nowrap">
