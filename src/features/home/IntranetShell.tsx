@@ -636,13 +636,15 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                 <Images className="w-3.5 h-3.5" />APIS Wall
               </button>
 
-              <button onClick={() => go('ctc-calculator')} title="CTC Calculator"
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
-                           ${active === 'ctc-calculator'
-                             ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
-                             : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
-                <Calculator className="w-3.5 h-3.5" />CTC Calculator
-              </button>
+              {canOpen('ctc-calculator') && (
+                <button onClick={() => go('ctc-calculator')} title="CTC Calculator"
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
+                             ${active === 'ctc-calculator'
+                               ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
+                               : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
+                  <Calculator className="w-3.5 h-3.5" />CTC Calculator
+                </button>
+              )}
 
               {/* These are genuinely not built yet. They're dimmed and
                   `cursor-not-allowed` on purpose so it's obvious they differ

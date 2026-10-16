@@ -154,10 +154,6 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
      screen from drawing something the API will then refuse. */
   const mayOpen = (v: AppView) =>
     v === 'admin-console' ? session.user.is_superadmin
-    /* Open to anyone signed in: nothing on the server grants it per user
-       yet, and the `ctc` API itself shows each person only their own
-       uploads (a super admin, everyone's). */
-    : v === 'ctc-calculator' ? true
     : session.user.allowed_apps.includes(v);
 
   if (view !== 'home' && !mayOpen(view)) {
