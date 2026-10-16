@@ -34,7 +34,9 @@ const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => 
   { label: 'Cadre',          render: c => c.cadre || '—' },
   { label: 'Children',       render: c => String(c.numberOfChildren ?? 0) },
   { label: 'Work Location',  render: c => c.workLocation || '—' },
-  { label: 'CTC (Annual)',   render: c => fmtCtc(c.ctc), align: 'right' },
+  { label: 'CTC (Annual)',   render: c => (c.ctcCorrected
+      ? `${fmtCtc(c.ctc)} → ${fmtCtc(c.ctcCorrected)} ⚠`
+      : fmtCtc(c.ctc)), align: 'right' },
   { label: 'Tax Regime',     render: c => c.taxRegime || '—' },
 ];
 
@@ -53,6 +55,10 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
     const problem = await downloadCtcPdf(c.id, c.candidateName);
     setPdfFor(null);
     if (problem) setNotice({ tone: 'error', text: `${c.candidateName}: ${problem}` });
+    else if (c.ctcCorrected) {
+      setNotice({ tone: 'error', text: `${c.candidateName}: you had put a CTC below the minimum wage, so it was `
+        + `automatically corrected to the state's minimum wage (${fmtCtc(c.ctcCorrected)} a year) in this PDF.` });
+    }
   };
 
   const refresh = async () => {
@@ -260,7 +266,11 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
                           <td key={col.label}
                             className={`px-4 py-2.5 whitespace-nowrap ${col.align === 'right' ? 'text-right font-mono font-bold text-slate-800' : ''}
                                         ${col.label === 'Candidate Name' ? 'font-black text-slate-900' : 'text-slate-600 font-semibold'}`}>
-                            {col.render(c)}
+                            <span className={col.label === 'CTC (Annual)' && c.ctcCorrected ? 'text-amber-700' : undefined}
+                              title={col.label === 'CTC (Annual)' && c.ctcCorrected
+                                ? 'Below the state minimum wage - automatically corrected to it' : undefined}>
+                              {col.render(c)}
+                            </span>
                           </td>
                         ))}
                         <td className="px-4 py-2 text-center whitespace-nowrap">

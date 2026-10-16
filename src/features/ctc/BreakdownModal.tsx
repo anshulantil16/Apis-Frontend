@@ -130,6 +130,17 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
             </div>
           ) : (
             <div className="p-4 sm:p-5 space-y-3">
+              {b.ctcAdjusted && (
+                <div role="alert" className="flex items-start gap-2.5 rounded-2xl bg-orange-50 ring-1 ring-orange-300 px-4 py-3">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-orange-600" />
+                  <p className="text-[12.5px] font-bold text-orange-800 leading-relaxed">
+                    You had put a CTC below the minimum wage, so it was automatically corrected according to the
+                    minimum wage of {b.ctcAdjusted.state}: {rs(b.ctcAdjusted.minWage)} a month
+                    ({rs(b.ctcAdjusted.correctedAnnual)} a year) instead of {rs(b.ctcAdjusted.enteredAnnual)} a year.
+                    The break-up and the PDF use the corrected CTC.
+                  </p>
+                </div>
+              )}
               <div className="overflow-x-auto rounded-2xl ring-1 ring-slate-200">
                 <table className="w-full text-[12.5px]">
                   <thead>
@@ -164,7 +175,7 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
                   </tbody>
                 </table>
               </div>
-              {b.notes.map(n => (
+              {b.notes.filter((_n, i) => !(b.ctcAdjusted && i === 0)).map(n => (
                 <p key={n} className="flex items-start gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 text-[11.5px] font-semibold text-amber-800">
                   <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />{n}
                 </p>
