@@ -218,7 +218,7 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
             <p className="mt-1.5 max-w-md text-[13px] text-slate-500 leading-relaxed">
               Download the template, fill in Employee Code, Candidate Name, Category, Department,
               Designation, Grade, Cadre, Number of Children, Date of Joining, Work Location, CTC and Tax Regime for
-              each candidate, pick Yes / No for the Gross Earnings items (cadres D, C and M only),
+              each candidate, pick Yes / No for LTA and the reimbursements (cadres D, C and M, CTC above ₹12 lakh),
               then upload it. Click a candidate to see
               their salary break-up.
             </p>
