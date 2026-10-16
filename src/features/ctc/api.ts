@@ -11,6 +11,8 @@ export interface CtcCandidate {
   numberOfChildren: number;
   /* Gross Earnings answered on the template, { meal: true, car: false, ... }. */
   grossEarnings?: Record<string, boolean>;
+  /* "Old Regime", "New Regime", "Both Regime", or "" when not given. */
+  taxRegime?: string;
   /* ISO date ("2026-07-01"), or null when not given. */
   dateOfJoining: string | null;
   candidateName: string; category: string; department: string; designation: string;

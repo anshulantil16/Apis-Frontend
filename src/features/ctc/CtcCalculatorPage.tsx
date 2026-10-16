@@ -40,6 +40,7 @@ const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => 
   { label: 'Date of Joining', render: c => fmtDate(c.dateOfJoining) },
   { label: 'Work Location',  render: c => c.workLocation || '—' },
   { label: 'CTC (Annual)',   render: c => fmtCtc(c.ctc), align: 'right' },
+  { label: 'Tax Regime',     render: c => c.taxRegime || '—' },
 ];
 
 export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boolean } = {}) {
@@ -216,7 +217,7 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
             <h2 className="mt-4 text-lg font-black text-slate-900">No candidates uploaded yet</h2>
             <p className="mt-1.5 max-w-md text-[13px] text-slate-500 leading-relaxed">
               Download the template, fill in Employee Code, Candidate Name, Category, Department,
-              Designation, Grade, Cadre, Number of Children, Date of Joining, Work Location and CTC for
+              Designation, Grade, Cadre, Number of Children, Date of Joining, Work Location, CTC and Tax Regime for
               each candidate, pick Yes / No for the Gross Earnings items (cadres D, C and M only),
               then upload it. Click a candidate to see
               their salary break-up.

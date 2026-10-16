@@ -99,6 +99,9 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
                 <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">
                   {candidate.numberOfChildren ?? 0} child{(candidate.numberOfChildren ?? 0) === 1 ? '' : 'ren'}
                 </span>
+                {candidate.taxRegime && (
+                  <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">{candidate.taxRegime}</span>
+                )}
                 {b && !b.error && <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">VPP {b.vppPercent}%</span>}
                 {b && !b.error && b.state && (
                   <span className="px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-amber-700">
