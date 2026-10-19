@@ -38,6 +38,7 @@ const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => 
       ? `${fmtCtc(c.ctc)} → ${fmtCtc(c.ctcCorrected)} ⚠`
       : fmtCtc(c.ctc)), align: 'right' },
   { label: 'Tax Regime',     render: c => c.taxRegime || '—' },
+  { label: 'Mediclaim',      render: c => (c.mediclaim === false ? 'No' : 'Yes') },
 ];
 
 export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boolean } = {}) {
@@ -218,8 +219,8 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
             <h2 className="mt-4 text-lg font-black text-slate-900">No candidates uploaded yet</h2>
             <p className="mt-1.5 max-w-md text-[13px] text-slate-500 leading-relaxed">
               Download the template, fill in Candidate Name, Category, Department,
-              Designation, Grade, Cadre, Number of Children, Work Location, CTC and Tax Regime for
-              each candidate, pick Yes / No for LTA and the reimbursements (cadres D, C and M, CTC above ₹12 lakh),
+              Designation, Grade, Cadre, Number of Children, Work Location, CTC, Tax Regime and Mediclaim
+              (Yes by default) for each candidate, pick Yes / No for LTA and the reimbursements (cadres D, C and M, CTC above ₹12 lakh),
               then upload it. Click a candidate to see
               their salary break-up.
             </p>
