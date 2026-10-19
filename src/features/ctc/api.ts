@@ -13,8 +13,6 @@ export interface CtcCandidate {
   grossEarnings?: Record<string, boolean>;
   /* "Old Regime", "New Regime", "Both Regime", or "" when not given. */
   taxRegime?: string;
-  /* false: Mediclaim opted out, its amount paid in Special Allowance. */
-  mediclaim?: boolean;
   /* ISO date ("2026-07-01"), or null when not given. */
   dateOfJoining: string | null;
   candidateName: string; category: string; department: string; designation: string;
