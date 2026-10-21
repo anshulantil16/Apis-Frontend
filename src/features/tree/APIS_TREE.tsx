@@ -78,7 +78,7 @@ const SUB_TREE_ROOTS: Record<string, SubTreeRoot> = {
     peerMembers: [
       { name: 'Sandeep', role: 'M1- AM- HO' },
       { name: 'Kamaljeet', role: 'O5- Sr. Executive- HO' },
-      { name: 'Sanjay', role: 'O4- Executive- HO' },
+      { name: 'Vacant', role: 'O4- Executive- HO' },
     ],
     peer2: { name: 'Nischal Bharadwaj', role: 'M4- Sr. Manager- Finance & Accounts- Roorkee', department: 'PPC' },
     peer2Members: [
@@ -256,7 +256,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
             {
               name: 'Krishna', role: 'AM',
               reports: [
-                { name: 'K. Ninay', role: 'Executive' },
+                { name: 'K. Vinay', role: 'Executive' },
               ],
             },
           ],
@@ -338,7 +338,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
       name: 'Internal Audit', role: 'Department', stemLabel: 'Functional Reporting',
       reports: [
         {
-          name: 'Tapon Behera', role: 'M4- Sr. Manager- HO',
+          name: 'Tapan Behera', role: 'M4- Sr. Manager- HO',
           reports: [
             { name: 'Harpal Singh', role: 'M1- AM' },
             { name: 'Rishab', role: 'O5- Sr. Executive' },
@@ -355,11 +355,11 @@ const SUB_TREES: Record<string, TeamMember[]> = {
         {
           name: 'Prateek Aggarwal', role: 'M4- Sr. Manager- AP- HO',
           reports: [
-            { name: 'Salendra', role: 'M1- AM' },
+            { name: 'Satendra', role: 'M1- AM' },
             { name: 'Azad', role: 'O5- Sr. Executive' },
             { name: 'Bhumika', role: 'O4- Executive' },
             { name: 'Gaurav', role: 'O5- Sr. Executive' },
-            { name: 'Sallabh', role: 'O4- Executive' },
+            { name: 'Sailabh', role: 'O4- Executive' },
             { name: 'Neha', role: 'O4- Executive' },
           ],
         },
@@ -370,7 +370,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
             { name: 'Mayank', role: 'O4- Executive' },
             { name: 'Roshan', role: 'O5- Sr. Executive' },
             { name: 'Ashu', role: 'O4- Executive' },
-            { name: 'Anil', role: 'O4- Executive' },
+            { name: 'Arif', role: 'O4- Executive' },
             { name: 'Sunil Kumar', role: 'O5- Sr. Executive' },
           ],
         },
