@@ -503,7 +503,8 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
                       {u.name}
                       {u.is_superadmin && <Crown className="w-3 h-3 text-amber-500" />}
                     </p>
-                    <p className="text-slate-400">{u.email}</p>
+                    <p className={u.email ? "text-slate-400" : "text-amber-600 font-bold"}>
+                      {u.email || "No email in HRMS — cannot sign in"}</p>
                   </td>
                   <td className="px-3 py-2 text-slate-500 font-semibold">{u.employee_code}</td>
                   <td className="px-3 py-2 text-slate-500">{u.department || '—'}</td>
@@ -746,7 +747,8 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
             <p className="font-black text-slate-800 truncate flex items-center gap-1.5">
               {u.name}{u.is_superadmin && <Crown className="w-3.5 h-3.5 text-amber-500" />}
             </p>
-            <p className="text-xs text-slate-400 truncate">{u.email}</p>
+            <p className={`text-xs truncate ${u.email ? "text-slate-400" : "text-amber-600 font-bold"}`}>
+              {u.email || "No email in HRMS — cannot sign in"}</p>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-600 shrink-0"><X className="w-5 h-5" /></button>
         </div>
