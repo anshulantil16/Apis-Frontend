@@ -180,13 +180,10 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     { name: 'Vasanth D', role: 'GTR 9- Tamil Nadu & Kerala- M4- RSM', location: 'Chennai',
       photo: '/hierarchy/arun-mishra/vasanth-d.jpeg' },
   ],
-  // Business To Business (B2B) Sales (Narendra Gangawar) — single direct
-  // report, no further nesting, so the default nested-variant rendering
-  // (HOD card → T-connector → one manager box) already matches the source
-  // chart with no extra layout needed.
-  'narendra-gangwar': [
-    { name: 'Sumit Kumar Verma', role: 'M1- Assistant Manager- HQ- Delhi' },
-  ],
+  // Business To Business (B2B) Sales (Narendra Gangawar) — no one listed
+  // under him. Kept as an empty entry, not dropped, so his card still opens
+  // the drill-down where a manager can add someone with the "+" button.
+  'narendra-gangwar': [],
   // Sales - Alternate Channel (Vaibhav Mishra). The three level-2 "manager"
   // slots below aren't people, they're the department groupings from the
   // org chart supplied (Modern Trade / Ecommerce / Sales Coordination) —
@@ -279,10 +276,9 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     },
   ],
   // New Product Development (Dinesh Kumar) — three direct reports, no
-  // further nesting, per the org chart supplied. Same shape as
-  // narendra-gangwar's single-report entry above, just three instead of
-  // one; the default nested-variant rendering (HOD card → T-connector →
-  // manager boxes) already matches that chart with no extra layout needed.
+  // further nesting, per the org chart supplied. The default nested-variant
+  // rendering (HOD card → T-connector → manager boxes) already matches that
+  // chart with no extra layout needed.
   'dinesh-kumar': [
     { name: 'Deepak Joshi', role: 'M1- AM- HO' },
     { name: 'Meeran Alam', role: 'O4- Exec- HO' },
@@ -301,7 +297,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     { name: 'Neeraj Krishnatray', role: 'M1- AM', location: 'Factory' },
   ],
   // CS & Legal (Vikas Aggarwal) — one direct report, per the org chart
-  // supplied. Same shape as narendra-gangwar's single-entry tree above.
+  // supplied. A single manager box under the HOD, no T-bar.
   'vikas-aggarwal': [
     { name: 'Sonal', role: 'O4- Executive- HO' },
   ],
@@ -2057,7 +2053,9 @@ function DeptSubTree({ hod, root, members, onBack }: {
         )}
 
         <Collapsible open={!collapsed}>
-          {root?.peer ? null : root || FLAT_TREE_IDS.has(hod.id) ? (
+          {/* No one under the HOD yet (static or added): no stem dangling into nothing. */}
+          {root?.peer || (!root && members.length === 0 && !(addedByParent[hod.id]?.length)) ? null
+            : root || FLAT_TREE_IDS.has(hod.id) ? (
             <>
               {/* flat tree: one amber stem straight into the T-connector, no manager tier */}
               <div aria-hidden className="w-px h-8 bg-amber-300 mx-auto" />
