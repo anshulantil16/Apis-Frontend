@@ -308,7 +308,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
   'ershad-alam': [
     { name: 'Nickey Sasi', role: 'M3- Manager' },
     { name: 'Vacant (M1-AM)', role: 'M1- AM', location: 'HO' },
-    { name: 'Vacant (M2-DM)', role: 'M2- DM', location: 'HO' },
+    { name: 'Pratik Rai', role: 'O5- Sr. Executive- Export', location: 'HO' },
     { name: 'Gholam', role: 'M1- AM', location: 'HO' },
     { name: 'Deepak', role: 'O5- Sr. Executive', location: 'HO' },
   ],
