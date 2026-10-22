@@ -229,7 +229,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
   // — per the org chart supplied, both level-2 slots are department-group
   // labels (same reuse of the "manager" slot as Vaibhav Mishra's tree
   // above), each recursing three people deep via ReportBoxCard. The vacant
-  // seat under Sanjeev Lamba is modelled the same way PPC's vacant Plant
+  // seat under Sanjeev Kumar is modelled the same way PPC's vacant Plant
   // Head root is — the position title as the card, "Vacant" as its role.
   'r-manigandan': [
     {
@@ -239,7 +239,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
           name: 'S.P. Chaubey', role: 'Sr. Manager',
           reports: [
             {
-              name: 'Sanjeev Lamba', role: 'AM',
+              name: 'Sanjeev Kumar', role: 'AM',
               reports: [
                 { name: 'Executive', role: 'Vacant' },
               ],
@@ -285,7 +285,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     { name: 'Meeran Alam', role: 'O4- Exec- HO' },
     { name: 'Mahesh', role: 'O5- Sr. Exec- HO' },
   ],
-  // Purchase & Procurement (Pradeep Krishali) — six flat direct reports,
+  // Purchase & Procurement (Pradeep Kumar) — six flat direct reports,
   // one of them a vacant seat, per the org chart supplied. Added to
   // FLAT_TREE_IDS above (like Arun Mishra's 12 GTRs) rather than the
   // nested variant, since none of these six have reports of their own.
