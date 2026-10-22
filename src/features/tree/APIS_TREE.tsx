@@ -191,7 +191,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
   // reusing the manager-card slot for a group label instead of a person is
   // what lets this reuse the existing nested/leaf branch rendering as-is:
   // Modern Trade's one report (Gouri Shankar) has his own reports so it
-  // draws as a nested box-grid branch; Ecommerce's one report (Hariom) and
+  // draws as a nested box-grid branch; Ecommerce's one report (Hari Om) and
   // Sales Coordination's three both have no further reports so they draw
   // as flat leaf-spine lists — exactly matching the source chart's shape
   // with no new components.
@@ -213,7 +213,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     {
       name: 'Ecommerce', role: 'Department',
       reports: [
-        { name: 'Hariom', role: 'M3- Customer Development Manager- HQ- Delhi' },
+        { name: 'Hari Om', role: 'M3- Customer Development Manager- HQ- Delhi' },
       ],
     },
     {
