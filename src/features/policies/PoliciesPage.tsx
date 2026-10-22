@@ -11,10 +11,10 @@
  * any uploaded row.
  *
  * Documents are read here, not taken away. A title opens the reader below
- * rather than a new tab: the server sends the PDF marked `inline` (see the
- * policies views module) and the frame asks the browser's PDF viewer for
- * #toolbar=0, which is where its Download, Print and Save buttons are. So
- * there is no button to take a copy with and no address to pass on.
+ * rather than a new tab, and the reader draws the pages itself (PDF.js)
+ * instead of using the browser's PDF viewer, whose right-click menu has
+ * "Save as…" on it. So there is no button or menu to take a copy with and
+ * no address to pass on.
  *
  * It is a closed door, not a locked one — the file has to reach the browser
  * to be read at all, so anyone determined can still get at it. What this
