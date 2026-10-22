@@ -219,7 +219,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     {
       name: 'Sales Coordination', role: 'Department',
       reports: [
-        { name: 'Gaurav Dapral', role: 'O5- Sr. Executive- HQ- Delhi' },
+        { name: 'Gaurav Dabral', role: 'O5- Sr. Executive- HQ- Delhi' },
         { name: 'Vishal Mahaur', role: 'O5- Sr. Executive- HQ- Delhi' },
         { name: 'Pooja Arora', role: 'O5- Sr. Executive- HQ- Delhi' },
       ],
@@ -322,8 +322,8 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     {
       name: 'Pankaj Jha', role: 'M4- Sr. Manager- Marketing- HO',
       reports: [
-        { name: 'Aman Bhawadwaj', role: 'M1- AM- ATL- HO' },
-        { name: 'Abhishek Naagar', role: 'O4- Sr. Executive- HO' },
+        { name: 'Aman Bhardwaj', role: 'M1- AM- ATL- HO' },
+        { name: 'Abhishek Nagar', role: 'O4- Sr. Executive- HO' },
         { name: 'Anoop Sehgal', role: 'O5- Sr. Executive- Design- HO' },
         { name: 'Performance Marketing (Vacant)', role: 'M1- AM' },
       ],
