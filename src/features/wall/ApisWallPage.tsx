@@ -51,33 +51,41 @@ const UPLOAD_CATEGORIES = ['Celebrations', 'Team Moments', 'CSR', 'Events', 'Oth
 /* Order here is deliberate — the wall fills row by row, so interleaving the
    later additions among the originals spreads them across the wall instead
    of bunching them at the bottom. Portraits (the tall tiles: 08, 15, 16, 17,
-   19, 22) are placed so that, with the widening below, every row comes out
-   full at 4, 3 and 2 columns and no two portraits sit side by side at 4 or
-   3. Adding or moving a photo changes that, so lay it out again then. */
+   19, 22, 27-30) are placed so that, with the widening below, every row
+   comes out full at 4, 3 and 2 columns, no two portraits sit side by side
+   at 4 or 2 (three pairs at 3 can't be avoided with ten of them), and the
+   tiles that get widened are full-size photos, not the small PNGs. Adding
+   or moving a photo changes that, so lay it out again then. */
 const SEED_PHOTOS: WallPhoto[] = [
-  { src: '/Apis_wall/Apiswall01.jpeg', title: 'Happy Independence Day', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall20.jpeg', title: 'The APIS Family', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall16.jpeg', title: 'Showcasing the APIS Range', category: 'Team Moments' },
+  { src: '/Apis_wall/Apiswall01.jpeg', title: 'Happy Independence Day', category: 'Celebrations' },
+  { src: '/Apis_wall/Apiswall27.jpeg', title: 'Apni Dukan Activity', category: 'Events' },
   { src: '/Apis_wall/Apiswall09.png', title: 'Wall of Gratitude', category: 'Team Moments' },
-  { src: '/Apis_wall/Apiswall02.jpeg', title: 'Community Outreach Drive', category: 'CSR' },
   { src: '/Apis_wall/Apiswall23.jpeg', title: 'Blood Donation Camp with Indian Red Cross', category: 'CSR' },
+  { src: '/Apis_wall/Apiswall19.jpeg', title: 'Apni Dukan Activity', category: 'Events' },
+  { src: '/Apis_wall/Apiswall02.jpeg', title: 'Community Outreach Drive', category: 'CSR' },
   { src: '/Apis_wall/Apiswall18.jpeg', title: 'The Mindset Wall', category: 'Team Moments' },
+  { src: '/Apis_wall/Apiswall17.jpeg', title: 'APIS on the Shelves', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall03.jpeg', title: 'Office Birthday Celebration', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall04.jpeg', title: 'Birthday Surprise', category: 'Celebrations' },
-  { src: '/Apis_wall/Apiswall19.jpeg', title: 'Apni Dukan Activity', category: 'Events' },
   { src: '/Apis_wall/Apiswall10.png', title: 'Traditional Office Celebration', category: 'Celebrations' },
-  { src: '/Apis_wall/Apiswall14.png', title: 'AIL Cares Community Drive', category: 'CSR' },
+  { src: '/Apis_wall/Apiswall28.jpeg', title: 'Apni Dukan Activity', category: 'Events' },
   { src: '/Apis_wall/Apiswall05.jpeg', title: 'Team Lunch Together', category: 'Team Moments' },
-  { src: '/Apis_wall/Apiswall17.jpeg', title: 'APIS on the Shelves', category: 'Team Moments' },
-  { src: '/Apis_wall/Apiswall06.jpeg', title: 'Birthday Wishes', category: 'Celebrations' },
-  { src: '/Apis_wall/Apiswall21.jpeg', title: 'APIS Bags for the Team', category: 'Events' },
-  { src: '/Apis_wall/Apiswall11.png', title: 'Team Stretch Break', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall22.jpeg', title: 'Giving Blood, Saving Lives', category: 'CSR' },
+  { src: '/Apis_wall/Apiswall14.png', title: 'AIL Cares Community Drive', category: 'CSR' },
+  { src: '/Apis_wall/Apiswall06.jpeg', title: 'Birthday Wishes', category: 'Celebrations' },
+  { src: '/Apis_wall/Apiswall26.jpeg', title: 'Team APIS, Together', category: 'Team Moments' },
+  { src: '/Apis_wall/Apiswall29.jpeg', title: 'Apni Dukan Activity', category: 'Events' },
+  { src: '/Apis_wall/Apiswall11.png', title: 'Team Stretch Break', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall15.jpeg', title: 'APIS Product Hamper', category: 'Team Moments' },
-  { src: '/Apis_wall/Apiswall07.jpeg', title: 'Lunch Break Bonding', category: 'Team Moments' },
+  { src: '/Apis_wall/Apiswall31.png', title: 'AIL Cares School Visit', category: 'CSR' },
+  { src: '/Apis_wall/Apiswall21.jpeg', title: 'APIS Bags for the Team', category: 'Events' },
   { src: '/Apis_wall/Apiswall12.png', title: 'Celebrating Team Spirit', category: 'Team Moments' },
-  { src: '/Apis_wall/Apiswall08.jpeg', title: 'Cutting the Cake', category: 'Celebrations' },
+  { src: '/Apis_wall/Apiswall30.jpeg', title: 'Apni Dukan Activity', category: 'Events' },
   { src: '/Apis_wall/Apiswall13.png', title: 'Team Moments', category: 'Events' },
+  { src: '/Apis_wall/Apiswall08.jpeg', title: 'Cutting the Cake', category: 'Celebrations' },
+  { src: '/Apis_wall/Apiswall07.jpeg', title: 'Lunch Break Bonding', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall25.jpeg', title: 'Evening Get-Together', category: 'Events' },
 ];
 

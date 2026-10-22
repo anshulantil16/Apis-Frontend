@@ -109,6 +109,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
         { name: 'Sujat Alam', role: 'O5- Sr. Executive- P&C- HO' },
         { name: 'Kanchan', role: 'O5- Sr. Executive- Admin & Facilities- HO' },
         { name: 'Shobhit', role: 'O4-  EA Front Desk Executive- Admin & Facilities- HO' },
+        { name: 'Abhay', role: 'Management Trainee (MIS)- HR' },
       ],
     },
     {
@@ -190,7 +191,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
   // reusing the manager-card slot for a group label instead of a person is
   // what lets this reuse the existing nested/leaf branch rendering as-is:
   // Modern Trade's one report (Gouri Shankar) has his own reports so it
-  // draws as a nested box-grid branch; Ecommerce's one report (Hariom) and
+  // draws as a nested box-grid branch; Ecommerce's one report (Hari Om) and
   // Sales Coordination's three both have no further reports so they draw
   // as flat leaf-spine lists — exactly matching the source chart's shape
   // with no new components.
@@ -212,13 +213,13 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     {
       name: 'Ecommerce', role: 'Department',
       reports: [
-        { name: 'Hariom', role: 'M3- Customer Development Manager- HQ- Delhi' },
+        { name: 'Hari Om', role: 'M3- Customer Development Manager- HQ- Delhi' },
       ],
     },
     {
       name: 'Sales Coordination', role: 'Department',
       reports: [
-        { name: 'Gaurav Dapral', role: 'O5- Sr. Executive- HQ- Delhi' },
+        { name: 'Gaurav Dabral', role: 'O5- Sr. Executive- HQ- Delhi' },
         { name: 'Vishal Mahaur', role: 'O5- Sr. Executive- HQ- Delhi' },
         { name: 'Pooja Arora', role: 'O5- Sr. Executive- HQ- Delhi' },
       ],
@@ -228,7 +229,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
   // — per the org chart supplied, both level-2 slots are department-group
   // labels (same reuse of the "manager" slot as Vaibhav Mishra's tree
   // above), each recursing three people deep via ReportBoxCard. The vacant
-  // seat under Sanjeev Lamba is modelled the same way PPC's vacant Plant
+  // seat under Sanjeev Kumar is modelled the same way PPC's vacant Plant
   // Head root is — the position title as the card, "Vacant" as its role.
   'r-manigandan': [
     {
@@ -238,7 +239,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
           name: 'S.P. Chaubey', role: 'Sr. Manager',
           reports: [
             {
-              name: 'Sanjeev Lamba', role: 'AM',
+              name: 'Sanjeev Kumar', role: 'AM',
               reports: [
                 { name: 'Executive', role: 'Vacant' },
               ],
@@ -284,7 +285,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     { name: 'Meeran Alam', role: 'O4- Exec- HO' },
     { name: 'Mahesh', role: 'O5- Sr. Exec- HO' },
   ],
-  // Purchase & Procurement (Pradeep Krishali) — six flat direct reports,
+  // Purchase & Procurement (Pradeep Kumar) — six flat direct reports,
   // one of them a vacant seat, per the org chart supplied. Added to
   // FLAT_TREE_IDS above (like Arun Mishra's 12 GTRs) rather than the
   // nested variant, since none of these six have reports of their own.
@@ -321,8 +322,8 @@ const SUB_TREES: Record<string, TeamMember[]> = {
     {
       name: 'Pankaj Jha', role: 'M4- Sr. Manager- Marketing- HO',
       reports: [
-        { name: 'Aman Bhawadwaj', role: 'M1- AM- ATL- HO' },
-        { name: 'Abhishek Naagar', role: 'O4- Sr. Executive- HO' },
+        { name: 'Aman Bhardwaj', role: 'M1- AM- ATL- HO' },
+        { name: 'Abhishek Nagar', role: 'O4- Sr. Executive- HO' },
         { name: 'Anoop Sehgal', role: 'O5- Sr. Executive- Design- HO' },
         { name: 'Performance Marketing (Vacant)', role: 'M1- AM' },
       ],

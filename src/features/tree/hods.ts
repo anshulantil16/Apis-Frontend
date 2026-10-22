@@ -43,7 +43,7 @@ export const hods: Person[] = [
   { id: 'naagesh-mishra', name: 'Naagesh Mishra', role: 'GM', department: 'Marketing', level: 'hod', photo: naageshMishraPhoto },
   { id: 'pankaj-tripathi', name: 'Pankaj Tripathi', role: 'GM', department: 'P&C Admin & IT', level: 'hod', photo: '/hierarchy/Pankaj_Tripathi1.png' },
   { id: 'ankit-nagar', name: 'Ankit Nagar', role: 'CFO', department: 'F&A/Internal Audit', level: 'hod', photo: ankitNagarPhoto },
-  { id: 'pradeep-krishali', name: 'Pradeep Krishali', role: 'AGM', department: 'Procurement', level: 'hod', photo: pradeepKrishaliPhoto },
+  { id: 'pradeep-krishali', name: 'Pradeep Kumar', role: 'AGM', department: 'Procurement', level: 'hod', photo: pradeepKrishaliPhoto },
   { id: 'vikas-aggarwal', name: 'Vikas Aggarwal', role: 'AGM', department: 'CS & Legal', level: 'hod', photo: vikashAggarwalPhoto },
   { id: 'r-manigandan', name: 'R. Manigandan', role: 'GM', department: 'BEX & SCM', level: 'hod', photo: manigandanPhoto },
   { id: 'heera-swami', name: 'Heera Swami', role: 'GM', department: 'PPC', level: 'hod', photo: heeraSwamiPhoto },
