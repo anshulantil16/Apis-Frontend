@@ -109,6 +109,7 @@ const SUB_TREES: Record<string, TeamMember[]> = {
         { name: 'Sujat Alam', role: 'O5- Sr. Executive- P&C- HO' },
         { name: 'Kanchan', role: 'O5- Sr. Executive- Admin & Facilities- HO' },
         { name: 'Shobhit', role: 'O4-  EA Front Desk Executive- Admin & Facilities- HO' },
+        { name: 'Abhay', role: 'Management Trainee (MIS)- HR' },
       ],
     },
     {
