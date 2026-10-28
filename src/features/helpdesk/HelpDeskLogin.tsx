@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { API, RP_STYLES, rpFetch} from './HelpDeskShared';
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
+import { useHideScrollRail } from '../home/scrollRailStore';
 
 /* ── the "raise a ticket" stub — AdminPulse's visual signature, standing in
    for the radar sweep the other panel used before this reskin. A slightly
@@ -58,6 +59,7 @@ function Particles() {
 export function HelpDeskLogin({ onSuccess }: {
   onSuccess: (s: { email: string; name: string; role: string; token: string }) => void;
 }) {
+  useHideScrollRail();
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
   const [masked, setMasked] = useState('');

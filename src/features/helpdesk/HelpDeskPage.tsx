@@ -1050,7 +1050,7 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
           </div>
         </div>
 
-        <div className="max-w-[1500px] mx-auto px-6 flex items-center gap-1 overflow-x-auto">
+        <div className="max-w-[1500px] mx-auto px-6 flex items-center gap-1 overflow-x-auto overflow-y-hidden">
           {visibleTabs.map(t => {
             const Icon = t.icon;
             const on = activeTab === t.id;

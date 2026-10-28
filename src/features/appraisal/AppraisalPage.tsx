@@ -10,6 +10,7 @@ import { AppraisalHODView } from '../../Components/Appraisal/hod/AppraisalHODVie
 import { HRView } from '../../Components/Performance/hr/HRView';
 import { ProgressReportDashboard } from '../../Components/ProgressReport/ProgressReportDashboard';
 import { TOOL_STYLES } from '../../Components/toolStyles';
+import { HideScrollRail } from '../home/ScrollRail';
 interface AppraisalPageProps {
   onNavigateBack?: () => void;
 }
@@ -295,6 +296,7 @@ export function AppraisalPage({}: AppraisalPageProps) {
   return (
     <div className="min-h-full py-10 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <style>{TOOL_STYLES}</style>
+      <HideScrollRail />
       {/* The growth-desk illustration is the page, the way every other OTP
           sign-in screen in the intranet works now — not a colour wash. */}
       <img src="/Appraisal_bg.png" alt="" aria-hidden decoding="async"

@@ -6,8 +6,10 @@ import {
 } from 'lucide-react';
 import { API, HR_LABEL, type User } from './shared';
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
+import { useHideScrollRail } from '../home/scrollRailStore';
 
 export function Login({ onLogin }: { onLogin: (u: User) => void }) {
+  useHideScrollRail();
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const [empId, setEmpId] = useState('');
   const [otp, setOtp] = useState('');
