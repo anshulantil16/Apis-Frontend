@@ -6,6 +6,7 @@ import { EOMHodView }       from '../../Components/EOM/hod/EOMHodView';
 import { EOMPanelView }     from '../../Components/EOM/panel/EOMPanelView';
 import { EOMHrView }        from '../../Components/EOM/hr/EOMHrView';
 import { TOOL_STYLES } from '../../Components/toolStyles';
+import { HideScrollRail } from '../home/ScrollRail';
 
 const API_BASE = apiBase();
 export const EOM_API = `${API_BASE}/api/eom`;
@@ -287,6 +288,7 @@ export function EOMPage({}: EOMPageProps) {
   return (
     <div className="min-h-full py-10 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <style>{TOOL_STYLES}</style>
+      <HideScrollRail />
       {/* The trophy-desk illustration is the page, the way every other OTP
           sign-in screen in the intranet works now — not a colour wash. */}
       <img src="/EmployeeOFMonth_bg.png" alt="" aria-hidden decoding="async"

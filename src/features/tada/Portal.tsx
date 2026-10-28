@@ -28,6 +28,16 @@ export function Portal({ user, onLogout }: { user: User; onLogout: () => void })
   useEffect(() => { if (tab === 'mine') fetch(`${API}/requests/mine/?employee_id=${user.employee_id}`).then(r => r.json()).then(d => setMine(d.requests || [])); }, [tab, refresh]);
 
   const isAdmin = user.role === 'admin';
+  /* Two widths, not one. A form and a request are read top to bottom and
+     want a column no wider than comfortable; the admin directory and the
+     booking desk are tables of many columns, and capping those at 1152px
+     was clipping the last column off the screen on a monitor with room to
+     spare. The approvals queue stays narrow on purpose -- it is a list of
+     cards, and a card stretched to 1700px is harder to read, not easier.
+     The header and the tab bar take the same
+     width as the screen below them so nothing steps out of line. */
+  const wide = isAdmin || tab === 'bookings';
+  const shell = `${wide ? 'max-w-[1700px]' : 'max-w-6xl'} mx-auto px-5`;
   const tabs = isDesk
     ? [{ k: 'bookings', l: 'Ticket Bookings', i: Plane }, { k: 'new', l: 'My New Request', i: Plus }, { k: 'mine', l: 'My Requests', i: FileText }]
     : isApprover
@@ -37,19 +47,19 @@ export function Portal({ user, onLogout }: { user: User; onLogout: () => void })
   return (
     <div className="min-h-full bg-[#f5f7fa]">
       <header className="bg-white border-b border-slate-200 text-slate-800 relative z-20">
-        <div className="max-w-6xl mx-auto px-5 py-3 flex items-center gap-3 relative">
+        <div className={`${shell} py-3 flex items-center gap-3 relative`}>
           <div className="flex-1"><p className="font-black leading-tight text-slate-900">{user.name}</p><p className="text-slate-500 text-xs">{user.designation} · {isAdmin ? 'Oversight & Setup' : `Level ${user.level}`}</p></div>
           <span className="hidden sm:inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">{roleLabel(user.role)}</span>
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-sm">{(user.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
           <button onClick={onLogout} className="flex items-center gap-1 text-slate-500 hover:text-slate-900 text-sm transition-colors"><LogOut className="w-4 h-4" /><span className="hidden md:inline">Logout</span></button>
         </div>
         {!isAdmin && (
-          <div className="max-w-6xl mx-auto px-5 flex gap-1">
+          <div className={`${shell} flex gap-1`}>
             {tabs.map(t => <button key={t.k} onClick={() => { setTab(t.k); setSel(null); }} data-active={tab === t.k} className={`ih-underline flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-all ${tab === t.k ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><t.i className="w-4 h-4" />{t.l}</button>)}
           </div>
         )}
       </header>
-      <main className="max-w-6xl mx-auto px-5 py-6">
+      <main className={`${shell} py-6`}>
         {isAdmin && <AdminDashboard user={user} />}
         {tab === 'approvals' && !isAdmin && <ApproverBoard user={user} />}
         {tab === 'bookings' && !isAdmin && <BookingDesk user={user} />}

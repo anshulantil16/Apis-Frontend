@@ -20,6 +20,7 @@ import { TeamView } from './TeamView';
 import { AdminView } from './AdminView';
 import { Ambient, Hero, Motes, Panel } from './chrome';
 import { onTilt3dMove, onTilt3dLeave } from '../../ui';
+import { useHideScrollRail } from '../home/scrollRailStore';
 
 /* Rotates under the sign-in card. The screen is otherwise still while someone
    waits for a code, and a portal that says nothing while you wait reads as one
@@ -60,6 +61,7 @@ function ValueBlock({ icon: Icon, title, text, align = 'left' }: {
 // ── sign in ───────────────────────────────────────────────────────────────────
 
 function SignIn({ onSignedIn }: { onSignedIn: (e: Employee) => void }) {
+  useHideScrollRail();
   const [mode, setMode] = useState<'employee' | 'admin'>('employee');
   const [step, setStep] = useState<'id' | 'otp'>('id');
   const [empId, setEmpId] = useState('');

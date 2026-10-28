@@ -321,4 +321,23 @@ html.ih-reveal-ready .ih-inview[data-in] { opacity:1; transform:none; }
   -ms-overflow-style: none;    /* old Edge/IE */
 }
 .ih-scroll-clean::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* The content area's plain grey scrollbar, no arrows, on every page. The
+   invisible ::after is one pixel taller than the area itself, so a page that
+   fits on screen still has a pixel to scroll - and so shows the same grey
+   bar, nearly full length, as the longer pages. */
+.ih-scroll-bar { overflow-y: scroll; position: relative; }
+.ih-scroll-bar::after {
+  content: ''; position: absolute; top: 0; left: 0; width: 1px; height: calc(100% + 1px); pointer-events: none;
+}
+.ih-scroll-bar::-webkit-scrollbar { width: 10px; }
+.ih-scroll-bar::-webkit-scrollbar-button { display: none; height: 0; }
+.ih-scroll-bar::-webkit-scrollbar-track { background: #e4e4e9; box-shadow: inset 1px 0 0 #d4d4da; }
+/* Firefox only: in Chrome these standard properties would override the
+   ::-webkit-scrollbar styling above and bring back the arrow buttons. */
+@supports not selector(::-webkit-scrollbar) {
+  .ih-scroll-bar { scrollbar-width: thin; scrollbar-color: #a9a9b0 #e4e4e9; }
+}
+.ih-scroll-bar::-webkit-scrollbar-thumb { background: #a9a9b0; border-radius: 2px; }
+.ih-scroll-bar::-webkit-scrollbar-thumb:hover { background: #8e8e96; }
 `;

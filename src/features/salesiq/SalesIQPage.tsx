@@ -732,7 +732,7 @@ export function SalesIQPage(_props: { onNavigateBack?: () => void } = {}) {
         </div>
 
         {/* tabs */}
-        <div className="max-w-[1600px] mx-auto px-6 flex items-center gap-1 overflow-x-auto">
+        <div className="max-w-[1600px] mx-auto px-6 flex items-center gap-1 overflow-x-auto overflow-y-hidden">
           {TABS.map(t => {
             const Icon = t.icon;
             const on = activeTab === t.id;
