@@ -15,7 +15,7 @@ import { portalFetch } from '../portal/session';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
   HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images, Calculator,
-  Users, Landmark, MapPin, Mail, Phone, CalendarClock, Gift,
+  Users, Landmark, MapPin, Mail, Phone, CalendarClock, Gift, UserCheck, Stamp,
 } from 'lucide-react';
 import {
   QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, dailyQuote, type QuickAccessId,
@@ -88,31 +88,44 @@ function MyProfileCard({ onClose }: { onClose: () => void }) {
   const initials = (p?.name || '?').trim().split(/\s+/).slice(0, 2)
     .map((w: string) => w[0]).join('').toUpperCase();
 
+  /* Every field is shown, filled in or not. A row that disappears when it
+     is empty makes a half-filled record look complete -- you cannot tell
+     "we have no HOD for you" from "this screen does not show HODs", and
+     there is nothing to point at when asking P & C to fix it. Blank is
+     drawn as an em dash so the gap is visibly a gap. */
   const groups: { title: string; rows: [any, string, string][] }[] = p ? [
     {
       title: 'Where you sit',
-      rows: ([
+      rows: [
         [Users, 'Department', p.department],
         [Landmark, 'Category', p.category],
         [MapPin, 'Location', p.location],
+      ] as [any, string, string][],
+    },
+    {
+      title: 'Your reporting line',
+      rows: [
         [Network, 'Reports to', p.manager],
-      ] as [any, string, string][]).filter(r => !!r[2]),
+        [ShieldCheck, 'Head of department', p.hod],
+        [UserCheck, 'Leave recommender', p.leave_recommender],
+        [Stamp, 'Leave approver', p.leave_approver],
+      ] as [any, string, string][],
     },
     {
       title: 'How to reach you',
-      rows: ([
+      rows: [
         [Mail, 'Email', p.email],
         [Phone, 'Work number', p.office_mobile],
-      ] as [any, string, string][]).filter(r => !!r[2]),
+      ] as [any, string, string][],
     },
     {
       title: 'Dates',
-      rows: ([
+      rows: [
         [CalendarClock, 'Joined', p.date_of_joining],
         [Gift, 'Birthday', p.birthday],
-      ] as [any, string, string][]).filter(r => !!r[2]),
+      ] as [any, string, string][],
     },
-  ].filter(g => g.rows.length) : [];
+  ] : [];
 
   return (
     <div className="ih-fade fixed inset-0 z-[60] flex items-start justify-center p-4 pt-20
@@ -203,7 +216,9 @@ function MyProfileCard({ onClose }: { onClose: () => void }) {
                                      tracking-wide text-slate-400">
                       <Icon className="w-3 h-3" /> {label}
                     </span>
-                    <p className="text-[13px] font-bold text-slate-700 mt-0.5 break-words">{value}</p>
+                    <p className={`text-[13px] mt-0.5 break-words ${value
+                      ? 'font-bold text-slate-700' : 'font-semibold text-slate-300'}`}>
+                      {value || '—'}</p>
                   </div>
                 ))}
               </div>
