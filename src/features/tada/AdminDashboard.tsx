@@ -28,16 +28,36 @@ export function AdminDashboard({ user }: { user: User }) {
      portal session: the server only accepts them from a super admin. */
   const [users, setUsers] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const loadUsers = () => apiFetch(`${API}/users/`).then(r => r.json()).then(setUsers);
+  /* A failed call must not take the page down with it. Reading
+     users.users off an error body ({detail: ...}) is what turned a 401
+     into a blank screen. */
+  const loadUsers = async () => {
+    try {
+      const r = await apiFetch(`${API}/users/`);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !Array.isArray(d.users)) {
+        setUsers({ users: [], total: 0, needs_level: 0, no_manager: 0 });
+        setMsg(r.status === 401 || r.status === 403
+          ? 'Sign in to the intranet as an administrator to manage the TA/DA directory.'
+          : (d.error || 'Could not load the directory.'));
+        return;
+      }
+      setUsers(d); setMsg('');
+    } catch {
+      setUsers({ users: [], total: 0, needs_level: 0, no_manager: 0 });
+      setMsg('Could not reach the server.');
+    }
+  };
   useEffect(() => { if (sub === 'users') loadUsers(); }, [sub]);
 
   const syncUsers = async () => {
     setBusy(true);
     try {
       const r = await apiFetch(`${API}/users/sync/`, { method: 'POST' });
-      const d = await r.json();
-      setMsg(d.message || d.error || 'Could not sync.');
-      await loadUsers(); load();
+      const d = await r.json().catch(() => ({}));
+      setMsg(r.ok ? (d.message || 'Synced.')
+                  : (d.error || 'Only an intranet administrator can sync the directory.'));
+      if (r.ok) { await loadUsers(); load(); }
     } finally { setBusy(false); }
   };
 
@@ -46,8 +66,8 @@ export function AdminDashboard({ user }: { user: User }) {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [field]: value }),
     });
-    const d = await r.json();
-    if (!r.ok) { setMsg(d.error || 'That change was not saved.'); return; }
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.user) { setMsg(d.error || 'That change was not saved.'); return; }
     // Replace just the row that changed, so the table does not jump.
     setUsers((prev: any) => prev && {
       ...prev, users: prev.users.map((u: any) => (u.id === id ? d.user : u)),
@@ -294,7 +314,7 @@ export function AdminDashboard({ user }: { user: User }) {
                 ))}
               </tbody>
             </table>
-            {users && users.users.length === 0 && (
+            {users && (users.users || []).length === 0 && (
               <p className="text-slate-300 text-center py-10">
                 Nobody here yet — press Sync from HRMS master.
               </p>
