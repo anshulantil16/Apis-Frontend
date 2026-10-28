@@ -18,6 +18,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ChevronRight, X, Sparkles, Image as ImageIcon, PartyPopper, Users, HeartHandshake, Plus, UploadCloud } from 'lucide-react';
 import { apiFetch } from '../portal/session';
 import { apiBase } from '../../apiBase';
+import { useAssistantIntent } from '../assistant/intent';
 
 interface WallPhoto {
   src: string; title: string; category: string;
@@ -116,6 +117,8 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
      right shape without anybody saying what shape it is. */
   const [tall, setTall] = useState<Record<string, boolean>>({});
   const [uploadOpen, setUploadOpen] = useState(false);
+  // Ask APIS: "put a photo on the wall" opens the upload form directly.
+  useAssistantIntent('apis-wall', action => { if (action === 'upload') setUploadOpen(true); });
   const [previewSrc, setPreviewSrc] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

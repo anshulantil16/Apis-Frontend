@@ -1,11 +1,17 @@
 /* Admin view: the user directory, bulk import, and portal-wide figures. */
 import { useState, useEffect } from 'react';
 import {
-  Trash2, Upload, CheckCircle, FileText, Receipt, Car, AlertCircle, RefreshCw, ChevronRight, Users, Shield, BarChart3, TrendingUp, Wallet, Activity,
+  Trash2, CheckCircle, FileText, Receipt, Car, AlertCircle, RefreshCw, ChevronRight, Users, Shield, BarChart3, TrendingUp, Wallet, Activity,
 } from 'lucide-react';
+import { apiFetch } from '../portal/session';
 import { API, fmt, HR_LABEL, type User } from './shared';
 import { Count, PBar, Ring } from './components';
 import { Detail, ReqCard } from './RequestDetail';
+
+/* The closed list the allowance matrices are keyed on. M7 and above share
+   one band, so M8/M9 are legitimate; the list stops where the policy's own
+   table does and anything beyond it is typed in deliberately elsewhere. */
+const LEVELS = ['M7', 'M6', 'M5', 'M4', 'M3', 'M2', 'M1', 'E4', 'E3', 'E2', 'E1'];
 
 export const STATUS_LABELS: Record<string, string> = {
   submitted: 'Pending Manager', manager_approved: `Pending ${HR_LABEL}`, hr_approved: 'Pending Finance',
@@ -22,17 +28,73 @@ export function AdminDashboard({ user }: { user: User }) {
   const load = () => fetch(`${API}/admin/overview/`).then(r => r.json()).then(setOv);
   useEffect(() => { load(); }, []);
 
-  const imp = async (e: any) => {
-    const f = e.target.files?.[0]; if (!f) return;
-    const fd = new FormData(); fd.append('file', f);
-    const r = await fetch(`${API}/users/import/`, { method: 'POST', body: fd });
-    const d = await r.json(); setMsg(d.message || d.error); load(); e.target.value = '';
+  /* The directory is the HRMS master, not a spreadsheet. These two calls
+     change who approves what and what people are paid, so they carry the
+     portal session: the server only accepts them from a super admin. */
+  const [users, setUsers] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [uq, setUq] = useState('');
+  const [onlyGaps, setOnlyGaps] = useState(false);
+  /* A failed call must not take the page down with it. Reading
+     users.users off an error body ({detail: ...}) is what turned a 401
+     into a blank screen. */
+  const loadUsers = async () => {
+    try {
+      const r = await apiFetch(`${API}/users/`);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !Array.isArray(d.users)) {
+        setUsers({ users: [], total: 0, needs_level: 0, no_manager: 0 });
+        setMsg(r.status === 401 || r.status === 403
+          ? 'Sign in to the intranet as an administrator to manage the TA/DA directory.'
+          : (d.error || 'Could not load the directory.'));
+        return;
+      }
+      setUsers(d); setMsg('');
+    } catch {
+      setUsers({ users: [], total: 0, needs_level: 0, no_manager: 0 });
+      setMsg('Could not reach the server.');
+    }
+  };
+  useEffect(() => { if (sub === 'users') loadUsers(); }, [sub]);
+
+  const syncUsers = async () => {
+    setBusy(true);
+    try {
+      const r = await apiFetch(`${API}/users/sync/`, { method: 'POST' });
+      const d = await r.json().catch(() => ({}));
+      setMsg(r.ok ? (d.message || 'Synced.')
+                  : (d.error || 'Only an intranet administrator can sync the directory.'));
+      if (r.ok) { await loadUsers(); load(); }
+    } finally { setBusy(false); }
+  };
+
+  const saveUser = async (id: number, field: string, value: string) => {
+    const r = await apiFetch(`${API}/users/${id}/`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.user) { setMsg(d.error || 'That change was not saved.'); return; }
+    // Replace just the row that changed, so the table does not jump.
+    setUsers((prev: any) => prev && {
+      ...prev, users: prev.users.map((u: any) => (u.id === id ? d.user : u)),
+    });
+    setMsg('');
   };
   const reset = async (what: string) => {
     if (!confirm(what === 'all' ? 'Clear ALL requests AND users? This cannot be undone.' : 'Clear ALL travel requests? This cannot be undone.')) return;
     const r = await fetch(`${API}/admin/reset/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ what }) });
     const d = await r.json(); setMsg(d.message); load();
   };
+
+  /* 716 rows is a directory, not a list: without a search this is a wall.
+     `onlyGaps` is the one that gets used -- it is the work queue, the people
+     who cannot be paid or whose request has nowhere to go. */
+  const allRows = users?.users || [];
+  const needle = uq.trim().toLowerCase();
+  const rows = allRows.filter((u: any) =>
+    (!needle || `${u.name} ${u.employee_id} ${u.email} ${u.department}`.toLowerCase().includes(needle))
+    && (!onlyGaps || u.needs_level || !u.reporting_manager_id));
 
   if (sel) return <Detail id={sel} user={user} onBack={() => setSel(null)} />;
   const reqs = (ov?.requests || []).filter((r: any) => !filter || r.status === filter);
@@ -181,14 +243,157 @@ export function AdminDashboard({ user }: { user: User }) {
       )}
 
       {sub === 'users' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
-          <h3 className="font-black text-slate-800 flex items-center gap-2"><Users className="w-5 h-5 text-indigo-500" />User Directory ({ov?.total_users ?? 0})</h3>
-          <p className="text-slate-500 text-sm">Import users: Employee ID, Name, Email, Level (M1-M7/E1-E4), Role (employee/manager/hr/finance), Reporting Manager ID.</p>
-          <div className="flex gap-2">
-            <a href={`${API}/users/template/`} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold"><FileText className="w-4 h-4" />Download Template</a>
-            <label className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl text-sm font-bold cursor-pointer"><Upload className="w-4 h-4" />Import Users<input type="file" accept=".xlsx" className="hidden" onChange={imp} /></label>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="min-w-0">
+              <h3 className="font-black text-slate-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-500" />
+                User Directory ({users?.total ?? 0})
+              </h3>
+              <p className="text-slate-500 text-[13px] mt-0.5">
+                Everyone comes from the HRMS master. Name, email, designation and
+                department are maintained in Pocket HRMS; the role, level, HQ and
+                approver are set here.
+              </p>
+            </div>
+            <button onClick={syncUsers} disabled={busy}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600
+                         text-white rounded-xl text-sm font-bold disabled:opacity-60">
+              <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
+              {busy ? 'Syncing…' : 'Sync from HRMS master'}
+            </button>
           </div>
-          {ov?.users_by_role && <div className="flex gap-2 flex-wrap pt-2">{Object.entries(ov.users_by_role).map(([k, v]: any) => <span key={k} className="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-600 capitalize">{k}: {v as number}</span>)}</div>}
+
+          {(users?.needs_level > 0 || users?.no_manager > 0) && (
+            <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 px-4 py-3">
+              <p className="text-[13px] font-bold text-amber-800">
+                Nobody can use TA/DA until these are filled in.
+              </p>
+              <ul className="mt-1 text-[12.5px] text-amber-700 font-semibold space-y-0.5">
+                {users.needs_level > 0 && (
+                  <li><b>{users.needs_level}</b> have no level — every allowance is worked
+                      out from it, so theirs comes to zero.</li>
+                )}
+                {users.no_manager > 0 && (
+                  <li><b>{users.no_manager}</b> have no approver — a request from them has
+                      nobody to go to. The master is read for all four of reporting
+                      manager, HOD, leave approver and leave recommender; these are the
+                      people Pocket HRMS has none of them for.</li>
+                )}
+              </ul>
+              <button onClick={() => { setOnlyGaps(true); setUq(''); }}
+                className="mt-2 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[12px] font-black">
+                Show only these
+              </button>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <input value={uq} onChange={e => setUq(e.target.value)}
+              placeholder="Search a name, employee ID, email or department…"
+              className="flex-1 min-w-[220px] px-3 py-2 rounded-xl ring-1 ring-slate-200
+                         text-[13px] text-slate-700" />
+            <button onClick={() => setOnlyGaps(v => !v)}
+              className={`px-3 py-2 rounded-xl text-[12px] font-black ring-1 transition-colors
+                ${onlyGaps ? 'bg-amber-500 text-white ring-amber-500'
+                           : 'bg-white text-slate-500 ring-slate-200 hover:text-amber-600'}`}>
+              Needs setting up
+            </button>
+            <span className="text-[12px] font-bold text-slate-400">
+              {rows.length === allRows.length
+                ? `${allRows.length} people`
+                : `${rows.length} of ${allRows.length}`}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px] min-w-[1020px]">
+              <thead>
+                <tr className="text-left text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-200">
+                  {['Employee', 'Department', 'Grade', 'Level', 'HQ city', 'Approver',
+                    'HOD (HRMS)', 'Role'].map(h => (
+                    <th key={h} className="px-2.5 py-2">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((u: any) => (
+                  <tr key={u.id} className={`border-b border-slate-50 ${u.is_active ? '' : 'opacity-50'}`}>
+                    <td className="px-2.5 py-2">
+                      <p className="font-black text-slate-800">{u.name}</p>
+                      <p className="text-slate-400 text-[11px]">{u.employee_id} · {u.email || 'no email'}</p>
+                    </td>
+                    <td className="px-2.5 py-2 text-slate-500">{u.department || '—'}</td>
+                    <td className="px-2.5 py-2 text-slate-400 font-semibold">{u.grade || '—'}</td>
+                    <td className="px-2.5 py-2">
+                      <select value={u.level} onChange={e => saveUser(u.id, 'level', e.target.value)}
+                        className={`w-[86px] px-2 py-1.5 rounded-lg ring-1 font-bold bg-white
+                          ${u.needs_level ? 'ring-amber-300 bg-amber-50 text-amber-700'
+                                          : 'ring-slate-200 text-slate-700'}`}>
+                        <option value="">Set…</option>
+                        {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-2.5 py-2">
+                      <input defaultValue={u.hq_city} placeholder="Base city"
+                        onBlur={e => e.target.value.trim() !== u.hq_city
+                          && saveUser(u.id, 'hq_city', e.target.value)}
+                        className="w-32 px-2 py-1.5 rounded-lg ring-1 ring-slate-200 text-slate-700" />
+                    </td>
+                    <td className="px-2.5 py-2">
+                      <input list="tada-approvers" defaultValue={u.reporting_manager_id}
+                        placeholder="Search a name…"
+                        onBlur={e => e.target.value.trim() !== u.reporting_manager_id
+                          && saveUser(u.id, 'reporting_manager_id', e.target.value)}
+                        className={`w-40 px-2 py-1.5 rounded-lg ring-1 text-slate-700
+                          ${u.reporting_manager_id ? 'ring-slate-200' : 'ring-amber-300 bg-amber-50'}`} />
+                      {(u.reporting_manager_name || u.approver_source) && (
+                        <p className="text-slate-400 text-[11px] mt-0.5 truncate max-w-[160px]">
+                          {u.reporting_manager_name}
+                          {/* Where it came from. HRMS sends a reporting manager for
+                              almost nobody, so most of these are routed through the
+                              HOD or the leave chain — worth seeing before trusting it. */}
+                          {u.approver_source && u.approver_source !== 'manager' && (
+                            <span className="text-slate-300"> · via {u.approver_source}</span>
+                          )}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-2.5 py-2 text-[12px]">
+                      {u.hod_name || u.hod_id
+                        ? <><span className="text-slate-600 font-semibold">{u.hod_name || u.hod_id}</span>
+                            {u.hod_name && u.hod_id && (
+                              <span className="block text-slate-300 text-[11px]">{u.hod_id}</span>)}</>
+                        : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-2.5 py-2">
+                      <select value={u.role} onChange={e => saveUser(u.id, 'role', e.target.value)}
+                        className="px-2 py-1 rounded-lg ring-1 ring-slate-200 font-bold text-slate-700 bg-white">
+                        {['employee', 'manager', 'hr', 'finance', 'travel_desk', 'admin'].map(r => (
+                          <option key={r} value={r}>{r === 'hr' ? HR_LABEL : r.replace('_', ' ')}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {users && allRows.length === 0 && (
+              <p className="text-slate-300 text-center py-10">
+                Nobody here yet — press Sync from HRMS master.
+              </p>
+            )}
+            {users && allRows.length > 0 && rows.length === 0 && (
+              <p className="text-slate-300 text-center py-10">Nobody matches that.</p>
+            )}
+            {/* Every employee, so an approver can be picked by name rather
+                than by remembering a code. */}
+            <datalist id="tada-approvers">
+              {allRows.map((u: any) => (
+                <option key={u.id} value={u.employee_id}>{u.name} · {u.department}</option>
+              ))}
+            </datalist>
+          </div>
         </div>
       )}
 
