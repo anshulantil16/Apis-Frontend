@@ -475,9 +475,9 @@ function PeopleTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
       )}
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto max-w-full">
+        <div className="overflow-auto max-w-full max-h-[70vh]">
           <table className="w-full min-w-[900px] text-xs">
-            <thead className="bg-slate-50 text-slate-400">
+            <thead className="bg-slate-50/95 backdrop-blur text-slate-500 sticky top-0 z-10">
               <tr>
                 <th className="px-3 py-2 w-8">
                   <input type="checkbox" checked={allShownPicked} className="w-3.5 h-3.5 accent-indigo-600"
@@ -1099,9 +1099,9 @@ function HrmsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => void
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <p className="font-black text-slate-700 text-sm px-4 py-3 border-b border-slate-100">Sync history</p>
-        <div className="overflow-x-auto max-w-full">
+        <div className="overflow-auto max-w-full max-h-[70vh]">
           <table className="w-full min-w-[900px] text-xs">
-            <thead className="bg-slate-50 text-slate-400">
+            <thead className="bg-slate-50/95 backdrop-blur text-slate-500 sticky top-0 z-10">
               <tr>{['When', 'By', 'Fetched', 'New', 'Updated', 'Disabled', 'No email', 'Refused', 'Result'].map(h => (
                 <th key={h} className="px-3 py-2 text-left font-black">{h}</th>))}</tr>
             </thead>
@@ -1178,9 +1178,9 @@ function SessionsTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => 
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-      <div className="overflow-x-auto max-w-full">
+      <div className="overflow-auto max-w-full max-h-[70vh]">
         <table className="w-full min-w-[900px] text-xs">
-          <thead className="bg-slate-50 text-slate-400">
+          <thead className="bg-slate-50/95 backdrop-blur text-slate-500 sticky top-0 z-10">
             <tr>{['Person', 'From', 'Device', 'Last seen', ''].map(h => (
               <th key={h} className="px-3 py-2 text-left font-black">{h}</th>))}</tr>
           </thead>
@@ -1991,9 +1991,9 @@ function ActivityTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => 
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto max-w-full">
+        <div className="overflow-auto max-w-full max-h-[70vh]">
           <table className="w-full min-w-[820px] text-xs">
-            <thead className="bg-slate-50 text-slate-400">
+            <thead className="bg-slate-50/95 backdrop-blur text-slate-500 sticky top-0 z-10">
               <tr>{['When', 'Who', 'Did', 'What', 'From'].map(h => (
                 <th key={h} className="px-3 py-2 text-left font-black">{h}</th>))}</tr>
             </thead>
@@ -3062,8 +3062,10 @@ function HolidaysAdmin({ onToast }: { onToast: (t: { t: string; ok: boolean }) =
             </form>
           )}
 
+          {/* Not sticky: a year of holidays is a short list with no scroll
+              box of its own, so a sticky header would pin to the page. */}
           <table className="w-full text-xs">
-            <thead className="bg-slate-50 text-slate-400">
+            <thead className="bg-slate-50 text-slate-500">
               <tr>{['Date', 'Holiday', 'Type', ''].map(h => (
                 <th key={h} className="px-4 py-2 text-left font-black">{h}</th>))}</tr>
             </thead>

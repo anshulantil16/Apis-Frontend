@@ -67,7 +67,7 @@ function returnJourneyOf(r: any): Journey | null {
   };
 }
 
-const cell = 'w-full border-2 border-slate-200 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:border-indigo-400 bg-white';
+const cell = 'w-full border-2 border-slate-200 rounded-lg px-2.5 py-2 text-[13px] font-medium text-slate-700 focus:outline-none focus:border-indigo-400 bg-white';
 const blankOption = () => ({ mode: '', carrier: '', detail: '', date: '', time: '', amount: '', remarks: '' });
 
 /* The desk quotes what it found — two to six rows, not the one it has already
@@ -103,30 +103,30 @@ function OptionsForm({ req, j, onDone, onCancel }: {
     <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 space-y-2">
       <p className="text-[11px] font-bold text-indigo-700">What did you find? Add at least two so the employee has a real choice.</p>
       {rows.map((row, i) => (
-        <div key={i} className="grid grid-cols-2 md:grid-cols-6 gap-1.5 items-end bg-white border border-slate-100 rounded-lg p-2">
+        <div key={i} className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 items-end bg-white border border-slate-100 rounded-xl p-3">
           <div>
-            <label className="text-[9px] font-bold text-slate-400 uppercase block">Mode</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Mode</label>
             <input className={cell} value={row.mode} onChange={e => set(i, 'mode', e.target.value)} placeholder="Flight / Train" />
           </div>
           <div>
-            <label className="text-[9px] font-bold text-slate-400 uppercase block">Airline / Train</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Airline / Train</label>
             <input className={cell} value={row.carrier} onChange={e => set(i, 'carrier', e.target.value)} placeholder="Required" />
           </div>
           <div>
-            <label className="text-[9px] font-bold text-slate-400 uppercase block">Flight / Train No.</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Flight / Train No.</label>
             <input className={cell} value={row.detail} onChange={e => set(i, 'detail', e.target.value)} />
           </div>
           <div>
-            <label className="text-[9px] font-bold text-slate-400 uppercase block">Date</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Date</label>
             <input type="date" className={cell} value={row.date} onChange={e => set(i, 'date', e.target.value)} />
           </div>
           <div>
-            <label className="text-[9px] font-bold text-slate-400 uppercase block">Time</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Time</label>
             <input className={cell} value={row.time} onChange={e => set(i, 'time', e.target.value)} placeholder="14:30" />
           </div>
-          <div className="flex items-end gap-1">
+          <div className="flex items-end gap-2">
             <div className="flex-1">
-              <label className="text-[9px] font-bold text-slate-400 uppercase block">Amount ₹</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Amount ₹</label>
               <input type="number" min="0" className={cell} value={row.amount} onChange={e => set(i, 'amount', e.target.value)} placeholder="Required" />
             </div>
             {rows.length > 2 && (

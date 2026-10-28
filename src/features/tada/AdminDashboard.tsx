@@ -235,7 +235,10 @@ export function AdminDashboard({ user }: { user: User }) {
             </select>
             <span className="text-slate-400 text-sm">{reqs.length} shown</span>
           </div>
-          <div className="space-y-2 stagger">
+          {/* The admin shell is wide, for the dashboard and the directory.
+              A request card is still a card, so this list keeps a readable
+              width instead of stretching across the whole monitor. */}
+          <div className="space-y-2 stagger max-w-5xl">
             {reqs.map((r: any) => <ReqCard key={r.id} r={r} onClick={() => setSel(r.id)} />)}
             {reqs.length === 0 && <p className="text-slate-300 text-center py-10">No requests.</p>}
           </div>
@@ -306,49 +309,63 @@ export function AdminDashboard({ user }: { user: User }) {
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px] min-w-[1020px]">
-              <thead>
-                <tr className="text-left text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-200">
+          {/* 716 rows. The header scrolls away on row 30 and the whole
+              table is then unlabelled, so it sticks; the body scrolls in
+              its own box rather than the page. Column widths are declared
+              once here so a long department name cannot squeeze the
+              controls down to a sliver. */}
+          <div className="rounded-xl ring-1 ring-slate-200 overflow-auto max-h-[70vh]">
+            <table className="w-full text-[13px] min-w-[1120px] border-collapse">
+              <colgroup>
+                <col className="w-[26%]" /><col className="w-[14%]" /><col className="w-[64px]" />
+                <col className="w-[104px]" /><col className="w-[150px]" /><col className="w-[200px]" />
+                <col className="w-[160px]" /><col className="w-[132px]" />
+              </colgroup>
+              <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
+                <tr className="text-left text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
                   {['Employee', 'Department', 'Grade', 'Level', 'HQ city', 'Approver',
                     'HOD (HRMS)', 'Role'].map(h => (
-                    <th key={h} className="px-2.5 py-2">{h}</th>
+                    <th key={h} className="px-3 py-2.5 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((u: any) => (
-                  <tr key={u.id} className={`border-b border-slate-50 ${u.is_active ? '' : 'opacity-50'}`}>
-                    <td className="px-2.5 py-2">
-                      <p className="font-black text-slate-800">{u.name}</p>
-                      <p className="text-slate-400 text-[11px]">{u.employee_id} · {u.email || 'no email'}</p>
+                  <tr key={u.id}
+                    className={`border-b border-slate-100 align-top transition-colors
+                      hover:bg-indigo-50/40 ${u.is_active ? '' : 'opacity-50'}`}>
+                    <td className="px-3 py-2.5">
+                      <p className="font-black text-slate-800 leading-tight">{u.name}</p>
+                      <p className="text-slate-400 text-[11px] mt-0.5 truncate">
+                        {u.employee_id} · {u.email || 'no email'}</p>
                     </td>
-                    <td className="px-2.5 py-2 text-slate-500">{u.department || '—'}</td>
-                    <td className="px-2.5 py-2 text-slate-400 font-semibold">{u.grade || '—'}</td>
-                    <td className="px-2.5 py-2">
+                    <td className="px-3 py-2.5 text-slate-500 text-[12px] leading-snug">
+                      {u.department || '—'}</td>
+                    <td className="px-3 py-2.5 text-slate-400 font-semibold">{u.grade || '—'}</td>
+                    <td className="px-3 py-2.5">
                       <select value={u.level} onChange={e => saveUser(u.id, 'level', e.target.value)}
-                        className={`w-[86px] px-2 py-1.5 rounded-lg ring-1 font-bold bg-white
+                        className={`w-full px-2 py-1.5 rounded-lg ring-1 font-bold bg-white
                           ${u.needs_level ? 'ring-amber-300 bg-amber-50 text-amber-700'
                                           : 'ring-slate-200 text-slate-700'}`}>
                         <option value="">Set…</option>
                         {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                       </select>
                     </td>
-                    <td className="px-2.5 py-2">
+                    <td className="px-3 py-2.5">
                       <input defaultValue={u.hq_city} placeholder="Base city"
                         onBlur={e => e.target.value.trim() !== u.hq_city
                           && saveUser(u.id, 'hq_city', e.target.value)}
-                        className="w-32 px-2 py-1.5 rounded-lg ring-1 ring-slate-200 text-slate-700" />
+                        className="w-full px-2 py-1.5 rounded-lg ring-1 ring-slate-200 text-slate-700" />
                     </td>
-                    <td className="px-2.5 py-2">
+                    <td className="px-3 py-2.5">
                       <input list="tada-approvers" defaultValue={u.reporting_manager_id}
                         placeholder="Search a name…"
                         onBlur={e => e.target.value.trim() !== u.reporting_manager_id
                           && saveUser(u.id, 'reporting_manager_id', e.target.value)}
-                        className={`w-40 px-2 py-1.5 rounded-lg ring-1 text-slate-700
+                        className={`w-full px-2 py-1.5 rounded-lg ring-1 text-slate-700
                           ${u.reporting_manager_id ? 'ring-slate-200' : 'ring-amber-300 bg-amber-50'}`} />
                       {(u.reporting_manager_name || u.approver_source) && (
-                        <p className="text-slate-400 text-[11px] mt-0.5 truncate max-w-[160px]">
+                        <p className="text-slate-400 text-[11px] mt-1 truncate">
                           {u.reporting_manager_name}
                           {/* Where it came from. HRMS sends a reporting manager for
                               almost nobody, so most of these are routed through the
@@ -359,16 +376,18 @@ export function AdminDashboard({ user }: { user: User }) {
                         </p>
                       )}
                     </td>
-                    <td className="px-2.5 py-2 text-[12px]">
+                    <td className="px-3 py-2.5 text-[12px]">
                       {u.hod_name || u.hod_id
-                        ? <><span className="text-slate-600 font-semibold">{u.hod_name || u.hod_id}</span>
+                        ? <><span className="text-slate-600 font-semibold leading-snug">
+                              {u.hod_name || u.hod_id}</span>
                             {u.hod_name && u.hod_id && (
                               <span className="block text-slate-300 text-[11px]">{u.hod_id}</span>)}</>
                         : <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-2.5 py-2">
+                    <td className="px-3 py-2.5">
                       <select value={u.role} onChange={e => saveUser(u.id, 'role', e.target.value)}
-                        className="px-2 py-1 rounded-lg ring-1 ring-slate-200 font-bold text-slate-700 bg-white">
+                        className="w-full px-2 py-1.5 rounded-lg ring-1 ring-slate-200 font-bold
+                                   text-slate-700 bg-white capitalize">
                         {['employee', 'manager', 'hr', 'finance', 'travel_desk', 'admin'].map(r => (
                           <option key={r} value={r}>{r === 'hr' ? HR_LABEL : r.replace('_', ' ')}</option>
                         ))}

@@ -123,12 +123,12 @@ export function BillCollector({ stops, heads, items, setItems }: {
    boxes left the employee guessing and the approver short of the one detail
    that would have settled the question. */
 
-const cell = 'w-full border-2 border-slate-200 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:border-indigo-400 transition-all bg-white';
+const cell = 'w-full border-2 border-slate-200 rounded-lg px-2.5 py-2 text-[13px] font-medium text-slate-700 focus:outline-none focus:border-indigo-400 transition-all bg-white';
 
 function Field({ label, children, span = '' }: { label: string; children: any; span?: string }) {
   return (
     <div className={span}>
-      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5 block">{label}</label>
+      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">{label}</label>
       {children}
     </div>
   );
@@ -159,8 +159,8 @@ function BillRow({ head, it, onPatch, onRemove }: {
   const ownVehicle = /own|bike|scooter|car/i.test(it.mode || '');
 
   return (
-    <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-2.5 space-y-2">
-      <div className="grid grid-cols-2 lg:grid-cols-12 gap-2">
+    <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3.5 space-y-3">
+      <div className="grid grid-cols-2 lg:grid-cols-12 gap-3">
 
         {head === 'lodging' && (<>
           <Field label="Hotel / Guest house" span="col-span-2 lg:col-span-4">
@@ -269,7 +269,7 @@ function BillRow({ head, it, onPatch, onRemove }: {
       </div>
 
       {/* Amount, purpose and the bill itself are common to every head. */}
-      <div className="grid grid-cols-2 lg:grid-cols-12 gap-2 items-end">
+      <div className="grid grid-cols-2 lg:grid-cols-12 gap-3 items-end">
         <Field label="Amount" span="lg:col-span-3">
           <input type="number" min="0" className={cell} placeholder="0"
             value={it.claimed_amount} onChange={e => set('claimed_amount', e.target.value)} />
