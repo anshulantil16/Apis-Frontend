@@ -8,6 +8,11 @@ import { API, fmt, HR_LABEL, type User } from './shared';
 import { Count, PBar, Ring } from './components';
 import { Detail, ReqCard } from './RequestDetail';
 
+/* The closed list the allowance matrices are keyed on. M7 and above share
+   one band, so M8/M9 are legitimate; the list stops where the policy's own
+   table does and anything beyond it is typed in deliberately elsewhere. */
+const LEVELS = ['M7', 'M6', 'M5', 'M4', 'M3', 'M2', 'M1', 'E4', 'E3', 'E2', 'E1'];
+
 export const STATUS_LABELS: Record<string, string> = {
   submitted: 'Pending Manager', manager_approved: `Pending ${HR_LABEL}`, hr_approved: 'Pending Finance',
   finance_approved: 'Finance Approved', paid: 'Paid', manager_rejected: 'Rejected · Manager',
@@ -28,6 +33,8 @@ export function AdminDashboard({ user }: { user: User }) {
      portal session: the server only accepts them from a super admin. */
   const [users, setUsers] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [uq, setUq] = useState('');
+  const [onlyGaps, setOnlyGaps] = useState(false);
   /* A failed call must not take the page down with it. Reading
      users.users off an error body ({detail: ...}) is what turned a 401
      into a blank screen. */
@@ -79,6 +86,15 @@ export function AdminDashboard({ user }: { user: User }) {
     const r = await fetch(`${API}/admin/reset/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ what }) });
     const d = await r.json(); setMsg(d.message); load();
   };
+
+  /* 716 rows is a directory, not a list: without a search this is a wall.
+     `onlyGaps` is the one that gets used -- it is the work queue, the people
+     who cannot be paid or whose request has nowhere to go. */
+  const allRows = users?.users || [];
+  const needle = uq.trim().toLowerCase();
+  const rows = allRows.filter((u: any) =>
+    (!needle || `${u.name} ${u.employee_id} ${u.email} ${u.department}`.toLowerCase().includes(needle))
+    && (!onlyGaps || u.needs_level || !u.reporting_manager_id));
 
   if (sel) return <Detail id={sel} user={user} onBack={() => setSel(null)} />;
   const reqs = (ov?.requests || []).filter((r: any) => !filter || r.status === filter);
@@ -249,17 +265,44 @@ export function AdminDashboard({ user }: { user: User }) {
           </div>
 
           {(users?.needs_level > 0 || users?.no_manager > 0) && (
-            <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 px-4 py-3 text-[13px] font-bold text-amber-800">
-              {users.needs_level > 0 && (
-                <p>{users.needs_level} people have no TA/DA level. Every allowance is
-                   worked out from the level, so theirs comes to zero until one is set.</p>
-              )}
-              {users.no_manager > 0 && (
-                <p className="mt-1">{users.no_manager} have no approver, so a request from
-                   them has nobody to go to.</p>
-              )}
+            <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 px-4 py-3">
+              <p className="text-[13px] font-bold text-amber-800">
+                Nobody can use TA/DA until these are filled in.
+              </p>
+              <ul className="mt-1 text-[12.5px] text-amber-700 font-semibold space-y-0.5">
+                {users.needs_level > 0 && (
+                  <li><b>{users.needs_level}</b> have no level — every allowance is worked
+                      out from it, so theirs comes to zero.</li>
+                )}
+                {users.no_manager > 0 && (
+                  <li><b>{users.no_manager}</b> have no approver — a request from them has
+                      nobody to go to.</li>
+                )}
+              </ul>
+              <button onClick={() => { setOnlyGaps(true); setUq(''); }}
+                className="mt-2 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[12px] font-black">
+                Show only these
+              </button>
             </div>
           )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <input value={uq} onChange={e => setUq(e.target.value)}
+              placeholder="Search a name, employee ID, email or department…"
+              className="flex-1 min-w-[220px] px-3 py-2 rounded-xl ring-1 ring-slate-200
+                         text-[13px] text-slate-700" />
+            <button onClick={() => setOnlyGaps(v => !v)}
+              className={`px-3 py-2 rounded-xl text-[12px] font-black ring-1 transition-colors
+                ${onlyGaps ? 'bg-amber-500 text-white ring-amber-500'
+                           : 'bg-white text-slate-500 ring-slate-200 hover:text-amber-600'}`}>
+              Needs setting up
+            </button>
+            <span className="text-[12px] font-bold text-slate-400">
+              {rows.length === allRows.length
+                ? `${allRows.length} people`
+                : `${rows.length} of ${allRows.length}`}
+            </span>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-[13px] min-w-[880px]">
@@ -271,7 +314,7 @@ export function AdminDashboard({ user }: { user: User }) {
                 </tr>
               </thead>
               <tbody>
-                {(users?.users || []).map((u: any) => (
+                {rows.map((u: any) => (
                   <tr key={u.id} className={`border-b border-slate-50 ${u.is_active ? '' : 'opacity-50'}`}>
                     <td className="px-2.5 py-2">
                       <p className="font-black text-slate-800">{u.name}</p>
@@ -280,26 +323,30 @@ export function AdminDashboard({ user }: { user: User }) {
                     <td className="px-2.5 py-2 text-slate-500">{u.department || '—'}</td>
                     <td className="px-2.5 py-2 text-slate-400 font-semibold">{u.grade || '—'}</td>
                     <td className="px-2.5 py-2">
-                      <input defaultValue={u.level} placeholder="M1–M7 / E1–E4"
-                        onBlur={e => e.target.value.trim().toUpperCase() !== u.level
-                          && saveUser(u.id, 'level', e.target.value)}
-                        className={`w-24 px-2 py-1 rounded-lg ring-1 font-bold uppercase
+                      <select value={u.level} onChange={e => saveUser(u.id, 'level', e.target.value)}
+                        className={`w-[86px] px-2 py-1.5 rounded-lg ring-1 font-bold bg-white
                           ${u.needs_level ? 'ring-amber-300 bg-amber-50 text-amber-700'
-                                          : 'ring-slate-200 text-slate-700'}`} />
+                                          : 'ring-slate-200 text-slate-700'}`}>
+                        <option value="">Set…</option>
+                        {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                      </select>
                     </td>
                     <td className="px-2.5 py-2">
-                      <input defaultValue={u.hq_city}
+                      <input defaultValue={u.hq_city} placeholder="Base city"
                         onBlur={e => e.target.value.trim() !== u.hq_city
                           && saveUser(u.id, 'hq_city', e.target.value)}
-                        className="w-32 px-2 py-1 rounded-lg ring-1 ring-slate-200 text-slate-700" />
+                        className="w-32 px-2 py-1.5 rounded-lg ring-1 ring-slate-200 text-slate-700" />
                     </td>
                     <td className="px-2.5 py-2">
-                      <input defaultValue={u.reporting_manager_id} placeholder="Employee ID"
+                      <input list="tada-approvers" defaultValue={u.reporting_manager_id}
+                        placeholder="Search a name…"
                         onBlur={e => e.target.value.trim() !== u.reporting_manager_id
                           && saveUser(u.id, 'reporting_manager_id', e.target.value)}
-                        className="w-28 px-2 py-1 rounded-lg ring-1 ring-slate-200 text-slate-700" />
+                        className={`w-40 px-2 py-1.5 rounded-lg ring-1 text-slate-700
+                          ${u.reporting_manager_id ? 'ring-slate-200' : 'ring-amber-300 bg-amber-50'}`} />
                       {u.reporting_manager_name && (
-                        <p className="text-slate-400 text-[11px] mt-0.5">{u.reporting_manager_name}</p>
+                        <p className="text-slate-400 text-[11px] mt-0.5 truncate max-w-[160px]">
+                          {u.reporting_manager_name}</p>
                       )}
                     </td>
                     <td className="px-2.5 py-2">
@@ -314,11 +361,21 @@ export function AdminDashboard({ user }: { user: User }) {
                 ))}
               </tbody>
             </table>
-            {users && (users.users || []).length === 0 && (
+            {users && allRows.length === 0 && (
               <p className="text-slate-300 text-center py-10">
                 Nobody here yet — press Sync from HRMS master.
               </p>
             )}
+            {users && allRows.length > 0 && rows.length === 0 && (
+              <p className="text-slate-300 text-center py-10">Nobody matches that.</p>
+            )}
+            {/* Every employee, so an approver can be picked by name rather
+                than by remembering a code. */}
+            <datalist id="tada-approvers">
+              {allRows.map((u: any) => (
+                <option key={u.id} value={u.employee_id}>{u.name} · {u.department}</option>
+              ))}
+            </datalist>
           </div>
         </div>
       )}
