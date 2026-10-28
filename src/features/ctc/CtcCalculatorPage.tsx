@@ -18,6 +18,7 @@ import {
 } from './api';
 import { BreakdownModal } from './BreakdownModal';
 import { SettingsPanel } from './SettingsPanel';
+import { useAssistantIntent } from '../assistant/intent';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 const fmtCtc = (v: string | null) => (v == null ? '—' : inr.format(Number(v)));
@@ -83,6 +84,8 @@ export function CtcCalculatorPage({ isSuperadmin = false }: { isSuperadmin?: boo
     setBusy(null);
     if (problem) setNotice({ tone: 'error', text: problem });
   };
+  // Ask APIS: "get the CTC template" downloads it as the page opens.
+  useAssistantIntent('ctc-calculator', action => { if (action === 'template') void onTemplate(); });
 
   const onFile = async (file: File | undefined) => {
     if (fileRef.current) fileRef.current.value = '';   // same file can be picked again after a fix
