@@ -33,6 +33,7 @@ import { apiBase } from '../../apiBase';
 import { DocumentReader } from './DocumentReader';
 import type { ReaderDoc } from './policyHref';
 import { hods } from '../tree/hods';
+import { useAssistantIntent } from '../assistant/intent';
 
 const POLICIES_API = `${apiBase()}/api/policies`;
 const ACCEPTED_FILES = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
@@ -312,6 +313,8 @@ export function PoliciesPage() {
     setNewCategory(category);
     setAddPolicyOpen(true);
   }
+  // Ask APIS: "add a policy" opens the Add Document form on its first category.
+  useAssistantIntent('policies', action => { if (action === 'add') openAddForm(CATEGORY_LABELS[0]); });
   function closeAddForm() {
     if (saving) return;
     setAddPolicyOpen(false);

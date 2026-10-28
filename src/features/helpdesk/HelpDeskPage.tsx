@@ -9,6 +9,7 @@ import {
   ROLE_LABEL, Reveal, Panel, Skel, Empty, StatusPill, PURPOSE_LABEL, PURPOSE_COLOUR,
   CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, AssigneePicker} from './HelpDeskShared';
 import { HelpDeskLogin } from './HelpDeskLogin';
+import { useAssistantIntent } from '../assistant/intent';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './HelpDeskAdminPanels';
 import {
   type SupportTicket, type Priority, type TicketEvent,
@@ -661,13 +662,14 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
    same popup would be reviewing their own request; same reasoning keeps
    the IT Tickets tab away from IT Support. Employee and Super Admin see
    both, same as always. ─────────────────────────────────────────────────── */
-function SupportDeskModal({ session, onClose, onDone }: {
-  session: Session; onClose: () => void; onDone: () => void;
+function SupportDeskModal({ session, onClose, onDone, initialTab }: {
+  session: Session; onClose: () => void; onDone: () => void; initialTab?: 'admin' | 'it';
 }) {
   const canAdminTicket = session.role !== 'admin';
   const canItTicket = session.role !== 'it_support';
   const showTabs = canAdminTicket && canItTicket;
-  const [deskTab, setDeskTab] = useState<'admin' | 'it'>(canAdminTicket ? 'admin' : 'it');
+  const [deskTab, setDeskTab] = useState<'admin' | 'it'>(
+    (initialTab === 'it' && canItTicket) || !canAdminTicket ? 'it' : 'admin');
 
   return (
     <div className="rp-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
@@ -873,6 +875,8 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
   const [bookRoom, setBookRoom] = useState<any>(null);
   const [showBooking, setShowBooking] = useState(false);
   const [showSupportDesk, setShowSupportDesk] = useState(false);
+  /* Which Support Desk tab to open on - set by Ask APIS. */
+  const [deskStartTab, setDeskStartTab] = useState<'admin' | 'it' | undefined>(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const loadRooms = useCallback(async () => {
@@ -931,6 +935,22 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
     const free = rooms.filter(r => r.status === 'free').length;
     return { total: rooms.length, occ, soon, free };
   }, [rooms]);
+
+  // Ask APIS opening a form here. Above the sign-in return, like every hook;
+  // it waits until there is a session, so someone who signs in first still
+  // lands on the form they asked for.
+  useAssistantIntent('helpdesk', action => {
+    if (action === 'it-ticket' || action === 'admin-ticket') {
+      setDeskStartTab(action === 'it-ticket' ? 'it' : 'admin');
+      setShowSupportDesk(true);
+    } else if (action === 'book-room') {
+      setBookRoom(null); setShowBooking(true);
+    } else if (action === 'my-requests') {
+      setTab('mine');
+    } else if (action === 'approvals') {
+      setTab('approvals');
+    }
+  }, !!session);
 
   if (!session) {
     return (
@@ -1090,8 +1110,9 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
           onClose={() => { setShowBooking(false); setBookRoom(null); }} onDone={onBookingDone} />
       )}
       {showSupportDesk && (
-        <SupportDeskModal session={session}
-          onClose={() => setShowSupportDesk(false)} onDone={onSupportDeskDone} />
+        <SupportDeskModal session={session} initialTab={deskStartTab}
+          onClose={() => { setShowSupportDesk(false); setDeskStartTab(undefined); }}
+          onDone={() => { setDeskStartTab(undefined); onSupportDeskDone(); }} />
       )}
     </div>
   );
