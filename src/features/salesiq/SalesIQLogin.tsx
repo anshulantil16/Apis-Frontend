@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Zap, Mail, ShieldCheck, ArrowRight, Loader, AlertTriangle, RotateCcw } from 'lucide-react';
 import { API } from './SalesIQShared';
+import { useHideScrollRail } from '../home/scrollRailStore';
 
 const SESSION_KEY = 'salesiq_session';
 
@@ -239,6 +240,7 @@ function Motes() {
 export function SalesIQLogin({ onSuccess }: {
   onSuccess: (email: string) => void;
 }) {
+  useHideScrollRail();
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
   const [masked, setMasked] = useState('');

@@ -9,6 +9,7 @@ import {
   Mail, ShieldCheck, ArrowRight, Gauge,
 } from 'lucide-react';
 import { Motes } from '../goalsetting/chrome';
+import { HideScrollRail } from '../home/ScrollRail';
 
 const API_BASE = apiBase();
 const PMS = `${API_BASE}/api/pms`;
@@ -364,6 +365,7 @@ export default function PMSPage() {
   if (!loggedIn) {
     return (
       <div className="min-h-full relative overflow-hidden flex items-center justify-center lg:justify-end px-4 lg:pr-16 py-10 bg-[#fdf6e3]">
+        <HideScrollRail />
         {/* The honey-desk illustration is the page, the way every other OTP
             sign-in screen in the intranet works now — not a colour wash. */}
         <img src="/PMS_simulator_bg.png" alt="" aria-hidden decoding="async"
@@ -583,7 +585,7 @@ export default function PMSPage() {
         </div>
 
         {/* Tabs */}
-        <div className="ih-inview flex items-center gap-2 bg-white/80 backdrop-blur-xl rounded-2xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto">
+        <div className="ih-inview flex items-center gap-2 bg-white/80 backdrop-blur-xl rounded-2xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto overflow-y-hidden">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id as any)}
               className={`ih-sheen flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all hover:-translate-y-0.5 ${tab===t.id ? `bg-gradient-to-r ${t.grad} text-white shadow-md hover:shadow-lg` : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>

@@ -21,6 +21,7 @@ import {
   QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, dailyQuote, type QuickAccessId,
 } from './IntranetHomeShared';
 import { AskApisButton } from '../assistant/AskApisButton';
+import { useScrollRailHidden } from './scrollRailStore';
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
    sub-views that live under a parent tool (approvals sits under letters). */
@@ -240,6 +241,8 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                                 userName, onSignOut, isSuperadmin, allowedApps }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  /* A plain scrollbar on every page, but not on a tool's sign-in screen. */
+  const hideScrollbar = useScrollRailHidden();
   const canOpen = (id: string) => isSuperadmin || !allowedApps || allowedApps.includes(id);
   const VISIBLE_GROUPS = useMemo(
     () => NAV_GROUPS
@@ -900,11 +903,11 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
           </div>
         </header>
 
-        <div className="ih-scroll-clean flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</div>
+        <div className={`${hideScrollbar ? 'ih-scroll-clean' : 'ih-scroll-bar'} flex-1 min-h-0 overflow-y-auto overflow-x-hidden`}>{children}</div>
         {profileOpen && <MyProfileCard onClose={() => setProfileOpen(false)} />}
       </main>
 
-      <AskApisButton onNavigate={onNavigate} canOpen={canOpen} />
+      <AskApisButton onNavigate={onNavigate} canOpen={canOpen} userName={userName} />
 
       {/* ── Command palette — ⌘K / Ctrl+K from anywhere in the app ─────────── */}
       {paletteOpen && (
