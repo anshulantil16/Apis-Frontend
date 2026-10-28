@@ -276,7 +276,9 @@ export function AdminDashboard({ user }: { user: User }) {
                 )}
                 {users.no_manager > 0 && (
                   <li><b>{users.no_manager}</b> have no approver — a request from them has
-                      nobody to go to.</li>
+                      nobody to go to. The master is read for all four of reporting
+                      manager, HOD, leave approver and leave recommender; these are the
+                      people Pocket HRMS has none of them for.</li>
                 )}
               </ul>
               <button onClick={() => { setOnlyGaps(true); setUq(''); }}
@@ -305,10 +307,11 @@ export function AdminDashboard({ user }: { user: User }) {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-[13px] min-w-[880px]">
+            <table className="w-full text-[13px] min-w-[1020px]">
               <thead>
                 <tr className="text-left text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-200">
-                  {['Employee', 'Department', 'Grade', 'Level', 'HQ city', 'Approver', 'Role'].map(h => (
+                  {['Employee', 'Department', 'Grade', 'Level', 'HQ city', 'Approver',
+                    'HOD (HRMS)', 'Role'].map(h => (
                     <th key={h} className="px-2.5 py-2">{h}</th>
                   ))}
                 </tr>
@@ -344,10 +347,24 @@ export function AdminDashboard({ user }: { user: User }) {
                           && saveUser(u.id, 'reporting_manager_id', e.target.value)}
                         className={`w-40 px-2 py-1.5 rounded-lg ring-1 text-slate-700
                           ${u.reporting_manager_id ? 'ring-slate-200' : 'ring-amber-300 bg-amber-50'}`} />
-                      {u.reporting_manager_name && (
+                      {(u.reporting_manager_name || u.approver_source) && (
                         <p className="text-slate-400 text-[11px] mt-0.5 truncate max-w-[160px]">
-                          {u.reporting_manager_name}</p>
+                          {u.reporting_manager_name}
+                          {/* Where it came from. HRMS sends a reporting manager for
+                              almost nobody, so most of these are routed through the
+                              HOD or the leave chain — worth seeing before trusting it. */}
+                          {u.approver_source && u.approver_source !== 'manager' && (
+                            <span className="text-slate-300"> · via {u.approver_source}</span>
+                          )}
+                        </p>
                       )}
+                    </td>
+                    <td className="px-2.5 py-2 text-[12px]">
+                      {u.hod_name || u.hod_id
+                        ? <><span className="text-slate-600 font-semibold">{u.hod_name || u.hod_id}</span>
+                            {u.hod_name && u.hod_id && (
+                              <span className="block text-slate-300 text-[11px]">{u.hod_id}</span>)}</>
+                        : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-2.5 py-2">
                       <select value={u.role} onChange={e => saveUser(u.id, 'role', e.target.value)}
