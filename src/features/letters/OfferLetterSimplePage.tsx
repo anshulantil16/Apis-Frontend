@@ -176,6 +176,12 @@ export function OfferLetterSimplePage() {
   const [success, setSuccess] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [sendEmails, setSendEmails] = useState(true);
+  /* The date printed on the letter, which is not always the day it is made.
+     Reissuing a letter in October because a figure was corrected has to keep
+     the date the letters were given out, or the corrected copy contradicts
+     the one already in the employee's file. Defaults to today, which is what
+     it did before there was a choice. */
+  const [letterDate, setLetterDate] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [progress, setProgress] = useState<any>(null);
   const [showFailedOnly, setShowFailedOnly] = useState(false);
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
@@ -242,6 +248,7 @@ export function OfferLetterSimplePage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('send_emails', sendEmails.toString());
+      formData.append('letter_date', letterDate);
 
       const response = await apiFetch(`${PMS_API}/offer-letter/upload/`, {
         method: 'POST',
@@ -379,6 +386,34 @@ export function OfferLetterSimplePage() {
                     />
                     {file && (
                       <p className="text-sm text-green-600 font-semibold mt-2">✓ {file.name}</p>
+                    )}
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <label htmlFor="letterDate" className="font-bold text-slate-900 text-sm">
+                      Date on the letter
+                    </label>
+                    <p className="text-xs text-slate-600 mt-1 mb-2">
+                      The date printed on the letter and above the signature — not
+                      today's date. Reissuing a letter keeps the date it was first
+                      given out, so the new copy agrees with the one already issued.
+                    </p>
+                    <input
+                      type="date"
+                      id="letterDate"
+                      value={letterDate}
+                      onChange={(e) => setLetterDate(e.target.value)}
+                      className="px-3 py-2 rounded-lg border-2 border-slate-200 bg-white
+                                 text-sm font-semibold text-slate-700"
+                    />
+                    {letterDate && (
+                      <p className="text-xs text-slate-500 mt-2">
+                        Letters will read{' '}
+                        <b className="text-slate-700">
+                          {new Date(`${letterDate}T00:00:00`).toLocaleDateString('en-GB',
+                            { day: '2-digit', month: 'long', year: 'numeric' })}
+                        </b>.
+                      </p>
                     )}
                   </div>
 
