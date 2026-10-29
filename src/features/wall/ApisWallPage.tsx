@@ -14,8 +14,8 @@
    Seed-photo captions/categories are hand-written to match each photo's actual
    content; dates are intentionally omitted rather than guessed, since none of
    the source files carry capture-date metadata. */
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ChevronRight, X, Sparkles, Image as ImageIcon, PartyPopper, Users, HeartHandshake, Plus, UploadCloud } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ChevronRight, X, Sparkles, Image as ImageIcon, PartyPopper, Users, HeartHandshake, Plus, UploadCloud, Shuffle, UserPlus } from 'lucide-react';
 import { apiFetch } from '../portal/session';
 import { apiBase } from '../../apiBase';
 import { useAssistantIntent } from '../assistant/intent';
@@ -38,6 +38,45 @@ const WALL_API = `${apiBase()}/api/wall`;
 function columnsFor(width: number) {
   return width >= 1280 ? 4 : width >= 1024 ? 3 : width >= 640 ? 2 : 1;
 }
+/* The wall's daily shuffle. Every photo gets a number from hashing today's
+   date with its own src (or id), and the wall is sorted by that number - so
+   the order is new each day, the same for everyone on that day, and an
+   upload slots in somewhere without reshuffling the rest. Portraits and wide
+   tiles follow the order, so the shape of the collage changes too. Photos
+   still awaiting approval (or not approved) stay first, where the uploader
+   looks for them. */
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+};
+
+function hash(text: string) {
+  /* FNV-1a, then a final mix so neighbouring dates don't give similar orders. */
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  return (h ^ (h >>> 13)) >>> 0;
+}
+
+function dailyOrder(photos: WallPhoto[], day: string) {
+  const held = photos.filter(p => p.moderationStatus === 'pending' || p.moderationStatus === 'rejected');
+  const rank = new Map(photos.map(p => [p, hash(`${day}|${p.id ?? p.src}`)]));
+  const rest = photos.filter(p => !held.includes(p)).sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0));
+  return [...held, ...rest];
+}
+
+/* Today's date key, moving on at midnight if the wall is left open. */
+function useToday() {
+  const [day, setDay] = useState(todayKey);
+  useEffect(() => {
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
+    const t = window.setTimeout(() => setDay(todayKey()), midnight + 1000);
+    return () => window.clearTimeout(t);
+  }, [day]);
+  return day;
+}
+
 function useWallColumns() {
   const [cols, setCols] = useState(() => columnsFor(window.innerWidth));
   useEffect(() => {
@@ -47,9 +86,12 @@ function useWallColumns() {
   }, []);
   return cols;
 }
-const UPLOAD_CATEGORIES = ['Celebrations', 'Team Moments', 'CSR', 'Events', 'Other'];
+const UPLOAD_CATEGORIES = ['Celebrations', 'Team Moments', 'Welcome Aboard', 'CSR', 'Events', 'Other'];
 
-/* Order here is deliberate — the wall fills row by row, so interleaving the
+/* The wall shows these in a new order each day (dailyOrder above); the
+   order below is only the list's. It was laid out by hand before the
+   shuffle, and is kept as it is. The notes that follow describe that layout:
+   the wall fills row by row, so interleaving the
    later additions among the originals spreads them across the wall instead
    of bunching them at the bottom. Portraits (the tall tiles: 08, 15, 16, 17,
    19, 22, 27-30) are placed so that, with the widening below, every row
@@ -95,6 +137,7 @@ const SEED_PHOTOS: WallPhoto[] = [
 const CATEGORY_STYLE: Record<string, { icon: typeof PartyPopper; chip: string; dot: string; pillActive: string }> = {
   'Celebrations':  { icon: PartyPopper,   chip: 'bg-amber-500/90 text-white',  dot: 'bg-amber-400',  pillActive: 'bg-amber-500 shadow-amber-500/30' },
   'Team Moments':  { icon: Users,         chip: 'bg-sky-500/90 text-white',    dot: 'bg-sky-400',    pillActive: 'bg-sky-500 shadow-sky-500/30' },
+  'Welcome Aboard': { icon: UserPlus,     chip: 'bg-violet-500/90 text-white', dot: 'bg-violet-400', pillActive: 'bg-violet-500 shadow-violet-500/30' },
   'CSR':           { icon: HeartHandshake, chip: 'bg-emerald-500/90 text-white', dot: 'bg-emerald-400', pillActive: 'bg-emerald-500 shadow-emerald-500/30' },
 };
 const styleFor = (cat: string) => CATEGORY_STYLE[cat] ?? { icon: ImageIcon, chip: 'bg-slate-500/90 text-white', dot: 'bg-slate-400', pillActive: 'bg-slate-600 shadow-slate-500/30' };
@@ -137,7 +180,8 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
     return () => { alive = false; };
   }, []);
 
-  const photos = [...uploaded, ...SEED_PHOTOS];
+  const day = useToday();
+  const photos = useMemo(() => dailyOrder([...uploaded, ...SEED_PHOTOS], day), [uploaded, day]);
   const categoryList = Array.from(new Set(photos.map(p => p.category)));
   const categories = ['All', ...categoryList];
   const filtered = filter === 'All' ? photos : photos.filter(p => p.category === filter);
@@ -263,6 +307,10 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
                   <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">APIS Wall</h1>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-[10px] font-black text-amber-600">
                     <ImageIcon className="w-3 h-3" />{photos.length} memories
+                  </span>
+                  <span title="The wall is arranged in a new order every day"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white ring-1 ring-amber-200 text-[10px] font-black text-amber-600">
+                    <Shuffle className="w-3 h-3" />Shuffled daily
                   </span>
                 </div>
                 <p className="text-sm text-slate-500 mt-1">Moments, events and memories — all in one place.</p>

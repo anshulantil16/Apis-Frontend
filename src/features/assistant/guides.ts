@@ -242,7 +242,7 @@ export const GUIDES: Guide[] = [
     tool: 'apis-wall', toolLabel: 'APIS Wall',
     steps: [
       'Open APIS Wall (menu → Resources).',
-      'Filter by category — Celebrations, Team Moments, CSR, Events.',
+      'Filter by category — Celebrations, Team Moments, Welcome Aboard, CSR, Events.',
       'Click any photo to see it full size.',
     ],
     keywords: ['wall', 'photo', 'photos', 'picture', 'pictures', 'gallery', 'event', 'events', 'celebration',
