@@ -35,6 +35,8 @@ export const GUIDES: Guide[] = [
     ],
     keywords: ['it', 'ticket', 'laptop', 'computer', 'pc', 'system', 'internet', 'wifi', 'network', 'email',
       'outlook', 'printer', 'mouse', 'keyboard', 'screen', 'software', 'install', 'password', 'slow',
+      'vpn', 'connect', 'connection', 'crash', 'crashing', 'hang', 'flicker', 'flickering', 'display',
+      'monitor', 'webcam', 'headphone', 'teams', 'virus', 'charger',
       'broken', 'error', 'not', 'working', 'issue', 'problem', 'technical', 'support'],
   },
   {
@@ -51,7 +53,8 @@ export const GUIDES: Guide[] = [
       'Admin approves it first, then arranges it — in between it shows as Awaiting Fulfilment.',
     ],
     keywords: ['admin', 'stationery', 'stationary', 'pen', 'notebook', 'furniture', 'chair', 'desk', 'pantry',
-      'printing', 'print', 'equipment', 'item', 'items', 'supplies', 'request', 'need', 'order'],
+      'printing', 'print', 'equipment', 'item', 'items', 'supplies', 'request', 'need', 'order',
+      'paper', 'a4', 'printer', 'toner', 'cartridge', 'stapler', 'file', 'folder', 'marker', 'diary'],
   },
   {
     group: 'Help Desk', title: 'Book a meeting room',
@@ -94,7 +97,8 @@ export const GUIDES: Guide[] = [
     tips: [
       'The Approvals tab appears only for Admin, IT Support and Super Admin.',
     ],
-    keywords: ['approve', 'approval', 'approvals', 'reject', 'pending', 'manager', 'waiting', 'review'],
+    keywords: ['approve', 'approval', 'approvals', 'reject', 'pending', 'manager', 'waiting', 'review',
+      'team', 'tickets', 'requests'],
   },
 
   // ── TA/DA ──────────────────────────────────────────────────────────────
@@ -137,7 +141,8 @@ export const GUIDES: Guide[] = [
       'Keep your bills — the claim is filled stop by stop against what was sanctioned.',
     ],
     keywords: ['claim', 'expense', 'expenses', 'bill', 'bills', 'reimbursement', 'reimburse', 'hotel', 'fare',
-      'after', 'trip', 'travelling', 'traveling', 'allowance', 'receipt'],
+      'after', 'trip', 'travelling', 'traveling', 'allowance', 'receipt', 'train', 'flight', 'air',
+      'lodging', 'da'],
   },
   {
     group: 'Travel (TA/DA)', title: 'Claim local travel',
@@ -147,7 +152,8 @@ export const GUIDES: Guide[] = [
       'Click New Request and choose Local Travel.',
       'Fill in the local trips and amounts, then Submit for Approval.',
     ],
-    keywords: ['local', 'conveyance', 'cab', 'auto', 'taxi', 'city', 'travel', 'claim', 'fuel', 'within'],
+    keywords: ['local', 'conveyance', 'cab', 'auto', 'taxi', 'city', 'travel', 'claim', 'fuel', 'within', 'fare',
+      'rickshaw', 'ola', 'uber', 'metro', 'bus', 'petrol', 'bill', 'bills'],
   },
 
   // ── Policies ───────────────────────────────────────────────────────────
@@ -310,7 +316,7 @@ export const GUIDES: Guide[] = [
       'Check the Leadership View for the total cost against the payroll budget.',
     ],
     keywords: ['pms', 'simulator', 'increment', 'hike', 'revision', 'raise', 'payroll', 'cost', 'budget',
-      'grade', 'merit'],
+      'grade', 'merit', 'calculation', 'calculate', 'percentage', 'percent'],
   },
 
   // ── HR documents ───────────────────────────────────────────────────────
@@ -360,7 +366,7 @@ export const GUIDES: Guide[] = [
       'Apply for leave or see your attendance there.',
     ],
     keywords: ['leave', 'leaves', 'apply', 'attendance', 'absent', 'punch', 'pocket', 'hrms',
-      'payslip', 'salary', 'slip'],
+      'payslip', 'salary', 'slip', 'credited', 'credit', 'payday', 'pay', 'paid'],
   },
   {
     group: 'Home & links', title: 'Open Bizom or ERP',
@@ -415,7 +421,7 @@ export const GUIDES: Guide[] = [
     ],
     action: { label: 'Raise an IT ticket for access', intent: 'helpdesk:it-ticket' },
     keywords: ['access', 'missing', 'cant', 'cannot', 'see', 'permission', 'allowed', 'hidden',
-      'tool', 'locked', 'denied', 'visible'],
+      'tool', 'denied', 'visible'],
   },
   {
     group: 'Getting around', title: 'Sign-in code or OTP not arriving',
@@ -428,6 +434,22 @@ export const GUIDES: Guide[] = [
     action: { label: 'Raise an IT ticket', intent: 'helpdesk:it-ticket' },
     keywords: ['otp', 'code', 'login', 'sign', 'signin', 'email', 'not', 'received', 'arriving', 'password',
       'locked', 'verification'],
+  },
+  {
+    group: 'Getting around', title: 'What Ask APIS can do',
+    tool: 'home', toolLabel: 'Home',
+    steps: [
+      'Ask how to do something — raise a ticket, claim travel, read a policy — and get the steps, with a button to the right form.',
+      'Type a tool or portal’s name (Pocket HRMS, Bizom, ERP) to open it straight away.',
+      'Ask “who is …” or “HR head” to find people from the APIS Tree.',
+      'Ask about holidays, openings, products, company facts or today’s thought.',
+      'Signed in to Help Desk? Ask “my tickets” or “is a room free now”.',
+    ],
+    tips: [
+      'Short questions work best — a few words is plenty.',
+      'Say hi any time, and close the chat with the cross to start over.',
+    ],
+    keywords: ['assistant', 'chatbot', 'bot', 'capabilities', 'features', 'abilities', 'ask', 'apis', 'bee', 'chat'],
   },
 ];
 

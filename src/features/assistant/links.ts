@@ -41,7 +41,12 @@ const ALSO: Record<string, string[]> = {
   'Instagram': ['instagram', 'insta'],
   'Facebook': ['facebook', 'fb'],
   'X': ['twitter', 'x'],
+  'AmbitionBox': ['ambitionbox', 'ambition', 'reviews', 'ratings', 'rating', 'glassdoor', 'employer'],
 };
+
+/* Employee reviews of APIS - the blue mark beside the social icons in the
+   home page header. */
+export const AMBITIONBOX_HREF = 'https://www.ambitionbox.com/reviews/apis-india-limited-reviews';
 
 /* `canOpen` is the sidebar's own access check - a tool someone can't open
    isn't offered to them here either. */
@@ -59,5 +64,6 @@ export function quickLinks(canOpen: (id: string) => boolean): QuickLink[] {
     ...QUICK_ACCESS.filter(t => canOpen(t.id)).map(t => tool(t.id, t.label, t.desc)),
     ...QUICK_PORTALS.filter(p => p.href).map(p => link(p.label, p.sub, p.href as string)),
     ...SOCIAL_LINKS.map(s => link(s.label, `APIS India on ${s.label === 'X' ? 'X (Twitter)' : s.label}`, s.href)),
+    link('AmbitionBox', 'What employees say about working at APIS', AMBITIONBOX_HREF),
   ];
 }
