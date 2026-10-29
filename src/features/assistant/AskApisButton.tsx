@@ -17,92 +17,15 @@ import type { ShellView } from '../home/IntranetShell';
 import { GUIDES, SUGGESTIONS, type Guide } from './guides';
 import { sendIntent } from './intent';
 import { quickLinks, type QuickLink } from './links';
-import { searchPeople, type PersonHit } from './people';
+import { normalize, search, searchLinks } from './search';
+import { searchPeople } from './people';
 import { HolidayAnswer } from './HolidayAnswer';
-import { isHolidayQuestion } from './holidays';
 import { BeeMascot } from './BeeMascot';
 import { ASK_APIS_STYLES } from './askApisStyles';
-
-/* Words that say nothing about which tool is meant. */
-const STOP_WORDS = new Set(['a', 'an', 'the', 'i', 'my', 'me', 'to', 'do', 'does', 'how', 'what', 'is', 'are',
-  'can', 'for', 'of', 'in', 'on', 'and', 'or', 'with', 'please', 'want', 'need', 'should', 'where', 'when',
-  'which', 'am', 'be', 'get', 'go', 'from', 'at', 'this', 'that', 'some', 'any', 'you', 'we']);
-
-/* "bookings" and "booking" both find "book"; "claims" finds "claim". Crude,
-   but enough for the words people type at a help box. */
-function stem(w: string) {
-  return w.replace(/(ings|ing|es|s|ed)$/, '') || w;
-}
-
-const INDEX = GUIDES.map(g => ({
-  g,
-  words: new Set([...g.keywords, ...(g.title.toLowerCase().match(/[a-z0-9]+/g) ?? [])].map(stem)),
-}));
-
-function termsOf(query: string) {
-  return (query.toLowerCase().replace(/[’']/g, '').match(/[a-z0-9]+/g) ?? [])
-    .filter(w => !STOP_WORDS.has(w)).map(stem);
-}
-
-function search(query: string): Guide[] {
-  const terms = termsOf(query);
-  if (terms.length === 0) return [];
-  return INDEX
-    .map(({ g, words }) => ({ g, score: terms.filter(t => words.has(t)).length }))
-    .filter(r => r.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map(r => r.g);
-}
-
-/* Links whose name (or another name for it) is in the question, best first. */
-function searchLinks(query: string, links: QuickLink[]): QuickLink[] {
-  const terms = termsOf(query);
-  if (terms.length === 0) return [];
-  return links
-    .map(l => {
-      const words = new Set([...(l.label.toLowerCase().match(/[a-z0-9]+/g) ?? []), ...l.also].map(stem));
-      return { l, score: terms.filter(t => words.has(t)).length };
-    })
-    .filter(r => r.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-    .map(r => r.l);
-}
+import { ExtraAnswer, SocialRow, type Go } from './LiveAnswers';
+import { answerFor, leadFor, type Answer } from './understand';
 
 const GROUPS = Array.from(new Set(GUIDES.map(g => g.group)));
-
-/* Everything one question found. */
-interface Answer {
-  guide?: Guide;
-  more: Guide[];
-  links: QuickLink[];
-  people: PersonHit[];
-  holiday: boolean;
-}
-
-function answerFor(text: string, links: QuickLink[], forced?: Guide): Answer {
-  if (forced) return { guide: forced, more: [], links: [], people: [], holiday: false };
-  const guides = search(text);
-  return {
-    guide: guides[0], more: guides.slice(1, 3), links: searchLinks(text, links),
-    people: searchPeople(text), holiday: isHolidayQuestion(text),
-  };
-}
-
-/* The line the bee answers with, above whatever it found. */
-function leadFor(a: Answer): string {
-  if (a.people.length === 1) return `That’s ${a.people[0].name} — here are the details 👇`;
-  if (a.people.length > 1) return `I found ${a.people.length} people who match 👇`;
-  if (a.holiday) return 'Here are the holidays for your zone 🗓️';
-  if (a.guide) {
-    const t = a.guide.title;
-    return /^I |not arriving/.test(t)
-      ? 'Let’s sort that out — here’s what to do:'
-      : `Sure! Here’s how to ${t.charAt(0).toLowerCase()}${t.slice(1).replace(/\bmy\b/g, 'your')}:`;
-  }
-  if (a.links.length) return 'You can open it right from here 👇';
-  return 'Hmm, I don’t have a guide for that yet 🤔';
-}
 
 interface Message {
   id: number;
@@ -174,6 +97,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
   const nextId = useRef(1);
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  const rootEl = useRef<HTMLDivElement>(null);
 
   const firstName = userName?.trim().split(/\s+/)[0];
   const greeting = `${firstName ? `${greetingWord()}, ${firstName}!` : 'Hi there!'} 👋`;
@@ -184,8 +108,8 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
   /* What the box would find for the words typed so far - links open
      straight away, the rest becomes a question. */
   const live = useMemo(() => {
-    const q = query.trim();
-    if (q.length < 2) return null;
+    if (query.trim().length < 2) return null;
+    const q = normalize(query);
     return {
       links: searchLinks(q, allLinks).slice(0, 2),
       people: searchPeople(q).slice(0, 2),
@@ -214,12 +138,20 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
-  /* Esc tucks the panel away, keeping the conversation. */
+  /* Esc, or a click anywhere else on the page, tucks the panel away,
+     keeping the conversation. */
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onPointer = (e: PointerEvent) => {
+      if (rootEl.current && !rootEl.current.contains(e.target as Node)) setOpen(false);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
   }, [open]);
 
   const send = (text: string, forced?: Guide) => {
@@ -237,7 +169,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
     const delay = 550 + Math.min(q.length * 12, 600);
     timers.current.push(window.setTimeout(() => {
       setMessages(ms => ms.map(m => (m.id === botId
-        ? { ...m, typing: false, text: leadFor(answer), answer, at: stamp() } : m)));
+        ? { ...m, typing: false, text: leadFor(answer, firstName), answer, at: stamp() } : m)));
     }, delay));
     input.current?.focus();
   };
@@ -254,6 +186,11 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
     if (g.action) sendIntent(g.action.intent);
     openTool(g.tool);
   };
+  /* Open a tool on a particular screen inside it, queued the same way. */
+  const goTo: Go = (view, intent) => {
+    if (intent) sendIntent(intent);
+    openTool(view);
+  };
   const openLink = (l: QuickLink) => {
     if (l.href) window.open(l.href, '_blank', 'noopener,noreferrer');
     else if (l.view) openTool(l.view);
@@ -261,7 +198,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
   const toggle = () => { setNudge(false); setOpen(o => !o); };
 
   return (
-    <div className="fixed bottom-5 right-5 z-[90] flex flex-col items-end gap-4">
+    <div ref={rootEl} className="fixed bottom-5 right-5 z-[90] flex flex-col items-end gap-4">
       <style>{ASK_APIS_STYLES}</style>
 
       {open && (
@@ -349,6 +286,11 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
                                ring-1 ring-amber-200 hover:bg-amber-100 text-[12px] font-black text-slate-700">
                     <BookOpen className="w-4 h-4 text-amber-700" />Browse all {GUIDES.length} topics<ChevronRight className="w-3.5 h-3.5" />
                   </button>
+                  {/* The same icons as the home page header. */}
+                  <div className="flex items-center justify-center gap-2.5 pt-0.5">
+                    <span className="text-[10.5px] font-black uppercase tracking-wide text-amber-900/50">Follow APIS</span>
+                    <SocialRow onQuote={() => send('Quote of the day')} />
+                  </div>
                 </>
               )}
 
@@ -402,7 +344,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
                         </div>
                         {m.answer && (
                           <AnswerBlocks answer={m.answer} query={m.query ?? ''}
-                            onAsk={send} onOpenTool={openTool} onRunAction={runAction} onOpenLink={openLink}
+                            onAsk={send} onOpenTool={openTool} onRunAction={runAction} onOpenLink={openLink} onGo={goTo}
                             onBrowse={() => setBrowsing(true)} />
                         )}
                         <div className="flex items-center gap-2 text-[10px] font-semibold text-amber-900/40">
@@ -514,19 +456,34 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
 
 /* Everything one answer found: people, holidays, links, the guide itself
    and other guides that might be meant. */
-function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpenLink, onBrowse }: {
+function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpenLink, onGo, onBrowse }: {
   answer: Answer;
   query: string;
   onAsk: (text: string, forced?: Guide) => void;
   onOpenTool: (view: ShellView) => void;
   onRunAction: (g: Guide) => void;
   onOpenLink: (l: QuickLink) => void;
+  onGo: Go;
   onBrowse: () => void;
 }) {
   const g = a.guide;
-  const nothing = !g && !a.links.length && !a.people.length && !a.holiday;
+  /* "not this" gets the same way out as a question nothing matched. */
+  const nope = a.talk?.only && a.talk.kind === 'nope';
+  const nothing = !g && !a.links.length && !a.people.length && !a.holiday && !a.extras.length && (!a.talk?.only || nope);
+  /* After a hello or a thanks, a few things to ask next. */
+  const chips = a.talk?.only && !['bye', 'night', 'who', 'help', 'nope'].includes(a.talk.kind);
   return (
     <div className="space-y-2">
+      {chips && (
+        <div className="flex flex-wrap gap-1.5">
+          {SUGGESTIONS.slice(0, 4).map(s => (
+            <button key={s} type="button" onClick={() => onAsk(s)}
+              className="aa-chip px-2.5 py-1.5 rounded-full bg-white ring-1 ring-amber-200 hover:bg-amber-50 text-[11.5px] font-bold text-slate-700">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
       {a.people.length > 0 && (
         <div className="space-y-1.5">
           {a.people.map(p => (
@@ -552,6 +509,8 @@ function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpen
       )}
 
       {a.holiday && <HolidayAnswer query={query} />}
+
+      {a.extras.map(e => <ExtraAnswer key={e.kind} extra={e} query={query} go={onGo} onAsk={onAsk} />)}
 
       {a.links.length > 0 && (
         <div className="space-y-1.5">
