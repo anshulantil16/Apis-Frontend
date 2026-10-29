@@ -49,7 +49,18 @@ function buildDirectory(): PersonHit[] {
   });
 }
 
-const DIRECTORY = buildDirectory();
+/* Some tree cards are a team or a function, not a person ("Finance &
+   Accounting", "Sales Coordination") - they would answer "account locked"
+   or "sales forecast" with a name that isn't one. */
+const NOT_A_PERSON = /&|\b(coordination|accounting|department|team|cell|desk)\b/i;
+
+const DIRECTORY = buildDirectory().filter(p => !NOT_A_PERSON.test(p.name));
+
+/* Every word of every name - so the typo fixer in search.ts leaves a name
+   alone rather than "correcting" it to some other word. */
+export const PEOPLE_WORDS = Array.from(new Set(
+  DIRECTORY.flatMap(p => p.name.toLowerCase().match(/[a-z]+/g) ?? []),
+));
 
 /* Words people use for a department, mapped to the HOD whose department it is. */
 const DEPARTMENT_WORDS: Record<string, string> = {
@@ -72,7 +83,7 @@ const WHO_WORDS = new Set(['who', 'whom', 'head', 'hod', 'contact', 'incharge', 
 /* Words in a question that are never the name being asked about. */
 const NOT_NAMES = new Set(['the', 'how', 'can', 'for', 'and', 'who', 'whom', 'you', 'what', 'where',
   'with', 'want', 'need', 'get', 'not', 'our', 'all', 'new', 'apis', 'head', 'hod', 'contact',
-  'manager', 'team', 'plant', 'room', 'leave', 'book', 'claim', 'policy', 'travel', 'ticket']);
+  'manager', 'team', 'plant', 'room', 'leave', 'book', 'claim', 'policy', 'travel', 'ticket', 'sales', 'forecast', 'won', 'test', 'menu', 'lunch']);
 
 export function searchPeople(query: string): PersonHit[] {
   const words = query.toLowerCase().replace(/[’'.]/g, '').match(/[a-z0-9]+/g) ?? [];

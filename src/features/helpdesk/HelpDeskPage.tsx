@@ -10,6 +10,7 @@ import {
   CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, AssigneePicker} from './HelpDeskShared';
 import { HelpDeskLogin } from './HelpDeskLogin';
 import { useAssistantIntent } from '../assistant/intent';
+import { IT_ISSUES, type ItIssue } from '../assistant/itIssues';
 import { ApprovalsPanel, CalendarPanel, SuperAdminPanel } from './HelpDeskAdminPanels';
 import {
   type SupportTicket, type Priority, type TicketEvent,
@@ -505,10 +506,17 @@ function AdminTicketForm({ session, onDone }: { session: Session; onDone: () => 
    by an Employee it lands Pending for IT Support to triage; raised by IT
    Support/Super Admin it's auto-approved, same convention rooms and item
    requests already use. ────────────────────────────────────────────────── */
-function ItTicketForm({ session, onDone }: { session: Session; onDone: () => void }) {
+function ItTicketForm({ session, onDone, issue }: { session: Session; onDone: () => void; issue?: ItIssue }) {
   const TICKET_CATEGORY_OPTIONS = Object.keys(TICKET_CATEGORY_LABEL);
   const blank = { category: TICKET_CATEGORY_OPTIONS[0], priority: 'medium' as Priority, subject: '', description: '', relatedTo: TICKET_RELATED_TO_OPTIONS[0] };
-  const [form, setForm] = useState(blank);
+  /* Ask APIS can start the form on a known issue; only values the form
+     itself offers are taken. */
+  const [form, setForm] = useState(() => !issue ? blank : {
+    ...blank,
+    subject: issue.subject,
+    category: TICKET_CATEGORY_OPTIONS.includes(issue.category) ? issue.category : blank.category,
+    relatedTo: TICKET_RELATED_TO_OPTIONS.includes(issue.relatedTo) ? issue.relatedTo : blank.relatedTo,
+  });
   const [files, setFiles] = useState<File[]>([]);
   const [assignee, setAssignee] = useState('');
   const [busy, setBusy] = useState(false);
@@ -662,8 +670,10 @@ function ItTicketForm({ session, onDone }: { session: Session; onDone: () => voi
    same popup would be reviewing their own request; same reasoning keeps
    the IT Tickets tab away from IT Support. Employee and Super Admin see
    both, same as always. ─────────────────────────────────────────────────── */
-function SupportDeskModal({ session, onClose, onDone, initialTab }: {
+function SupportDeskModal({ session, onClose, onDone, initialTab, issue }: {
   session: Session; onClose: () => void; onDone: () => void; initialTab?: 'admin' | 'it';
+  /* Fills the IT ticket form in (from Ask APIS). */
+  issue?: ItIssue;
 }) {
   const canAdminTicket = session.role !== 'admin';
   const canItTicket = session.role !== 'it_support';
@@ -718,7 +728,7 @@ function SupportDeskModal({ session, onClose, onDone, initialTab }: {
 
         {deskTab === 'admin'
           ? <AdminTicketForm session={session} onDone={onDone} />
-          : <ItTicketForm session={session} onDone={onDone} />}
+          : <ItTicketForm session={session} onDone={onDone} issue={issue} />}
       </div>
     </div>
   );
@@ -877,6 +887,8 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
   const [showSupportDesk, setShowSupportDesk] = useState(false);
   /* Which Support Desk tab to open on - set by Ask APIS. */
   const [deskStartTab, setDeskStartTab] = useState<'admin' | 'it' | undefined>(undefined);
+  /* An IT problem Ask APIS recognised, to fill the ticket form in with. */
+  const [deskIssue, setDeskIssue] = useState<ItIssue | undefined>(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const loadRooms = useCallback(async () => {
@@ -939,9 +951,12 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
   // Ask APIS opening a form here. Above the sign-in return, like every hook;
   // it waits until there is a session, so someone who signs in first still
   // lands on the form they asked for.
-  useAssistantIntent('helpdesk', action => {
+  useAssistantIntent('helpdesk', intent => {
+    /* "it-ticket|printer": the IT ticket form, filled in for that issue. */
+    const [action, issue] = intent.split('|');
     if (action === 'it-ticket' || action === 'admin-ticket') {
       setDeskStartTab(action === 'it-ticket' ? 'it' : 'admin');
+      setDeskIssue(IT_ISSUES.find(i => i.key === issue));
       setShowSupportDesk(true);
     } else if (action === 'book-room') {
       setBookRoom(null); setShowBooking(true);
@@ -1110,9 +1125,9 @@ export function HelpDeskPage(_props: { onNavigateBack?: () => void } = {}) {
           onClose={() => { setShowBooking(false); setBookRoom(null); }} onDone={onBookingDone} />
       )}
       {showSupportDesk && (
-        <SupportDeskModal session={session} initialTab={deskStartTab}
-          onClose={() => { setShowSupportDesk(false); setDeskStartTab(undefined); }}
-          onDone={() => { setDeskStartTab(undefined); onSupportDeskDone(); }} />
+        <SupportDeskModal session={session} initialTab={deskStartTab} issue={deskIssue}
+          onClose={() => { setShowSupportDesk(false); setDeskStartTab(undefined); setDeskIssue(undefined); }}
+          onDone={() => { setDeskStartTab(undefined); setDeskIssue(undefined); onSupportDeskDone(); }} />
       )}
     </div>
   );

@@ -18,6 +18,7 @@ import {
 } from './IntranetHomeShared';
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
 import { ReferralForm } from './ReferralFormPopup';
+import { useAssistantIntent } from '../assistant/intent';
 import { DocumentReader } from '../policies/DocumentReader';
 import { HealthInsurancePopup } from './HealthInsurancePopup';
 import type { ReaderDoc } from '../policies/policyHref';
@@ -546,9 +547,9 @@ const vacFieldLabelCls = 'block text-[11.5px] font-bold text-slate-600 mb-1.5';
    server read (useVacancies({ confidential: true })) and never appear in the
    ordinary list, the dashboard card, or the referral form's dropdown — so it
    has no referral banner, and anything added from it is filed confidential. */
-function VacanciesPopup({ onClose, isSuperadmin = false, canViewConfidential = false }:
-  { onClose: () => void; isSuperadmin?: boolean; canViewConfidential?: boolean }) {
-  const [tab, setTab] = useState<'vacancies' | 'confidential' | 'referral'>('vacancies');
+function VacanciesPopup({ onClose, isSuperadmin = false, canViewConfidential = false, initialTab = 'vacancies' }:
+  { onClose: () => void; isSuperadmin?: boolean; canViewConfidential?: boolean; initialTab?: 'vacancies' | 'referral' }) {
+  const [tab, setTab] = useState<'vacancies' | 'confidential' | 'referral'>(initialTab);
   const open = useVacancies();
   const secret = useVacancies({ confidential: true, enabled: canViewConfidential });
   const isConfidential = tab === 'confidential';
@@ -1332,6 +1333,16 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
   const [openProduct, setOpenProduct] = useState<OurProduct | null>(null);
   const [openListPopup, setOpenListPopup] = useState<'joiners' | 'vacancies' | 'announcements' | 'celebrations' | 'news' | null>(null);
   const [celebrationTab, setCelebrationTab] = useState<'birthdays' | 'anniversaries'>('birthdays');
+  const [vacancyTab, setVacancyTab] = useState<'vacancies' | 'referral'>('vacancies');
+  /* Ask APIS: "see all openings", "refer someone", "see all products". */
+  useAssistantIntent('home', action => {
+    if (action === 'vacancies' || action === 'refer') {
+      setVacancyTab(action === 'refer' ? 'referral' : 'vacancies');
+      setOpenListPopup('vacancies');
+    } else if (action === 'products') {
+      setTimeout(() => document.getElementById('our-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    }
+  });
   const filteredTools = category === 'All' ? VISIBLE_TOOLS : VISIBLE_TOOLS.filter(t => t.category === category);
 
   const { announcements, loading: announcementsLoading } = useAnnouncements();
@@ -1974,7 +1985,8 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
 
             {openProduct && <PackagingPopup product={openProduct} onClose={() => setOpenProduct(null)} />}
             {openListPopup === 'joiners' && <NewJoinersPopup onClose={() => setOpenListPopup(null)} />}
-            {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => setOpenListPopup(null)} isSuperadmin={isSuperadmin}
+            {openListPopup === 'vacancies' && <VacanciesPopup onClose={() => { setOpenListPopup(null); setVacancyTab('vacancies'); }}
+              isSuperadmin={isSuperadmin} initialTab={vacancyTab}
               canViewConfidential={!!isSuperadmin || !!canViewConfidentialVacancies} />}
             {openListPopup === 'announcements' && <AnnouncementsPopup onClose={() => setOpenListPopup(null)} />}
             {healthInsuranceOpen && <HealthInsurancePopup onClose={() => setHealthInsuranceOpen(false)} />}

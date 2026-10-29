@@ -72,7 +72,6 @@ const SEED_PHOTOS: WallPhoto[] = [
   { src: '/Apis_wall/Apiswall04.jpeg', title: 'Birthday Surprise', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall10.png', title: 'Traditional Office Celebration', category: 'Celebrations' },
   { src: '/Apis_wall/Apiswall28.jpeg', title: 'Apni Dukan Activity', category: 'Events' },
-  { src: '/Apis_wall/Apiswall05.jpeg', title: 'Team Lunch Together', category: 'Team Moments' },
   { src: '/Apis_wall/Apiswall22.jpeg', title: 'Giving Blood, Saving Lives', category: 'CSR' },
   { src: '/Apis_wall/Apiswall14.png', title: 'AIL Cares Community Drive', category: 'CSR' },
   { src: '/Apis_wall/Apiswall06.jpeg', title: 'Birthday Wishes', category: 'Celebrations' },
