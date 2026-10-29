@@ -35,8 +35,10 @@ const SYNONYMS: Record<string, string[]> = {
   net: ['internet'], wifi: ['wifi', 'internet'], mail: ['email'], gmail: ['email'], mails: ['email'],
   pc: ['computer'], cpu: ['computer'], system: ['computer'],
   reimburse: ['reimbursement'], reimbursed: ['reimbursement'],
-  boardroom: ['meeting', 'room'], cabin: ['room'],
-  joinee: ['candidate'], joiner: ['candidate'], fresher: ['candidate'],
+  boardroom: ['meeting', 'room'],
+  joinee: ['candidate'], joiner: ['candidate'], fresher: ['candidate'], hire: ['candidate'],
+  da: ['da', 'allowance'], itr: ['form16'], register: ['notebook'], registers: ['notebook'],
+  bharna: ['fill'], milegi: ['find'], kaam: ['working'], chalna: ['working'],
   photos: ['photo'], pics: ['photo'], pic: ['photo'], images: ['photo'],
 };
 
@@ -98,12 +100,34 @@ const NAMES = new Set(PEOPLE_WORDS);
    people rarely slip there, and allowing it turns "lunch" into "punch" and
    "cricket" into "ticket". Words of three letters or fewer are left alone,
    and only longer ones are corrected to a name ("asdf" is not Asif). */
+/* Everyday English that is a letter away from a word Ask APIS knows, and
+   must stay itself: "next" isn't "net" (internet), "show" isn't "slow". */
+const COMMON = new Set(('next week weeks month year years today tomorrow yesterday time times show shows give gave tell '
+  + 'take took make made come came went goes going done back much many more most also just only very than then them '
+  + 'they their there here your mine ours ourself about after before every each other others same such sure what when '
+  + 'where which while will would could should shall must might have having been being does doing said says want wants '
+  + 'need needs like look looks keep kept left right still yet ever never always often again once soon late early last '
+  + 'first second third best good great nice fine okay sorry thanks thank hello please kindly dear team staff office '
+  + 'black white work works worked working word words line lines page pages part parts side sides hand head home house '
+  + 'name names date dates days hours hour minute minutes money price cost costs paid pays pay call calls mail meet '
+  + 'item items list lists form forms file files data note notes plan plans rule rules fact facts post posts sent send').split(' '));
+
+/* Known words by their base form - "printed" is "print", a word Ask APIS
+   knows, so it isn't a typo for "printer". Filled on first use, since
+   stem() is defined below. */
+let VOCAB_STEMS: Set<string> | null = null;
+
 function correct(w: string): string {
-  if (w.length < 4 || VOCAB.has(w) || STOP_WORDS.has(w) || /\d/.test(w)) return w;
+  if (w.length < 4 || VOCAB.has(w) || STOP_WORDS.has(w) || COMMON.has(w) || /\d/.test(w)) return w;
+  VOCAB_STEMS ??= new Set([...VOCAB].map(stem));
+  if (VOCAB_STEMS.has(stem(w))) return w;
   const max = w.length >= 8 ? 2 : 1;
   let best = w, bestD = max + 1;
   for (const v of VOCAB) {
-    if (v[0] !== w[0] || (w.length < 5 && NAMES.has(v))) continue;
+    /* Never the first letter; never a name for a short word; and a short
+       word only grows into its fix ("aply" → "apply"), it doesn't shrink
+       into a shorter word ("next" → "net"). */
+    if (v[0] !== w[0] || (w.length < 5 && NAMES.has(v)) || (w.length < 6 && v.length < w.length)) continue;
     const d = distance(w, v, max);
     if (d < bestD) { best = v; bestD = d; }
   }
@@ -113,7 +137,8 @@ function correct(w: string): string {
 /* The question in the words Ask APIS knows. Unchanged words keep their
    place; a corrected or translated one is swapped in. */
 export function normalize(query: string): string {
-  return wordsIn(query.replace(/[’']/g, ''))
+  /* "form 16" is one thing - the tax form - not a form and a number. */
+  return wordsIn(query.replace(/[’']/g, '').replace(/\bform[\s-]*16\b/gi, 'form16'))
     .flatMap(w => SYNONYMS[w] ?? [correct(w)])
     .flatMap(w => SYNONYMS[w] ?? [w])
     .join(' ');
@@ -131,6 +156,7 @@ const WEAK = new Set(['not', 'no', 'see', 'my', 'open', 'check', 'add', 'find', 
   't', 'won', 'that', 'this', 'look', 'at', 'from', 'during', 'after', 'before', 'within', 'any', 'quick',
   'quickly', 'put', 'fill', 'wrong', 'fix', 'best', 'it', 'apis', 'ask', 'what', 'do', 'i', 'an', 'help',
   'thing', 'something', 'else', 'one', 'right', 'answer', 'menu', 'salary', 'who', 'k', 'ctrl',
+  'month', 'week', 'day', 'today', 'year', 'show', 'option', 'showing',
   'company', 'team', 'people', 'data', 'form'].map(stem));
 
 const INDEX = GUIDES.map(g => ({
@@ -142,9 +168,31 @@ const INDEX = GUIDES.map(g => ({
 /* A few questions whose words point two ways - "where is my ticket" shares
    "ticket" with raising one, but is about one already raised. */
 const BOOSTS: { when: (words: string[]) => boolean; title: string }[] = [
-  { when: w => w.includes('my') && w.some(x => /^(tickets?|requests?|bookings?|complaints?)$/.test(x))
+  { when: w => (w.includes('my') && w.some(x => /^(tickets?|requests?|bookings?|complaints?)$/.test(x))
+      /* "tickets", "my bookings" on their own - the ones already raised. */
+      || (w.length <= 2 && w.some(x => /^(tickets|requests|bookings|complaints)$/.test(x))))
       && !w.some(x => /^(raise|new|create|approve|approving)$/.test(x)),
     title: 'Check the status of my requests' },
+  /* "a projector for the meeting": equipment, not a room. */
+  { when: w => w.some(x => /^(projectors?|whiteboards?|speakers?|mics?|microphones?|extension|cables?|lcd|screens?)$/.test(x))
+      && w.some(x => /^(arrange|need|want|request|provide|send|get|order)$/.test(x)),
+    title: 'Request stationery, equipment or other admin items' },
+  /* "cancel the room I booked": a booking already made. */
+  { when: w => w.some(x => /^(cancel|cancell?ed|reschedule|change|modify)$/.test(x)) && w.some(x => /^(booked|booking|bookings|reservation)$/.test(x)),
+    title: 'Check the status of my requests' },
+  /* "AC not working in our cabin", "send a cleaner": the office itself -
+     an Admin request, whatever room it is in. */
+  { when: w => w.some(x => /^(ac|aircon|cooling|cleaner|cleaning|housekeeping|washroom|toilet|fan|lights?|electricity|plumbing|leakage|pest|courier|parcel|visiting)$/.test(x)),
+    title: 'Request stationery, equipment or other admin items' },
+  /* A device or account problem is IT, even when a new joiner or a CTC
+     word comes along with it - unless it is paper or toner for it. */
+  { when: w => w.some(x => /^(laptops?|desktops?|computers?|pc|monitors?|mouse|keyboards?|wifi|internet|vpn|outlook|email|software|password|locked)$/.test(x))
+      && !w.some(x => /^(paper|a4|toner|cartridges?|ctc|breakup|salary|otp|code|status|complaint|shortcut|shortcuts|ctrl)$/.test(x)),
+    title: 'Raise an IT ticket' },
+  /* "Help Desk is not showing in my menu": a missing tool. */
+  { when: w => w.some(x => /^(not|cant|cannot|missing|disappeared|gone|unable)$/.test(x))
+      && w.some(x => /^(showing|visible|appear|appearing|menu|sidebar|option|options|listed)$/.test(x)),
+    title: 'I can’t see a tool in my menu' },
   /* "travel policy", "leave rules": a policy, not a travel claim. */
   { when: w => w.some(x => /^(policy|policies|sops?|rules?|guidelines?|handbook)$/.test(x))
       && !w.some(x => /^(upload|add|new|publish|create)$/.test(x)),
@@ -159,13 +207,18 @@ export function search(query: string): Guide[] {
   if (!terms.some(t => !WEAK.has(t))) return [];
   const all = wordsIn(query);
   return INDEX
-    .map(({ g, words, title }) => ({
-      g,
-      score: terms.filter(t => words.has(t)).length
-        + 0.5 * terms.filter(t => title.has(t) && !WEAK.has(t)).length
-        + (BOOSTS.some(b => b.title === g.title && b.when(all)) ? 2 : 0),
-      strong: terms.some(t => !WEAK.has(t) && words.has(t)),
-    }))
+    .map(({ g, words, title }) => {
+      const boosted = BOOSTS.some(b => b.title === g.title && b.when(all));
+      return {
+        g,
+        score: terms.filter(t => words.has(t)).length
+          + 0.5 * terms.filter(t => title.has(t) && !WEAK.has(t)).length
+          + (boosted ? 3 : 0),
+        /* A rule that recognised the question counts as a strong word -
+           "not showing in my menu" is all weak words, and still clear. */
+        strong: boosted || terms.some(t => !WEAK.has(t) && words.has(t)),
+      };
+    })
     .filter(r => r.strong)
     .sort((a, b) => b.score - a.score)
     .map(r => r.g);

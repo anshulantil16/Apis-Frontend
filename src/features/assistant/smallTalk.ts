@@ -28,7 +28,7 @@ const KINDS: { kind: TalkKind; test: (w: string, all: string[]) => boolean }[] =
   { kind: 'nope', test: (w, all) => /^(no+|nope|nah|wrong|incorrect|useless)$/.test(w)
     || (w === 'not' && all.some(x => /^(this|that|it|helpful|right|correct|useful|what|meant|wanted|relevant)$/.test(x))) },
   { kind: 'hello', test: w => /^(h+i+|h+e+y+|h+e+l+o+|h+l+o+|hallo|hola|namaste|namaskar|namaskaar|yo|sup|wassup|whatsup|greetings|howdy|hy)$/.test(w) },
-  { kind: 'ok', test: w => /^(o+k+|okay|okk|cool|great|nice|awesome|perfect|fine|alright|got|done)$/.test(w) },
+  { kind: 'ok', test: w => /^(o+k+|okay|okk|cool|great|nice|awesome|perfect|fine|alright)$/.test(w) },
 ];
 
 /* Words that go along with small talk without being a question. */

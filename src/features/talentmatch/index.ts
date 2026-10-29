@@ -1,0 +1,1 @@
+export { TalentMatchPage } from './TalentMatchPage';

@@ -52,7 +52,7 @@ function buildDirectory(): PersonHit[] {
 /* Some tree cards are a team or a function, not a person ("Finance &
    Accounting", "Sales Coordination") - they would answer "account locked"
    or "sales forecast" with a name that isn't one. */
-const NOT_A_PERSON = /&|\b(coordination|accounting|department|team|cell|desk)\b/i;
+const NOT_A_PERSON = /&|\b(coordination|accounting|department|team|cell|desk|vacant)\b/i;
 
 const DIRECTORY = buildDirectory().filter(p => !NOT_A_PERSON.test(p.name));
 
@@ -95,7 +95,9 @@ export function searchPeople(query: string): PersonHit[] {
     const byName = DIRECTORY
       .map(p => {
         const nameWords = p.name.toLowerCase().replace(/[.]/g, ' ').match(/[a-z0-9]+/g) ?? [];
-        const hits = terms.filter(t => nameWords.some(n => n.startsWith(t))).length;
+        /* "pratik" finds Pratik by its start; a 3-letter word must be the
+           whole name ("rai"), or "per" would find Performance. */
+        const hits = terms.filter(t => nameWords.some(n => (t.length >= 4 ? n.startsWith(t) : n === t))).length;
         return { p, hits };
       })
       .filter(r => r.hits > 0)
