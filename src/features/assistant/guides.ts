@@ -54,7 +54,10 @@ export const GUIDES: Guide[] = [
     ],
     keywords: ['admin', 'stationery', 'stationary', 'pen', 'notebook', 'furniture', 'chair', 'desk', 'pantry',
       'printing', 'print', 'equipment', 'item', 'items', 'supplies', 'request', 'need', 'order',
-      'paper', 'a4', 'printer', 'toner', 'cartridge', 'stapler', 'file', 'folder', 'marker', 'diary'],
+      'projector', 'whiteboard', 'tea', 'coffee', 'water', 'snacks', 'register', 'arrange',
+      'paper', 'a4', 'printer', 'toner', 'cartridge', 'stapler', 'file', 'folder', 'marker', 'diary',
+      'visiting', 'cards', 'card', 'ac', 'cooling', 'cleaner', 'cleaning', 'housekeeping', 'washroom', 'fan',
+      'light', 'lights', 'electricity', 'plumbing', 'leakage', 'repair', 'maintenance', 'courier', 'parcel', 'facility'],
   },
   {
     group: 'Help Desk', title: 'Book a meeting room',
@@ -125,7 +128,7 @@ export const GUIDES: Guide[] = [
       'Get the tour sanctioned before you travel; claim the expenses after you are back.',
       'Your limits depend on your level and are shown on the form as you fill it in.',
     ],
-    keywords: ['tour', 'sanction', 'programme', 'program', 'trip', 'before', 'travel', 'plan', 'itinerary',
+    keywords: ['tour', 'sanction', 'programme', 'program', 'trip', 'before', 'travel', 'plan', 'itinerary', 'market', 'going',
       'advance', 'approval', 'outstation', 'visit'],
   },
   {
@@ -239,7 +242,7 @@ export const GUIDES: Guide[] = [
     tool: 'apis-wall', toolLabel: 'APIS Wall',
     steps: [
       'Open APIS Wall (menu → Resources).',
-      'Filter by category — Celebrations, Team Moments, CSR, Events.',
+      'Filter by category — Celebrations, Team Moments, Welcome Aboard, CSR, Events.',
       'Click any photo to see it full size.',
     ],
     keywords: ['wall', 'photo', 'photos', 'picture', 'pictures', 'gallery', 'event', 'events', 'celebration',
@@ -366,7 +369,8 @@ export const GUIDES: Guide[] = [
       'Apply for leave or see your attendance there.',
     ],
     keywords: ['leave', 'leaves', 'apply', 'attendance', 'absent', 'punch', 'pocket', 'hrms',
-      'payslip', 'salary', 'slip', 'credited', 'credit', 'payday', 'pay', 'paid'],
+      'payslip', 'salary', 'slip', 'credited', 'credit', 'payday', 'pay', 'paid',
+      'form16', 'tax', 'investment', 'declaration', 'regularisation', 'regularization', 'sick', 'casual', 'balance'],
   },
   {
     group: 'Home & links', title: 'Open Bizom or ERP',
@@ -433,7 +437,7 @@ export const GUIDES: Guide[] = [
     ],
     action: { label: 'Raise an IT ticket', intent: 'helpdesk:it-ticket' },
     keywords: ['otp', 'code', 'login', 'sign', 'signin', 'email', 'not', 'received', 'arriving', 'password',
-      'locked', 'verification'],
+      'verification', 'aaya', 'coming'],
   },
   {
     group: 'Getting around', title: 'What Ask APIS can do',
