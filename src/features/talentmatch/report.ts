@@ -1,7 +1,7 @@
 /* TalentMatch's exports: the ranking as a CSV, and a full comparison report
  * as a single HTML file (opens anywhere, prints to PDF). Built here in the
  * browser from the same results the page shows. */
-import type { JobProfile, Match } from './analyze';
+import { verdict, type JobProfile, type Match } from './analyze';
 
 const h = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
 const yrs = (n: number | null) => (n === null ? '—' : `${n} yrs`);
@@ -13,13 +13,17 @@ export function download(name: string, body: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function csvOf(matches: Match[]): string {
+/* The CSV is what gets mailed round and pasted into a sheet, so the
+   written reason travels with the number rather than only the score. */
+export function csvOf(matches: Match[], job: JobProfile): string {
   const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-  const head = ['Rank', 'Candidate', 'File', 'Score', 'Match', 'Experience', 'Education', 'Industry', 'Location',
+  const head = ['Rank', 'Candidate', 'File', 'Score', 'Match', 'Why', 'Concerns', 'Experience', 'Education', 'Industry', 'Location',
     'Distance (km)', 'Required skills matched',
     'Required skills missing', 'Preferred skills matched', 'Email', 'Phone'];
   const rows = matches.map((m, i) => [
-    i + 1, m.candidate.name, m.candidate.fileName, m.score, m.band, yrs(m.candidate.experience),
+    i + 1, m.candidate.name, m.candidate.fileName, m.score, m.band,
+    verdict(m, job).strengths.join('; '), verdict(m, job).concerns.join('; '),
+    yrs(m.candidate.experience),
     m.candidate.education.labels.join(' / ') || '—', m.candidate.industries.map(x => x.name).join('; ') || '—',
     m.candidate.location ?? '—', m.distance ?? '—', m.matchedRequired.join('; '), m.missingRequired.join('; '),
     m.matchedPreferred.join('; '), m.candidate.email, m.candidate.phone,
@@ -47,7 +51,10 @@ export function reportHtml(job: JobProfile, matches: Match[], jdFile: string): s
       <td>${h(m.candidate.education.labels[0] ?? '—')}</td>
       <td>${h(m.candidate.industries[0]?.name ?? '—')}</td>
       <td>${h(m.candidate.location ?? '—')}${m.distance !== null && m.distance > 40 ? ` · ${m.distance} km` : ''}</td>
-    </tr>`).join('');
+    </tr>
+    <tr><td></td><td colspan="7" style="padding-top:0;border-top:none;color:#475569;font-size:11.5px">
+      ${h(verdict(m, job).headline)}
+    </td></tr>`).join('');
   const details = matches.map((m, i) => `
     <div style="page-break-inside:avoid;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin:12px 0">
       <div style="display:flex;justify-content:space-between;align-items:baseline">

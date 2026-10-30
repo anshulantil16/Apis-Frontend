@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { ACCEPT, ReadError, readFileText } from './readFile';
 import {
-  DEFAULT_WEIGHTS, HOME_INDUSTRY, WEIGHT_LABELS, profileJob, profileResume, rank,
+  DEFAULT_WEIGHTS, HOME_INDUSTRY, WEIGHT_LABELS, profileJob, profileResume, rank, verdict,
   type Candidate, type JobProfile, type Match, type Weights,
 } from './analyze';
 import { CITIES, INDUSTRIES, cityByName } from './places';
@@ -100,8 +100,11 @@ export function TalentMatchPage() {
     for (const r of ready) {
       out.push(profileResume(r.id, r.text as string, r.file.name));
       setAnalyzed(out.length);
-      /* A beat per resume, so the progress is something you can see. */
-      await sleep(140);
+      /* Yield to the browser between resumes so the count paints and the
+         page stays responsive. It used to wait 140ms each as well, to make
+         the progress look busy -- on the 200-resume runs this tool is for,
+         that was half a minute of doing nothing on purpose. */
+      await sleep(0);
     }
     setJob(profile);
     setCandidates(out);
@@ -433,7 +436,7 @@ function Results({ job, setJob, matches, weights, setWeights, jdFile }: {
             <option value={800}>Within 800 km</option>
           </select>
           <div className="flex gap-2 ml-auto">
-            <button type="button" onClick={() => download(`TalentMatch-${job.title.replace(/[^\w]+/g, '-')}.csv`, csvOf(matches), 'text/csv')}
+            <button type="button" onClick={() => download(`TalentMatch-${job.title.replace(/[^\w]+/g, '-')}.csv`, csvOf(matches, job), 'text/csv')}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl ring-1 ring-slate-200 hover:bg-slate-50 text-[12px] font-black text-slate-700">
               <Download className="w-3.5 h-3.5" />CSV
             </button>
@@ -703,6 +706,7 @@ function Chips({ items, cls, empty = '—' }: { items: string[]; cls: string; em
 function CandidateRow({ m, rank, job, open, onToggle }: { m: Match; rank: number; job: JobProfile; open: boolean; onToggle: () => void }) {
   const b = BAND[m.band];
   const c = m.candidate;
+  const v = verdict(m, job);
   return (
     <div className={open ? 'bg-amber-50/30' : ''}>
       <button type="button" onClick={onToggle} className="w-full flex items-center gap-3 sm:gap-4 px-4 py-3.5 text-left hover:bg-slate-50/80 transition-colors">
@@ -710,7 +714,11 @@ function CandidateRow({ m, rank, job, open, onToggle }: { m: Match; rank: number
           ${rank <= 3 ? 'bg-gradient-to-br from-amber-300 to-orange-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{rank}</span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13.5px] font-black text-slate-900">{c.name}</p>
-          <p className="truncate text-[11px] text-slate-400">{c.fileName}</p>
+          {/* The reason, in words, without having to open the row. A
+              shortlist is read by asking "why this one" and a number
+              does not answer that. */}
+          <p className="truncate text-[11.5px] text-slate-500" title={v.headline}>{v.headline}</p>
+          <p className="truncate text-[10.5px] text-slate-300">{c.fileName}</p>
         </div>
         {/* Fixed widths, so every row's bar and figures sit in the same column. */}
         <div className="hidden md:block w-44 flex-shrink-0">
@@ -731,6 +739,25 @@ function CandidateRow({ m, rank, job, open, onToggle }: { m: Match; rank: number
 
       {open && (
         <div className="px-4 sm:px-6 pb-5 grid lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-3 grid sm:grid-cols-2 gap-4">
+            <div className="rounded-2xl bg-emerald-50/60 ring-1 ring-emerald-100 p-4">
+              <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-emerald-700 mb-1.5">
+                <CircleCheck className="w-3.5 h-3.5" />Why this candidate</p>
+              {v.strengths.length ? (
+                <ul className="list-disc pl-4 space-y-0.5 text-[12.5px] text-slate-700">
+                  {v.strengths.map(x => <li key={x}>{x}</li>)}</ul>
+              ) : <p className="text-[12.5px] text-slate-400">Nothing in this resume answers the JD strongly.</p>}
+            </div>
+            <div className="rounded-2xl bg-rose-50/50 ring-1 ring-rose-100 p-4">
+              <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-rose-700 mb-1.5">
+                <CircleX className="w-3.5 h-3.5" />Why not</p>
+              {v.concerns.length ? (
+                <ul className="list-disc pl-4 space-y-0.5 text-[12.5px] text-slate-700">
+                  {v.concerns.map(x => <li key={x}>{x}</li>)}</ul>
+              ) : <p className="text-[12.5px] text-slate-400">Nothing the JD asks for is missing.</p>}
+            </div>
+          </div>
+
           <div className="rounded-2xl bg-white ring-1 ring-slate-200 p-4 space-y-2.5">
             <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-slate-500"><Target className="w-3.5 h-3.5" />Score breakdown</p>
             {m.parts.map(p => (

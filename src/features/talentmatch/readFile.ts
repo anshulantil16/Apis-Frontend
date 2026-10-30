@@ -19,6 +19,70 @@ async function loadPdfJs() {
   return pdfjs;
 }
 
+/* A piece of text PDF.js found, reduced to what matters for laying it out
+   again: where it sits and how wide it is. */
+export interface TextBit { str: string; x: number; y: number; width: number }
+
+/* Resumes are very often two columns -- contact details and skills down one
+   side, the work history down the other. Read in the order PDF.js hands
+   them over, the two sides interleave: "Rahul Verma Skills 9876543210
+   Excel" and nothing downstream can make sense of it.
+
+   So: look for a vertical gutter no text crosses, with real content on both
+   sides of it, and if there is one, read the left column in full and then
+   the right. A single-column page has no such gutter and falls through
+   unchanged. */
+function gutterAt(bits: TextBit[], pageWidth: number): number | null {
+  /* Enough text on the page to be sure the gap is a layout and not just a
+     sparse page with two words on it. */
+  if (bits.length < 12 || pageWidth <= 0) return null;
+  const MIN_GAP = pageWidth * 0.04;
+  /* Only the middle of the page: the margins are empty on every page and
+     are not what anybody means by a column break. */
+  for (let cut = pageWidth * 0.3; cut <= pageWidth * 0.7; cut += pageWidth * 0.02) {
+    if (bits.some(b => b.x < cut && b.x + b.width > cut)) continue;
+    const left = bits.filter(b => b.x + b.width <= cut);
+    const right = bits.filter(b => b.x >= cut);
+    if (left.length < bits.length * 0.15 || right.length < bits.length * 0.15) continue;
+    const gap = Math.min(...right.map(b => b.x)) - Math.max(...left.map(b => b.x + b.width));
+    if (gap >= MIN_GAP) return cut;
+  }
+  return null;
+}
+
+/* One column's bits, top to bottom and left to right within a line. Lines
+   are broken on a real drop in y, not on PDF.js's own item boundaries,
+   which split mid-sentence whenever the font changes. */
+function columnLines(bits: TextBit[]): string[] {
+  const rows = [...bits].sort((a, b) => (Math.abs(a.y - b.y) > 2 ? b.y - a.y : a.x - b.x));
+  const out: string[] = [];
+  let line = '', lastY: number | null = null;
+  for (const b of rows) {
+    if (lastY !== null && Math.abs(b.y - lastY) > 2) {
+      if (line.trim()) out.push(line.trim());
+      line = '';
+    }
+    /* Two pieces with no space of their own get one, so "Python" and
+       "Advanced" sitting in two table columns do not become "PythonAdvanced". */
+    const needsSpace = !!line && !line.endsWith(' ') && !!b.str && !b.str.startsWith(' ');
+    line += (needsSpace ? ' ' : '') + b.str;
+    lastY = b.y;
+  }
+  if (line.trim()) out.push(line.trim());
+  return out;
+}
+
+export function layoutText(bits: TextBit[], pageWidth: number): string {
+  const real = bits.filter(b => b.str.trim());
+  if (!real.length) return '';
+  const cut = gutterAt(real, pageWidth);
+  if (cut === null) return columnLines(real).join('\n');
+  return [
+    ...columnLines(real.filter(b => b.x + b.width <= cut)),
+    ...columnLines(real.filter(b => b.x > cut)),
+  ].join('\n');
+}
+
 async function readPdf(file: File, onProgress: (p: number) => void): Promise<string> {
   const pdfjs = await loadPdfJs();
   const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
@@ -26,21 +90,19 @@ async function readPdf(file: File, onProgress: (p: number) => void): Promise<str
     const pdf = await task.promise;
     const pages: string[] = [];
     for (let i = 1; i <= pdf.numPages; i++) {
-      const content = await (await pdf.getPage(i)).getTextContent();
-      let line = '';
-      const lines: string[] = [];
-      let lastY: number | null = null;
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const bits: TextBit[] = [];
       for (const item of content.items) {
         if (!('str' in item)) continue;
-        const y = item.transform[5];
-        /* A new line when the text moves down, or PDF.js says the line ended. */
-        if (lastY !== null && Math.abs(y - lastY) > 2 && line.trim()) { lines.push(line); line = ''; }
-        line += (line && !line.endsWith(' ') && item.str && !item.str.startsWith(' ') ? ' ' : '') + item.str;
-        if (item.hasEOL) { lines.push(line); line = ''; }
-        lastY = y;
+        bits.push({
+          str: item.str,
+          x: item.transform[4],
+          y: item.transform[5],
+          width: item.width ?? 0,
+        });
       }
-      if (line.trim()) lines.push(line);
-      pages.push(lines.join('\n'));
+      pages.push(layoutText(bits, page.getViewport({ scale: 1 }).width));
       onProgress(i / pdf.numPages);
     }
     return pages.join('\n');
