@@ -60,11 +60,25 @@ const HEADINGS: [Section, RegExp][] = [
 ];
 
 /* A heading is a short line that starts like one. */
-function headingOf(line: string): Section | null {
+function headingLabel(line: string): Section | null {
   const l = line.replace(/[:\-–|]+$/, '').trim();
-  if (l.split(/\s+/).length > 6 || l.length > 50) return null;
+  if (!l || l.split(/\s+/).length > 6 || l.length > 50) return null;
   for (const [s, re] of HEADINGS) if (re.test(l)) return s;
   return null;
+}
+
+/* ...or a short label with its content after a colon on the same line.
+   Without this second test, "Qualification: Graduate in any discipline; MBA
+   in Marketing preferred" is nine words, so it is not read as a heading --
+   and every line after it stays in whatever section came before. In a JD
+   with a "Preferred:" block above it, that silently moved the skills from
+   the rest of the document into "preferred", where a candidate is barely
+   marked down for missing them. */
+function headingOf(line: string): Section | null {
+  const direct = headingLabel(line);
+  if (direct) return direct;
+  const colon = line.indexOf(':');
+  return colon > 0 && colon <= 40 ? headingLabel(line.slice(0, colon)) : null;
 }
 
 function sectioned(text: string) {
@@ -208,11 +222,21 @@ export function profileJob(text: string, fileName: string): JobProfile {
   const lower = text.toLowerCase();
   const parts = sectioned(text);
   const required = new Set<string>(), preferred = new Set<string>();
+  /* Skills seen only in the "About us" blurb. A JD opening "we are a
+     leading FMCG company running SAP" is describing itself, not listing
+     what the candidate must have, and counting those as requirements
+     marks down every applicant for missing them. A skill the JD asks for
+     somewhere else as well still counts, because the section that asks for
+     it adds it on its own pass. */
   for (const { section, line } of parts) {
     const lo = line.toLowerCase();
     /* "Knowledge of SAP (preferred)" - preferred inline, too. */
     const pref = section === 'preferred' || /\b(preferred|good to have|nice to have|desirable|an advantage|a plus|added advantage)\b/i.test(line);
-    for (const s of SKILL_MATCHERS) if (s.count(line, lo) > 0) (pref ? preferred : required).add(s.name);
+    for (const s of SKILL_MATCHERS) {
+      if (s.count(line, lo) === 0) continue;
+      if (section === 'summary' && !pref) continue;
+      (pref ? preferred : required).add(s.name);
+    }
   }
   for (const p of preferred) required.delete(p);
   const responsibilities = parts.filter(p => p.section === 'responsibilities' && p.line.split(/\s+/).length >= 4).map(p => p.line).slice(0, 14);
@@ -457,12 +481,16 @@ export function compare(job: JobProfile, c: Candidate, weights: Weights): Match 
     if (c.experience === null) { expScore = 0.3; expNote = `JD asks ${job.minExp}+ yrs · not found in resume`; meetsExperience = false; }
     else {
       meetsExperience = c.experience >= job.minExp;
-      /* Well past the top of a stated range is often a different level of
-         role - a small, visible deduction, not a rejection. */
-      const above = job.maxExp !== null && c.experience > job.maxExp + 3;
-      expScore = !meetsExperience ? Math.max(0, c.experience / Math.max(job.minExp, 0.5)) : above ? 0.8 : 1;
+      /* Past the top of a stated range is often a different level of
+         role: said plainly and deducted a little, further past it
+         deducted more. Neither is a rejection -- an over-qualified
+         candidate is a decision for a person, and scoring them a
+         silent 100 hid the question. */
+      const over = job.maxExp !== null ? c.experience - job.maxExp : 0;
+      expScore = !meetsExperience ? Math.max(0, c.experience / Math.max(job.minExp, 0.5))
+        : over > 3 ? 0.8 : over > 0 ? 0.92 : 1;
       expNote = `${c.experience} yrs vs ${job.minExp}${job.maxExp ? `–${job.maxExp}` : '+'} yrs asked`
-        + (above ? ' · well above the range' : '');
+        + (over > 3 ? ' · well above the range' : over > 0 ? ' · above the range' : '');
     }
   }
 
@@ -539,6 +567,72 @@ export function compare(job: JobProfile, c: Candidate, weights: Weights): Match 
     matchedRequired, missingRequired, matchedPreferred, missingPreferred, otherSkills, matchedCerts,
     responsibilities, meetsExperience, meetsEducation, fieldMatch, industryFit, distance,
   };
+}
+
+/* Why this person, in words.
+ *
+ * The score answers "how much" and the eight bars answer "out of what",
+ * but neither answers the question somebody actually opens a shortlist
+ * with: why is this one above that one. The strongest two things and the
+ * worst two, named, so a row can be read without expanding it.
+ *
+ * Everything here is drawn from the same parts the score is, so the words
+ * and the number can never say different things.
+ */
+export interface Verdict { strengths: string[]; concerns: string[]; headline: string }
+
+function phrase(m: Match, job: JobProfile, p: Part, good: boolean): string | null {
+  const c = m.candidate;
+  switch (p.key) {
+    case 'industry':
+      return m.industryFit === 'same' ? `right industry (${c.industries[0]?.name ?? job.industries[0]})`
+        : m.industryFit === 'related' ? 'a related industry'
+        : m.industryFit === 'other' ? `not from ${job.industries.join(' / ')}`
+        : 'industry not clear from the resume';
+    case 'required':
+      return good ? `${m.matchedRequired.length} of ${job.required.length} required skills`
+        : `missing ${m.missingRequired.slice(0, 3).join(', ')}`;
+    case 'preferred':
+      return good && m.matchedPreferred.length ? `has ${m.matchedPreferred.join(', ')}` : null;
+    case 'experience':
+      return c.experience === null ? 'no years of experience stated'
+        : m.meetsExperience === false ? `${c.experience} yrs against ${job.minExp} asked`
+        : `${c.experience} yrs${job.maxExp !== null && c.experience > job.maxExp ? ', above the range' : ''}`;
+    case 'education':
+      return good ? `education fits${job.fields.length && m.fieldMatch ? ` (${job.fields[0]})` : ''}`
+        : m.fieldMatch === false && job.fields.length ? `degree is not in ${job.fields.join(' / ')}`
+        : 'education below what the JD asks';
+    case 'location':
+      return m.distance === null ? (c.relocate ? 'location unknown, will relocate' : 'location not found')
+        : m.distance <= 40 ? `in ${c.location}`
+        : `${c.location}, ~${m.distance} km away${c.relocate ? ', will relocate' : ''}`;
+    case 'certifications':
+      return good ? `holds ${m.matchedCerts.join(', ')}` : `no ${job.certifications.join(' / ')}`;
+    case 'responsibilities': {
+      const n = m.responsibilities.filter(r => r.covered).length;
+      return good ? `covers ${n} of ${m.responsibilities.length} responsibilities`
+        : `touches only ${n} of ${m.responsibilities.length} responsibilities`;
+    }
+    default:
+      return null;
+  }
+}
+
+export function verdict(m: Match, job: JobProfile): Verdict {
+  /* Ranked by what each part actually did to the score, not by its own
+     percentage: 100% on a 2%-weighted part is not a reason to hire. */
+  const byGain = [...m.parts].sort((a, b) => b.weight * b.score - a.weight * a.score);
+  const byLoss = [...m.parts].sort((a, b) => b.weight * (100 - b.score) - a.weight * (100 - a.score));
+
+  const strengths = byGain.filter(p => p.score >= 70)
+    .map(p => phrase(m, job, p, true)).filter(Boolean).slice(0, 3) as string[];
+  const concerns = byLoss.filter(p => p.score < 60)
+    .map(p => phrase(m, job, p, false)).filter(Boolean).slice(0, 3) as string[];
+
+  const headline = strengths.length
+    ? strengths.slice(0, 2).join(' · ') + (concerns.length ? ` · but ${concerns[0]}` : '')
+    : concerns.length ? concerns.slice(0, 2).join(' · ') : 'Nothing in the JD to compare against';
+  return { strengths, concerns, headline: headline.charAt(0).toUpperCase() + headline.slice(1) };
 }
 
 export function rank(job: JobProfile, candidates: Candidate[], weights: Weights): Match[] {
