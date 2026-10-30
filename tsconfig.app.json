@@ -21,5 +21,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+
+  /* Tests are not part of the built app. They import vitest, which is a dev
+     dependency and is not installed on the servers -- leaving them in meant
+     a test file could fail a deploy, which it did. `npm test` type-checks
+     them on its own. */
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }
