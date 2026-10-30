@@ -156,11 +156,6 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
      screen from drawing something the API will then refuse. */
   const mayOpen = (v: AppView) =>
     v === 'admin-console' ? session.user.is_superadmin
-    /* TalentMatch is on trial and not yet a tool the server can grant
-       (accounts.AppKey). It reads files in the browser and calls no API, so
-       there is nothing server-side to refuse; open to anyone signed in until
-       it gets an access key of its own. */
-    : v === 'talent-match' ? true
     : session.user.allowed_apps.includes(v);
 
   if (view !== 'home' && !mayOpen(view)) {
