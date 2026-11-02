@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ArrowLeft, Check, MessageSquare, Pencil, Search, Send, Trash2, UserPlus, X,
+  ArrowLeft, Bell, Check, MessageSquare, Pencil, Search, Send, Trash2, UserPlus, X,
 } from 'lucide-react';
 import {
   clearThread, deleteMessage, editMessage, findPeople, listConversations, loadMessages,
@@ -14,6 +14,7 @@ import {
   type ChatMessage, type ConversationRow, type Person,
 } from './api';
 import { byDay, clockTime, listStamp } from './dates';
+import { askForDesktopAlerts, desktopAlertState } from './alerts';
 
 /* How often to ask for new messages. Four seconds reads as live without
    making 700 people poll a second apart; the browser pauses timers on a
@@ -144,11 +145,14 @@ export function ChatPage() {
               Between you and one colleague. Nobody else can read it, administrators included.
             </p>
           </div>
-          <button type="button" onClick={() => setPicking(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r
-                       from-amber-400 to-orange-500 text-white text-[12.5px] font-black shadow-sm">
-            <UserPlus className="w-4 h-4" />New message
-          </button>
+          <div className="flex items-center gap-2">
+            <DesktopAlerts />
+            <button type="button" onClick={() => setPicking(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r
+                         from-amber-400 to-orange-500 text-white text-[12.5px] font-black shadow-sm">
+              <UserPlus className="w-4 h-4" />New message
+            </button>
+          </div>
         </header>
 
         {error && (
@@ -180,6 +184,29 @@ export function ChatPage() {
 
       {picking && <PeoplePicker onPick={startWith} onClose={() => setPicking(false)} />}
     </div>
+  );
+}
+
+/* Messages pop up inside the intranet on their own. This is for the case
+   that actually matters: the tab sitting in the background while somebody
+   works in another one. The browser will only ask once, so it is offered
+   rather than demanded on page load. */
+function DesktopAlerts() {
+  const [state, setState] = useState(desktopAlertState);
+  if (state !== 'default') {
+    return state === 'granted' ? (
+      <span className="hidden sm:inline-flex items-center gap-1.5 text-[11.5px] font-bold text-emerald-600">
+        <Check className="w-3.5 h-3.5" />Desktop alerts on
+      </span>
+    ) : null;
+  }
+  return (
+    <button type="button" onClick={() => void askForDesktopAlerts().then(setState)}
+      title="Be told about a message even when this tab is in the background"
+      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl ring-1 ring-slate-200
+                 bg-white text-[12px] font-black text-slate-600 hover:text-amber-700">
+      <Bell className="w-3.5 h-3.5" />Turn on desktop alerts
+    </button>
   );
 }
 
