@@ -29,6 +29,7 @@ const PoliciesPage = lazy(() => import('./features/policies').then(m => ({ defau
 const ApisWallPage = lazy(() => import('./features/wall').then(m => ({ default: m.ApisWallPage })));
 const TalentMatchPage = lazy(() => import('./features/talentmatch').then(m => ({ default: m.TalentMatchPage })));
 const CtcCalculatorPage = lazy(() => import('./features/ctc').then(m => ({ default: m.CtcCalculatorPage })));
+const ChatPage = lazy(() => import('./features/chat').then(m => ({ default: m.ChatPage })));
 /* Straight at the file, not the barrel: PortalGate is imported eagerly from
    './features/portal' below, so going through the barrel here would pull
    AdminConsole into the entry chunk anyway and the lazy() would buy nothing. */
@@ -43,7 +44,7 @@ import { pushRecentTool, type QuickAccessId } from './features/home/IntranetHome
 import { PortalGate } from './features/portal/PortalGate';
 import type { PortalUser } from './features/portal/session';
 
-type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'helpdesk' | 'apis-tree' | 'policies' | 'apis-wall' | 'talent-match' | 'ctc-calculator' | 'admin-console';
+type AppView = 'home' | 'extractor' | 'performance' | 'appraisal' | 'goal-setting' | 'eom' | 'pms' | 'offer-letters' | 'offer-approvals' | 'tada' | 'salesiq' | 'helpdesk' | 'apis-tree' | 'policies' | 'apis-wall' | 'talent-match' | 'ctc-calculator' | 'chat' | 'admin-console';
 
 /* Header caption per view. The shell renders the sidebar and header for every
    screen, so tools never draw their own top-level chrome. */
@@ -64,6 +65,7 @@ const VIEW_META: Record<AppView, { title: string; subtitle: string }> = {
   'policies':        { title: 'Policies',            subtitle: 'Policies & Guidelines' },
   'apis-wall':       { title: 'APIS Wall',            subtitle: 'Moments & Memories' },
   'talent-match':    { title: 'TalentMatch',          subtitle: 'JD & Resume Comparison' },
+  'chat':            { title: 'Messages',            subtitle: 'Talk to a colleague' },
   'ctc-calculator':  { title: 'CTC Calculator',       subtitle: 'Salary Breakup' },
   'admin-console':   { title: 'Administrator',       subtitle: 'People, Access & Master Data' },
 };
@@ -221,6 +223,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
         <PoliciesPage />
       ) : view === 'apis-wall' ? (
         <ApisWallPage isSuperadmin={session.user.is_superadmin} />
+      ) : view === 'chat' ? (
+        <ChatPage />
       ) : view === 'talent-match' ? (
         <TalentMatchPage />
       ) : view === 'ctc-calculator' ? (
