@@ -22,6 +22,11 @@ import {
   QUICK_ACCESS, NAV_GROUPS, COMING_SOON, SOCIAL_LINKS, IH_STYLES, dailyQuote, type QuickAccessId,
 } from './IntranetHomeShared';
 import { AskApisButton } from '../assistant/AskApisButton';
+/* Straight from the two modules, not the folder's index: that also
+   exports ChatPage, and importing it here would pull the whole
+   screen into the shell bundle and undo its lazy load. */
+import { ChatToasts } from '../chat/ChatToasts';
+import { useChatAlerts } from '../chat/alerts';
 import { useScrollRailHidden } from './scrollRailStore';
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
@@ -245,6 +250,10 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
   /* A plain scrollbar on every page, but not on a tool's sign-in screen. */
   const hideScrollbar = useScrollRailHidden();
   const canOpen = (id: string) => isSuperadmin || !allowedApps || allowedApps.includes(id);
+  /* Messages runs from the shell rather than from its own page, so a
+     message finds you wherever you are in the intranet. Muted while you are
+     already reading Messages -- the thread itself is the notification. */
+  const chat = useChatAlerts(canOpen('chat'), active === 'chat');
   const VISIBLE_GROUPS = useMemo(
     () => NAV_GROUPS
       .map(g => ({ ...g, items: g.items.filter(i => canOpen(i.id)) }))
@@ -656,16 +665,6 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                 <Images className="w-3.5 h-3.5" />APIS Wall
               </button>
 
-              {canOpen('chat') && (
-                <button onClick={() => go('chat')} title="Messages — talk to a colleague"
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
-                             ${active === 'chat'
-                               ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
-                               : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
-                  <MessageSquare className="w-3.5 h-3.5" />Messages
-                </button>
-              )}
-
               {canOpen('talent-match') && (
                 <button onClick={() => go('talent-match')} title="TalentMatch — compare resumes with a JD"
                   className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
@@ -827,6 +826,24 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
             )}
 
             <div className="ml-auto flex items-center gap-2">
+              {/* Messages lives up here rather than in the sidebar: it is
+                  checked many times a day and belongs with the other
+                  always-on controls, not among the tools you open once. */}
+              {canOpen('chat') && (
+                <button onClick={() => go('chat' as ShellView)} title="Messages"
+                  className={`relative p-2 rounded-lg transition-all ${active === 'chat'
+                    ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}>
+                  <MessageSquare className="w-4 h-4" />
+                  {chat.unread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full
+                                     bg-amber-500 text-white text-[10px] font-black leading-none
+                                     flex items-center justify-center ring-2 ring-white">
+                      {chat.unread > 9 ? '9+' : chat.unread}
+                    </span>
+                  )}
+                </button>
+              )}
+
               {/* Notifications — same fixed-overlay/dropdown pattern as the
                   Quote of the Day popup above. No notifications backend
                   exists yet, so it says so rather than showing made-up
@@ -835,6 +852,9 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                 <button onClick={() => setNotifOpen(o => !o)} title="Notifications"
                   className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                   <Bell className="w-4 h-4" />
+                  {chat.items.length > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
+                  )}
                 </button>
 
                 {notifOpen && (
@@ -851,13 +871,32 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <div className="flex flex-col items-center text-center py-6">
-                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center mb-2">
-                          <Bell className="w-4.5 h-4.5 text-slate-300" />
+                      {chat.items.length === 0 ? (
+                        <div className="flex flex-col items-center text-center py-6">
+                          <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+                            <Bell className="w-4.5 h-4.5 text-slate-300" />
+                          </div>
+                          <p className="text-[12.5px] font-bold text-slate-600">No notifications yet</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">You're all caught up.</p>
                         </div>
-                        <p className="text-[12.5px] font-bold text-slate-600">No notifications yet</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">You're all caught up.</p>
-                      </div>
+                      ) : (
+                        <div className="-mx-1 mt-1 max-h-80 overflow-y-auto divide-y divide-slate-50">
+                          {chat.items.map(n => (
+                            <button key={n.conversationId} type="button"
+                              onClick={() => { setNotifOpen(false); go('chat' as ShellView); }}
+                              className="w-full flex items-start gap-2.5 px-2 py-2.5 text-left rounded-lg hover:bg-amber-50">
+                              <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center
+                                               justify-center flex-shrink-0">
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[12.5px] font-black text-slate-800">{n.name}</span>
+                                <span className="block truncate text-[11.5px] text-slate-500">{n.preview}</span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -927,6 +966,9 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
         <div className={`${hideScrollbar ? 'ih-scroll-clean' : 'ih-scroll-bar'} flex-1 min-h-0 overflow-y-auto overflow-x-hidden`}>{children}</div>
         {profileOpen && <MyProfileCard onClose={() => setProfileOpen(false)} />}
       </main>
+
+      <ChatToasts toasts={chat.toasts} onDismiss={chat.dismiss}
+        onOpen={id => { chat.dismiss(id); go('chat' as ShellView); }} />
 
       <AskApisButton onNavigate={onNavigate} canOpen={canOpen} userName={userName} />
 
