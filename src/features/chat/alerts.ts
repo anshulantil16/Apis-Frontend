@@ -29,10 +29,28 @@ export interface ChatAlert {
   at: string;
 }
 
+/* What a message says, in one line, for a popup and for the bell.
+ *
+ * A photo sent with no words has no body at all, and showing the empty
+ * string gives a popup with a name and nothing under it. Saying "Photo" is
+ * both true and the thing the reader needs to decide whether to look. */
+function previewOf(c: ConversationRow): string {
+  const m = c.last_message;
+  if (!m) return '';
+  if (m.deleted) return 'Message deleted';
+  if (m.body) return m.body;
+  const first = m.attachments?.[0];
+  if (!first) return '';
+  const more = (m.attachments?.length ?? 0) - 1;
+  const one = first.kind === 'image' ? 'Photo' : first.name;
+  return more > 0 ? `${one} and ${more} more` : one;
+}
+
 export const alertOf = (c: ConversationRow): ChatAlert => ({
   conversationId: c.id,
-  name: c.person?.name ?? 'Someone',
-  preview: c.last_message?.deleted ? 'Message deleted' : (c.last_message?.body ?? ''),
+  // A group has a name; a direct conversation is named after the person.
+  name: c.title || c.person?.name || 'Someone',
+  preview: previewOf(c),
   at: c.last_message_at,
 });
 
