@@ -247,7 +247,19 @@ export function ChatPage() {
           <ThreadList threads={threads} active={active} loaded={loaded}
             className={active !== null ? 'hidden lg:flex' : 'flex'}
             onOpen={open} onNew={() => setPicking('direct')}
-            onClear={async id => { await clearThread(id); if (active === id) setActive(null); void refreshThreads(); }} />
+            onClear={async id => {
+              /* Asked rather than done, because this is now the click that
+                 starts a real delete: once everyone in a thread has removed
+                 it and nothing new is said, the server destroys it. */
+              const t = threads.find(x => x.id === id);
+              const who = t?.title || t?.person?.name || 'this conversation';
+              if (!window.confirm(
+                `Delete your copy of ${who}?\n\n` +
+                'It goes from your list, and comes back if they write again. '
+                + 'Once everyone in it has deleted it, the messages and files are removed for good.'
+              )) return;
+              await clearThread(id); if (active === id) setActive(null); void refreshThreads();
+            }} />
 
           <section className={`rounded-2xl bg-white ring-1 ring-slate-200 overflow-hidden
             flex-col ${active === null ? 'hidden lg:flex' : 'flex'}`}>
@@ -372,7 +384,7 @@ function ThreadList({ threads, active, loaded, className, onOpen, onNew, onClear
                 </span>
               </span>
             </button>
-            <button type="button" title="Remove from your list" onClick={() => onClear(t.id)}
+            <button type="button" title="Delete this conversation for me" onClick={() => onClear(t.id)}
               className="absolute right-1 top-1 p-1 rounded-lg text-slate-300 opacity-0 group-hover:opacity-100
                          hover:text-rose-500 hover:bg-white transition-opacity">
               <X className="w-3.5 h-3.5" />
