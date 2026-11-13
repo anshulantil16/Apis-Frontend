@@ -62,8 +62,10 @@ export function extrasFor(query: string): Extra[] {
   const out: Extra[] = [];
   /* Not "i": "I want to raise a ticket" is a new ticket, not the old ones. */
   const mine = has(words, 'my', 'mine');
+  /* "my team's requests" are the team's, for a manager to approve. */
+  const team = has(words, 'team', 'teams', 'employees', 'staff', 'subordinates', 'juniors', 'reportees');
 
-  if (mine && has(words, 'ticket', 'tickets', 'request', 'requests', 'complaint', 'complaints', 'booking', 'bookings'))
+  if (mine && !team && has(words, 'ticket', 'tickets', 'request', 'requests', 'complaint', 'complaints', 'booking', 'bookings'))
     out.push({ kind: 'my-requests' });
   if (has(words, 'room', 'rooms') && has(words, 'free', 'available', 'vacant', 'empty', 'now', 'busy', 'occupied'))
     out.push({ kind: 'rooms' });

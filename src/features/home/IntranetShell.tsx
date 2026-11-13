@@ -11,7 +11,7 @@
  * IntranetHomeShared.tsx and render its body as `children` here.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { portalFetch } from '../portal/session';
+import { portalFetch, type PortalUser } from '../portal/session';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
   HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images, Calculator, UserSearch,
@@ -53,6 +53,9 @@ interface Props {
    *  granted them. A superadmin bypasses this (mayOpen already does, in
    *  App.tsx; this list is what decides what to SHOW, not what to allow). */
   allowedApps?: string[];
+  /** The signed-in person: Ask APIS offers their Employee ID and email as the
+   *  sign-in for its forms - each still confirmed by an emailed code. */
+  user?: PortalUser;
 }
 
 /* What the scroll-reveal observer watches. `.tp-reveal` is the legacy
@@ -244,7 +247,7 @@ function MyProfileCard({ onClose }: { onClose: () => void }) {
 }
 
 export function IntranetShell({ active, onNavigate, children, subNav, title, subtitle,
-                                userName, onSignOut, isSuperadmin, allowedApps }: Props) {
+                                userName, onSignOut, isSuperadmin, allowedApps, user }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   /* A plain scrollbar on every page, but not on a tool's sign-in screen. */
@@ -970,7 +973,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
       <ChatToasts toasts={chat.toasts} onDismiss={chat.dismiss}
         onOpen={id => { chat.dismiss(id); go('chat' as ShellView); }} />
 
-      <AskApisButton onNavigate={onNavigate} canOpen={canOpen} userName={userName} />
+      <AskApisButton onNavigate={onNavigate} canOpen={canOpen} userName={userName} employeeCode={user?.employee_code} userEmail={user?.email} />
 
       {/* ── Command palette — ⌘K / Ctrl+K from anywhere in the app ─────────── */}
       {paletteOpen && (
