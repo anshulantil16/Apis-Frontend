@@ -16,8 +16,9 @@ import {
   type ChatMessage, type ConversationRow, type Person, type ThreadPage,
 } from './api';
 import { AttachmentList, Pending } from './Attachments';
-import { askForDesktopAlerts, desktopAlertState } from './alerts';
+import { askForDesktopAlerts, desktopAlertState, previewsInAlerts, setPreviewsInAlerts } from './alerts';
 import { byDay, clockTime, listStamp } from './dates';
+import { merge } from './merge';
 
 const POLL_MS = 4000;
 
@@ -104,6 +105,7 @@ export function ChatPage() {
     setMessages([]); setHead(null); setReplyTo(null); setFind(''); setFiles([]);
     try {
       const d = await loadMessages(id);
+      mark.current = d.now;
       setHead(d); setMessages(d.messages); setHasMore(d.has_more);
       await markRead(id);
       void refreshThreads();
@@ -126,9 +128,22 @@ export function ChatPage() {
     return () => { alive = false; clearTimeout(t); };
   }, [find, active]);
 
-  /* New messages, and the other side's read marks, on the same poll: both
-     are answered by re-reading the newest page. */
-  const lastId = messages.length ? messages[messages.length - 1].id : 0;
+  /* Everything that changed since the last poll -- arrived, edited or
+     deleted -- in one request.
+     
+     Asking `after: <highest id>` could only ever bring new messages, so a
+     message the sender deleted stayed on the reader's screen looking
+     normal until they reloaded. Asking by time catches all three.
+
+     The mark is the SERVER's clock, handed back on every answer, so a
+     laptop running a minute fast cannot ask about a window that has not
+     happened yet and silently miss everything in it. */
+  const mark = useRef('');
+  /* Read inside the interval rather than closed over, so an arriving
+     message does not tear down the timer and restart its clock. */
+  const seenState = useRef<ChatMessage[]>([]);
+  seenState.current = messages;
+
   useEffect(() => {
     if (active === null) {
       const t = setInterval(() => void refreshThreads(), POLL_MS * 2);
@@ -137,25 +152,29 @@ export function ChatPage() {
     if (find.trim()) return;   // not while reading search results
     const t = setInterval(async () => {
       try {
-        const fresh = await loadMessages(active, { after: lastId });
+        if (!mark.current) return;   // the thread has not finished opening
+        const fresh = await loadMessages(active, { since: mark.current });
+        mark.current = fresh.now;
         if (fresh.messages.length) {
-          setMessages(m => [...m, ...fresh.messages.filter(x => !m.some(y => y.id === x.id))]);
-          await markRead(active);
+          setMessages(prev => merge(prev, fresh.messages));
+          if (fresh.messages.some(m => !m.mine && !m.deleted)) await markRead(active);
           void refreshThreads();
           return;
         }
-        /* Nothing new to add -- but a single tick may have become two.
-           Re-read the page only while something of ours is still unseen,
-           so a settled thread costs one empty request and no more. */
-        if (!messages.some(m => m.mine && !m.seen && !m.deleted)) return;
+        /* Nothing changed -- but a single tick may have become two, and a
+           read mark is not stored on the message, so no `since` can report
+           it. Re-read the page only while something of ours is still
+           unseen, so a settled thread costs one empty request and no more. */
+        if (!seenState.current.some(m => m.mine && !m.seen && !m.deleted)) return;
         const page = await loadMessages(active);
+        mark.current = page.now;
         setMessages(prev => (prev.length && page.messages.length
           && prev[prev.length - 1].id === page.messages[page.messages.length - 1].id
           ? page.messages : prev));
       } catch { /* a dropped poll is not worth an error on screen */ }
     }, POLL_MS);
     return () => clearInterval(t);
-  }, [active, lastId, find, messages, refreshThreads]);
+  }, [active, find, refreshThreads]);
 
   const send = async () => {
     const body = draft.trim();
@@ -310,10 +329,26 @@ export function ChatPage() {
    rather than demanded on page load. */
 function DesktopAlerts() {
   const [state, setState] = useState(desktopAlertState);
+  const [showText, setShowText] = useState(previewsInAlerts);
+
   if (state !== 'default') {
+    /* Once alerts are on, the only thing left to decide is whether a
+       desktop notification repeats what was said. It does not by default:
+       Windows paints that over a locked or shared screen and keeps it in
+       Notification Centre afterwards, where someone who was never given
+       Messages can read it. */
     return state === 'granted' ? (
-      <span className="hidden sm:inline-flex items-center gap-1.5 text-[11.5px] font-bold text-emerald-600">
-        <Check className="w-3.5 h-3.5" />Desktop alerts on
+      <span className="hidden sm:inline-flex items-center gap-2.5 text-[11.5px] font-bold text-emerald-600">
+        <span className="inline-flex items-center gap-1.5">
+          <Check className="w-3.5 h-3.5" />Desktop alerts on
+        </span>
+        <label title="Off: the alert says only who wrote. On: it also shows what they said, which Windows will display on a locked or shared screen."
+          className="inline-flex items-center gap-1.5 text-slate-500 cursor-pointer font-bold">
+          <input type="checkbox" id="chat-alert-previews" checked={showText}
+            onChange={e => { setShowText(e.target.checked); setPreviewsInAlerts(e.target.checked); }}
+            className="w-3.5 h-3.5 accent-amber-500" />
+          Show message text
+        </label>
       </span>
     ) : null;
   }
