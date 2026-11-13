@@ -41,6 +41,13 @@ export interface ConversationRow {
 
 export interface ThreadPage {
   conversation_id: number; is_group: boolean; title: string;
+  /* The server's clock at the moment this answer was true. Sent back as
+     `since` on the next poll, so a browser running fast or slow never asks
+     about a window the server does not recognise. */
+  now: string;
+  /* A `since` poll found more changes than one answer carries. The thread
+     must be re-read whole, because the rest cannot be asked for again. */
+  truncated?: boolean;
   person: Person | null; members: Person[];
   messages: ChatMessage[]; has_more: boolean;
 }
@@ -67,9 +74,10 @@ export const createGroup = (title: string, employee_codes: string[]): Promise<{ 
   post('/conversations/', { title, employee_codes });
 
 export function loadMessages(
-  id: number, opts: { after?: number; before?: number; q?: string } = {},
+  id: number, opts: { after?: number; before?: number; q?: string; since?: string } = {},
 ): Promise<ThreadPage> {
   const p = new URLSearchParams();
+  if (opts.since) p.set('since', opts.since);
   if (opts.after) p.set('after', String(opts.after));
   if (opts.before) p.set('before', String(opts.before));
   if (opts.q) p.set('q', opts.q);

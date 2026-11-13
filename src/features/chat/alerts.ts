@@ -74,6 +74,35 @@ export function newArrivals(
 export const seenMap = (rows: ConversationRow[]) =>
   new Map(rows.map(c => [c.id, c.last_message?.id ?? 0]));
 
+/* Whether an OS notification may repeat what the message said.
+ *
+ * Off by default, and that default is the point. A desktop notification is
+ * not shown inside the app: Windows paints it over whatever is on screen,
+ * keeps it in Notification Centre after it fades, and shows it on a locked
+ * or shared machine. People here send salary discussions, appraisal
+ * wording and scans of documents to each other, so putting the text of a
+ * message into that surface hands it to whoever is walking past the desk
+ * -- someone who was never given the Messages tool at all.
+ *
+ * Who sent it is enough to make somebody go and look, which is all the
+ * notification is for. Anybody who wants the text back can say so.
+ */
+const PREVIEW_KEY = 'apis.chat.alertPreviews';
+
+export function previewsInAlerts(): boolean {
+  try {
+    return localStorage.getItem(PREVIEW_KEY) === 'yes';
+  } catch {
+    return false;   // blocked storage must fail to the private answer
+  }
+}
+
+export function setPreviewsInAlerts(on: boolean) {
+  try {
+    localStorage.setItem(PREVIEW_KEY, on ? 'yes' : 'no');
+  } catch { /* the setting simply will not stick; the safe default holds */ }
+}
+
 /* A notification outside the browser tab, for the case this is really
    about: the intranet open in a tab nobody is looking at. Silent unless
    the person has allowed it -- asking is a separate, deliberate act, see
@@ -82,7 +111,7 @@ function desktopAlert(a: ChatAlert) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   try {
     const n = new Notification(`${a.name} sent you a message`, {
-      body: a.preview.slice(0, 180),
+      ...(previewsInAlerts() ? { body: a.preview.slice(0, 180) } : {}),
       // One notification per conversation: five messages from the same
       // person replace each other rather than stacking five deep.
       tag: `apis-chat-${a.conversationId}`,
