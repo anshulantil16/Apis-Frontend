@@ -100,8 +100,26 @@ export function ChatPage() {
 
   useEffect(() => { void refreshThreads(); }, [refreshThreads]);
 
+  /* The server's clock as of the last answer, which the poll sends back as
+     `since`. Held in a ref rather than state so that updating it does not
+     re-render the thread four times a minute. */
+  const mark = useRef('');
+  /* Read inside the interval rather than closed over, so an arriving
+     message does not tear down the timer and restart its clock. */
+  const seenState = useRef<ChatMessage[]>([]);
+  seenState.current = messages;
+
   const open = useCallback(async (id: number) => {
     setActive(id);
+    /* Cleared before the await, not after it.
+       
+       `active` changes now and the poll restarts against the new thread
+       immediately, while this request is still in flight. Leaving the old
+       thread's mark in place would let that first tick ask "what changed
+       in THIS conversation since I last read THAT one" -- which answers
+       with a handful of recent messages and paints them as if they were
+       the whole thread. An empty mark makes the poll wait its turn. */
+    mark.current = '';
     setMessages([]); setHead(null); setReplyTo(null); setFind(''); setFiles([]);
     try {
       const d = await loadMessages(id);
@@ -115,14 +133,29 @@ export function ChatPage() {
   }, [refreshThreads]);
 
   /* Searching replaces what is on screen; clearing the box puts the thread
-     back, which is the only way out people look for. */
+     back, which is the only way out people look for.
+     
+     Putting it back has to be done, not just described: without it the
+     search results stay on screen and the poll folds live changes into
+     them, leaving a thread that is half search hits and half this
+     afternoon, in one list, with no way to tell which is which. */
+  const wasFinding = useRef(false);
   useEffect(() => {
-    if (active === null || !find.trim()) return;
+    if (active === null) return;
+    const q = find.trim();
+    /* Only a search, or the clearing of one. Without this the effect also
+       fires on opening a thread, re-fetching what open() has just read. */
+    const restoring = !q && wasFinding.current;
+    wasFinding.current = !!q;
+    if (!q && !restoring) return;
     let alive = true;
     const t = setTimeout(async () => {
       try {
-        const d = await loadMessages(active, { q: find.trim() });
-        if (alive) { setMessages(d.messages); setHasMore(false); }
+        const d = q ? await loadMessages(active, { q }) : await loadMessages(active);
+        if (!alive) return;
+        setMessages(d.messages);
+        setHasMore(q ? false : d.has_more);
+        if (!q) mark.current = d.now;   // live again from this moment
       } catch { /* leave what is on screen */ }
     }, 250);
     return () => { alive = false; clearTimeout(t); };
@@ -138,12 +171,6 @@ export function ChatPage() {
      The mark is the SERVER's clock, handed back on every answer, so a
      laptop running a minute fast cannot ask about a window that has not
      happened yet and silently miss everything in it. */
-  const mark = useRef('');
-  /* Read inside the interval rather than closed over, so an arriving
-     message does not tear down the timer and restart its clock. */
-  const seenState = useRef<ChatMessage[]>([]);
-  seenState.current = messages;
-
   useEffect(() => {
     if (active === null) {
       const t = setInterval(() => void refreshThreads(), POLL_MS * 2);
@@ -155,6 +182,18 @@ export function ChatPage() {
         if (!mark.current) return;   // the thread has not finished opening
         const fresh = await loadMessages(active, { since: mark.current });
         mark.current = fresh.now;
+        if (fresh.truncated) {
+          /* More changed than one answer holds -- a tab left open over a
+             weekend. The rest cannot be asked for again, so re-read the
+             thread rather than carry on from a mark we have not caught
+             up to. */
+          const page = await loadMessages(active);
+          mark.current = page.now;
+          setMessages(page.messages); setHasMore(page.has_more);
+          await markRead(active);
+          void refreshThreads();
+          return;
+        }
         if (fresh.messages.length) {
           setMessages(prev => merge(prev, fresh.messages));
           if (fresh.messages.some(m => !m.mine && !m.deleted)) await markRead(active);

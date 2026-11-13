@@ -45,6 +45,9 @@ export interface ThreadPage {
      `since` on the next poll, so a browser running fast or slow never asks
      about a window the server does not recognise. */
   now: string;
+  /* A `since` poll found more changes than one answer carries. The thread
+     must be re-read whole, because the rest cannot be asked for again. */
+  truncated?: boolean;
   person: Person | null; members: Person[];
   messages: ChatMessage[]; has_more: boolean;
 }
