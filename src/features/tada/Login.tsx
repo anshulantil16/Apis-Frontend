@@ -16,6 +16,8 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [step, setStep] = useState<'id' | 'otp'>('id');
   const [msg, setMsg] = useState('');
   const [masked, setMasked] = useState('');
+  // Only sent by a developer's backend that has no mail account to email it with.
+  const [devOtp, setDevOtp] = useState('');
   const [busy, setBusy] = useState(false);
 
   const send = async (asAdmin = false) => {
@@ -25,7 +27,7 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
       const body = asAdmin ? {} : { employee_id: empId.trim() };
       const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json();
-      if (r.ok) { setMode(asAdmin ? 'admin' : 'user'); setStep('otp'); setMasked(d.masked_email); } else setMsg(d.error || 'Failed');
+      if (r.ok) { setMode(asAdmin ? 'admin' : 'user'); setStep('otp'); setMasked(d.masked_email); setDevOtp(d.dev_otp || ''); } else setMsg(d.error || 'Failed');
     } catch { setMsg('Network error'); }
     setBusy(false);
   };
@@ -171,6 +173,13 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
                   <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 shrink-0" /> Code sent to <b>{masked}</b>
                   </div>
+                  {devOtp && (
+                    <button type="button" onClick={() => setOtp(devOtp)}
+                      className="w-full bg-sky-50 border border-sky-100 rounded-xl px-4 py-2.5 mb-4 text-[12.5px] text-sky-800 text-left">
+                      <b>Local testing:</b> email isn't set up on this machine, so your code is{' '}
+                      <b className="font-mono tracking-widest">{devOtp}</b> — click to fill it in.
+                    </button>
+                  )}
                   <label className="text-xs font-bold text-slate-500 mb-1.5 block">One-Time Password</label>
                   <div className="relative mb-3.5">
                     <KeyRound className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
