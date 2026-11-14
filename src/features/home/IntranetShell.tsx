@@ -12,6 +12,8 @@
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { portalFetch, type PortalUser } from '../portal/session';
+import { WelcomeToast, WelcomeNotification } from './WelcomeToast';
+import { isWelcomePreview, markWelcomed } from './welcome';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
   HelpCircle, User, Network, ShieldCheck, Quote, X, LogOut, Crown, Images, Calculator, UserSearch,
@@ -53,8 +55,7 @@ interface Props {
    *  granted them. A superadmin bypasses this (mayOpen already does, in
    *  App.tsx; this list is what decides what to SHOW, not what to allow). */
   allowedApps?: string[];
-  /** The signed-in person: Ask APIS offers their Employee ID and email as the
-   *  sign-in for its forms - each still confirmed by an emailed code. */
+  /** The signed-in person, for the new joiner's "Welcome aboard" note. */
   user?: PortalUser;
 }
 
@@ -274,12 +275,34 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
   const todaysQuote = useMemo(() => dailyQuote(), []);
   const [notifOpen, setNotifOpen] = useState(false);
 
+  /* A new joiner's welcome: the note waits for the Quote of the Day to have
+     shown and closed, and steps aside whenever the quote is reopened, so the
+     two never sit on top of each other. Its notification stays all day. */
+  const [welcomePreview] = useState(isWelcomePreview);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => !!user && (welcomePreview || !!user.welcome));
+  const [quoteShown, setQuoteShown] = useState(false);
+  const welcomeVisible = welcomeOpen && quoteShown && !quoteOpen;
+  const welcomeMarked = useRef(false);
+  useEffect(() => {
+    if (!welcomeVisible || welcomePreview || welcomeMarked.current) return;
+    welcomeMarked.current = true;
+    markWelcomed();
+  }, [welcomeVisible, welcomePreview]);
+  /* The note closes by itself after 9 seconds; the bell keeps it all day. */
+  useEffect(() => {
+    if (!welcomeVisible) return;
+    const t = setTimeout(() => setWelcomeOpen(false), 9000);
+    return () => clearTimeout(t);
+  }, [welcomeVisible]);
+  const welcomeNote = !!user && (welcomePreview || !!user.welcome || !!user.welcome_today);
+  const [notifSeen, setNotifSeen] = useState(false);
+
   // Greets with the quote popup on its own the moment the dashboard loads
   // (once — not on every re-render), auto-dismissing after 4s same as a
   // toast. Still toggleable by hand afterwards via the icon.
   useEffect(() => {
-    const openTimer = setTimeout(() => setQuoteOpen(true), 600);
-    return () => clearTimeout(openTimer);
+    const openTimer = setTimeout(() => { setQuoteOpen(true); setQuoteShown(true); }, 600);
+    return () => clearTimeout(openTimer);  
   }, []);
   useEffect(() => {
     if (!quoteOpen) return;
@@ -852,10 +875,10 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                   exists yet, so it says so rather than showing made-up
                   rows, and the bell carries no unread dot. */}
               <div className="relative">
-                <button onClick={() => setNotifOpen(o => !o)} title="Notifications"
+                <button onClick={() => { setNotifOpen(o => !o); setNotifSeen(true); }} title="Notifications"
                   className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                   <Bell className="w-4 h-4" />
-                  {chat.items.length > 0 && (
+                  {(chat.items.length > 0 || (welcomeNote && !notifSeen)) && (
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
                   )}
                 </button>
@@ -874,15 +897,8 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      {chat.items.length === 0 ? (
-                        <div className="flex flex-col items-center text-center py-6">
-                          <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center mb-2">
-                            <Bell className="w-4.5 h-4.5 text-slate-300" />
-                          </div>
-                          <p className="text-[12.5px] font-bold text-slate-600">No notifications yet</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">You're all caught up.</p>
-                        </div>
-                      ) : (
+                      {welcomeNote && user && <div className="mt-2"><WelcomeNotification user={user} /></div>}
+                      {chat.items.length > 0 && (
                         <div className="-mx-1 mt-1 max-h-80 overflow-y-auto divide-y divide-slate-50">
                           {chat.items.map(n => (
                             <button key={n.conversationId} type="button"
@@ -898,6 +914,15 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                               </span>
                             </button>
                           ))}
+                        </div>
+                      )}
+                      {chat.items.length === 0 && !(welcomeNote && user) && (
+                        <div className="flex flex-col items-center text-center py-6">
+                          <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+                            <Bell className="w-4.5 h-4.5 text-slate-300" />
+                          </div>
+                          <p className="text-[12.5px] font-bold text-slate-600">No notifications yet</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">You're all caught up.</p>
                         </div>
                       )}
                     </div>
@@ -967,6 +992,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
         </header>
 
         <div className={`${hideScrollbar ? 'ih-scroll-clean' : 'ih-scroll-bar'} flex-1 min-h-0 overflow-y-auto overflow-x-hidden`}>{children}</div>
+        {welcomeVisible && user && <WelcomeToast user={user} onClose={() => setWelcomeOpen(false)} />}
         {profileOpen && <MyProfileCard onClose={() => setProfileOpen(false)} />}
       </main>
 

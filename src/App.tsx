@@ -199,7 +199,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
         <AdminConsoleLazy me={session.user} />
       ) : view === 'home' ? (
         <IntranetHomePage onNavigate={navigate} allowedApps={session.user.allowed_apps} isSuperadmin={session.user.is_superadmin}
-          canViewConfidentialVacancies={session.user.can_view_confidential_vacancies} />
+          canViewConfidentialVacancies={session.user.can_view_confidential_vacancies}
+          canReviewReferrals={!!session.user.can_review_referrals} />
       ) : view === 'extractor' ? (
         <DataExtractorPage />
       ) : view === 'helpdesk' ? (

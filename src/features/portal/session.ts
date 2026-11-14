@@ -36,10 +36,18 @@ export type PortalUser = {
   can_manage_tree: boolean;
   // Sees and may add confidential vacancies. A superadmin always does.
   can_view_confidential_vacancies: boolean;
+  // Sees the Referrals Received tab (every referral, with the HR section).
+  // A superadmin always does.
+  can_review_referrals?: boolean;
   allowed_apps: string[];
   from_hrms: boolean;
   last_login_at: string | null;
   last_synced_at: string | null;
+  // On the New Joiners list and not yet shown the "Welcome aboard" note.
+  // Sent by /me/ only.
+  welcome?: boolean;
+  // Was shown it today: it stays in their notifications until midnight.
+  welcome_today?: boolean;
 };
 
 export const getToken = () => {
