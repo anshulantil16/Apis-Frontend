@@ -78,12 +78,13 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
       name: 'Devender Kumar', role: 'M2- Dy. Manager - HO',
       photo: '/hierarchy/Devender Kumar- Dy. Manager - IT  .jpeg',
       reports: [
-        // Anshul Antil sits to the left of Kunal, with Rainy Chaudhary
-        // nested one level under him; Ravi follows.
+        // Anshul Antil sits first, with Rainy Chaudhary nested one level
+        // under him; Sahil Jha beside him, then Kunal and Ravi.
         {
           name: 'Anshul Antil', role: 'O5- Lead Automation- IT- HO',
           reports: [{ name: 'Rainy Chaudhary', role: 'AI & ML Automation- IT- HO' }],
         },
+        { name: 'Sahil Jha', role: 'O5- Business Analyst- IT- HO' },
         { name: 'Kunal', role: 'IT Support- IT- HO' },
         { name: 'Ravi', role: 'O5- IT- Roorkee' },
       ],
