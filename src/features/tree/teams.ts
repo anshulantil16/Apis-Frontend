@@ -63,7 +63,7 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
   'pankaj-tripathi': [
     {
       name: 'Hemant Tripathi', role: 'M2- HRBP- HO',
-      photo: '/hierarchy/Hemant Tripathi- Dy. Manager- HRBP.jpeg',
+      photo: '/hierarchy/Hemant_Tripathi.jpeg',
       reports: [
         { name: 'Sandhya Singh', role: 'M1- AM- TA & TM- HO' },
         { name: 'Gopa', role: 'O5- Sr. Executive- TA & ER- HO' },
@@ -109,7 +109,6 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
   // uses the generic person icon rather than attempting one.
   'heera-swami': [
     { name: 'Rahul Dutt Sharma', role: 'M5- AGM- Production- Roorkee', location: 'Roorkee' },
-    { name: 'Sarvan Kumar', role: 'M3- Manager- Engineering- Roorkee', location: 'Roorkee' },
     { name: 'Amir Khan', role: 'M1- AM- Store & Dispatch- Roorkee', location: 'Roorkee' },
     { name: 'Sunil Kumar', role: 'M3- Manager- QA & QC- Roorkee', location: 'Roorkee' },
   ],
@@ -264,12 +263,10 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
   'vikas-aggarwal': [
     { name: 'Sonal', role: 'O4- Executive- HO' },
   ],
-  // Export (Ershad Alam) — five flat direct reports, two of them vacant
-  // seats, per the org chart supplied. Added to FLAT_TREE_IDS above. The
-  // two vacant seats need distinct names (grade folded in) since every
-  // flat-tree card is keyed by name.
+  // Export (Ershad Alam) — four flat direct reports, one of them a vacant
+  // seat. Added to FLAT_TREE_IDS above. A vacant seat needs a distinct name
+  // (grade folded in) since every flat-tree card is keyed by name.
   'ershad-alam': [
-    { name: 'Nickey Sasi', role: 'M3- Manager' },
     { name: 'Vacant (M1-AM)', role: 'M1- AM', location: 'HO' },
     { name: 'Pratik Rai', role: 'O5- Sr. Executive- Export', location: 'HO' },
     { name: 'Gholam', role: 'M1- AM', location: 'HO' },
@@ -303,7 +300,6 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
         {
           name: 'Tapan Behera', role: 'M4- Sr. Manager- HO',
           reports: [
-            { name: 'Harpal Singh', role: 'M1- AM' },
             { name: 'Rishab', role: 'O5- Sr. Executive' },
             { name: 'Pravesh', role: 'O5- Sr. Executive' },
             { name: 'Puneet Singh', role: 'O4- Executive' },
