@@ -34,7 +34,10 @@ function fmtAvgDur(total: number, count: number): string {
   return `${Math.floor(avg)}:${String(Math.round((avg - Math.floor(avg)) * 60)).padStart(2, '0')}h`;
 }
 
-const LATE_MINS = 10 * 60 + 30;
+// Punch in after this and the day counts as Late. 11:00 sharp is on time:
+// every check below is a strict `>`, so the cutoff minute itself is not late.
+// Was 10:30 until 16 Nov 2026.
+const LATE_MINS = 11 * 60;
 
 function missingPunchType(rec: DelhiRecord): 'no_out' | 'no_in' | null {
   // parseTimeMinutes validates format — rejects placeholders like "0", "N/A", "unswipe"
