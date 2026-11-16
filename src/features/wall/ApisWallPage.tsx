@@ -411,10 +411,9 @@ export function ApisWallPage({ isSuperadmin = false }: { isSuperadmin?: boolean 
                 </span>
                 <div className="absolute bottom-2.5 left-2.5 right-2.5 transition-transform duration-300 group-hover:-translate-y-0.5">
                   <p className="text-[12.5px] font-black text-white leading-snug drop-shadow">{p.title}</p>
-                  {p.submittedBy && (
+                  {pending && p.isMine && (
                     <p className="text-[10px] font-bold text-white/70 drop-shadow mt-0.5">
-                      {pending && p.isMine ? 'Your upload — visible only to you until approved'
-                        : `Uploaded by ${p.submittedBy}`}
+                      Your upload — visible only to you until approved
                     </p>
                   )}
                 </div>

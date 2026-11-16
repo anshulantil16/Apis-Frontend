@@ -226,6 +226,18 @@ const BOOSTS: { when: (words: string[]) => boolean; title: string }[] = [
       /* "welcome aboard post for the new joinee" - the wall's own category. */
       || w.includes('aboard') || (w.includes('welcome') && w.some(x => /^(post|photos?|pics?|pictures?|wall|joinee|joiner|joinees|joiners|employee|upload)$/.test(x))),
     title: 'Put a photo on the APIS Wall' },
+  /* Goal sheet questions: "how to make it 100%", "weightage of kpis". */
+  { when: w => w.some(x => /^(weightages?|weights?|weighted|100|percent|percentage|hundred|total|sum)$/.test(x))
+      && !w.some(x => /^(salary|ctc|pf|tada|claim|discount|price|prices)$/.test(x)),
+    title: 'Make my goal sheet weightage add up to 100%' },
+  /* "example of KRA for sales", "how to write good KPIs". */
+  { when: w => w.some(x => /^(examples?|samples?|ideas?|suggest|suggestions?|smart|write|writing|good)$/.test(x))
+      && w.some(x => /^(kras?|kpis?|goals?|sheet|targets?|objectives?)$/.test(x)),
+    title: 'Write good KRAs and KPIs for my goal sheet (examples)' },
+  /* "what is direction in kpi", "meaning of data source". */
+  { when: w => w.some(x => /^(mean|means|meaning|columns?|fields?|direction|frequency|unit|source|parameter)$/.test(x))
+      && w.some(x => /^(kras?|kpis?|goals?|sheet|direction|frequency|unit|source|parameter|columns?)$/.test(x)),
+    title: 'What each column of the goal sheet means' },
 ];
 
 export function search(query: string): Guide[] {

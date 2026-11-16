@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  AlertCircle, ArrowDown, ArrowUp, ArrowUpRight, CalendarDays, Download, FileSpreadsheet, FileText, Megaphone, Newspaper, Package,
+  AlertCircle, ArrowDown, ArrowUp, ArrowUpRight, CalendarDays, Check, ChevronDown, Download, FileSpreadsheet, FileText, Megaphone, Newspaper, Package,
   RefreshCw, Scale, ShieldCheck, TrendingUp, Trophy, Users, X,
 } from 'lucide-react';
 import { apiBase } from '../../apiBase';
@@ -163,31 +163,25 @@ export function MarketWatch() {
 
       {/* ── Filters ── */}
       <div className="flex flex-wrap items-center gap-2.5 px-6 py-3 border-b border-amber-100 bg-white">
-        <label className="inline-flex items-center gap-2 rounded-xl border-2 border-amber-400 bg-amber-50 px-3 py-1.5 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-xl border-2 border-amber-400 bg-amber-50 px-3 py-1.5 shadow-sm">
           <span className="text-[15px] leading-none" aria-hidden>{productInfo(product).icon}</span>
           <span className="text-[11.5px] font-bold text-amber-800">Product</span>
-          <select value={product} onChange={e => pickProduct(e.target.value)} className="mw-select" aria-label="Product">
-            {(data?.products ?? PRODUCTS).map(x => <option key={x.key} value={x.key}>{x.label}</option>)}
-          </select>
-        </label>
+          <MwSelect value={product} onChange={pickProduct} ariaLabel="Product"
+            options={(data?.products ?? PRODUCTS).map(x => ({ value: x.key, label: x.label }))} />
+        </div>
         <Filter icon={CalendarDays} label="Date">
-          <select value={day} onChange={e => { const v = e.target.value; busy(() => setDay(v)); }} className="mw-select">
-            <option value="">Today (live)</option>
-            {(data?.days ?? []).filter(d => d !== today).map(d => <option key={d} value={d}>{dayLabel(d)}</option>)}
-          </select>
+          <MwSelect value={day} onChange={v => busy(() => setDay(v))} ariaLabel="Date"
+            options={[{ value: '', label: 'Today (live)' },
+              ...(data?.days ?? []).filter(d => d !== today).map(d => ({ value: d, label: dayLabel(d) }))]} />
         </Filter>
         <Filter icon={Package} label="Compare at">
-          <select value={size} onChange={e => { const v = Number(e.target.value); busy(() => setSize(v)); }} className="mw-select">
-            {(data?.sizes ?? [250, 500, 1000]).map(s => <option key={s} value={s}>{sizeLabel(s)}</option>)}
-          </select>
+          <MwSelect value={String(size)} onChange={v => busy(() => setSize(Number(v)))} ariaLabel="Compare at"
+            options={(data?.sizes ?? [250, 500, 1000]).map(s => ({ value: String(s), label: sizeLabel(s) }))} />
         </Filter>
         <Filter icon={Users} label="Competitor">
-          <select value={rival} onChange={e => setRival(e.target.value)} className="mw-select">
-            <option value="all">All competitors</option>
-            {(data?.comparison ?? []).filter(r => r.brand !== HOME && !r.missing).map(r => (
-              <option key={r.brand} value={r.brand}>{r.brand}</option>
-            ))}
-          </select>
+          <MwSelect value={rival} onChange={setRival} ariaLabel="Competitor"
+            options={[{ value: 'all', label: 'All competitors' },
+              ...(data?.comparison ?? []).filter(r => r.brand !== HOME && !r.missing).map(r => ({ value: r.brand, label: r.brand }))]} />
         </Filter>
         <div className="flex-1" />
         {data && (
@@ -205,7 +199,6 @@ export function MarketWatch() {
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />Refresh
         </button>
       </div>
-      <style>{`.mw-select{background:transparent;font-size:12.5px;font-weight:800;color:#1e293b;outline:none;cursor:pointer;max-width:9.5rem}`}</style>
 
       {error && (
         <p className="mx-6 mt-4 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] font-semibold text-rose-700">
@@ -455,13 +448,60 @@ function PopupButton({ icon: Icon, title, hint, children }: {
   );
 }
 
+/* The filter dropdowns. A native <select> opens an OS list (blue highlight on
+ * Windows) that CSS cannot reach, so this draws its own list in APIS amber. */
+function MwSelect({ value, options, onChange, ariaLabel }: {
+  value: string; options: { value: string; label: string }[]; onChange: (v: string) => void; ariaLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const current = options.find(o => o.value === value) ?? options[0];
+  return (
+    <div ref={box} className="relative">
+      <button type="button" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+        className="inline-flex items-center gap-1 text-[12.5px] font-extrabold text-slate-800 max-w-[9.5rem] outline-none">
+        <span className="truncate">{current?.label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 text-amber-600 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <ul role="listbox" aria-label={ariaLabel}
+          className="absolute left-0 top-full mt-2 z-40 min-w-[9rem] max-h-64 overflow-auto rounded-xl border-2 border-amber-300 bg-white p-1 shadow-lg shadow-amber-200/60">
+          {options.map(o => {
+            const on = o.value === value;
+            return (
+              <li key={o.value} role="option" aria-selected={on}>
+                <button type="button" onClick={() => { setOpen(false); if (!on) onChange(o.value); }}
+                  className={`w-full flex items-center justify-between gap-3 rounded-lg px-3 py-1.5 text-left text-[12.5px] whitespace-nowrap transition-colors ${
+                    on ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white font-extrabold'
+                       : 'text-slate-700 font-semibold hover:bg-amber-50 hover:text-amber-800'}`}>
+                  {o.label}
+                  {on && <Check className="w-3.5 h-3.5" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function Filter({ icon: Icon, label, children }: { icon: typeof CalendarDays; label: string; children: React.ReactNode }) {
   return (
-    <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+    <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
       <Icon className="w-4 h-4 text-amber-600" />
       <span className="text-[11.5px] font-semibold text-slate-500">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 
