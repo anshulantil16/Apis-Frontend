@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiBase } from '../../apiBase';
 import type { ChatMsg } from './SecureChatView';
 import { answer, nextField, SKIP, type Answers, type Field } from './tadaChat';
-import { kpiFields, kraFields, toKpi, totalOf, type Kra } from './goalChat';
+import { FIELD_HELP, isHelp, kpiFields, kraFields, toKpi, totalOf, type Kra } from './goalChat';
 
 type Stage = 'id' | 'otp' | 'cycle' | 'keep' | 'kra' | 'kpi' | 'next' | 'review' | 'sending' | 'done' | 'stop';
 
@@ -89,6 +89,13 @@ export function useGoalChat(employeeCode?: string) {
   const ask = (f: Field, a: Answers) =>
     say({ from: 'bot', text: f.ask(a, {}), chips: [...(f.chips?.(a, {}, {}) ?? []), ...(f.optional ? [SKIP] : [])] });
 
+  /* "help" at a question: what it means, with examples, then the same question again. */
+  const explain = (f: Field, a: Answers) => {
+    say({ from: 'bot', tone: 'note', text: FIELD_HELP[f.key] ?? 'Answer in a few words — you can change it on the sheet before you submit.' });
+    ask(f, a);
+  };
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
   /* Weightage still free, counting the KRA in progress. */
   const free = (list: Kra[], current: Kra | null) =>
     Math.max(0, Math.round((100 - totalOf(current ? [...list, current] : list)) * 100) / 100);
@@ -96,7 +103,15 @@ export function useGoalChat(employeeCode?: string) {
     ({ category: a.category, title: a.title, description: a.description || '', kpis: kpisSoFar });
   const kpisOf = (a: Answers) => (a._kpis ? (JSON.parse(a._kpis) as Kra['kpis']) : []);
 
+  /* The sheet is full: a new KPI would push it over 100%. */
+  const full = (list: Kra[]) => {
+    say({ from: 'bot', tone: 'note',
+      text: 'Your sheet is already at 100%, so there’s no weightage left for another KPI. To add one, first remove a KPI on the sheet above (✕), then add it again with a smaller share.' });
+    showReview(list);
+  };
+
   const startKra = (list: Kra[]) => {
+    if (free(list, null) <= 0) { full(list); return; }
     setStage('kra'); setKra({}); setKpi({});
     say({ from: 'bot', tone: 'note', text: `KRA ${list.length + 1}${list.length ? '' : ' — your first Key Result Area'}.` });
     ask(kraFields(vocab.categories)[0], {});
@@ -110,9 +125,12 @@ export function useGoalChat(employeeCode?: string) {
   const showReview = (list: Kra[]) => {
     setStage('review');
     const t = totalOf(list);
+    const gap = Math.round(Math.abs(100 - t) * 100) / 100;
     say({ from: 'bot', review: true,
       text: t === 100 ? 'Here’s your goal sheet — weightage is at exactly 100%. Check it, then submit it to your manager or keep it as a draft.'
-        : `Here’s your goal sheet. Weightage is at ${t}% — it has to be exactly 100% to submit. You can still save it as a draft.` });
+        : t < 100
+          ? `Here’s your goal sheet. Weightage is at ${t}% — ${gap}% short of 100%. To fix it, tap “+ Add another KRA” below and give its KPI(s) ${gap}% in total — or remove a KPI (✕) and add it again with ${gap}% more. You can also save it as a draft and finish later.`
+          : `Here’s your goal sheet. Weightage is at ${t}% — ${gap}% over 100%. Remove a KPI (✕) and add it again with ${gap}% less. You can also save it as a draft and finish later.` });
   };
 
   const askId = () => {
@@ -127,6 +145,8 @@ export function useGoalChat(employeeCode?: string) {
     if (said) say({ from: 'user', text: said });
     say({ from: 'bot', tone: 'note',
       text: 'I can fill in your goal sheet with you right here — KRAs and their KPIs, the same columns as Goal Setting — and submit it to your manager.' });
+    say({ from: 'bot', tone: 'note',
+      text: 'How it works:\n• A KRA is a big area you own (e.g. Grow sales). A KPI is the number that measures it (e.g. Secondary sales in ₹ lakh).\n• Each KPI gets a weightage %, and all of them together must make exactly 100%. Easy way: share 100% across your KRAs first (like 40 + 30 + 20 + 10), then split each one across its KPIs.\n• I keep the count and tell you how much % is still free after every KPI.\n• Stuck on any question? Type “help” for an explanation and examples.' });
     askId();
   };
 
@@ -263,6 +283,7 @@ export function useGoalChat(employeeCode?: string) {
         const fs = kraFields(vocab.categories);
         const f = nextField(fs, kra, {});
         if (!f) return;
+        if (isHelp(input)) { explain(f, kra); return; }
         const r = answer(f, input, kra, {});
         if ('error' in r) { say({ from: 'bot', tone: 'error', text: r.error, chips: f.chips?.(kra, {}, {}) }); return; }
         const a = { ...kra, [f.key]: r.value };
@@ -277,6 +298,7 @@ export function useGoalChat(employeeCode?: string) {
         const fs = kpiFields(vocab.frequencies, free(kras, currentKra(kra, kpisOf(kra))));
         const f = nextField(fs, kpi, {});
         if (!f) return;
+        if (isHelp(input)) { explain(f, kpi); return; }
         const r = answer(f, input, kpi, {});
         if ('error' in r) { say({ from: 'bot', tone: 'error', text: r.error, chips: f.chips?.(kpi, {}, {}) }); return; }
         const a = { ...kpi, [f.key]: r.value };
@@ -289,15 +311,18 @@ export function useGoalChat(employeeCode?: string) {
         setKra(k); setKpi({});
         const left = free(kras, currentKra(k, kpis));
         setStage('next');
-        say({ from: 'bot', chips: [NEXT.kpi, NEXT.kra, NEXT.done],
-          text: left > 0 ? `Added. ${left}% of the weightage is still free. What next?`
-            : 'Added — that brings the sheet to 100%. What next?' });
+        say({ from: 'bot', chips: left > 0 ? [NEXT.kpi, NEXT.kra, NEXT.done] : [NEXT.done],
+          text: left > 0 ? `Added. Your sheet is at ${round2(100 - left)}% — ${left}% is still free. Add another KPI to this KRA, or a new KRA, until it reaches 100%.`
+            : 'Added — that brings the sheet to exactly 100%. It’s ready: have a look and submit it.' });
         return;
       }
       case 'next': {
         const done = currentKra(kra, kpisOf(kra));
-        if (/another kpi|kpi/i.test(input)) { startKpi(kras, kra); return; }
         const list = [...kras, done];
+        if (/another kpi|kpi/i.test(input)) {
+          if (free(kras, done) <= 0) { setKras(list); setKra({}); full(list); return; }
+          startKpi(kras, kra); return;
+        }
         setKras(list); setKra({});
         if (/another kra|kra/i.test(input)) { startKra(list); return; }
         showReview(list);

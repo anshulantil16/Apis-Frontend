@@ -117,6 +117,34 @@ no column feeding them are not rendered at all; `filters/` returns
 Months with a plan and no result yet come back as `null`, not `0`. Chart
 series over them need `connectNulls={false}` or the line falls off a cliff.
 
+## Attendance dashboards (`src/Components/`)
+
+Two of them, from two different exports, and they do **not** share code:
+`DelhiAttendanceDashboard` reads Pocket HRMS, `AttendanceDashboard` reads the
+BIZOM field export. Three rules the BIZOM one now holds, each written because
+the figure was wrong without it:
+
+- **BIZOM closes an unclosed day by stamping `23:59`.** That is the system
+  giving up, not a punch. `isAutoEod()` flags those rows, they are counted on
+  their own rather than as EOD compliance, and no working-hours figure is
+  derived from one — a 23:59 close reads as a fifteen-hour day and drags
+  every average with it.
+- **Hours are computed, not read.** BIZOM has no duration column (Delhi's
+  export does), so `workedMinutes()` subtracts the in punch from the out
+  punch and returns 0 unless both are real times and the day closed properly.
+- **`isOnLeave()` is present-first** (`!isPresent && isLeave`), and every
+  count and card goes through it. A half day carries both a punch and a leave
+  note; reading it as leave hides the punch that was made. A row that *is*
+  leave shows the leave type and no punch at all — a blank clock beside
+  somebody on approved leave reads as a missing punch.
+
+Column matching tries an **exact** header name before any partial one.
+`EOD_Location` contains `eod`, so a loose-only match answers `get('eod')`
+with the location the moment that column comes first in the sheet.
+
+The Delhi late cutoff is `LATE_MINS`, one constant with four readers. 11:00
+sharp is on time — every check is a strict `>`.
+
 ## Conventions
 
 - Every new full-page screen needs a visible way out (a back button).
