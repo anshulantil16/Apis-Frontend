@@ -522,7 +522,7 @@ function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpen
   /* ... and the IT ticket, for any guide whose button raises one. */
   const ticketable = g?.action?.intent === 'helpdesk:it-ticket' || g?.action?.intent === 'helpdesk:admin-ticket';
   /* ... and your own goal sheet. */
-  const goalable = g?.tool === 'goal-setting' && /set goals/i.test(g.title);
+  const goalable = g?.tool === 'goal-setting';
   /* ... and your own Employee of the Month nomination. */
   const eomable = g?.tool === 'eom' && /nominat/i.test(g.title);
   /* "not this" gets the same way out as a question nothing matched. */
