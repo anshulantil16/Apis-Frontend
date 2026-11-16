@@ -141,6 +141,16 @@ export function BreakdownModal({ candidate, onClose }: { candidate: CtcCandidate
                   </p>
                 </div>
               )}
+              {b.takeHome != null && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 px-4 py-3">
+                  <p className="text-[12.5px] font-black text-emerald-900">In-hand / Take Home</p>
+                  <p className="text-[11px] font-semibold text-emerald-700">Gross Earnings − PF contribution</p>
+                  <p className="ml-auto text-right">
+                    <span className="text-[17px] font-black text-emerald-800">{rs(b.takeHome)}</span>
+                    <span className="text-[11.5px] font-bold text-emerald-700"> / month · {rs(b.takeHomeAnnual ?? 0)} / year</span>
+                  </p>
+                </div>
+              )}
               <div className="overflow-x-auto rounded-2xl ring-1 ring-slate-200">
                 <table className="w-full text-[12.5px]">
                   <thead>

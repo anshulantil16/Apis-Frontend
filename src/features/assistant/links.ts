@@ -31,7 +31,7 @@ const ALSO: Record<string, string[]> = {
   'APIS Tree': ['tree', 'org', 'chart', 'hierarchy'],
   'Policies & Guidelines': ['policy', 'policies', 'sop', 'guidelines'],
   'APIS Wall': ['wall', 'photos', 'gallery'],
-  'TalentMatch': ['talentmatch', 'resume', 'resumes', 'cv', 'jd', 'shortlist', 'shortlisting', 'screening', 'candidates'],
+  'TalentMatch': ['talentmatch', 'resume', 'resumes', 'cv', 'cvs', 'jd', 'jds', 'shortlist', 'shortlisting', 'screening', 'candidates', 'rank', 'ranking'],
   'CTC Calculator': ['ctc', 'salary', 'breakup'],
   'Pocket HRMS': ['hrms', 'pocket', 'leave', 'attendance', 'payslip', 'ess'],
   'Bizom': ['bizom', 'orders'],

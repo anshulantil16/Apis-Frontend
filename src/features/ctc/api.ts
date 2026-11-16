@@ -92,6 +92,8 @@ export interface CtcBreakdown {
   reimbursements: BreakdownLine[]; grossSalary: number; grossSalaryAnnual: number;
   benefits: BreakdownLine[]; benefitsTotal: number; benefitsTotalAnnual: number;
   fixedMonthly: number; fixedAnnual: number;
+  /* In-hand / take home: Gross Earnings less the PF contribution. */
+  takeHome?: number; takeHomeAnnual?: number;
   otherPayments: BreakdownLine[];
   totalCtcMonthly: number; totalCtcAnnual: number;
   /* Car Lease picked on the template — as per the car lease policy, outside the CTC. */

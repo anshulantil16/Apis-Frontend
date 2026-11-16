@@ -171,8 +171,13 @@ const BOOSTS: { when: (words: string[]) => boolean; title: string }[] = [
   { when: w => (w.includes('my') && w.some(x => /^(tickets?|requests?|bookings?|complaints?)$/.test(x))
       /* "tickets", "my bookings" on their own - the ones already raised. */
       || (w.length <= 2 && w.some(x => /^(tickets|requests|bookings|complaints)$/.test(x))))
-      && !w.some(x => /^(raise|new|create|approve|approving)$/.test(x)),
+      && !w.some(x => /^(raise|new|create|approve|approving|team|teams|employees|staff|subordinates|juniors|reportees)$/.test(x)),
     title: 'Check the status of my requests' },
+  /* "my team's leave requests", "pending requests from my reportees":
+     a manager's queue. */
+  { when: w => w.some(x => /^(team|teams|employees|staff|subordinates|juniors|reportees)$/.test(x))
+      && w.some(x => /^(requests?|leaves?|claims?|approvals?|pending|approve)$/.test(x)) && w.some(x => /^(my|our)$/.test(x)),
+    title: 'Approve requests (managers, Admin and IT Support)' },
   /* "a projector for the meeting": equipment, not a room. */
   { when: w => w.some(x => /^(projectors?|whiteboards?|speakers?|mics?|microphones?|extension|cables?|lcd|screens?)$/.test(x))
       && w.some(x => /^(arrange|need|want|request|provide|send|get|order)$/.test(x)),
@@ -186,9 +191,28 @@ const BOOSTS: { when: (words: string[]) => boolean; title: string }[] = [
     title: 'Request stationery, equipment or other admin items' },
   /* A device or account problem is IT, even when a new joiner or a CTC
      word comes along with it - unless it is paper or toner for it. */
-  { when: w => w.some(x => /^(laptops?|desktops?|computers?|pc|monitors?|mouse|keyboards?|wifi|internet|vpn|outlook|email|software|password|locked)$/.test(x))
-      && !w.some(x => /^(paper|a4|toner|cartridges?|ctc|breakup|salary|otp|code|status|complaint|shortcut|shortcuts|ctrl)$/.test(x)),
+  { when: w => (w.some(x => /^(laptops?|desktops?|computers?|pc|monitors?|mouse|keyboards?|wifi|internet|vpn|outlook|email|software|password|locked|zoom|skype|antivirus|webcam|headphones?|printers?|scanner)$/.test(x))
+      /* Microsoft Teams - not "my team's requests", which reads as "my teams". */
+      || w.some((x, i) => x === 'teams' && !/^(my|our|your|his|her|their|all|whole|sales|other)$/.test(w[i - 1] ?? ''))
+      /* "Teams is not opening", "Zoom keeps crashing" - an app that won't run. */
+      || (w.some(x => /^(not|isnt|wont|doesnt|cant|unable)$/.test(x)) && w.some(x => /^(opening|open|loading|starting|launching|responding)$/.test(x))
+        && !w.some(x => /^(menu|sidebar|tool|tools|option|portal|wall|tree)$/.test(x))))
+      && !w.some(x => /^(paper|a4|toner|cartridges?|ctc|breakup|salary|otp|code|status|complaint|shortcut|shortcuts|ctrl|tada)$/.test(x))
+      && !(w.includes('ta') && w.includes('da')),
     title: 'Raise an IT ticket' },
+  /* "forgot TA/DA password": the portal's own sign-in, not an IT account. */
+  { when: w => (w.includes('tada') || (w.includes('ta') && w.includes('da')))
+      && w.some(x => /^(login|log|password|forgot|sign|signin|otp|access|open|opening)$/.test(x)),
+    title: 'Sign in to the TA/DA Portal' },
+  /* "chair is broken", "need a cupboard": furniture is Admin's. */
+  { when: w => w.some(x => /^(chairs?|tables?|furniture|cupboards?|almirah|drawers?|lockers?|sofa|doors?|windows?|curtains?|keys?)$/.test(x))
+      && !w.some(x => /^(keyboards?|laptops?|computers?|stuck)$/.test(x)),
+    title: 'Request stationery, equipment or other admin items' },
+  /* "applied leave kab approve hoga", "my leave not approved yet": the
+     person's own leave - not a manager approving others. */
+  { when: w => w.some(x => /^leaves?$/.test(x)) && w.some(x => /^(applied|kab|my|mera|meri|mine|when)$/.test(x))
+      && !w.some(x => /^(team|teams|employees?|staff|subordinates?|juniors?|policy|rules?)$/.test(x)),
+    title: 'Apply for leave or check attendance' },
   /* "Help Desk is not showing in my menu": a missing tool. */
   { when: w => w.some(x => /^(not|cant|cannot|missing|disappeared|gone|unable)$/.test(x))
       && w.some(x => /^(showing|visible|appear|appearing|menu|sidebar|option|options|listed)$/.test(x)),
@@ -198,13 +222,16 @@ const BOOSTS: { when: (words: string[]) => boolean; title: string }[] = [
       && !w.some(x => /^(upload|add|new|publish|create)$/.test(x)),
     title: 'Read a company policy' },
   /* "share photos from the event": putting one up, not looking. */
-  { when: w => w.some(x => /^(upload|share|post|add|put)$/.test(x)) && w.some(x => /^(photos?|pictures?|pics?|images?)$/.test(x)),
+  { when: w => (w.some(x => /^(upload|share|post|add|put)$/.test(x)) && w.some(x => /^(photos?|pictures?|pics?|images?)$/.test(x)))
+      /* "welcome aboard post for the new joinee" - the wall's own category. */
+      || w.includes('aboard') || (w.includes('welcome') && w.some(x => /^(post|photos?|pics?|pictures?|wall|joinee|joiner|joinees|joiners|employee|upload)$/.test(x))),
     title: 'Put a photo on the APIS Wall' },
 ];
 
 export function search(query: string): Guide[] {
   const terms = termsOf(query);
-  if (!terms.some(t => !WEAK.has(t))) return [];
+  /* No early exit on weak words alone: a rule can still recognise the
+     question ("Teams is not opening"), and the filter below drops the rest. */
   const all = wordsIn(query);
   return INDEX
     .map(({ g, words, title }) => {

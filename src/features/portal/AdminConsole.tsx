@@ -884,6 +884,10 @@ function PersonDrawer({ u, detail, apps, onClose, onPatch, onRemove }: {
                   label="Confidential vacancies"
                   note="See the Confidential Vacancies tab in the Vacancies popup, add confidential positions and close them. Nobody else sees these."
                   onToggle={() => onPatch(u, { can_view_confidential_vacancies: !u.can_view_confidential_vacancies })} />
+                <GrantRow on={u.can_review_referrals}
+                  label="Review referrals"
+                  note="See the Referrals Received tab in the Vacancies popup: every referral with the candidate's and referrer's details, and fill in the For HR Use Only section. For HR only."
+                  onToggle={() => onPatch(u, { can_review_referrals: !u.can_review_referrals })} />
               </div>
             )}
           </div>
@@ -1286,6 +1290,8 @@ function AccessTab({ onToast }: { onToast: (t: { t: string; ok: boolean }) => vo
       note: 'Put someone on the chart, take someone off, move them under another HOD — includes editing' },
     { field: 'can_view_confidential_vacancies', label: 'Confidential vacancies',
       note: 'See, add and close confidential vacancies — hidden from everyone else' },
+    { field: 'can_review_referrals', label: 'Review referrals',
+      note: 'See every referral submitted and fill in the For HR Use Only section — for HR' },
   ];
   // Managing carries editing with it on the server too (require_tree_editor),
   // so the smaller cell reads as on rather than contradicting the page.

@@ -24,6 +24,18 @@ import { BeeMascot } from './BeeMascot';
 import { ASK_APIS_STYLES } from './askApisStyles';
 import { ExtraAnswer, SocialRow, type Go } from './LiveAnswers';
 import { answerFor, leadFor, type Answer } from './understand';
+import { wantsTadaFill } from './tadaChat';
+import { useTadaChat } from './useTadaChat';
+import { TadaChatView } from './TadaChatView';
+import { ticketDesk } from './ticketChat';
+import { useTicketChat } from './useTicketChat';
+import { TicketChatView } from './TicketChatView';
+import { wantsGoalFill } from './goalChat';
+import { useGoalChat } from './useGoalChat';
+import { GoalChatView } from './GoalChatView';
+import { wantsEomFill } from './eomChat';
+import { useEomChat } from './useEomChat';
+import { EomChatView } from './EomChatView';
 
 const GROUPS = Array.from(new Set(GUIDES.map(g => g.group)));
 
@@ -79,12 +91,16 @@ function TypedText({ text }: { text: string }) {
   return <>{text.slice(0, shown)}{shown < text.length && <span className="aa-caret" />}</>;
 }
 
-export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
+export function AskApisButton({ onNavigate, canOpen = () => true, userName, employeeCode, userEmail }: {
   onNavigate?: (view: ShellView) => void;
   /* The sidebar's access check, so only tools this person can open are offered. */
   canOpen?: (id: string) => boolean;
   /* For the greeting; the bee says plain "Hi there" without it. */
   userName?: string;
+  /* Offered as the TA/DA sign-in ID - still confirmed by the emailed code. */
+  employeeCode?: string;
+  /* Offered as the Help Desk sign-in email - still confirmed by the emailed code. */
+  userEmail?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -93,6 +109,21 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
   const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
   const [nudge, setNudge] = useState(false);
   const allLinks = useMemo(() => quickLinks(canOpen), [canOpen]);
+  /* Filling a TA/DA request in the chat - its own conversation, see useTadaChat. */
+  const tada = useTadaChat(employeeCode);
+  /* Raising an IT ticket in the chat - the same, for the Help Desk. */
+  const ticket = useTicketChat(userEmail);
+  /* Filling your own goal sheet in the chat - the same, for Goal Setting. */
+  const goals = useGoalChat(employeeCode);
+  /* Your own Employee of the Month nomination in the chat - the same, for EOM. */
+  const eom = useEomChat(employeeCode);
+  /* One signed-in errand at a time: starting one ends the others. */
+  const startTada = (said?: string) => { ticket.reset(); goals.reset(); eom.reset(); tada.start(said); };
+  const startTicket = (said?: string, which: 'it' | 'admin' | 'ask' = 'ask') => {
+    tada.reset(); goals.reset(); eom.reset(); ticket.start(said, which);
+  };
+  const startGoals = (said?: string) => { tada.reset(); ticket.reset(); eom.reset(); goals.start(said); };
+  const startEom = (said?: string) => { tada.reset(); ticket.reset(); goals.reset(); eom.start(said); };
   const timers = useRef<number[]>([]);
   const nextId = useRef(1);
   const scroller = useRef<HTMLDivElement>(null);
@@ -102,7 +133,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
   const firstName = userName?.trim().split(/\s+/)[0];
   const greeting = `${firstName ? `${greetingWord()}, ${firstName}!` : 'Hi there!'} 👋`;
   const intro = 'I’m your APIS intranet assistant. Ask me anything about the intranet…';
-  const atStart = messages.length === 0 && !browsing;
+  const atStart = messages.length === 0 && !browsing && !tada.active && !ticket.active && !goals.active && !eom.active;
   const busy = messages.some(m => m.typing);
 
   /* What the box would find for the words typed so far - links open
@@ -157,6 +188,11 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
   const send = (text: string, forced?: Guide) => {
     const q = text.trim();
     if (!q) return;
+    if (!forced && wantsTadaFill(q)) { setBrowsing(false); setQuery(''); startTada(q); return; }
+    const desk = forced ? null : ticketDesk(q);
+    if (desk) { setBrowsing(false); setQuery(''); startTicket(q, desk); return; }
+    if (!forced && wantsGoalFill(q)) { setBrowsing(false); setQuery(''); startGoals(q); return; }
+    if (!forced && wantsEomFill(q)) { setBrowsing(false); setQuery(''); startEom(q); return; }
     const now = stamp();
     const userId = nextId.current++, botId = nextId.current++;
     setBrowsing(false);
@@ -175,7 +211,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
   };
 
   const onSubmit = (e: FormEvent) => { e.preventDefault(); send(query); };
-  const newChat = () => { clearTimers(); setMessages([]); setQuery(''); setBrowsing(false); setFeedback({}); };
+  const newChat = () => { clearTimers(); setMessages([]); setQuery(''); setBrowsing(false); setFeedback({}); tada.reset(); ticket.reset(); goals.reset(); eom.reset(); };
   /* The cross ends the conversation, so the panel reopens on its starting
      view; minimise keeps it. */
   const close = () => { setOpen(false); newChat(); };
@@ -246,6 +282,15 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
               </div>
             </div>
 
+            {tada.active ? (
+              <TadaChatView flow={tada} onOpenPortal={() => openTool('tada')} />
+            ) : eom.active ? (
+              <EomChatView flow={eom} onOpenEom={() => openTool('eom')} />
+            ) : goals.active ? (
+              <GoalChatView flow={goals} onOpenGoalSetting={() => openTool('goal-setting')} />
+            ) : ticket.active ? (
+              <TicketChatView flow={ticket} onOpenHelpDesk={() => { sendIntent('helpdesk:my-requests'); openTool('helpdesk'); }} />
+            ) : (<>
             <div ref={scroller} aria-live="polite" className="aa-scroll flex-1 min-h-0 overflow-y-auto px-4 pb-3 space-y-3">
               {atStart && (
                 <>
@@ -345,7 +390,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
                         {m.answer && (
                           <AnswerBlocks answer={m.answer} query={m.query ?? ''}
                             onAsk={send} onOpenTool={openTool} onRunAction={runAction} onOpenLink={openLink} onGo={goTo}
-                            onBrowse={() => setBrowsing(true)} />
+                            onBrowse={() => setBrowsing(true)} onFillTada={() => startTada()} onFillTicket={which => startTicket(undefined, which)} onFillGoals={() => startGoals()} onFillEom={() => startEom()} />
                         )}
                         <div className="flex items-center gap-2 text-[10px] font-semibold text-amber-900/40">
                           <span>Ask APIS · {clock(m.at)}</span>
@@ -414,6 +459,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
                 Preview · answers from {GUIDES.length} guides, the APIS Tree and the holiday list. Nothing leaves the intranet.
               </p>
             </form>
+            </>)}
           </div>
 
           {/* Honey dripping off the bottom edge. */}
@@ -456,7 +502,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName }: {
 
 /* Everything one answer found: people, holidays, links, the guide itself
    and other guides that might be meant. */
-function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpenLink, onGo, onBrowse }: {
+function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpenLink, onGo, onBrowse, onFillTada, onFillTicket, onFillGoals, onFillEom }: {
   answer: Answer;
   query: string;
   onAsk: (text: string, forced?: Guide) => void;
@@ -465,8 +511,20 @@ function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpen
   onOpenLink: (l: QuickLink) => void;
   onGo: Go;
   onBrowse: () => void;
+  onFillTada: () => void;
+  onFillTicket: (which: 'it' | 'admin') => void;
+  onFillGoals: () => void;
+  onFillEom: () => void;
 }) {
   const g = a.guide;
+  /* The two TA/DA requests the chat can fill in itself. */
+  const fillable = g?.tool === 'tada' && /tour|local travel/i.test(g.title);
+  /* ... and the IT ticket, for any guide whose button raises one. */
+  const ticketable = g?.action?.intent === 'helpdesk:it-ticket' || g?.action?.intent === 'helpdesk:admin-ticket';
+  /* ... and your own goal sheet. */
+  const goalable = g?.tool === 'goal-setting' && /set goals/i.test(g.title);
+  /* ... and your own Employee of the Month nomination. */
+  const eomable = g?.tool === 'eom' && /nominat/i.test(g.title);
   /* "not this" gets the same way out as a question nothing matched. */
   const nope = a.talk?.only && a.talk.kind === 'nope';
   const nothing = !g && !a.links.length && !a.people.length && !a.holiday && !a.extras.length && (!a.talk?.only || nope);
@@ -551,6 +609,14 @@ function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpen
               </p>
               {g.tips.map((t, i) => <p key={i} className="text-[11.5px] text-sky-900/80 leading-snug">{t}</p>)}
             </div>
+          )}
+          {(fillable || ticketable || goalable || eomable) && (
+            <button type="button" onClick={fillable ? onFillTada : goalable ? onFillGoals : eomable ? onFillEom
+              : () => onFillTicket(g?.action?.intent === 'helpdesk:admin-ticket' ? 'admin' : 'it')}
+              className="aa-chip w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                         bg-white ring-2 ring-orange-300 text-orange-700 text-[12px] font-black hover:bg-orange-50">
+              <Sparkles className="w-3.5 h-3.5" />Fill it in here, in the chat
+            </button>
           )}
           {g.action ? (
             <div className="space-y-1.5">

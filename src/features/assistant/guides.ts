@@ -36,7 +36,7 @@ export const GUIDES: Guide[] = [
     keywords: ['it', 'ticket', 'laptop', 'computer', 'pc', 'system', 'internet', 'wifi', 'network', 'email',
       'outlook', 'printer', 'mouse', 'keyboard', 'screen', 'software', 'install', 'password', 'slow',
       'vpn', 'connect', 'connection', 'crash', 'crashing', 'hang', 'flicker', 'flickering', 'display',
-      'monitor', 'webcam', 'headphone', 'teams', 'virus', 'charger',
+      'monitor', 'webcam', 'headphone', 'teams', 'zoom', 'skype', 'antivirus', 'virus', 'charger',
       'broken', 'error', 'not', 'working', 'issue', 'problem', 'technical', 'support'],
   },
   {
@@ -156,7 +156,7 @@ export const GUIDES: Guide[] = [
       'Fill in the local trips and amounts, then Submit for Approval.',
     ],
     keywords: ['local', 'conveyance', 'cab', 'auto', 'taxi', 'city', 'travel', 'claim', 'fuel', 'within', 'fare',
-      'rickshaw', 'ola', 'uber', 'metro', 'bus', 'petrol', 'bill', 'bills'],
+      'rickshaw', 'ola', 'uber', 'metro', 'bus', 'petrol', 'bill', 'bills', 'bike', 'scooter', 'km', 'kms', 'mileage', 'diesel'],
   },
 
   // ── Policies ───────────────────────────────────────────────────────────
@@ -260,7 +260,7 @@ export const GUIDES: Guide[] = [
     tips: [
       'A clear title helps — it is what people see on the photo.',
     ],
-    keywords: ['upload', 'add', 'post', 'share', 'photo', 'image', 'picture', 'wall'],
+    keywords: ['upload', 'add', 'post', 'share', 'photo', 'image', 'picture', 'wall', 'welcome', 'aboard'],
   },
 
   // ── Performance ────────────────────────────────────────────────────────

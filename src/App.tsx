@@ -188,7 +188,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       onNavigate={v => navigate(v as AppView)}
       title={meta.title} subtitle={meta.subtitle}
       userName={session.user.name} onSignOut={session.signOut}
-      isSuperadmin={session.user.is_superadmin} allowedApps={session.user.allowed_apps}>
+      isSuperadmin={session.user.is_superadmin} allowedApps={session.user.allowed_apps}
+      user={session.user}>
       <Suspense fallback={
         <div className="min-h-[60vh] flex items-center justify-center">
           <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
@@ -198,7 +199,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
         <AdminConsoleLazy me={session.user} />
       ) : view === 'home' ? (
         <IntranetHomePage onNavigate={navigate} allowedApps={session.user.allowed_apps} isSuperadmin={session.user.is_superadmin}
-          canViewConfidentialVacancies={session.user.can_view_confidential_vacancies} />
+          canViewConfidentialVacancies={session.user.can_view_confidential_vacancies}
+          canReviewReferrals={!!session.user.can_review_referrals} />
       ) : view === 'extractor' ? (
         <DataExtractorPage />
       ) : view === 'helpdesk' ? (

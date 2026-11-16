@@ -124,6 +124,7 @@ export function EOMPage({}: EOMPageProps) {
   const [step, setStep]               = useState<LoginStep>('id');
   const [maskedEmail, setMaskedEmail] = useState('');
   const [otpInput, setOtpInput]       = useState('');
+  const [devOtp, setDevOtp]           = useState('');
 
   useEffect(() => {
     if (user) localStorage.setItem('eom_user', JSON.stringify(user));
@@ -154,6 +155,9 @@ export function EOMPage({}: EOMPageProps) {
       const data = await parseJson(res);
       if (!res.ok) throw new Error(data.error || 'Failed to send OTP.');
       setMaskedEmail(data.masked_email);
+      // Only a developer's backend sends this - it has no mail to send it by.
+      setOtpInput(data.dev_otp || '');
+      setDevOtp(data.dev_otp || '');
       setStep('otp');
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -190,6 +194,8 @@ export function EOMPage({}: EOMPageProps) {
       const data = await parseJson(res);
       if (!res.ok) throw new Error(data.error || 'Failed to send OTP.');
       setMaskedEmail(data.masked_email);
+      setOtpInput(data.dev_otp || '');
+      setDevOtp(data.dev_otp || '');
       setStep('admin_otp');
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -326,6 +332,11 @@ export function EOMPage({}: EOMPageProps) {
                 <p className="text-slate-500 text-sm">
                   OTP sent to <span className="text-rose-600 font-semibold">{maskedEmail}</span>
                 </p>
+                {devOtp && (
+                  <p className="mt-2 text-[11.5px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-3 py-1.5">
+                    Local testing: email isn’t set up on this machine, so the code <b>{devOtp}</b> is filled in for you.
+                  </p>
+                )}
                 <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full">
                   <Zap className="w-3 h-3 text-amber-500" />
                   <span className="text-amber-600 text-[11px] font-bold">Expires in 5 minutes</span>
@@ -379,6 +390,11 @@ export function EOMPage({}: EOMPageProps) {
                 <p className="text-slate-500 text-sm">
                   OTP sent to <span className="text-amber-700 font-semibold">{maskedEmail}</span>
                 </p>
+                {devOtp && (
+                  <p className="mt-2 text-[11.5px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-3 py-1.5">
+                    Local testing: email isn’t set up on this machine, so the code <b>{devOtp}</b> is filled in for you.
+                  </p>
+                )}
                 <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full">
                   <Zap className="w-3 h-3 text-amber-500" />
                   <span className="text-amber-600 text-[11px] font-bold">Expires in 5 minutes</span>
