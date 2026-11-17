@@ -183,6 +183,24 @@ with the location the moment that column comes first in the sheet.
 The Delhi late cutoff is `LATE_MINS`, one constant with four readers. 11:00
 sharp is on time — every check is a strict `>`.
 
+## `overflow-x-auto` gives you a vertical scrollbar too
+
+Per the CSS spec, a non-`visible` `overflow-x` forces `overflow-y` to compute
+to `auto`. So `<div className="overflow-x-auto">` is a scroll box in **both**
+directions, and anything that pokes out of it vertically — `.tp-reveal` starts
+cards 18px low, `.tp-tilt:hover` lifts them 4px — fills it and paints a second
+vertical scrollbar right next to the shell's own.
+
+**Pair it with `overflow-y-hidden`** on any wrapper whose children animate or
+hang outside the box. The shell (`IntranetShell`) owns the one vertical
+scroller the app is meant to have: `h-screen overflow-hidden` outside,
+`flex-1 min-h-0 overflow-y-auto` on the content area. Nothing inside should
+scroll vertically unless it deliberately sets a height.
+
+The same rule bit `APIS_TREE.tsx`, where it clipped the bracket labels rather
+than adding a scrollbar. There are ~50 `overflow-x-auto` wrappers in this repo
+and only the Data Extractor ones have been audited.
+
 ## Conventions
 
 - Every new full-page screen needs a visible way out (a back button).

@@ -10,7 +10,7 @@ export function PreviewTable({ data, selectedColumns, totalRows }: PreviewTableP
   const cols = Array.from(selectedColumns);
 
   return (
-    <div className="tp-reveal overflow-x-auto">
+    <div className="tp-reveal overflow-x-auto overflow-y-hidden">
       <style>{TOOL_STYLES}</style>
       <table className="w-full text-left text-xs">
         <thead>

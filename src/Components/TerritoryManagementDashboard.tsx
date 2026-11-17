@@ -292,7 +292,7 @@ export function TerritoryManagementDashboard({ rawData }: { rawData: any }) {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10 bg-white/5">
