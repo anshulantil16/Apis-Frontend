@@ -24,15 +24,52 @@
    header none of them has heard of.
 */
 
-export type PhotoVerdict = 'ok' | 'blank' | 'unreadable';
+export type PhotoVerdict = 'ok' | 'blank' | 'no_person' | 'unreadable';
 
 export interface PhotoStat {
   verdict: PhotoVerdict;
-  /** Mean luminance, 0 (black) to 255 (white). */
-  mean: number;
-  /** Spread of luminance. A real scene has detail; a covered lens does not. */
-  sd: number;
   reason: string;
+  /** Mean luminance, 0 (black) to 255 (white). */
+  mean?: number;
+  /** Spread. A real scene varies; a covered lens does not. */
+  sd?: number;
+  /** Pixel-to-pixel change. Server-side only. */
+  edges?: number;
+  /** Share of pixels in the skin-tone range. Server-side only. */
+  skin?: number;
+}
+
+/* ── The way this actually runs ───────────────────────────────────────────
+
+   The server does it. `checkViaServer` posts the URLs to Django, which
+   fetches each image itself and answers with numbers.
+
+   It has to be the server, and that is the whole reason this file is only
+   half of the job. Reading a photo's pixels back out of a canvas needs the
+   host serving it to send `Access-Control-Allow-Origin`, and BIZOM's does
+   not: the image displays perfectly in an <img> and is then unreadable to
+   every line of code on the page. The browser version below ran, found
+   nothing, and reported "could not be read" for the lot.
+
+   It is kept as a fallback for one case -- an old backend that has no
+   /photo-check/ yet -- and for that case only. */
+
+const SERVER_BATCH = 100;
+
+export async function checkViaServer(
+  urls: string[],
+  post: (body: string) => Promise<Response>,
+): Promise<Record<string, PhotoStat>> {
+  const out: Record<string, PhotoStat> = {};
+  const list = [...new Set(urls.filter(Boolean))];
+  for (let i = 0; i < list.length; i += SERVER_BATCH) {
+    const batch = list.slice(i, i + SERVER_BATCH);
+    const res = await post(JSON.stringify({ urls: batch }));
+    if (!res.ok) throw new Error(`photo check failed: ${res.status}`);
+    const body = await res.json();
+    Object.assign(out, body?.results || {});
+  }
+  return out;
 }
 
 /* Thresholds, from looking at the real thing. The black square in the live

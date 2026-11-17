@@ -5,7 +5,9 @@ import {
   AlertTriangle, Timer, Navigation, Camera, Filter, X, ScanFace,
 } from 'lucide-react';
 import { TOOL_STYLES } from './toolStyles';
-import { checkMany, type PhotoStat } from './photoCheck';
+import { checkMany, checkViaServer, type PhotoStat } from './photoCheck';
+import { apiFetch } from '../features/portal/session';
+import { apiBase } from '../apiBase';
 
 /* ── Reading the BIZOM export ──────────────────────────────────────────── */
 
@@ -161,7 +163,8 @@ interface AttendanceRecord {
    itself, but that one needs the image fetched and inspected, so it lives
    outside `Row.flags` and is answered by the scan results. */
 type FlagKey = 'present' | 'late' | 'leave' | 'wo' | 'eodDone' | 'autoEod'
-             | 'invalidPunch' | 'noMove' | 'noEodLoc' | 'noPhoto' | 'badPhoto';
+             | 'invalidPunch' | 'noMove' | 'noEodLoc' | 'noPhoto'
+             | 'badPhoto' | 'noPerson';
 
 interface Row extends AttendanceRecord {
   cat: Cat;
@@ -212,6 +215,24 @@ const CAT_CHIP: Record<Cat, { label: string; cls: string }> = {
   wo:      { label: 'W/Off',   cls: 'bg-sky-50 text-sky-700 border-sky-200'             },
   other:   { label: '',        cls: 'bg-slate-50 text-slate-600 border-slate-200'       },
 };
+
+/* What a day can be grouped by. Offered only when the column is actually in
+   the file: the BIZOM export carries Zone and Beat but no Sub Zone, manager,
+   user type or designation, so those four sat in the dropdown answering
+   "Not Assigned, everybody" and looked broken. */
+const GROUP_FIELDS: { key: keyof AttendanceRecord; label: string }[] = [
+  { key: 'zone',        label: 'Zone' },
+  { key: 'subzone',     label: 'Sub Zone' },
+  { key: 'reportingTo', label: 'Reporting Manager' },
+  { key: 'beat',        label: 'Beat' },
+  { key: 'userType',    label: 'User Type' },
+  { key: 'designation', label: 'Designation' },
+  { key: 'forDate',     label: 'Date' },
+];
+
+/* Natural order, so GTR2 sorts before GTR10 rather than after it, and so
+   the list reads the way somebody scanning for their own zone expects. */
+const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare;
 
 /* The exceptions that do not get a card of their own. Each is a filter. */
 const EXCEPTIONS: { key: FlagKey; label: string; hint: string }[] = [
@@ -269,7 +290,21 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
 
   const [selectedDate, setSelectedDate] = useState(() => uniqueDates[0] || '');
   const [groupBy, setGroupBy] = useState<keyof AttendanceRecord>('zone');
+  const [groupValue, setGroupValue] = useState('');   // '' = every group
+  const [sortBy, setSortBy] = useState<'name' | 'size'>('name');
   const [search, setSearch] = useState('');
+
+  /* Only the columns this file actually carries. */
+  const groupOptions = useMemo(
+    () => GROUP_FIELDS.filter(f => normalized.some(r => String(r[f.key] || '').trim() !== '')),
+    [normalized]);
+
+  // A file with no Zone column must not leave the dropdown pointing at one.
+  useEffect(() => {
+    if (groupOptions.length && !groupOptions.some(o => o.key === groupBy)) {
+      setGroupBy(groupOptions[0].key);
+    }
+  }, [groupOptions, groupBy]);
   const [flags, setFlags] = useState<Set<FlagKey>>(() => new Set());
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
@@ -293,7 +328,7 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
      them has been clicked -- read them off the filtered set instead and
      clicking "Auto EOD" zeroes every other card, leaving nothing to click
      next. `shown` is what the table actually lists. */
-  const scoped = useMemo(() => normalized.filter(r => {
+  const dated = useMemo(() => normalized.filter(r => {
     if (selectedDate && r.forDate !== selectedDate) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -305,13 +340,37 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
     return true;
   }), [normalized, selectedDate, search]);
 
+  /* Every value of the current grouping, for the "which one" dropdown. Read
+     from `dated` rather than from `scoped`, or choosing a zone empties the
+     list that offers the zones. */
+  const groupValues = useMemo(() => {
+    const s = new Set<string>();
+    dated.forEach(r => { const v = String(r[groupBy] || '').trim(); if (v) s.add(v); });
+    return [...s].sort(byName);
+  }, [dated, groupBy]);
+
+  // Changing what we group by invalidates the value picked under the old one.
+  useEffect(() => { setGroupValue(''); }, [groupBy]);
+
+  /* Picking one zone narrows the cards too, not only the table: "show me
+     this zone" means the whole screen, otherwise the numbers above describe
+     a day the table below is not showing. */
+  const scoped = useMemo(() => {
+    if (!groupValue) return dated;
+    return dated.filter(r => String(r[groupBy] || '').trim() === groupValue);
+  }, [dated, groupBy, groupValue]);
+
   /* Several flags at once mean "any of these", not "all of these". The four
      status flags are mutually exclusive, so an all-of rule would answer
      nothing the moment somebody clicked Present and Late together -- which
      is exactly the pair worth looking at side by side. */
-  const isBadPhoto = (r: Row) =>
-    !!r.attendanceImage && photos[r.attendanceImage]?.verdict === 'blank';
-  const holds = (r: Row, f: FlagKey) => f === 'badPhoto' ? isBadPhoto(r) : r.flags.has(f);
+  const photoOf = (r: Row) => r.attendanceImage ? photos[r.attendanceImage] : undefined;
+  const isBadPhoto = (r: Row) => photoOf(r)?.verdict === 'blank';
+  const isNoPerson = (r: Row) => photoOf(r)?.verdict === 'no_person';
+  const holds = (r: Row, f: FlagKey) =>
+    f === 'badPhoto' ? isBadPhoto(r)
+    : f === 'noPerson' ? isNoPerson(r)
+    : r.flags.has(f);
 
   const shown = useMemo(() => {
     if (!flags.size) return scoped;
@@ -328,16 +387,29 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
 
   const count = (k: FlagKey) => scoped.reduce((n, r) => n + (holds(r, k) ? 1 : 0), 0);
 
+  /* The server does the looking. It has to: BIZOM's image host sends no
+     CORS header, so the browser can display these photos and cannot read a
+     single pixel of one. The in-page check is kept only for a backend too
+     old to have the endpoint. */
   const scanPhotos = async () => {
     const urls = [...new Set(scoped.map(r => r.attendanceImage).filter(Boolean))]
       .filter(u => !photos[u]);
     if (!urls.length || scan.running) return;
     stop.current = false;
     setScan({ running: true, done: 0, total: urls.length });
-    await checkMany(urls, (url, stat) => {
-      setPhotos(p => ({ ...p, [url]: stat }));
-      setScan(s => ({ ...s, done: s.done + 1 }));
-    }, { stopped: () => stop.current });
+    try {
+      const got = await checkViaServer(urls, body =>
+        apiFetch(`${apiBase()}/api/user_management/photo-check/`, { method: 'POST', body }));
+      if (!stop.current) {
+        setPhotos(p => ({ ...p, ...got }));
+        setScan(s => ({ ...s, done: Object.keys(got).length }));
+      }
+    } catch {
+      await checkMany(urls, (url, stat) => {
+        setPhotos(p => ({ ...p, [url]: stat }));
+        setScan(s => ({ ...s, done: s.done + 1 }));
+      }, { stopped: () => stop.current });
+    }
     setScan(s => ({ ...s, running: false }));
   };
 
@@ -345,15 +417,16 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
      saying out loud: nothing is wrong with the photos, the host simply will
      not let the browser read them back. */
   const photoSummary = useMemo(() => {
-    let checked = 0, blank = 0, blocked = 0;
+    let checked = 0, blank = 0, noPerson = 0, blocked = 0;
     scoped.forEach(r => {
       const s = r.attendanceImage ? photos[r.attendanceImage] : undefined;
       if (!s) return;
       checked++;
       if (s.verdict === 'blank') blank++;
+      else if (s.verdict === 'no_person') noPerson++;
       else if (s.verdict === 'unreadable') blocked++;
     });
-    return { checked, blank, blocked };
+    return { checked, blank, noPerson, blocked };
   }, [scoped, photos]);
 
   const kpi = useMemo(() => {
@@ -419,8 +492,8 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
         avgWorkStr: fmtHM(q.workDays ? Math.round(q.workMins / q.workDays) : 0),
         avgKmStr: q.kmDays ? fmtKm(q.kmSum / q.kmDays) : '—',
       };
-    }).sort((a, b) => b.total - a.total);
-  }, [shown, groupBy]);
+    }).sort((a, b) => sortBy === 'size' ? b.total - a.total : byName(a.name, b.name));
+  }, [shown, groupBy, sortBy]);
 
   const toggle = (name: string) => setExpandedGroups(p => ({ ...p, [name]: !p[name] }));
 
@@ -465,7 +538,8 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
         r.flags.has('noMove') && 'No movement',
         r.flags.has('noEodLoc') && 'No EOD location',
         r.flags.has('noPhoto') && 'No photo',
-        isBadPhoto(r) && `Blank photo (${photos[r.attendanceImage]?.reason})`,
+        isBadPhoto(r) && `Blank photo (${photoOf(r)?.reason})`,
+        isNoPerson(r) && 'May not be a person',
        ].filter(Boolean).join('; '),
      ])]);
 
@@ -488,7 +562,8 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
 
   const activeLabels = cards.filter(c => c.flag && flags.has(c.flag)).map(c => c.label)
     .concat(EXCEPTIONS.filter(e => flags.has(e.key)).map(e => e.label))
-    .concat(flags.has('badPhoto') ? ['Blank photo'] : []);
+    .concat(flags.has('badPhoto') ? ['Blank photo'] : [])
+    .concat(flags.has('noPerson') ? ['May not be a person'] : []);
 
   return (
     <div className="space-y-5">
@@ -504,16 +579,30 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
               className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl w-full text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 placeholder-slate-400 transition-all"
             />
           </div>
-          <div className="flex items-center gap-2 min-w-fit">
+          <div className="flex items-center gap-2 min-w-fit flex-wrap">
             <SlidersHorizontal className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            {/* Only what this file carries — see GROUP_FIELDS. */}
             <select value={groupBy} onChange={e => setGroupBy(e.target.value as keyof AttendanceRecord)}
               className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none cursor-pointer">
-              <option value="zone">Zone</option>
-              <option value="subzone">Sub Zone</option>
-              <option value="reportingTo">Reporting Manager</option>
-              <option value="beat">Beat</option>
-              <option value="userType">User Type</option>
-              <option value="designation">Designation</option>
+              {groupOptions.map(o => <option key={String(o.key)} value={String(o.key)}>{o.label}</option>)}
+            </select>
+
+            {/* Which one. Narrows the whole screen, cards included. */}
+            {groupValues.length > 1 && (
+              <select value={groupValue} onChange={e => setGroupValue(e.target.value)}
+                className={`px-3 py-2.5 border rounded-xl text-sm font-bold focus:outline-none cursor-pointer max-w-56 ${
+                  groupValue ? 'bg-amber-50 border-amber-300 text-amber-800'
+                             : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                <option value="">All ({groupValues.length})</option>
+                {groupValues.map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            )}
+
+            <select value={sortBy} onChange={e => setSortBy(e.target.value as 'name' | 'size')}
+              title="How the groups below are ordered"
+              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none cursor-pointer">
+              <option value="name">A → Z</option>
+              <option value="size">Most rows first</option>
             </select>
           </div>
         </div>
@@ -606,20 +695,41 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
             <ScanFace className="w-3 h-3" /> Check photos
           </button>
         ) : (
-          <button type="button" onClick={() => toggleFlag('badPhoto')}
-            aria-pressed={flags.has('badPhoto')} disabled={photoSummary.blank === 0}
-            title={`Blank, black or featureless. ${photoSummary.checked} checked`
-                   + (photoSummary.blocked ? `, ${photoSummary.blocked} could not be read` : '')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
-              flags.has('badPhoto') ? 'bg-amber-500 text-white border-amber-500 shadow-md'
-              : photoSummary.blank === 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 cursor-default'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300 hover:text-amber-700'
-            }`}>
-            <ScanFace className="w-3 h-3" /> Blank photo
-            <span className={`px-1.5 rounded font-black ${flags.has('badPhoto') ? 'bg-white/25' : 'bg-slate-100'}`}>
-              {photoSummary.blank}
-            </span>
-          </button>
+          <>
+            <button type="button" onClick={() => toggleFlag('badPhoto')}
+              aria-pressed={flags.has('badPhoto')} disabled={photoSummary.blank === 0}
+              title={`Black, washed out or featureless. ${photoSummary.checked} photos checked`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                flags.has('badPhoto') ? 'bg-amber-500 text-white border-amber-500 shadow-md'
+                : photoSummary.blank === 0 ? 'bg-slate-50 text-slate-300 border-slate-150 cursor-default'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300 hover:text-amber-700'
+              }`}>
+              <ScanFace className="w-3 h-3" /> Blank photo
+              <span className={`px-1.5 rounded font-black ${flags.has('badPhoto') ? 'bg-white/25' : 'bg-slate-100'}`}>
+                {photoSummary.blank}
+              </span>
+            </button>
+            {/* Kept apart from "blank" on purpose: there IS a picture here,
+                it just does not appear to have anybody in it, and that is a
+                hint rather than a finding. */}
+            <button type="button" onClick={() => toggleFlag('noPerson')}
+              aria-pressed={flags.has('noPerson')} disabled={photoSummary.noPerson === 0}
+              title="A picture with no skin tone in it — an object, a wall, a screen. A colour test, not a face check: worth a look, not proof."
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                flags.has('noPerson') ? 'bg-amber-500 text-white border-amber-500 shadow-md'
+                : photoSummary.noPerson === 0 ? 'bg-slate-50 text-slate-300 border-slate-150 cursor-default'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300 hover:text-amber-700'
+              }`}>
+              <ScanFace className="w-3 h-3" /> May not be a person
+              <span className={`px-1.5 rounded font-black ${flags.has('noPerson') ? 'bg-white/25' : 'bg-slate-100'}`}>
+                {photoSummary.noPerson}
+              </span>
+            </button>
+            <button type="button" onClick={scanPhotos} title="Check any photos not looked at yet"
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-400 hover:text-amber-700 hover:border-amber-300 transition-all">
+              Re-check
+            </button>
+          </>
         )}
         {!scan.running && photoSummary.blocked > 0 && (
           <span className="text-[11px] font-semibold text-slate-400"
@@ -673,7 +783,7 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
              get back rather than just sitting there empty. */
           <div className="px-6 py-12 text-center">
             <p className="text-sm font-bold text-slate-500">Nothing matches these filters.</p>
-            <button type="button" onClick={() => setFlags(new Set())}
+            <button type="button" onClick={() => { setFlags(new Set()); setGroupValue(''); }}
               className="mt-3 px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all">
               Clear filters
             </button>
@@ -758,9 +868,11 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                 }`} style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>
                                   {rec.attendanceImage && (
                                     <a href={rec.attendanceImage} target="_blank" rel="noopener noreferrer"
-                                      title={photos[rec.attendanceImage]?.reason}
+                                      title={photoOf(rec)?.reason}
                                       className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border shadow-sm ${
-                                        isBadPhoto(rec) ? 'border-amber-400 ring-2 ring-amber-300' : 'border-slate-100'
+                                        isBadPhoto(rec) ? 'border-amber-400 ring-2 ring-amber-300'
+                                        : isNoPerson(rec) ? 'border-yellow-300 ring-2 ring-yellow-200'
+                                        : 'border-slate-100'
                                       }`}>
                                       <img src={rec.attendanceImage} alt={rec.userName} className="w-full h-full object-cover" />
                                     </a>
@@ -858,10 +970,15 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                         </span>
                                       )}
                                       {isBadPhoto(rec) && (
-                                        <span className="text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-lg flex items-center gap-1"
-                                          title={photos[rec.attendanceImage]?.reason}>
+                                        <span className="text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-lg flex items-center gap-1">
                                           <ScanFace className="w-3 h-3" />
-                                          Blank photo — {photos[rec.attendanceImage]?.reason}
+                                          Blank photo — {photoOf(rec)?.reason}
+                                        </span>
+                                      )}
+                                      {isNoPerson(rec) && (
+                                        <span className="text-[11px] font-bold bg-yellow-50 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded-lg flex items-center gap-1"
+                                          title="A colour test, not a face check — worth a look, not proof.">
+                                          <ScanFace className="w-3 h-3" /> May not be a person
                                         </span>
                                       )}
                                       {!rec.mp && !rec.auto && rec.designation && (
