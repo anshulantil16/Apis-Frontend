@@ -138,6 +138,30 @@ the figure was wrong without it:
   leave shows the leave type and no punch at all — a blank clock beside
   somebody on approved leave reads as a missing punch.
 
+Everything derived about a row — its category, its flags, its hours, its
+distance — is computed once by `enrich()` and read from `Row` thereafter, so
+a figure on a card, in the table and in the CSV cannot disagree.
+
+**Counts come from `scoped`, the table comes from `shown`.** `scoped` is the
+day (date + search); `shown` is `scoped` after the flag filters. Reading the
+card counts off the filtered set zeroes every other card the moment one is
+clicked, leaving nothing to click next. Several flags at once mean **any of**,
+not all — the four status flags are mutually exclusive, so an all-of rule
+answers nothing for the pair most worth seeing together.
+
+`Start → EOD` is the **straight line between the two punches**, never
+distance travelled: the file has two points and no track, so a loop that ends
+where it began scores zero. Say "start → EOD" in any new label.
+
+`photoCheck.ts` is a **brightness-and-detail test, not face recognition.** It
+answers blank / ok / unreadable and nothing else. `unreadable` is load-bearing:
+reading pixels back needs BIZOM's host to send `Access-Control-Allow-Origin`,
+and where it does not the honest answer is "could not check" — never "blank",
+which would put every field employee on an exceptions list over a header none
+of them has heard of. The scan is started by a button, never on load; a day is
+hundreds of images. `badPhoto` is therefore the one flag not in `Row.flags` —
+it needs the fetch — so filters go through `holds()`, not `r.flags.has()`.
+
 Column matching tries an **exact** header name before any partial one.
 `EOD_Location` contains `eod`, so a loose-only match answers `get('eod')`
 with the location the moment that column comes first in the sheet.
