@@ -153,14 +153,28 @@ answers nothing for the pair most worth seeing together.
 distance travelled: the file has two points and no track, so a loop that ends
 where it began scores zero. Say "start → EOD" in any new label.
 
-`photoCheck.ts` is a **brightness-and-detail test, not face recognition.** It
-answers blank / ok / unreadable and nothing else. `unreadable` is load-bearing:
-reading pixels back needs BIZOM's host to send `Access-Control-Allow-Origin`,
-and where it does not the honest answer is "could not check" — never "blank",
-which would put every field employee on an exceptions list over a header none
-of them has heard of. The scan is started by a button, never on load; a day is
-hundreds of images. `badPhoto` is therefore the one flag not in `Row.flags` —
-it needs the fetch — so filters go through `holds()`, not `r.flags.has()`.
+**The photo check runs on the server**, at
+`POST /api/user_management/photo-check/`. It cannot run here: reading a
+photo's pixels out of a canvas needs BIZOM's host to send
+`Access-Control-Allow-Origin`, and it does not — the image displays in an
+`<img>` and is unreadable to every line of code on the page. The in-page
+version in `photoCheck.ts` is kept only as a fallback for a backend too old
+to have the endpoint, and it will find nothing against the real host.
+
+It answers blank / no_person / ok / unreadable. **`no_person` is a skin-tone
+colour test, not face recognition** — say "may not be a person", never
+anything stronger. `badPhoto` and `noPerson` are the two flags not in
+`Row.flags`, because they need the fetch, so every filter goes through
+`holds()` and never `r.flags.has()` directly.
+
+The scan is a button, never automatic: a day is hundreds of images.
+
+Group-by is offered only for columns the uploaded file actually carries
+(`GROUP_FIELDS` filtered against the data). The BIZOM export has Zone and
+Beat but no Sub Zone, manager, user type or designation, and offering those
+four produced a dropdown where five of six options answered "Not Assigned,
+everybody". Groups sort naturally (`byName`, `Intl.Collator` with
+`numeric: true`), so GTR2 comes before GTR10.
 
 Column matching tries an **exact** header name before any partial one.
 `EOD_Location` contains `eod`, so a loose-only match answers `get('eod')`
