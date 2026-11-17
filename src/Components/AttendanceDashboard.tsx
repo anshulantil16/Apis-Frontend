@@ -789,12 +789,35 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
             </button>
           </div>
         ) : (
-        <div className="overflow-x-auto">
+        /* overflow-y-hidden is load-bearing, not tidying. Per spec a
+           non-visible overflow-x forces overflow-y to auto, so this wrapper
+           quietly became a second vertical scrollbox -- and the tp-reveal
+           cards inside it start 18px low and lift 4px on hover, which is
+           enough to fill it. The page then had two vertical scrollbars side
+           by side. Same class of bug as the bracket clipping in
+           APIS_TREE.tsx. */
+        <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                {['Group', 'Total', 'Present', 'Late', 'Leave', 'WO', 'EOD Done', 'Avg Hrs', 'Avg Start→EOD', 'Attendance %'].map((h, i) => (
-                  <th key={h} className={`py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider ${i === 0 ? 'px-6 w-1/4' : i === 9 ? 'px-6 text-right' : 'px-4 text-center'}`}>{h}</th>
+                {/* Ten columns do not fit a laptop, and a table that must be
+                    dragged sideways to reach its own headline figure is worse
+                    than one that drops a column. The order here is the order
+                    they go: detail first, the figures somebody came for last.
+                    Every one of them is still in the CSV. */}
+                {[
+                  { h: 'Group',         cls: 'px-6 w-1/4 text-left' },
+                  { h: 'Total',         cls: 'px-4 text-center' },
+                  { h: 'Present',       cls: 'px-4 text-center' },
+                  { h: 'Late',          cls: 'px-4 text-center' },
+                  { h: 'Leave',         cls: 'px-4 text-center hidden sm:table-cell' },
+                  { h: 'WO',            cls: 'px-4 text-center hidden md:table-cell' },
+                  { h: 'EOD Done',      cls: 'px-4 text-center hidden lg:table-cell' },
+                  { h: 'Avg Hrs',       cls: 'px-4 text-center hidden xl:table-cell' },
+                  { h: 'Avg Start→EOD', cls: 'px-4 text-center hidden xl:table-cell' },
+                  { h: 'Attendance %',  cls: 'px-6 text-right' },
+                ].map(c => (
+                  <th key={c.h} className={`py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider ${c.cls}`}>{c.h}</th>
                 ))}
               </tr>
             </thead>
@@ -825,19 +848,19 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                       <td className="px-4 py-3.5 text-center">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${grp.late > 0 ? 'text-amber-700 bg-amber-50' : 'text-slate-300 bg-slate-50'}`}>{grp.late}</span>
                       </td>
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3.5 text-center hidden sm:table-cell">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${grp.leave > 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-300 bg-slate-50'}`}>{grp.leave}</span>
                       </td>
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3.5 text-center hidden md:table-cell">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${grp.wo > 0 ? 'text-sky-600 bg-sky-50' : 'text-slate-300 bg-slate-50'}`}>{grp.wo}</span>
                       </td>
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3.5 text-center hidden lg:table-cell">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${grp.eodPct >= 80 ? 'text-indigo-600 bg-indigo-50' : grp.eod > 0 ? 'text-amber-600 bg-amber-50' : 'text-slate-300 bg-slate-50'}`}>{grp.eod} ({grp.eodPct}%)</span>
                       </td>
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3.5 text-center hidden xl:table-cell">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${grp.workDays ? 'text-violet-700 bg-violet-50' : 'text-slate-300 bg-slate-50'}`}>{grp.avgWorkStr}</span>
                       </td>
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3.5 text-center hidden xl:table-cell">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${grp.kmDays ? 'text-teal-700 bg-teal-50' : 'text-slate-300 bg-slate-50'}`}>{grp.avgKmStr}</span>
                       </td>
                       <td className="px-6 py-3.5 text-right">

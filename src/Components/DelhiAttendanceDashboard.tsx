@@ -417,7 +417,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
           <span className="px-2.5 py-1 bg-violet-50 text-violet-700 font-bold text-[10px] rounded-full border border-violet-200 uppercase tracking-wider">{grouped.length} groups</span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
