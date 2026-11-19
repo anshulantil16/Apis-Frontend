@@ -509,18 +509,25 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
      initials on a grey square, which is a gap, not a failure. */
   const [sheetFor, setSheetFor] = useState('');
 
+  /* Everything the card on screen shows, in the order it shows it. The
+     point of the sheet is that the person receiving it does not have to
+     come back and ask what the row means. */
   const asShareRow = (r: Row, thumbs: Record<string, string>): ShareRow => ({
     photo: r.attendanceImage ? thumbs[r.attendanceImage] : undefined,
     name: r.userName || r.empId || r.userId || 'Unknown',
-    sub: [r.empId || r.userId, r.beat].filter(Boolean).join(' · '),
+    subs: [
+      [r.empId || r.userId, r.designation, r.zone].filter(Boolean).join(' · '),
+      r.beat,
+      r.reportingTo ? `Reports to ${r.reportingTo}` : '',
+    ].filter(Boolean),
     status: CAT_CHIP[r.cat].label || r.attendance,
     facts: r.cat === 'leave'
       ? [leaveLabel(r)]
       : [
           [isValidTime(r.attendanceTime) ? r.attendanceTime : 'no in punch',
            isValidTime(r.eodTime) ? r.eodTime : 'no out punch'].join(' → '),
-          r.workedMin > 0 ? fmtHM(r.workedMin) : '',
-          r.km >= 0 ? fmtKm(r.km) : '',
+          r.workedMin > 0 ? fmtHM(r.workedMin) : 'hours unknown',
+          r.km >= 0 ? `${fmtKm(r.km)} start → EOD` : '',
         ].filter(Boolean),
     flags: [
       r.auto && 'Auto EOD',
