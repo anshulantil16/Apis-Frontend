@@ -370,12 +370,18 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
         const f = flagsOf(r);
         return {
           name: r.name || r.code || 'Unknown',
-          sub: [r.code, r.department, isRange ? r.date : ''].filter(Boolean).join(' · '),
+          subs: [
+            [r.code, r.designation, r.category].filter(Boolean).join(' · '),
+            r.department,
+            // In range mode a person has several rows, so each one has to
+            // say which day it is or the sheet is unreadable.
+            isRange ? [r.date, r.day].filter(Boolean).join(' · ') : '',
+          ].filter(Boolean),
           status: typeInfo(r.type).label,
           facts: [
             [hasPunchTime(r.inTime) ? r.inTime : 'no in punch',
              hasPunchTime(r.outTime) ? r.outTime : 'no out punch'].join(' → '),
-            r.duration ? r.duration + 'h' : '',
+            r.duration ? r.duration + 'h' : 'hours unknown',
             r.shiftName,
           ].filter(Boolean),
           flags: [
