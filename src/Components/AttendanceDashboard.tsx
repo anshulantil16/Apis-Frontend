@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { TOOL_STYLES } from './toolStyles';
 import { checkMany, checkViaServer, type PhotoStat } from './photoCheck';
+import { renderSheet, downloadBlob, safeFileName, MAX_ROWS, type ShareRow } from './shareSheet';
 import { apiFetch } from '../features/portal/session';
 import { apiBase } from '../apiBase';
 
@@ -497,6 +498,75 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
 
   const toggle = (name: string) => setExpandedGroups(p => ({ ...p, [name]: !p[name] }));
 
+  /* ── Sending the exceptions to whoever can do something about them ──
+
+     An HOD gets a message, not a login. So a group -- or one person -- can
+     leave here as a JPG carrying the date, the names and what is wrong.
+
+     The photos have to come from our own backend as data URIs: drawing a
+     BIZOM-hosted image onto a canvas taints it and toBlob then refuses, so
+     the sheet would not be produced at all. A face we cannot fetch becomes
+     initials on a grey square, which is a gap, not a failure. */
+  const [sheetFor, setSheetFor] = useState('');
+
+  const asShareRow = (r: Row, thumbs: Record<string, string>): ShareRow => ({
+    photo: r.attendanceImage ? thumbs[r.attendanceImage] : undefined,
+    name: r.userName || r.empId || r.userId || 'Unknown',
+    sub: [r.empId || r.userId, r.beat].filter(Boolean).join(' · '),
+    status: CAT_CHIP[r.cat].label || r.attendance,
+    facts: r.cat === 'leave'
+      ? [leaveLabel(r)]
+      : [
+          [isValidTime(r.attendanceTime) ? r.attendanceTime : 'no in punch',
+           isValidTime(r.eodTime) ? r.eodTime : 'no out punch'].join(' → '),
+          r.workedMin > 0 ? fmtHM(r.workedMin) : '',
+          r.km >= 0 ? fmtKm(r.km) : '',
+        ].filter(Boolean),
+    flags: [
+      r.auto && 'Auto EOD',
+      r.mp === 'no_out' && 'Missing out punch',
+      r.mp === 'no_in' && 'Missing in punch',
+      r.flags.has('noMove') && 'Same place all day',
+      r.flags.has('noEodLoc') && 'No EOD location',
+      r.flags.has('noPhoto') && 'No photo',
+      isBadPhoto(r) && 'Blank photo',
+      isNoPerson(r) && 'May not be a person',
+    ].filter(Boolean) as string[],
+  });
+
+  const makeSheet = async (key: string, title: string, rows: Row[]) => {
+    if (!rows.length || sheetFor) return;
+    setSheetFor(key);
+    try {
+      let thumbs: Record<string, string> = {};
+      // Only the rows the sheet will actually draw: renderSheet caps at
+      // MAX_ROWS, and fetching a hundred faces to paint sixty is a hundred
+      // image downloads for no picture.
+      const urls = [...new Set(rows.slice(0, MAX_ROWS).map(r => r.attendanceImage).filter(Boolean))];
+      if (urls.length) {
+        try {
+          const res = await apiFetch(`${apiBase()}/api/user_management/photo-thumbs/`,
+            { method: 'POST', body: JSON.stringify({ urls: urls.slice(0, 120) }) });
+          if (res.ok) thumbs = (await res.json())?.thumbs || {};
+        } catch { /* initials instead of faces; the sheet still goes out */ }
+      }
+      // Says what the reader is looking at. With filters on it is the
+      // exceptions; with none it is the whole group, and the sheet must not
+      // imply otherwise.
+      const what = activeLabels.length ? activeLabels.join(' or ') : 'Attendance';
+      const blob = await renderSheet({
+        title,
+        subtitle: `${what} — ${rows.length} ${rows.length === 1 ? 'person' : 'people'}`,
+        dateLabel: selectedDate || 'All dates',
+        source: 'BIZOM field attendance',
+        rows: rows.map(r => asShareRow(r, thumbs)),
+      });
+      downloadBlob(blob, safeFileName(title, what, selectedDate || 'all dates'));
+    } finally {
+      setSheetFor('');
+    }
+  };
+
   const download = (name: string, rows: (string | number)[][]) => {
     const csv = '\uFEFF' + rows.map(r =>
       r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -840,6 +910,16 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                             <Timer className="w-3 h-3" /> {grp.autoEod} auto EOD
                           </span>
                         )}
+                        {/* The whole group as one picture, to forward to
+                            whoever owns it. stopPropagation or the click
+                            also collapses the row under the button. */}
+                        <button type="button" disabled={!!sheetFor}
+                          onClick={e => { e.stopPropagation(); makeSheet(grp.name, grp.name, grp.records); }}
+                          title={`Download ${grp.name} as a JPG to share`}
+                          className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-amber-700 border border-slate-200 hover:border-amber-300 px-2 py-0.5 rounded-full transition-all disabled:opacity-40">
+                          <Download className="w-3 h-3" />
+                          {sheetFor === grp.name ? 'Making…' : 'JPG'}
+                        </button>
                       </td>
                       <td className="px-4 py-3.5 text-center text-slate-600 font-semibold text-sm">{grp.total}</td>
                       <td className="px-4 py-3.5 text-center">
@@ -906,9 +986,19 @@ export function AttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                         <p className="font-bold text-slate-800 text-sm truncate">{rec.userName}</p>
                                         <p className="text-[11px] text-slate-400 font-semibold">{rec.empId || rec.userId || '—'}</p>
                                       </div>
-                                      <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-lg border flex-shrink-0 ${chip.cls}`}>
-                                        {chip.label || rec.attendance || '?'}
-                                      </span>
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-lg border ${chip.cls}`}>
+                                          {chip.label || rec.attendance || '?'}
+                                        </span>
+                                        {/* This one person, on their own, for
+                                            a message to their manager. */}
+                                        <button type="button" disabled={!!sheetFor}
+                                          onClick={() => makeSheet(`one-${grp.name}-${i}`, rec.userName || 'Employee', [rec])}
+                                          title="Download this person as a JPG to share"
+                                          className="p-1 rounded-lg text-slate-300 hover:text-amber-600 hover:bg-amber-50 transition-all disabled:opacity-40">
+                                          <Download className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
 
                                     {rec.beat && (
