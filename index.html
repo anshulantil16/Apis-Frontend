@@ -2,9 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>apis-frontend</title>
+
+    <!-- The tab is branding. It was the Vite lightning bolt and the project
+         folder's name, which told everyone who opened the portal that they
+         were looking at somebody's build output.
+
+         The icons are built from public/logo.png: the real logo is a wide
+         oval, which letterboxed into a square is a nine-pixel sliver in a
+         tab, so it sits on a white tile that fills the square. The 16px one
+         is a separate file rather than a downscale of the 512 -- browsers
+         scale it badly and the wordmark turns to mud. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/apis-icon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/apis-icon-16.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/apis-icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#FBB20B" />
+
+    <!-- What a link to the portal looks like when it is pasted into
+         WhatsApp or Teams, which is how most people will first meet it. -->
+    <meta name="description" content="APIS India's internal portal — Help Desk, Goal Setting, SalesIQ, PMS, attendance and more." />
+    <meta property="og:title" content="APIS India Intranet" />
+    <meta property="og:description" content="APIS India's internal portal — Help Desk, Goal Setting, SalesIQ, PMS, attendance and more." />
+    <meta property="og:image" content="/apis-icon-512.png" />
+    <meta property="og:type" content="website" />
+
+    <!-- Kept short on purpose: a tab shows roughly twenty characters before
+         it truncates, and chat/alerts.ts prefixes an unread count onto
+         whatever this says, so "(3) APIS India Intranet" has to still fit. -->
+    <title>APIS India Intranet</title>
   </head>
   <body>
     <div id="root"></div>
