@@ -56,8 +56,14 @@ export interface ShareSheet {
 const SCALE = 2;
 const W = 1000;
 const PAD = 28;
-const FOOT_H = 48;
+const FOOT_H = 70;         // two lines: the count, and the portal's address
 const PHOTO = 64;
+
+/* The sheet gets forwarded on, and whoever opens it may never have heard
+   of the portal it came from. The footer is the only place that can say
+   so, so it carries the name and the address rather than a quiet credit. */
+const BRAND = 'APIS India Intranet';
+const BRAND_URL = 'https://intranet.apisuniverse.com';
 
 const ROW_PAD = 15;        // above the name and below the last pill
 const NAME_H = 24;
@@ -343,21 +349,37 @@ export async function renderSheet(sheet: ShareSheet): Promise<Blob> {
   });
 
   // ── footer ──
+  //
+  // This is the branding. The sheet is made to be forwarded, and the person
+  // who opens it two hops later may not know the portal exists -- so the
+  // name and the address get a line each, not a credit in small print.
   const fy = H - FOOT_H;
   c.fillStyle = '#f8fafc';
   c.fillRect(0, fy, W, FOOT_H);
-  c.font = font(600, 12);
+  c.fillStyle = ACCENT;
+  c.fillRect(0, fy, W, 3);
+
   c.textBaseline = 'middle';
+
+  c.font = font(600, 12);
   c.fillStyle = dropped ? WARN_INK : FAINT;
   c.fillText(
     dropped
       ? `${rows.length} of ${sheet.rows.length} shown — the full list is in the CSV`
       : `${rows.length} ${rows.length === 1 ? 'person' : 'people'}`,
-    PAD, fy + FOOT_H / 2);
+    PAD, fy + 26);
   c.fillStyle = FAINT;
+  c.font = font(500, 11.5);
+  c.fillText(`Generated ${new Date().toLocaleDateString('en-GB',
+    { day: '2-digit', month: 'short', year: 'numeric' })}`, PAD, fy + 48);
+
   c.textAlign = 'right';
-  c.fillText(`APIS India intranet · generated ${new Date().toLocaleDateString('en-GB',
-    { day: '2-digit', month: 'short', year: 'numeric' })}`, W - PAD, fy + FOOT_H / 2);
+  c.fillStyle = INK;
+  c.font = font(800, 14);
+  c.fillText(BRAND, W - PAD, fy + 25);
+  c.fillStyle = '#b45309';   // amber, so the address is the thing that catches
+  c.font = font(700, 12.5);
+  c.fillText(BRAND_URL, W - PAD, fy + 47);
   c.textAlign = 'left';
 
   return new Promise<Blob>((resolve, reject) => {
