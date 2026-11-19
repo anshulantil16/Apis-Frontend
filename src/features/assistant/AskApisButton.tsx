@@ -390,7 +390,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName, empl
                         {m.answer && (
                           <AnswerBlocks answer={m.answer} query={m.query ?? ''}
                             onAsk={send} onOpenTool={openTool} onRunAction={runAction} onOpenLink={openLink} onGo={goTo}
-                            onBrowse={() => setBrowsing(true)} onFillTada={() => startTada()} onFillTicket={which => startTicket(undefined, which)} onFillGoals={() => startGoals()} onFillEom={() => startEom()} />
+                            onBrowse={() => setBrowsing(true)} onFillTada={() => startTada()} onFillTicket={which => startTicket(undefined, which)} onFillGoals={() => startGoals()} onFillEom={() => startEom()} userEmail={userEmail} />
                         )}
                         <div className="flex items-center gap-2 text-[10px] font-semibold text-amber-900/40">
                           <span>Ask APIS · {clock(m.at)}</span>
@@ -502,7 +502,7 @@ export function AskApisButton({ onNavigate, canOpen = () => true, userName, empl
 
 /* Everything one answer found: people, holidays, links, the guide itself
    and other guides that might be meant. */
-function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpenLink, onGo, onBrowse, onFillTada, onFillTicket, onFillGoals, onFillEom }: {
+function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpenLink, onGo, onBrowse, onFillTada, onFillTicket, onFillGoals, onFillEom, userEmail }: {
   answer: Answer;
   query: string;
   onAsk: (text: string, forced?: Guide) => void;
@@ -515,6 +515,7 @@ function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpen
   onFillTicket: (which: 'it' | 'admin') => void;
   onFillGoals: () => void;
   onFillEom: () => void;
+  userEmail?: string;
 }) {
   const g = a.guide;
   /* The two TA/DA requests the chat can fill in itself. */
@@ -568,7 +569,7 @@ function AnswerBlocks({ answer: a, query, onAsk, onOpenTool, onRunAction, onOpen
 
       {a.holiday && <HolidayAnswer query={query} />}
 
-      {a.extras.map(e => <ExtraAnswer key={e.kind} extra={e} query={query} go={onGo} onAsk={onAsk} />)}
+      {a.extras.map(e => <ExtraAnswer key={e.kind} extra={e} query={query} go={onGo} onAsk={onAsk} userEmail={userEmail} />)}
 
       {a.links.length > 0 && (
         <div className="space-y-1.5">

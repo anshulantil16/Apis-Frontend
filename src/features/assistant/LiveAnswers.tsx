@@ -25,14 +25,16 @@ import { AMBITIONBOX_HREF } from './links';
 /* Open a tool, optionally on a particular screen inside it. */
 export type Go = (view: ShellView, intent?: string) => void;
 
-export function ExtraAnswer({ extra: e, query, go, onAsk }: {
+export function ExtraAnswer({ extra: e, query, go, onAsk, userEmail }: {
   extra: Extra; query: string; go: Go;
   /* Ask the bee something, as if typed. */
   onAsk: (text: string) => void;
+  /* The intranet's email, offered as the Help Desk sign-in. */
+  userEmail?: string;
 }) {
   switch (e.kind) {
     case 'social': return <Social onQuote={() => onAsk('Quote of the day')} />;
-    case 'my-requests': return <MyRequests go={go} />;
+    case 'my-requests': return <MyRequests go={go} userEmail={userEmail} />;
     case 'rooms': return <Rooms go={go} />;
     case 'recent-tools': return <RecentTools go={go} />;
     case 'vacancies': return <Vacancies terms={e.terms} go={go} />;
@@ -150,13 +152,13 @@ function DeskSignIn({ go, intent, what }: { go: Go; intent: string; what: string
   );
 }
 
-interface RequestRow { key: string; kind: string; title: string; status: string; statusLabel: string; created: string; }
+interface RequestRow { key: string; kind: string; title: string; status: string; statusLabel: string; created: string; who?: string }
 
 const OPEN = new Set(['pending', 'approved', 'in_progress']);
 
 const pretty = (s: string) => s.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
 
-function MyRequests({ go }: { go: Go }) {
+function MyRequests({ go, userEmail }: { go: Go; userEmail?: string }) {
   const load = useDesk(async s => {
     const mine = encodeURIComponent(s.email);
     const [b, r, t] = await Promise.all([
@@ -172,33 +174,139 @@ function MyRequests({ go }: { go: Go }) {
     return rows.sort((a, c) => (a.created < c.created ? 1 : -1));
   });
 
+  /* Rows read through the chat's own sign-in, when this browser has no Help Desk one. */
+  const [viaChat, setViaChat] = useState<{ email: string; rows: RequestRow[] } | null>(null);
+  const rows = viaChat?.rows ?? (load.state === 'ok' ? load.data : null);
+
   return (
     <Card icon={<Headphones className="w-3 h-3" />} title="My Help Desk requests">
       {load.state === 'loading' && <Loading />}
-      {load.state === 'signin' && <DeskSignIn go={go} intent="helpdesk:my-requests" what="your tickets and requests" />}
+      {load.state === 'signin' && !viaChat && <ChatSignIn userEmail={userEmail} onRows={(email, r) => setViaChat({ email, rows: r })} />}
       {load.state === 'down' && <Muted>Help Desk isn’t answering right now — try again in a moment.</Muted>}
-      {load.state === 'ok' && (load.data.length === 0 ? <Muted>You haven’t raised anything on Help Desk yet.</Muted> : (
-        <>
-          <Muted>{load.data.filter(r => OPEN.has(r.status)).length} still open, {load.data.length} in all.</Muted>
-          <div className="space-y-1">
-            {load.data.slice(0, 5).map(r => (
-              <div key={r.key} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[12px] font-bold text-slate-800">{r.title}</p>
-                  <p className="text-[10.5px] text-slate-400">{r.kind} · {new Date(r.created).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
-                </div>
-                <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase ring-1 ${REQUEST_STATUS_BADGE[r.status] ?? 'bg-slate-50 text-slate-500 ring-slate-200'}`}>
-                  {r.statusLabel}
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      ))}
-      {load.state === 'ok' && (
+      {viaChat && <Muted>Signed in as {viaChat.email} for this check only — nothing is kept in the browser.</Muted>}
+      {rows && <RequestList rows={rows} />}
+      {rows && (
         <Action onClick={() => go('helpdesk', 'helpdesk:my-requests')}>Open My Requests<ArrowRight className="w-3 h-3" /></Action>
       )}
     </Card>
+  );
+}
+
+function RequestList({ rows }: { rows: RequestRow[] }) {
+  if (!rows.length) return <Muted>You haven’t raised anything on Help Desk yet.</Muted>;
+  return (
+    <>
+      <Muted>{rows.filter(r => OPEN.has(r.status)).length} still open, {rows.length} in all{rows.length > 5 ? ' — the latest 5 are below' : ''}.</Muted>
+      <div className="space-y-1">
+        {rows.slice(0, 5).map(r => (
+          <div key={r.key} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-bold text-slate-800">{r.title}</p>
+              <p className="truncate text-[10.5px] text-slate-400">
+                {r.kind} · {new Date(r.created).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                {r.who ? ` · with ${r.who}` : ''}
+              </p>
+            </div>
+            <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase ring-1 ${REQUEST_STATUS_BADGE[r.status] ?? 'bg-slate-50 text-slate-500 ring-slate-200'}`}>
+              {r.statusLabel}
+            </span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/* Never throws: a network failure comes back as an error like any other. */
+async function deskPost(path: string, body: object): Promise<{ ok: boolean; d: Record<string, unknown> }> {
+  try {
+    const r = await fetch(`${API}/${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    let d: Record<string, unknown> = {};
+    try { d = await r.json(); } catch { d = { error: `Help Desk had a problem (${r.status}). Please try again.` }; }
+    return { ok: r.ok, d };
+  } catch {
+    return { ok: false, d: { error: 'I couldn’t reach the Help Desk. Check your connection and try again.' } };
+  }
+}
+
+/* Sign in to the Help Desk right in the chat - work email, then the emailed
+ * code - and read the person's own requests. The server decides whose they
+ * are from the code, not from anything sent here. The chat's sign-in is
+ * used once and ended straight away: nothing is stored in the browser, and
+ * the token never leaves this function. */
+function ChatSignIn({ userEmail, onRows }: { userEmail?: string; onRows: (email: string, rows: RequestRow[]) => void }) {
+  const [stage, setStage] = useState<'email' | 'code'>('email');
+  const [email, setEmail] = useState(userEmail ?? '');
+  const [code, setCode] = useState('');
+  const [sentTo, setSentTo] = useState('');
+  const [devCode, setDevCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const send = async () => {
+    const addr = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) { setError('That doesn’t look like an email address.'); return; }
+    setBusy(true); setError('');
+    const { ok, d } = await deskPost('login/', { action: 'send_otp', email: addr });
+    setBusy(false);
+    if (!ok) { setError(String(d.error ?? 'I couldn’t send a code. Please try again.')); return; }
+    setEmail(addr); setSentTo(String(d.masked_email ?? addr)); setDevCode(typeof d.dev_otp === 'string' ? d.dev_otp : '');
+    setCode(''); setStage('code');
+  };
+
+  const check = async () => {
+    if (!/^\d{6}$/.test(code.trim())) { setError('The code is 6 digits — please type just those.'); return; }
+    setBusy(true); setError('');
+    const v = await deskPost('assistant/verify/', { email, otp: code.trim() });
+    if (!v.ok) { setBusy(false); setError(String(v.d.error ?? 'That code didn’t work. Please try again.')); return; }
+    const token = String(v.d.token);
+    const m = await deskPost('assistant/my-requests/', { token });
+    // One look is all this is for: end the sign-in now, whatever came back.
+    void deskPost('assistant/logout/', { token });
+    setBusy(false);
+    if (!m.ok) { setError(String(m.d.error ?? 'Help Desk isn’t answering right now — try again in a moment.')); return; }
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- the server's rows, typed below. */
+    const rows: RequestRow[] = ((m.d.results ?? []) as any[]).map(x => ({
+      key: `${x.kind}${x.id}`, kind: x.kind, title: x.title, status: x.status,
+      statusLabel: x.status_label || pretty(x.status), created: x.created, who: x.assigned_to || undefined,
+    }));
+    onRows(String(m.d.email ?? email), rows);
+  };
+
+  const input = 'w-full rounded-lg ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 px-2.5 py-1.5 text-[12.5px] font-semibold text-slate-800 outline-none';
+  return (
+    <form className="space-y-2" onSubmit={ev => { ev.preventDefault(); void (stage === 'email' ? send() : check()); }}>
+      {stage === 'email' ? (
+        <>
+          <Muted>To keep your requests private, sign in to the Help Desk here. I’ll email you a 6-digit code.</Muted>
+          <input type="email" value={email} onChange={ev => setEmail(ev.target.value)} placeholder="Your work email"
+            autoComplete="email" className={input} />
+        </>
+      ) : (
+        <>
+          <Muted>I’ve emailed a 6-digit code to {sentTo}. Type it here — it’s valid for 5 minutes.</Muted>
+          {devCode && <Muted>Local testing: email isn’t set up on this machine, so your code is {devCode}.</Muted>}
+          <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} autoFocus
+            onChange={ev => setCode(ev.target.value.replace(/\D/g, ''))} placeholder="6-digit code"
+            className={`${input} tracking-[0.3em]`} />
+        </>
+      )}
+      {error && <p className="text-[11.5px] font-semibold text-rose-600">{error}</p>}
+      <button type="submit" disabled={busy}
+        className="aa-chip w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                   bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[12px] font-black shadow-sm disabled:opacity-60">
+        {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+        {stage === 'email' ? 'Send me a code' : 'Check my requests'}
+      </button>
+      {stage === 'code' && (
+        <div className="flex justify-between">
+          <Action onClick={() => void send()}>Send a new code</Action>
+          <Action onClick={() => { setStage('email'); setError(''); }}>Use a different email</Action>
+        </div>
+      )}
+    </form>
   );
 }
 
