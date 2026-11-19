@@ -230,3 +230,24 @@ and only the Data Extractor ones have been audited.
 - Every new full-page screen needs a visible way out (a back button).
 - Panels with nothing to show are hidden, not rendered empty — an empty card
   reads as broken.
+
+## Medical Insurance (`src/features/insurance/`)
+
+A launcher, not a viewer. The insurer's integration document gives us a
+sign-in redirect and **no data API**, so this page cannot show anybody's
+health card, cover or claim status — it signs them in to the insurer's portal
+and that portal shows them. Say that on screen rather than implying the
+intranet holds the records.
+
+- `insuranceLaunchUrl()` returns a **single-use** URL. Never cache one: it is
+  a key to somebody's medical records with a three-hour life.
+- **The new tab is opened synchronously inside the click**, then pointed at
+  the URL once it arrives. Opening it after the `await` puts it outside the
+  user gesture and every popup blocker swallows it — the button then does
+  nothing at all, with nothing to show for it.
+- Destination tiles are filtered against the keys the server actually offers,
+  so the eleven in `GROUPS` can go stale without rendering a dead button.
+- `ready` is two things at once: the connection is configured **and** this
+  person can be identified to the insurer. Someone with neither an email nor
+  an employee code cannot be, and is told so instead of being given buttons
+  that all fail identically.

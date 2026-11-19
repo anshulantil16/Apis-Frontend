@@ -1,0 +1,1 @@
+export { InsurancePage } from './InsurancePage';
