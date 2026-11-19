@@ -183,6 +183,30 @@ with the location the moment that column comes first in the sheet.
 The Delhi late cutoff is `LATE_MINS`, one constant with four readers. 11:00
 sharp is on time — every check is a strict `>`.
 
+## Sending exceptions out as a picture (`shareSheet.ts`)
+
+Both attendance dashboards can hand a group — or one person — to whoever
+owns them as a JPG, because an HOD gets a message, not a login. The sheet
+carries the date it is **for**, the names, and what is wrong.
+
+**It is drawn on a canvas, not screenshotted.** html2canvas over the cards
+cannot work here: the BIZOM photos come with no CORS header, so drawing one
+taints the canvas and `toBlob` then refuses outright — the download silently
+does not happen. Photos therefore arrive as data URIs from
+`/api/user_management/photo-thumbs/`, which have no origin. A face that could
+not be fetched is initials on a grey square, never a failed download. Drawing
+it also keeps the app's furniture out of something being forwarded.
+
+`renderSheet` caps at `MAX_ROWS` (60) and says so in the footer — past that
+it is a wall of names nobody reads, and the canvas nears the height at which
+`toBlob` returns null. Callers slice their photo fetches to the same cap.
+
+Both dashboards now share the same filter shape: KPI cards with a `flag` are
+toggles, exceptions get chips, several at once mean **any of**, and counts
+come from the pre-flag set so clicking one card does not zero the others.
+Delhi's thresholds live in `SHORT_HOURS` and `LATE_MINS` — one constant each,
+read by the flags, the KPI and the row rendering alike.
+
 ## `overflow-x-auto` gives you a vertical scrollbar too
 
 Per the CSS spec, a non-`visible` `overflow-x` forces `overflow-y` to compute

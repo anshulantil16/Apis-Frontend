@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Users, UserCheck, CalendarOff, Coffee, Search, Download,
   Clock, ChevronDown, ChevronUp, SlidersHorizontal,
-  AlertTriangle, Timer, Activity, TrendingDown, MessageSquare,
+  AlertTriangle, Timer, Activity, TrendingDown, MessageSquare, Filter, X,
 } from 'lucide-react';
 import { TOOL_STYLES } from './toolStyles';
+import { renderSheet, downloadBlob, safeFileName, type ShareRow } from './shareSheet';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -94,6 +95,59 @@ interface DelhiRecord {
   raw: Record<string, unknown>;
 }
 
+/* Everything that can be filtered on, decided once per row.
+
+   The BIZOM side got these first and this one did not, so the Delhi report
+   could show an Invalid Punch count and give you no way to see which eight
+   rows it meant. Same idea, same wording where the two overlap.
+
+   Present-first, like the other dashboard: the category decides, and a day
+   is late or short only if it was worked at all. */
+type DFlag = 'present' | 'late' | 'absent' | 'leave' | 'off'
+           | 'short' | 'invalidPunch' | 'remarks';
+
+/* Under this many hours a worked day is short. Pocket HRMS gives the
+   duration outright, so unlike BIZOM nothing has to be inferred from the
+   punches. A day with no duration recorded contributes nothing rather than
+   counting as zero -- silent is not the same as short. */
+const SHORT_HOURS = 7;
+
+function flagsOf(r: DelhiRecord): Set<DFlag> {
+  const f = new Set<DFlag>();
+  const cat = typeInfo(r.type).cat;
+  if (cat === 'present') {
+    f.add('present');
+    if (parseTimeMinutes(r.inTime) > LATE_MINS) f.add('late');
+    const h = parseDurationHours(r.duration);
+    if (h > 0 && h < SHORT_HOURS) f.add('short');
+  } else if (cat === 'absent') f.add('absent');
+  else if (cat === 'leave') f.add('leave');
+  else f.add('off');
+  if (missingPunchType(r)) f.add('invalidPunch');
+  if (r.remarks?.trim()) f.add('remarks');
+  return f;
+}
+
+/* Natural order, so Dept 2 sorts before Dept 10 rather than after it. */
+const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare;
+
+/* The exceptions without a card of their own. */
+interface Card {
+  label: string; value: string | number; sub: string; border: string;
+  icon: React.ComponentType<{ className?: string }>; iconCls: string; flag?: DFlag;
+}
+
+const D_LABEL: Record<DFlag, string> = {
+  present: 'Present', late: 'Late in', absent: 'Absent', leave: 'On leave',
+  off: 'Weekly off', short: 'Short day', invalidPunch: 'Invalid punch',
+  remarks: 'Has remark',
+};
+
+const D_EXCEPTIONS: { key: DFlag; label: string; hint: string }[] = [
+  { key: 'short',   label: 'Short day', hint: `Worked, but under ${SHORT_HOURS} hours` },
+  { key: 'remarks', label: 'Has remark', hint: 'WFH, on duty, or a note from HR' },
+];
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
@@ -146,22 +200,68 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [shiftFilter, setShiftFilter] = useState('all');
+  const [dflags, setDflags] = useState<Set<DFlag>>(() => new Set());
+  const [groupValue, setGroupValue] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'size'>('name');
+  const [sheetFor, setSheetFor] = useState('');
+
+  const groupKeyOf = (r: DelhiRecord) =>
+    (groupBy === 'department' ? r.department
+     : groupBy === 'category' ? r.category
+     : r.designation) || 'Not Assigned';
 
   const uniqueShifts = useMemo(() => {
     const s = new Set<string>(); records.forEach(r => r.shiftName && s.add(r.shiftName));
     return Array.from(s).sort();
   }, [records]);
 
+  /* Read from the dates alone, so picking one department never empties
+     the list that offers the departments. */
+  const groupValues = useMemo(() => {
+    const s = new Set<string>();
+    records.forEach(r => { if (selectedDates.has(r.date)) s.add(groupKeyOf(r)); });
+    return [...s].sort(byName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, selectedDates, groupBy]);
+
+  // Choosing what to group by invalidates the value picked under the old one.
+  useEffect(() => { setGroupValue(''); }, [groupBy]);
+
+  /* The group filter lives in here rather than downstream on purpose:
+     "show me this department" has to narrow the cards too, or the figures
+     above describe a day the table below is not showing. */
   const filtered = useMemo(() => records.filter(r => {
     if (!selectedDates.has(r.date)) return false;
     if (shiftFilter !== 'all' && r.shiftName !== shiftFilter) return false;
+    if (groupValue && groupKeyOf(r) !== groupValue) return false;
     if (search) {
       const q = search.toLowerCase();
       return r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q) ||
              r.department.toLowerCase().includes(q) || r.designation.toLowerCase().includes(q);
     }
     return true;
-  }), [records, selectedDates, shiftFilter, search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [records, selectedDates, shiftFilter, search, groupBy, groupValue]);
+
+  /* Several flags at once mean "any of these". The category flags are
+     mutually exclusive, so an all-of rule answers nothing the moment
+     somebody ticks Present and Late together. */
+  const shown = useMemo(() => {
+    if (!dflags.size) return filtered;
+    const want = [...dflags];
+    return filtered.filter(r => { const f = flagsOf(r); return want.some(x => f.has(x)); });
+  }, [filtered, dflags]);
+
+  const toggleDflag = (k: DFlag) => setDflags(p => {
+    const n = new Set(p);
+    if (n.has(k)) n.delete(k); else n.add(k);
+    return n;
+  });
+
+  /* Counts come from `filtered`, never from `shown`: read them off the
+     filtered set and clicking one card zeroes every other, leaving nothing
+     to click next. */
+  const dcount = (k: DFlag) => filtered.reduce((n, r) => n + (flagsOf(r).has(k) ? 1 : 0), 0);
 
   const kpi = useMemo(() => {
     const byDate: Record<string, { present: number; absent: number; leave: number; off: number; late: number }> = {};
@@ -180,7 +280,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
         byDate[d].present++;
         if (parseTimeMinutes(r.inTime) > LATE_MINS) byDate[d].late++;
         const h = parseDurationHours(r.duration);
-        if (h > 0) { totalDur += h; durCount++; if (h < 7) shortHours++; }
+        if (h > 0) { totalDur += h; durCount++; if (h < SHORT_HOURS) shortHours++; }
       } else if (ti.cat === 'absent') {
         byDate[d].absent++;
       } else if (ti.cat === 'leave') {
@@ -226,8 +326,8 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       name: string; present: number; absent: number; leave: number; off: number; late: number; withRemarks: number; invalidPunch: number;
       employees: Record<string, DelhiRecord[]>; records: DelhiRecord[];
     }> = {};
-    filtered.forEach(r => {
-      const key = (groupBy === 'department' ? r.department : groupBy === 'category' ? r.category : r.designation) || 'Not Assigned';
+    shown.forEach(r => {
+      const key = groupKeyOf(r);
       if (!g[key]) g[key] = { name: key, present: 0, absent: 0, leave: 0, off: 0, late: 0, withRemarks: 0, invalidPunch: 0, employees: {}, records: [] };
       const ti = typeInfo(r.type);
       if (ti.cat === 'present') { g[key].present++; if (parseTimeMinutes(r.inTime) > LATE_MINS) g[key].late++; }
@@ -249,14 +349,60 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       employeeList: Object.entries(grp.employees)
         .map(([code, recs]) => ({ code, recs: recs.sort((a, b) => a.date.localeCompare(b.date)) }))
         .sort((a, b) => a.code.localeCompare(b.code)),
-    })).sort((a, b) => b.total - a.total);
-  }, [filtered, groupBy, isRange]);
+    })).sort((a, b) => sortBy === 'size' ? b.total - a.total : byName(a.name, b.name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown, groupBy, isRange, sortBy]);
 
   const toggle = (n: string) => setExpanded(p => ({ ...p, [n]: !p[n] }));
 
+  /* A department as one picture, for the HOD who will never open this
+     tool. The Pocket HRMS export carries no photographs, so every row is
+     initials on a grey square -- which is the right amount of detail for a
+     list whose point is the dates and the exceptions. */
+  const makeSheet = async (key: string, title: string, recs: DelhiRecord[]) => {
+    if (!recs.length || sheetFor) return;
+    setSheetFor(key);
+    try {
+      const what = [...dflags].length
+        ? [...dflags].map(f => D_LABEL[f]).join(' or ')
+        : 'Attendance';
+      const rows: ShareRow[] = recs.map(r => {
+        const f = flagsOf(r);
+        return {
+          name: r.name || r.code || 'Unknown',
+          sub: [r.code, r.department, isRange ? r.date : ''].filter(Boolean).join(' · '),
+          status: typeInfo(r.type).label,
+          facts: [
+            [hasPunchTime(r.inTime) ? r.inTime : 'no in punch',
+             hasPunchTime(r.outTime) ? r.outTime : 'no out punch'].join(' → '),
+            r.duration ? r.duration + 'h' : '',
+            r.shiftName,
+          ].filter(Boolean),
+          flags: [
+            f.has('late') && 'Late in',
+            f.has('short') && 'Short day',
+            missingPunchType(r) === 'no_out' && 'Missing out punch',
+            missingPunchType(r) === 'no_in' && 'Missing in punch',
+            r.remarks?.trim() || '',
+          ].filter(Boolean) as string[],
+        };
+      });
+      const blob = await renderSheet({
+        title,
+        subtitle: `${what} — ${rows.length} ${rows.length === 1 ? 'row' : 'rows'}`,
+        dateLabel: isRange ? `${dateFrom} → ${dateTo}` : (dateFrom || 'All dates'),
+        source: 'Delhi / HO attendance (Pocket HRMS)',
+        rows,
+      });
+      downloadBlob(blob, safeFileName(title, what, isRange ? `${dateFrom} to ${dateTo}` : dateFrom));
+    } finally {
+      setSheetFor('');
+    }
+  };
+
   const exportCSV = () => {
     const hdr = ['Code','Name','Category','Department','Designation','Date','Shift','In Time','Out Time','Duration','Type','Day','Remarks'];
-    const rows = filtered.map(r => [r.code,r.name,r.category,r.department,r.designation,r.date,r.shiftName,r.inTime,r.outTime,r.duration,r.type,r.day,r.remarks]);
+    const rows = shown.map(r => [r.code,r.name,r.category,r.department,r.designation,r.date,r.shiftName,r.inTime,r.outTime,r.duration,r.type,r.day,r.remarks]);
     const csv = '﻿' + [hdr,...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const a = Object.assign(document.createElement('a'), { href: url, download: `HO_Attendance_${dateFrom}${isRange?'_to_'+dateTo:''}.csv` });
@@ -286,6 +432,24 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
               <option value="department">Department</option>
               <option value="category">Category</option>
               <option value="designation">Designation</option>
+            </select>
+
+            {/* Which one. Narrows the whole screen, cards included. */}
+            {groupValues.length > 1 && (
+              <select value={groupValue} onChange={e => setGroupValue(e.target.value)}
+                className={`px-3 py-2.5 border rounded-xl text-sm font-bold focus:outline-none cursor-pointer max-w-56 ${
+                  groupValue ? 'bg-violet-50 border-violet-300 text-violet-800'
+                             : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                <option value="">All ({groupValues.length})</option>
+                {groupValues.map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            )}
+
+            <select value={sortBy} onChange={e => setSortBy(e.target.value as 'name' | 'size')}
+              title="How the groups below are ordered"
+              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none cursor-pointer">
+              <option value="name">A to Z</option>
+              <option value="size">Most rows first</option>
             </select>
           </div>
           {/* Shift filter */}
@@ -343,16 +507,24 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {[
           { label: 'Total',          value: kpi.total,          sub: isRange ? 'Unique emps' : 'Employees',        border: 'border-t-2 border-slate-200',   icon: Users,        iconCls: 'bg-slate-100 text-slate-500'    },
-          { label: 'Present',        value: kpi.present,        sub: `${kpi.presentPct}%${isRange ? ' avg' : ''}`,  border: 'border-t-2 border-emerald-400', icon: UserCheck,    iconCls: 'bg-emerald-50 text-emerald-500' },
-          { label: 'Absent',         value: kpi.absent,         sub: `${kpi.absentPct}%${isRange ? ' avg' : ''}`,   border: 'border-t-2 border-rose-400',    icon: CalendarOff,  iconCls: 'bg-rose-50 text-rose-500'       },
-          { label: 'On Leave',       value: kpi.leave,          sub: `${kpi.leavePct}%${isRange ? ' avg' : ''}`,    border: 'border-t-2 border-orange-400',  icon: CalendarOff,  iconCls: 'bg-orange-50 text-orange-500'   },
-          { label: 'Weekly Off',     value: kpi.off,            sub: isRange ? 'avg/day' : 'Scheduled',             border: 'border-t-2 border-sky-400',     icon: Coffee,       iconCls: 'bg-sky-50 text-sky-500'         },
-          { label: 'Late In',        value: kpi.late,           sub: `${kpi.latePct}% of present`,                  border: 'border-t-2 border-amber-400',   icon: AlertTriangle,iconCls: 'bg-amber-50 text-amber-500'    },
+          { label: 'Present',        value: kpi.present,        sub: `${kpi.presentPct}%${isRange ? ' avg' : ''}`,  border: 'border-t-2 border-emerald-400', icon: UserCheck,    iconCls: 'bg-emerald-50 text-emerald-500' , flag: 'present' as DFlag },
+          { label: 'Absent',         value: kpi.absent,         sub: `${kpi.absentPct}%${isRange ? ' avg' : ''}`,   border: 'border-t-2 border-rose-400',    icon: CalendarOff,  iconCls: 'bg-rose-50 text-rose-500'     , flag: 'absent' as DFlag },
+          { label: 'On Leave',       value: kpi.leave,          sub: `${kpi.leavePct}%${isRange ? ' avg' : ''}`,    border: 'border-t-2 border-orange-400',  icon: CalendarOff,  iconCls: 'bg-orange-50 text-orange-500' , flag: 'leave' as DFlag },
+          { label: 'Weekly Off',     value: kpi.off,            sub: isRange ? 'avg/day' : 'Scheduled',             border: 'border-t-2 border-sky-400',     icon: Coffee,       iconCls: 'bg-sky-50 text-sky-500'       , flag: 'off' as DFlag },
+          { label: 'Late In',        value: kpi.late,           sub: `${kpi.latePct}% of present`,                  border: 'border-t-2 border-amber-400',   icon: AlertTriangle,iconCls: 'bg-amber-50 text-amber-500'  , flag: 'late' as DFlag },
           { label: 'Avg Hours',      value: kpi.avgDurStr,      sub: `${kpi.shortHours} short days`,                border: 'border-t-2 border-violet-400',  icon: Timer,        iconCls: 'bg-violet-50 text-violet-500'   },
-          { label: 'Invalid Punch',  value: kpi.invalidPunch,   sub: 'Missing in or out',                           border: 'border-t-2 border-red-500',     icon: AlertTriangle,iconCls: 'bg-red-50 text-red-500'         },
-        ].map((c, i) => (
-          <div key={c.label}
-            className={`tp-reveal tp-tilt bg-white rounded-2xl border border-slate-100 ${c.border} p-4 shadow-sm hover:shadow-md transition-all`}
+          { label: 'Invalid Punch',  value: kpi.invalidPunch,   sub: 'Missing in or out',                           border: 'border-t-2 border-red-500',     icon: AlertTriangle,iconCls: 'bg-red-50 text-red-500'       , flag: 'invalidPunch' as DFlag },
+        ].map((c: Card, i) => {
+          const on = !!c.flag && dflags.has(c.flag);
+          const Tag = c.flag ? 'button' : 'div';
+          return (
+          <Tag key={c.label}
+            {...(c.flag ? { type: 'button' as const, onClick: () => toggleDflag(c.flag!),
+                            'aria-pressed': on, title: `Show only: ${c.label}` } : {})}
+            className={`tp-reveal tp-tilt text-left w-full bg-white rounded-2xl border ${c.border} p-4 shadow-sm transition-all ${
+              on ? 'border-violet-300 ring-2 ring-offset-1 ring-violet-400 shadow-lg'
+                 : 'border-slate-100 hover:shadow-md'
+            } ${c.flag ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
             style={{ animationDelay: `${i * 60}ms` }}>
             <div className={`tp-pop-in w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${c.iconCls}`}>
               <c.icon className="w-4 h-4" />
@@ -360,8 +532,43 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.label}</p>
             <p className="text-2xl font-black text-slate-800 mt-0.5">{c.value}</p>
             <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{c.sub}</p>
+          </Tag>
+          );
+        })}
+      </div>
+
+      {/* Exceptions worth a look, each one a filter. */}
+      <div className="tp-reveal bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-3.5 flex flex-wrap items-center gap-2">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mr-1">
+          <Filter className="w-3 h-3" /> Exceptions
+        </span>
+        {D_EXCEPTIONS.map(e => {
+          const n = dcount(e.key), on = dflags.has(e.key);
+          return (
+            <button key={e.key} type="button" onClick={() => toggleDflag(e.key)}
+              aria-pressed={on} title={e.hint} disabled={n === 0}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                on ? 'bg-violet-500 text-white border-violet-500 shadow-md'
+                   : n === 0 ? 'bg-slate-50 text-slate-300 border-slate-150 cursor-default'
+                   : 'bg-white text-slate-600 border-slate-200 hover:border-violet-300 hover:text-violet-700'
+              }`}>
+              {e.key === 'short' ? <Timer className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+              {e.label}
+              <span className={`px-1.5 rounded font-black ${on ? 'bg-white/25' : 'bg-slate-100'}`}>{n}</span>
+            </button>
+          );
+        })}
+        {dflags.size > 0 && (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-[11px] font-semibold text-slate-500">
+              {shown.length} of {filtered.length} rows
+            </span>
+            <button type="button" onClick={() => setDflags(new Set())}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:text-red-600 hover:border-red-200 transition-all">
+              <X className="w-3 h-3" /> Clear
+            </button>
           </div>
-        ))}
+        )}
       </div>
 
       {/* ── Breakdowns row ── */}
@@ -450,6 +657,15 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                             ⚠ {grp.invalidPunch} invalid
                           </span>
                         )}
+                        {/* stopPropagation, or the click also collapses the
+                            row underneath the button. */}
+                        <button type="button" disabled={!!sheetFor}
+                          onClick={e => { e.stopPropagation(); makeSheet(grp.name, grp.name, grp.records); }}
+                          title={`Download ${grp.name} as a JPG to share`}
+                          className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-violet-700 border border-slate-200 hover:border-violet-300 px-2 py-0.5 rounded-full transition-all disabled:opacity-40">
+                          <Download className="w-3 h-3" />
+                          {sheetFor === grp.name ? 'Making…' : 'JPG'}
+                        </button>
                       </td>
                       <td className="px-4 py-3.5 text-center text-slate-600 font-semibold text-sm">{grp.total}</td>
                       <td className="px-4 py-3.5 text-center"><span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{grp.present} ({grp.presentPct}%)</span></td>
@@ -497,6 +713,15 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                         {first?.department && <span className="text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded">{first.department}</span>}
                                         {first?.designation && <span className="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{first.designation}</span>}
                                         {invalidC > 0 && <span className="text-[9px] font-black bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" />{invalidC} invalid punch{invalidC > 1 ? 'es' : ''}</span>}
+                                        {/* This one person, for a message to
+                                            their manager. */}
+                                        <button type="button" disabled={!!sheetFor}
+                                          onClick={() => makeSheet(`one-${grp.name}-${emp.code}`,
+                                                                   first?.name || emp.code, emp.recs)}
+                                          title="Download this person as a JPG to share"
+                                          className="p-1 rounded-lg text-slate-300 hover:text-violet-600 hover:bg-violet-50 transition-all disabled:opacity-40">
+                                          <Download className="w-3.5 h-3.5" />
+                                        </button>
                                       </div>
                                       <div className="flex items-center gap-1.5 flex-shrink-0">
                                         {pC > 0 && <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">{pC}P</span>}
@@ -510,7 +735,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                                       {emp.recs.map((rec, ri) => {
                                         const ti = typeInfo(rec.type);
                                         const dh = parseDurationHours(rec.duration);
-                                        const isShort = ti.cat === 'present' && dh > 0 && dh < 7;
+                                        const isShort = ti.cat === 'present' && dh > 0 && dh < SHORT_HOURS;
                                         const isLate = ti.cat === 'present' && parseTimeMinutes(rec.inTime) > LATE_MINS;
                                         const rk = remarkKey(rec.remarks);
                                         const rs = rk ? REMARK_STYLE[rk] : null;
@@ -550,7 +775,7 @@ export function DelhiAttendanceDashboard({ rawData }: { rawData: unknown[] }) {
                               {grp.records.map((rec, i) => {
                                 const ti = typeInfo(rec.type);
                                 const dh = parseDurationHours(rec.duration);
-                                const isShort = ti.cat === 'present' && dh > 0 && dh < 7;
+                                const isShort = ti.cat === 'present' && dh > 0 && dh < SHORT_HOURS;
                                 const isLate = ti.cat === 'present' && parseTimeMinutes(rec.inTime) > LATE_MINS;
                                 const rk = remarkKey(rec.remarks);
                                 const rs = rk ? REMARK_STYLE[rk] : null;
