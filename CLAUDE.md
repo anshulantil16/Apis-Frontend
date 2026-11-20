@@ -309,3 +309,55 @@ rows and React will happily try to draw all of them.
 CLAUDE.md for the counts that forced that. The scope is applied inside
 `scoped`, i.e. **before** the flags, so the KPI cards count head office only
 while it is on. "Everyone" is one click.
+
+### Overview charts, and why the colours are what they are
+
+`AttendanceCharts.tsx` uses four hues, and they were **validated, not chosen
+by eye**: teal `#0d9488` (on time), amber `#f59e0b` (late vs their shift),
+rose `#e11d48` (after the clock cutoff), violet `#7c3aed` (unswiped). Worst
+adjacent pair under colour-vision deficiency is ΔE 16.6; worst normal-vision
+pair 25.6.
+
+**Do not "align" them to the table's chip colours.** That set was tested
+first and FAILED: Tailwind's `orange-500` and `rose-500` sit at ΔE 12.7,
+under the 15 normal-vision floor — full-colour readers cannot reliably tell
+them apart either. Amber is the one hue under 3:1 contrast on white, which is
+why every chart carrying it also carries a legend, a tooltip and a matching
+table in Reports.
+
+One axis per chart, always. The daily trend plots three counts of **people**,
+which share a unit honestly; a rate and a count on one plot would invent a
+relationship that is not in the data.
+
+### `analysed` vs `shown` — the distinction is load-bearing
+
+- `scoped` — date, search, facets and the Delhi HO scope. The KPI cards count this.
+- `analysed` — `scoped` after the flag toggles. **Every statistic, chart and
+  report reads this one.**
+- `shown` — `analysed` with the no-record rows collapsed and the sort applied.
+  **The Day-rows table, and only that table, reads this.**
+
+`hideBlank` is a reading convenience, not a filter on the data. It was wired
+into the statistics first time round and the result was "Turned up 100%" with
+every no-record figure at zero — because the rows it hides are exactly the
+ones those figures are about. The By-person table also reads `analysed`,
+since it has a No record column.
+
+### The arrival histogram trims its window on purpose
+
+Untrimmed, five real days of head office spanned **01:30 to 16:00 — 59
+buckets, 38 of them empty**, because of one 01:30 punch, one 14:15 and one
+16:00. The hours anybody actually wants to read were squashed into a third of
+the width by three rows. The plotted window now covers the central 98% and
+the tails fold into faded, labelled edge bars. **Nothing is dropped** — the
+bucket counts still sum to every punch there was.
+
+The cutoff `ReferenceLine` is guarded by a check that its bucket exists:
+it matches a CATEGORY axis by label, so outside the window it silently draws
+nothing.
+
+### Today is not a finished day
+
+`DayPoint.partial` marks it. On a real 20-Nov fetch all 60 punched-in people
+were "unswiped" at noon — nobody had gone home yet. Anything plotting the
+daily series has to say so, or it reads as a collapse.

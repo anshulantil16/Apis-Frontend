@@ -29,12 +29,17 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays, ArrowLeft, Loader2, AlertTriangle, RefreshCw, Download,
   Users, Clock, CircleSlash, Timer, LogOut, CalendarOff, Search, Info, Table2,
-  UserRound, ArrowUpDown, ArrowRight, EyeOff, Eye,
+  UserRound, ArrowUpDown, ArrowRight, EyeOff, Eye, LayoutDashboard, FileBarChart,
 } from 'lucide-react';
 import {
   fetchAttMeta, fetchAttRecords, hours, dur,
   type AttFlag, type AttMeta, type AttRecords, type AttRow,
 } from './api';
+import {
+  arrivalHistogram, asClock, clockMins, dailySeries, group, summarise,
+} from './analytics';
+import { ArrivalChart, DeptChart, TrendChart } from './AttendanceCharts';
+import { AttendanceReports } from './AttendanceReports';
 
 const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare;
 
@@ -100,6 +105,13 @@ function rangeFor(preset: Preset, today: Date): [string, string] {
 }
 
 type SortKey = 'name' | 'in' | 'out' | 'worked' | 'late' | 'date';
+type Tab = 'overview' | 'rows' | 'people' | 'reports';
+const TABS: { key: Tab; label: string; icon: typeof Table2 }[] = [
+  { key: 'overview', label: 'Overview',  icon: LayoutDashboard },
+  { key: 'rows',     label: 'Day rows',  icon: Table2 },
+  { key: 'people',   label: 'By person', icon: UserRound },
+  { key: 'reports',  label: 'Reports',   icon: FileBarChart },
+];
 const PAGE = 150;
 
 interface Props { onBack?: () => void }
@@ -122,7 +134,7 @@ export function AttendancePage({ onBack }: Props) {
   const [department, setDepartment] = useState('');
   const [grade, setGrade] = useState('');
   const [flags, setFlags] = useState<Set<AttFlag>>(new Set());
-  const [view, setView] = useState<'rows' | 'people'>('rows');
+  const [tab, setTab] = useState<Tab>('overview');
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'name', desc: false });
   /* 189 of 720 rows on a normal day are blanks for people the feed has
      nothing on. Left in, they fill the first screen with dashes before any
@@ -194,11 +206,23 @@ export function AttendancePage({ onBack }: Props) {
       && (!grade || r.grade === grade));
   }, [rows, hoOnly, data, search, location, department, grade]);
 
-  /* shown = scoped after the flags. Several flags mean ANY OF: the status
-     markers are near enough mutually exclusive that an all-of rule answers
-     nothing for the pairs most worth seeing together. */
+  /* analysed = scoped after the flag toggles. Several flags mean ANY OF: the
+     status markers are near enough mutually exclusive that an all-of rule
+     answers nothing for the pairs most worth seeing together.
+
+     **Every statistic on this screen is computed from `analysed`, never from
+     `shown`.** `hideBlank` below is a reading convenience for one table; it
+     is not a filter on the data. Letting it reach the figures made "Turned
+     up" read 100% and every no-record count read zero, because the rows it
+     hides are exactly the ones those figures are about. */
+  const analysed = useMemo(
+    () => (flags.size ? scoped.filter(r => r.flags.some(f => flags.has(f))) : scoped),
+    [scoped, flags]);
+
+  /* shown = analysed with the blank rows collapsed and the sort applied.
+     The table, and only the table, reads this. */
   const shown = useMemo(() => {
-    let out = flags.size ? scoped.filter(r => r.flags.some(f => flags.has(f))) : scoped;
+    let out = analysed;
     // Never hide what was explicitly asked for.
     if (hideBlank && !flags.has('noRecord')) out = out.filter(r => !r.noRecord);
     const dir = sort.desc ? -1 : 1;
@@ -214,7 +238,7 @@ export function AttendancePage({ onBack }: Props) {
         default:       return dir * byName(a.name, b.name);
       }
     });
-  }, [scoped, flags, hideBlank, sort]);
+  }, [analysed, flags, hideBlank, sort]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: scoped.length };
@@ -222,16 +246,28 @@ export function AttendancePage({ onBack }: Props) {
     return c;
   }, [scoped]);
 
+  /* The overview's inputs, derived from `shown` so a chart can never
+     disagree with the table beside it. All memoised on `shown` because a
+     month is ~22,000 rows and these walk them several times. */
+  const cutoffMins = useMemo(
+    () => clockMins(data?.lateCutoff || '11:00') ?? 11 * 60, [data]);
+  const histogram = useMemo(
+    () => arrivalHistogram(analysed, cutoffMins), [analysed, cutoffMins]);
+  const trend = useMemo(() => dailySeries(analysed), [analysed]);
+  const deptStats = useMemo(() => group(analysed, 'department', 3), [analysed]);
+
   const worked = useMemo(() => {
-    const v = scoped.map(r => r.workedMins).filter((m): m is number => m != null);
+    const v = analysed.map(r => r.workedMins).filter((m): m is number => m != null);
     return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
-  }, [scoped]);
+  }, [analysed]);
 
   /* One row per person for a range — a month of day rows is 20,000 lines
      nobody reads, while "who was late nine times" is the actual question. */
   const people = useMemo(() => {
     const map = new Map<string, Person>();
-    for (const r of shown) {
+    // `analysed`, not `shown`: this table has a No record column, and the
+    // blank rows it collapses in the Day-rows view are its whole subject.
+    for (const r of analysed) {
       let p = map.get(r.code);
       if (!p) {
         p = { code: r.code, name: r.name, designation: r.designation, grade: r.grade,
@@ -250,13 +286,13 @@ export function AttendancePage({ onBack }: Props) {
       if (r.workedMins != null) { p.totalMins += r.workedMins; p.withHours += 1; }
     }
     return Array.from(map.values()).sort((a, b) => byName(a.name, b.name));
-  }, [shown]);
+  }, [analysed]);
 
   const download = () => {
     const head = ['Code', 'Name', 'Designation', 'Grade', 'Department', 'Location',
       'Date', 'In', 'Out', 'Worked', 'Normal', 'Late by', 'Early by', 'Flags'];
     const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const body = shown.map(r => [
+    const body = analysed.map(r => [
       r.code, r.name, r.designation, r.grade, r.department, r.location, r.date,
       r.inUnswiped ? 'Unswiped' : r.inTime,
       r.outUnswiped ? 'Unswiped' : r.outTime,
@@ -274,7 +310,7 @@ export function AttendancePage({ onBack }: Props) {
 
   const multiDay = (data?.days ?? 1) > 1;
   const blankHidden = hideBlank && !flags.has('noRecord')
-    ? (flags.size ? scoped.filter(r => r.flags.some(f => flags.has(f))) : scoped).filter(r => r.noRecord).length
+    ? analysed.filter(r => r.noRecord).length
     : 0;
 
   return (
@@ -499,17 +535,8 @@ export function AttendancePage({ onBack }: Props) {
                   Average day <b className="text-slate-800 tabular-nums">{hours(worked)}</b>
                 </span>
               )}
-              <div className="flex rounded-lg border border-slate-200 overflow-hidden">
-                {([['rows', 'Day rows', Table2], ['people', 'By person', UserRound]] as const).map(
-                  ([k, label, Icon]) => (
-                    <button key={k} onClick={() => setView(k)}
-                      className={`px-2.5 py-1.5 text-[11px] font-bold inline-flex items-center gap-1 transition-colors
-                        ${view === k ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
-                      <Icon className="w-3 h-3" />{label}
-                    </button>
-                  ))}
-              </div>
-              <button onClick={download} disabled={!shown.length}
+              <button onClick={download} disabled={!analysed.length}
+                title="Every filtered row, including the no-record ones the table collapses"
                 className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px] font-bold
                            text-slate-600 hover:bg-slate-50 inline-flex items-center gap-1 disabled:opacity-50">
                 <Download className="w-3 h-3" />CSV
@@ -517,9 +544,47 @@ export function AttendancePage({ onBack }: Props) {
             </div>
           </div>
 
-          <p className="mt-2 text-[11px] text-slate-400">
-            Showing {Math.min(shown.length, limit).toLocaleString('en-IN')} of{' '}
-            {shown.length.toLocaleString('en-IN')}
+          {/* ── Tabs ────────────────────────────────────────────────────── */}
+          <div className="mt-4 flex items-center gap-1 border-b border-slate-200">
+            {TABS.map(t => {
+              const Icon = t.icon;
+              const on = tab === t.key;
+              return (
+                <button key={t.key} onClick={() => setTab(t.key)}
+                  className={`relative px-3.5 py-2 text-[12px] font-bold inline-flex items-center gap-1.5
+                              transition-colors ${on ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
+                  <Icon className="w-3.5 h-3.5" />{t.label}
+                  {on && <span className="absolute inset-x-1 -bottom-px h-0.5 rounded-full bg-slate-900" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {tab === 'overview' && (
+            <div className="mt-4 space-y-4">
+              <HeadlineBand rows={analysed} days={data.days} cutoffLabel={data.lateCutoff} />
+              <ArrivalChart data={histogram} cutoffMins={cutoffMins} cutoffLabel={data.lateCutoff} />
+              {multiDay && <TrendChart data={trend} />}
+              <div className="grid gap-4 xl:grid-cols-2">
+                <DeptChart data={deptStats} metric="lateRate" />
+                <DeptChart data={deptStats} metric="avgWorked" />
+              </div>
+            </div>
+          )}
+
+          {tab === 'reports' && (
+            <div className="mt-4">
+              <AttendanceReports rows={analysed} days={data.days}
+                cutoffLabel={data.lateCutoff}
+                scopeLabel={hoOnly ? (data.homeOffice?.label || 'Delhi HO') : 'this selection'} />
+            </div>
+          )}
+
+          {(tab === 'rows' || tab === 'people') && (
+          <>
+          <p className="mt-3 text-[11px] text-slate-400">
+            Showing {Math.min(tab === 'rows' ? shown.length : people.length, limit).toLocaleString('en-IN')} of{' '}
+            {(tab === 'rows' ? shown.length : people.length).toLocaleString('en-IN')}
             {blankHidden ? ` · ${blankHidden.toLocaleString('en-IN')} no-record rows hidden` : ''}
             {flags.size > 1 ? ' · several filters mean any of them' : ''}
           </p>
@@ -533,23 +598,25 @@ export function AttendancePage({ onBack }: Props) {
               vertical scrollbar beside the shell's own. */}
           <div className="mt-2 rounded-xl border border-slate-200 bg-white
                           max-lg:overflow-x-auto max-lg:overflow-y-hidden">
-            {view === 'rows'
+            {tab === 'rows'
               ? <RowTable rows={shown.slice(0, limit)} multiDay={multiDay}
                           sort={sort} onSort={setSort} />
               : <PeopleTable people={people.slice(0, limit)} />}
           </div>
 
-          {(view === 'rows' ? shown.length : people.length) > limit && (
+          {(tab === 'rows' ? shown.length : people.length) > limit && (
             <button onClick={() => setLimit(l => l + PAGE * 2)}
               className="mt-3 w-full py-2.5 rounded-xl border border-slate-200 bg-white text-[12px]
                          font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-              Show more — {((view === 'rows' ? shown.length : people.length) - limit)
+              Show more — {((tab === 'rows' ? shown.length : people.length) - limit)
                 .toLocaleString('en-IN')} still hidden
             </button>
           )}
 
           {!shown.length && (
             <p className="py-10 text-center text-[13px] text-slate-400">Nothing matches those filters.</p>
+          )}
+          </>
           )}
 
           <div className="mt-6 rounded-xl bg-slate-50 border border-slate-200 p-4">
@@ -814,5 +881,80 @@ function PeopleTable({ people }: { people: Person[] }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+/* ── The overview's headline ───────────────────────────────────────────────
+   A hero figure and four supporting numbers, not an eight-hue chart: the
+   question "how did today go" has one answer, and a chart of one number is
+   a stat tile with extra steps.
+
+   Everything here is quoted against a denominator that is stated on screen.
+   A rate with nothing behind it reads as fact and is noise — a department of
+   one person having one bad morning is 100% late. */
+function HeadlineBand({ rows, days, cutoffLabel }: {
+  rows: AttRow[]; days: number; cutoffLabel: string;
+}) {
+  const s = useMemo(() => summarise(rows), [rows]);
+  if (!s.rows) return null;
+
+  const pct = (v: number | null) => (v == null ? '—' : `${v.toFixed(0)}%`);
+  const stats: { label: string; value: string; sub: string; tone?: string }[] = [
+    { label: 'Median arrival',
+      value: s.medianArrival == null ? '—' : asClock(s.medianArrival),
+      sub: `cutoff ${cutoffLabel}`,
+      tone: s.medianArrival != null && s.medianArrival > (clockMins(cutoffLabel) ?? 660)
+        ? 'text-rose-700' : 'text-slate-900' },
+    { label: 'Average day',
+      value: s.avgWorked == null ? '—' : hours(s.avgWorked),
+      sub: 'days with a duration only' },
+    { label: 'After cutoff',
+      value: s.afterCutoff.toLocaleString('en-IN'),
+      sub: `${pct(s.punched ? (s.afterCutoff / s.punched) * 100 : null)} of days punched`,
+      tone: s.afterCutoff ? 'text-rose-700' : 'text-slate-900' },
+    { label: 'Unswiped',
+      value: s.unswiped.toLocaleString('en-IN'),
+      sub: 'no hours can be derived',
+      tone: s.unswiped ? 'text-violet-700' : 'text-slate-900' },
+  ];
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-5">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+            Turned up
+          </p>
+          {/* The hero figure. It is a share of DAY RECORDS, not of people:
+              over a range one person contributes several and they differ. */}
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-5xl font-black tracking-tight text-slate-900">
+              {pct(s.punchedRate)}
+            </span>
+            <span className="text-[12px] text-slate-500">
+              {s.punched.toLocaleString('en-IN')} of {s.rows.toLocaleString('en-IN')}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500">
+            {s.people.toLocaleString('en-IN')} people over {days} day{days === 1 ? '' : 's'}
+            {s.noRecord ? ` · ${s.noRecord.toLocaleString('en-IN')} with no record at all` : ''}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-x-7 gap-y-4">
+          {stats.map(st => (
+            <div key={st.label}>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                {st.label}
+              </p>
+              <p className={`mt-0.5 text-xl font-black tabular-nums ${st.tone || 'text-slate-900'}`}>
+                {st.value}
+              </p>
+              <p className="text-[10px] text-slate-400">{st.sub}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
