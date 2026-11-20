@@ -230,3 +230,51 @@ and only the Data Extractor ones have been audited.
 - Every new full-page screen needs a visible way out (a back button).
 - Panels with nothing to show are hidden, not rendered empty — an empty card
   reads as broken.
+
+## Medical Insurance (`src/features/insurance/`)
+
+A launcher, not a viewer. The insurer's integration document gives us a
+sign-in redirect and **no data API**, so this page cannot show anybody's
+health card, cover or claim status — it signs them in to the insurer's portal
+and that portal shows them. Say that on screen rather than implying the
+intranet holds the records.
+
+- `insuranceLaunchUrl()` returns a **single-use** URL. Never cache one: it is
+  a key to somebody's medical records with a three-hour life.
+- **The new tab is opened synchronously inside the click**, then pointed at
+  the URL once it arrives. Opening it after the `await` puts it outside the
+  user gesture and every popup blocker swallows it — the button then does
+  nothing at all, with nothing to show for it.
+- Destination tiles are filtered against the keys the server actually offers,
+  so the eleven in `GROUPS` can go stale without rendering a dead button.
+- `ready` is two things at once: the connection is configured **and** this
+  person can be identified to the insurer. Someone with neither an email nor
+  an employee code cannot be, and is told so instead of being given buttons
+  that all fail identically.
+
+## Attendance (`src/features/attendance/`)
+
+Live from Pocket HRMS — a date or a range, no upload. Separate from the Data
+Extractor's two attendance dashboards and separately granted.
+
+Same filter contract as those dashboards: KPI cards with a flag are toggles,
+counts come from `scoped` (the pre-flag set) so clicking one card does not
+zero the others, and several flags at once mean **any of**.
+
+- **Hours are blank on an unswiped day, never zero and never derived.** The
+  day did not close; a duration taken from one reads as a fifteen-hour shift.
+- **`noRecord` is not "absent".** HRMS returns a blank row for every employee
+  on every date, future dates included, and the feed has no leave or week-off
+  column. The footnote on the page says this — keep it.
+- **There is no overtime column** and must not be one: `OTHours` is `-` on
+  every row this tenant returns.
+- `late` (HRMS, vs the person's shift) and `afterCutoff` (vs the 11:00 clock
+  rule) are both shown and routinely differ by an order of magnitude. The
+  explanation sits under the cards, not in a tooltip, because it is the first
+  thing anyone asks.
+- Dates are built with a local `iso()` helper, **not** `toISOString()` — that
+  converts to UTC and in IST returns yesterday for anything before 05:30.
+- "By person" averages over the days that **have** a duration, not over every
+  day in the range: dividing by days nobody closed drags the average down.
+- Facet dropdowns render only when the fetched rows actually carry that
+  column (`Picker` returns null on an empty list).
