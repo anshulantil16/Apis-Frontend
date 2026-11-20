@@ -278,3 +278,28 @@ zero the others, and several flags at once mean **any of**.
   day in the range: dividing by days nobody closed drags the average down.
 - Facet dropdowns render only when the fetched rows actually carry that
   column (`Picker` returns null on an empty list).
+
+### Its table layout is deliberate
+
+The first build had twelve columns and **the Status chips fell off the right
+edge** — the one column that explains the row. Related fields are now paired
+into single cells (grade under designation, the two punches as one
+`in → out` span, late/early as one signed variance) so it fits a laptop, and
+the chips sit under the name where they are read with it. Adding a thirteenth
+column puts it back where it was.
+
+`sticky top-0` on `<thead>` only works because the table is **in the page
+flow** at desktop width — the shell's content area is the scroller. An
+`overflow-x` wrapper would make the header stick to a box that never scrolls
+vertically, i.e. do nothing. The horizontal scroller is therefore
+`max-lg:` only, and paired with `max-lg:overflow-y-hidden` for the
+double-scrollbar rule above.
+
+**No-record rows are hidden from the table by default and never from the
+counts.** 189 of 720 rows on a normal day are blanks for people the feed has
+nothing on; left in, they fill the first screen with dashes before a single
+real punch appears. The toggle says which state it is in, and asking for the
+`noRecord` flag explicitly always overrides the hiding.
+
+Rows render `PAGE` (150) at a time behind a "Show more" — a month is ~22,000
+rows and React will happily try to draw all of them.
