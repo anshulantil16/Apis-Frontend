@@ -303,3 +303,9 @@ real punch appears. The toggle says which state it is in, and asking for the
 
 Rows render `PAGE` (150) at a time behind a "Show more" — a month is ~22,000
 rows and React will happily try to draw all of them.
+
+**It opens on Delhi HO**, scoped by employee code prefix (from
+`meta.homeOffice.codePrefix`), not by the location dropdown — see the backend
+CLAUDE.md for the counts that forced that. The scope is applied inside
+`scoped`, i.e. **before** the flags, so the KPI cards count head office only
+while it is on. "Everyone" is one click.

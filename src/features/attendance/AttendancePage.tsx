@@ -130,6 +130,13 @@ export function AttendancePage({ onBack }: Props) {
      away. The COUNTS always include them — only the table hides them. */
   const [hideBlank, setHideBlank] = useState(true);
   const [limit, setLimit] = useState(PAGE);
+  /* Opens on Delhi HO, because that is the question this tool was built to
+     answer. Matched on the employee CODE, not the directory's location:
+     83 people carry an HO code and only 40 are filed under 'DELHI-HO', while
+     location 'DELHI' is mostly field sales. Switching to Everyone is one
+     click, and the card counts follow the scope because it is applied
+     before the flags. */
+  const [hoOnly, setHoOnly] = useState(true);
 
   useEffect(() => {
     fetchAttMeta().then(setMeta).catch(e => setMetaError(e.message));
@@ -178,12 +185,14 @@ export function AttendancePage({ onBack }: Props) {
      clicking one card never zeroes the rest. */
   const scoped = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const prefix = (data?.homeOffice?.codePrefix || 'HO').toUpperCase();
     return rows.filter(r =>
-      (!q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
+      (!hoOnly || r.code.toUpperCase().startsWith(prefix))
+      && (!q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
       && (!location || r.location === location)
       && (!department || r.department === department)
       && (!grade || r.grade === grade));
-  }, [rows, search, location, department, grade]);
+  }, [rows, hoOnly, data, search, location, department, grade]);
 
   /* shown = scoped after the flags. Several flags mean ANY OF: the status
      markers are near enough mutually exclusive that an all-of rule answers
@@ -449,6 +458,18 @@ export function AttendancePage({ onBack }: Props) {
 
           {/* ── Filters ─────────────────────────────────────────────────── */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            {/* Scope first, because it changes every number above it. */}
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              {([[true, data.homeOffice?.label || 'Delhi HO'], [false, 'Everyone']] as const).map(
+                ([v, label]) => (
+                  <button key={String(v)} onClick={() => { setHoOnly(v); setLimit(PAGE); }}
+                    className={`px-3 py-1.5 text-[11px] font-bold transition-colors
+                      ${hoOnly === v ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                    {label}
+                  </button>
+                ))}
+            </div>
+
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input value={search} onChange={e => { setSearch(e.target.value); setLimit(PAGE); }}
