@@ -45,6 +45,14 @@ export interface AttRow {
   offDirectory: boolean;
 }
 
+/** Who counts as head office. Matched on the employee CODE, not the
+ *  directory's location column: 83 people carry an HO code but only 40 have
+ *  location 'DELHI-HO', and location 'DELHI' is mostly field sales. */
+export interface HomeOffice {
+  label: string;
+  codePrefix: string;
+}
+
 export interface AttMeta {
   ready: boolean;
   reason: string;
@@ -56,6 +64,7 @@ export interface AttMeta {
   departments: string[];
   directorySize: number;
   overtimeTracked: boolean;
+  homeOffice: HomeOffice;
 }
 
 export interface AttRecords {
@@ -68,6 +77,7 @@ export interface AttRecords {
   lateCutoff: string;
   holidays: Record<string, { optional: boolean; locations: string[] }>;
   overtimeTracked: boolean;
+  homeOffice: HomeOffice;
   fetchedAt: string;
 }
 
