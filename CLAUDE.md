@@ -245,6 +245,13 @@ intranet holds the records.
   the URL once it arrives. Opening it after the `await` puts it outside the
   user gesture and every popup blocker swallows it — the button then does
   nothing at all, with nothing to show for it.
+- **Never put `noopener` in that `window.open` feature string.** It returns
+  `null` by specification when `noopener` is set — severing the handle is
+  what the flag does — so the handle this pattern needs is always null, the
+  code falls through to `window.location.href`, and **the intranet tab
+  itself navigates to the insurer** while an empty tab sits on `about:blank`.
+  That shipped once and looked exactly like "nothing is opening". The same
+  protection is applied by nulling `tab.opener` after the navigation.
 - Destination tiles are filtered against the keys the server actually offers,
   so the eleven in `GROUPS` can go stale without rendering a dead button.
 - `ready` is two things at once: the connection is configured **and** this

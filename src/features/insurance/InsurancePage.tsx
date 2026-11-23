@@ -91,15 +91,35 @@ export function InsurancePage({ onBack }: Props) {
   /* The blank tab is opened SYNCHRONOUSLY, inside the click, and pointed at
      the URL once it arrives. Opening it after the await instead puts it
      outside the user gesture, and every popup blocker swallows it — the
-     button then does nothing at all, with no error to show for it. */
+     button then does nothing at all, with no error to show for it.
+
+     **No `noopener` in the feature string.** `window.open` with `noopener`
+     returns null by specification — severing the handle is exactly what the
+     flag is for — so the handle this pattern depends on was always null,
+     the code fell through to `window.location.href`, and the intranet tab
+     itself navigated to the insurer while an empty second tab sat on
+     about:blank. That is precisely what it looked like in use: "nothing is
+     opening", with the portal gone from the tab it was opened from.
+
+     The protection `noopener` buys is restored on the line below by nulling
+     `opener` after the navigation, which is what the flag does anyway. */
   const open = async (destination: string, label: string) => {
     setLaunchError('');
     setOpening(destination);
-    const tab = window.open('', '_blank', 'noopener,noreferrer');
+    const tab = window.open('', '_blank');
     try {
       const url = await insuranceLaunchUrl(destination);
-      if (tab) tab.location.href = url;
-      else window.location.href = url;   // blocked anyway — go there in this tab
+      if (tab) {
+        // Sever the back-reference before handing the tab to someone else's
+        // origin, so their page cannot reach back into ours.
+        try { tab.opener = null; } catch { /* some browsers forbid the write */ }
+        tab.location.replace(url);
+      } else {
+        // A blocker ate the tab. Say so rather than silently navigating the
+        // portal away from under the person who clicked.
+        setLaunchError(
+          `Your browser blocked the new tab for ${label}. Allow pop-ups for this site and try again.`);
+      }
     } catch (e) {
       tab?.close();
       setLaunchError(e instanceof Error ? e.message : `Could not open ${label}.`);
