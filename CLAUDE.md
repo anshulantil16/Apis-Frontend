@@ -368,3 +368,21 @@ nothing.
 `DayPoint.partial` marks it. On a real 20-Nov fetch all 60 punched-in people
 were "unswiped" at noon — nobody had gone home yet. Anything plotting the
 daily series has to say so, or it reads as a collapse.
+
+### Absences are the point of the screen
+
+`noRecord` rows used to be collapsed by default under that name, which hid
+every absence on a dashboard whose job is to show them. The server now says
+what each blank means (`absent` / `weekOff` / `holiday` / `notYet`) and they
+are **shown by default**. The toggle survives for looking at real punches
+only; it has never affected the counts.
+
+- `absent` has its own KPI card, its own rose row tint, and leads the
+  "worth a conversation" report. **Say on screen that it is not proof of
+  absence** — an approved leave is indistinguishable in this feed.
+- `noRecord` renders no chip of its own: one of the four meanings always
+  sits beside it, and both would read "No record Absent" on every row.
+  `sunday` renders none either, because `weekOff` already says it.
+- The Delhi HO scope reads `meta.homeOffice.codePrefixes` (a LIST — `HO,NA`).
+  `codePrefix` is the old single value, kept only so an older bundle does not
+  break.

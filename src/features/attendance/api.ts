@@ -20,7 +20,12 @@ const ATT_API = `${apiBase()}/api/attendance`;
  *                  routinely disagree — 502 vs 49 on one real two-day sample. */
 export type AttFlag =
   | 'present' | 'noRecord' | 'unswiped' | 'late' | 'afterCutoff'
-  | 'earlyOut' | 'holiday' | 'optionalHoliday' | 'sunday';
+  | 'earlyOut' | 'holiday' | 'optionalHoliday' | 'sunday'
+  /* What a blank row actually MEANS, worked out on the server from the
+     calendar, the weekday and the date. `absent` is the one that matters
+     and is NOT proof of absence — an approved leave is indistinguishable,
+     because the feed carries no column to tell them apart. */
+  | 'absent' | 'weekOff' | 'notYet';
 
 export interface AttRow {
   code: string;
@@ -50,6 +55,11 @@ export interface AttRow {
  *  location 'DELHI-HO', and location 'DELHI' is mostly field sales. */
 export interface HomeOffice {
   label: string;
+  /** Several, because one was not enough — NA0001–NA0007 are in the HRMS
+   *  feed, have never been in the portal directory, and were being dropped
+   *  from the default view entirely. */
+  codePrefixes?: string[];
+  /** Kept for older bundles; prefer codePrefixes. */
   codePrefix: string;
 }
 

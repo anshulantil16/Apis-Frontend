@@ -16,14 +16,14 @@ import {
 } from './analytics';
 import { hours, type AttRow } from './api';
 
-type OffenceKey = 'late' | 'afterCutoff' | 'unswiped' | 'earlyOut' | 'noRecord';
+type OffenceKey = 'absent' | 'late' | 'afterCutoff' | 'unswiped' | 'earlyOut';
 
 const OFFENCE: Record<OffenceKey, { label: string; blurb: string }> = {
+  absent:      { label: 'Absent',        blurb: 'Working days with nothing recorded — holidays, Sundays and future dates already excluded. May be approved leave.' },
   late:        { label: 'Late (shift)',  blurb: 'Days HRMS marked late against their own shift' },
   afterCutoff: { label: 'After cutoff',  blurb: 'Days they punched in after the clock cutoff' },
   unswiped:    { label: 'Unswiped',      blurb: 'Days a punch was never made, so no hours exist' },
   earlyOut:    { label: 'Early out',     blurb: 'Days they left before their shift ended' },
-  noRecord:    { label: 'No record',     blurb: 'Days HRMS held nothing at all — not necessarily absence' },
 };
 
 function csv(name: string, head: string[], body: (string | number)[][]) {
@@ -86,7 +86,7 @@ function Share({ value, max }: { value: number; max: number }) {
 export function AttendanceReports({ rows, days, cutoffLabel, scopeLabel }: {
   rows: AttRow[]; days: number; cutoffLabel: string; scopeLabel: string;
 }) {
-  const [offence, setOffence] = useState<OffenceKey>('afterCutoff');
+  const [offence, setOffence] = useState<OffenceKey>('absent');
   /* Over one day everyone with a single bad morning would be an "offender",
      which is not a report, it is the table again. Over a range the floor
      rises so the list stays worth reading. */
@@ -133,6 +133,7 @@ export function AttendanceReports({ rows, days, cutoffLabel, scopeLabel }: {
                   <th className={TH}>Department</th>
                   <th className={`${TH} text-right`}>People</th>
                   <th className={`${TH} text-right`}>Punched</th>
+                  <th className={`${TH} text-right`}>Absent</th>
                   <th className={`${TH} text-right`}>Late</th>
                   <th className={`${TH} text-right`}>After cutoff</th>
                   <th className={`${TH} text-right`}>Unswiped</th>
@@ -145,6 +146,9 @@ export function AttendanceReports({ rows, days, cutoffLabel, scopeLabel }: {
                     <td className={`${TD} font-bold text-slate-800`}>{d.name}</td>
                     <td className={NUM}>{d.people}</td>
                     <td className={NUM}>{d.punched}</td>
+                    <td className={`${NUM} ${d.absent ? 'text-rose-700 font-bold' : 'text-slate-300'}`}>
+                      {d.absent || '—'}
+                    </td>
                     <td className={`${NUM} ${d.late ? 'text-amber-700 font-bold' : 'text-slate-300'}`}>
                       {d.late || '—'}
                     </td>
