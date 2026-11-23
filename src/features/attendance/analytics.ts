@@ -47,6 +47,10 @@ export interface Summary {
   days: number;            // distinct dates present
   punched: number;
   noRecord: number;
+  /** A working day with nothing recorded, once holidays, Sundays and future
+   *  dates are taken out. Not proof of absence — see the server's
+   *  _classify(). This is the figure people actually ask for. */
+  absent: number;
   late: number;
   afterCutoff: number;
   unswiped: number;
@@ -67,6 +71,7 @@ export function summarise(rows: AttRow[]): Summary {
     days: new Set(rows.map(r => r.date).filter(Boolean)).size,
     punched,
     noRecord: rows.filter(r => r.noRecord).length,
+    absent: rows.filter(r => has(r, 'absent')).length,
     late: rows.filter(r => has(r, 'late')).length,
     afterCutoff: rows.filter(r => has(r, 'afterCutoff')).length,
     unswiped: rows.filter(r => has(r, 'unswiped')).length,
@@ -216,6 +221,7 @@ export interface GroupStat {
   unswiped: number;
   earlyOut: number;
   noRecord: number;
+  absent: number;
   avgWorked: number | null;
   lateRate: number | null;
   punchedRate: number | null;
@@ -249,6 +255,7 @@ export function group(
         unswiped: s.unswiped,
         earlyOut: s.earlyOut,
         noRecord: s.noRecord,
+        absent: s.absent,
         avgWorked: s.avgWorked,
         // Lateness is quoted against the days somebody actually turned up.
         // Against every row it only measures how many blanks a team has.
@@ -275,6 +282,7 @@ export interface PersonStat {
   afterCutoff: number;
   unswiped: number;
   noRecord: number;
+  absent: number;
   earlyOut: number;
   avgWorked: number | null;
   avgArrival: number | null;
@@ -303,6 +311,7 @@ export function byPerson(rows: AttRow[]): PersonStat[] {
       afterCutoff: s.afterCutoff,
       unswiped: s.unswiped,
       noRecord: s.noRecord,
+      absent: s.absent,
       earlyOut: s.earlyOut,
       avgWorked: s.avgWorked,
       avgArrival: mean(list.map(r => clockMins(r.inTime)).filter((m): m is number => m != null)),
@@ -318,7 +327,7 @@ export function byPerson(rows: AttRow[]): PersonStat[] {
  *  rounding error with a 100% rate. `minCount` keeps the one-offs out.
  */
 export function repeatOffenders(
-  people: PersonStat[], field: 'late' | 'afterCutoff' | 'unswiped' | 'earlyOut' | 'noRecord',
+  people: PersonStat[], field: 'late' | 'afterCutoff' | 'unswiped' | 'earlyOut' | 'absent',
   minCount = 2,
 ): PersonStat[] {
   return people

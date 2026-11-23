@@ -68,12 +68,14 @@ type Tone = 'slate' | 'emerald' | 'amber' | 'rose' | 'orange' | 'violet' | 'sky'
 const CARDS: Card[] = [
   { key: 'all',         label: 'People',       hint: 'Everyone in this range',          icon: Users,         tone: 'slate' },
   { key: 'present',     label: 'Punched',      hint: 'At least one punch recorded',     icon: Clock,         tone: 'emerald' },
-  { key: 'noRecord',    label: 'No record',    hint: 'Nothing at all came from HRMS',   icon: CircleSlash,   tone: 'slate' },
+  { key: 'absent',      label: 'Absent',       hint: 'A working day with nothing recorded. May be approved leave — the feed cannot tell them apart.',
+                                                                                        icon: CircleSlash,   tone: 'rose' },
   { key: 'late',        label: 'Late (shift)', hint: 'Late against their own shift',    icon: Timer,         tone: 'amber' },
   { key: 'afterCutoff', label: 'After cutoff', hint: 'In-punch after the clock cutoff', icon: Timer,         tone: 'rose' },
   { key: 'unswiped',    label: 'Unswiped',     hint: 'A punch was never made',          icon: AlertTriangle, tone: 'orange' },
   { key: 'earlyOut',    label: 'Early out',    hint: 'Left before their shift ended',   icon: LogOut,        tone: 'violet' },
-  { key: 'holiday',     label: 'Holiday',      hint: 'A company holiday',               icon: CalendarOff,   tone: 'sky' },
+  { key: 'holiday',     label: 'Holiday',      hint: "A company holiday at that person's location", icon: CalendarOff, tone: 'sky' },
+  { key: 'weekOff',     label: 'Week off',     hint: 'Sunday',                          icon: CalendarOff,   tone: 'slate' },
 ];
 
 /* Whole classes, never built by interpolation — Tailwind's scan is static and
@@ -136,11 +138,13 @@ export function AttendancePage({ onBack }: Props) {
   const [flags, setFlags] = useState<Set<AttFlag>>(new Set());
   const [tab, setTab] = useState<Tab>('overview');
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'name', desc: false });
-  /* 189 of 720 rows on a normal day are blanks for people the feed has
-     nothing on. Left in, they fill the first screen with dashes before any
-     real punch appears, so they are collapsed by default and one click
-     away. The COUNTS always include them — only the table hides them. */
-  const [hideBlank, setHideBlank] = useState(true);
+  /* Rows the feed holds nothing for. These used to be collapsed by default
+     under the name "no record", which hid every ABSENCE on the screen whose
+     job is to show them. They are now shown, and the server has worked out
+     what each blank actually means — absent, week off, holiday or not yet.
+     The toggle survives for the days somebody wants only real punches; the
+     COUNTS have never been affected by it either way. */
+  const [hideBlank, setHideBlank] = useState(false);
   const [limit, setLimit] = useState(PAGE);
   /* Opens on Delhi HO, because that is the question this tool was built to
      answer. Matched on the employee CODE, not the directory's location:
@@ -197,9 +201,13 @@ export function AttendancePage({ onBack }: Props) {
      clicking one card never zeroes the rest. */
   const scoped = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const prefix = (data?.homeOffice?.codePrefix || 'HO').toUpperCase();
+    // Several prefixes: NA0001-NA0007 are in the feed, have never been in
+    // the directory, and were being dropped from this view altogether.
+    const ho = data?.homeOffice;
+    const prefixes = (ho?.codePrefixes?.length ? ho.codePrefixes : [ho?.codePrefix || 'HO'])
+      .map(p => p.toUpperCase());
     return rows.filter(r =>
-      (!hoOnly || r.code.toUpperCase().startsWith(prefix))
+      (!hoOnly || prefixes.some(p => r.code.toUpperCase().startsWith(p)))
       && (!q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
       && (!location || r.location === location)
       && (!department || r.department === department)
@@ -273,7 +281,7 @@ export function AttendancePage({ onBack }: Props) {
         p = { code: r.code, name: r.name, designation: r.designation, grade: r.grade,
               department: r.department, location: r.location,
               days: 0, punched: 0, late: 0, afterCutoff: 0, unswiped: 0,
-              noRecord: 0, earlyOut: 0, totalMins: 0, withHours: 0 };
+              noRecord: 0, absent: 0, earlyOut: 0, totalMins: 0, withHours: 0 };
         map.set(r.code, p);
       }
       p.days += 1;
@@ -282,6 +290,7 @@ export function AttendancePage({ onBack }: Props) {
       if (r.flags.includes('afterCutoff')) p.afterCutoff += 1;
       if (r.flags.includes('unswiped')) p.unswiped += 1;
       if (r.flags.includes('noRecord')) p.noRecord += 1;
+      if (r.flags.includes('absent')) p.absent += 1;
       if (r.flags.includes('earlyOut')) p.earlyOut += 1;
       if (r.workedMins != null) { p.totalMins += r.workedMins; p.withHours += 1; }
     }
@@ -521,12 +530,12 @@ export function AttendancePage({ onBack }: Props) {
               options={grades} label="All grades" />
 
             <button onClick={() => setHideBlank(h => !h)}
-              title="Rows HRMS returned nothing for. The counts above always include them."
+              title="Absences, week offs and holidays. The counts above always include them."
               className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-bold inline-flex items-center gap-1.5
                 ${hideBlank ? 'border-slate-200 text-slate-500 hover:bg-slate-50'
                             : 'border-indigo-300 bg-indigo-50 text-indigo-700'}`}>
               {hideBlank ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-              {hideBlank ? 'No-record rows hidden' : 'Showing no-record rows'}
+              {hideBlank ? 'Days with no punch hidden' : 'Showing days with no punch'}
             </button>
 
             <div className="ml-auto flex items-center gap-2">
@@ -585,7 +594,7 @@ export function AttendancePage({ onBack }: Props) {
           <p className="mt-3 text-[11px] text-slate-400">
             Showing {Math.min(tab === 'rows' ? shown.length : people.length, limit).toLocaleString('en-IN')} of{' '}
             {(tab === 'rows' ? shown.length : people.length).toLocaleString('en-IN')}
-            {blankHidden ? ` · ${blankHidden.toLocaleString('en-IN')} no-record rows hidden` : ''}
+            {blankHidden ? ` · ${blankHidden.toLocaleString('en-IN')} days with no punch hidden` : ''}
             {flags.size > 1 ? ' · several filters mean any of them' : ''}
           </p>
 
@@ -625,9 +634,15 @@ export function AttendancePage({ onBack }: Props) {
             </p>
             <ul className="mt-2 space-y-1.5 text-[12px] text-slate-600 leading-relaxed">
               <li>
-                <b className="text-slate-800">No record</b> means HRMS returned nothing for that person
-                that day. It is <b>not</b> the same as absent — the feed carries no leave or week-off
-                column, so a day off, an approved leave and a missed punch all arrive looking identical.
+                <b className="text-slate-800">Absent</b> means a working day with nothing recorded, once
+                holidays, Sundays and future dates have been taken out. It is <b>not</b> proof of
+                absence — the feed carries no leave column, so an approved leave arrives looking
+                exactly the same. Check against leave records before acting on it.
+              </li>
+              <li>
+                <b className="text-slate-800">Holidays are matched to each person's location.</b> The
+                calendar is state-wise — 11 Nov is a holiday in Assam and West Bengal only — so one
+                state's holiday no longer marks the whole company off.
               </li>
               <li>
                 <b className="text-slate-800">Unswiped</b> days show no hours. The day never closed, and a
@@ -658,7 +673,7 @@ interface Person {
   code: string; name: string; designation: string; grade: string;
   department: string; location: string;
   days: number; punched: number; late: number; afterCutoff: number;
-  unswiped: number; noRecord: number; earlyOut: number;
+  unswiped: number; noRecord: number; absent: number; earlyOut: number;
   totalMins: number; withHours: number;
 }
 
@@ -714,6 +729,9 @@ function SortTH({ label, k, sort, onSort, align = 'left' }: {
 
 function Chip({ flag }: { flag: AttFlag }) {
   const look: Partial<Record<AttFlag, string>> = {
+    absent:          'bg-rose-100 text-rose-800 ring-rose-200',
+    weekOff:         'bg-slate-100 text-slate-500 ring-slate-200',
+    notYet:          'bg-slate-50 text-slate-400 ring-slate-200',
     late:            'bg-amber-100 text-amber-800 ring-amber-200',
     afterCutoff:     'bg-rose-100 text-rose-800 ring-rose-200',
     unswiped:        'bg-orange-100 text-orange-800 ring-orange-200',
@@ -724,10 +742,16 @@ function Chip({ flag }: { flag: AttFlag }) {
     sunday:          'bg-slate-100 text-slate-500 ring-slate-200',
   };
   const text: Partial<Record<AttFlag, string>> = {
+    absent: 'Absent', weekOff: 'Week off', notYet: 'Not yet',
     late: 'Late', afterCutoff: 'After cutoff', unswiped: 'Unswiped', earlyOut: 'Early out',
-    noRecord: 'No record', holiday: 'Holiday', optionalHoliday: 'Optional holiday', sunday: 'Sunday',
+    holiday: 'Holiday', optionalHoliday: 'Optional holiday', sunday: 'Sunday',
   };
-  if (flag === 'present' || !look[flag]) return null;
+  /* `noRecord` carries no chip of its own: it is the raw fact, and one of
+     absent / weekOff / holiday / notYet always sits beside it saying what
+     it means. Showing both would put "No record  Absent" on every row. */
+  if (flag === 'present' || flag === 'noRecord' || !look[flag]) return null;
+  /* Sunday is already said by "Week off"; the two together are noise. */
+  if (flag === 'sunday') return null;
   return (
     <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ring-1 ${look[flag]}`}>
       {text[flag]}
@@ -756,8 +780,10 @@ function RowTable({ rows, multiDay, sort, onSort }: {
       <tbody>
         {rows.map((r, i) => (
           <tr key={`${r.code}-${r.date}-${i}`}
-            className={`border-b border-slate-100 last:border-0
-                        ${r.noRecord ? 'bg-slate-50/60' : 'hover:bg-indigo-50/40'} transition-colors`}>
+            className={`border-b border-slate-100 last:border-0 transition-colors
+                        ${r.flags.includes('absent') ? 'bg-rose-50/50 hover:bg-rose-50'
+                          : r.noRecord ? 'bg-slate-50/60 hover:bg-slate-100/60'
+                          : 'hover:bg-indigo-50/40'}`}>
             {/* Name, code and the chips that explain the row, together —
                 the chips used to be the last column and fell off the edge. */}
             <td className={`${TD} min-w-[220px]`}>
@@ -837,7 +863,7 @@ function PeopleTable({ people }: { people: Person[] }) {
           <th className={TH}>Department</th>
           <th className={`${TH} text-right`}>Days</th>
           <th className={`${TH} text-right`}>Punched</th>
-          <th className={`${TH} text-right`}>No record</th>
+          <th className={`${TH} text-right`}>Absent</th>
           <th className={`${TH} text-right`}>Late (shift)</th>
           <th className={`${TH} text-right`}>After cutoff</th>
           <th className={`${TH} text-right`}>Unswiped</th>
@@ -859,7 +885,9 @@ function PeopleTable({ people }: { people: Person[] }) {
             <td className={`${TD} text-right tabular-nums`}>
               <Num n={p.punched} tone="text-emerald-700 font-bold" />
             </td>
-            <td className={`${TD} text-right tabular-nums`}><Num n={p.noRecord} /></td>
+            <td className={`${TD} text-right tabular-nums`}>
+              <Num n={p.absent} tone="text-rose-700 font-bold" />
+            </td>
             <td className={`${TD} text-right tabular-nums`}>
               <Num n={p.late} tone="text-amber-700 font-bold" />
             </td>
