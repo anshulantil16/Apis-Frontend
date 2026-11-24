@@ -9,6 +9,10 @@
    card-select behaviour until their structure is provided too. */
 export type TeamMember = {
   name: string; role: string; hod?: boolean; photo?: string; location?: string; reports?: TeamMember[];
+  /** The name this card was first saved under, when its shown name has
+   * since been corrected - its id (and so any saved edit or photo) is
+   * built from this, not from `name`. See memberId() in APIS_TREE.tsx. */
+  key?: string;
   /** True for a member who reports to their own functional head elsewhere
    * rather than straight into this department's top node — drawn as its
    * own bracketed sub-group off the main bus, not a plain direct stem (see
@@ -44,16 +48,16 @@ export type SubTreeRoot = {
 };
 export const SUB_TREE_ROOTS: Record<string, SubTreeRoot> = {
   'heera-swami': {
-    title: 'Plant Head- Roorkee', vacant: true, department: 'PPC',
-    peer: { name: 'Heera Swami', role: 'C1- GM- HO', department: 'PPC' },
+    title: 'Plant Head- Roorkee', vacant: true, department: 'Manufacturing',
+    peer: { name: 'Heera Polandeappn', role: 'C1- GM- HO', department: 'Manufacturing' },
     peerMembers: [
-      { name: 'Sandeep', role: 'M1- AM- HO' },
+      { name: 'Sandeep Kumar', key: 'Sandeep', role: 'M1- AM- HO' },
       { name: 'Kamaljeet', role: 'O5- Sr. Executive- HO' },
       { name: 'Vacant', role: 'O4- Executive- HO' },
     ],
-    peer2: { name: 'Nischal Bharadwaj', role: 'M4- Sr. Manager- Finance & Accounts- Roorkee', department: 'PPC' },
+    peer2: { name: 'Nischal Bhardwaj', role: 'M4- Sr. Manager- Finance & Accounts- Roorkee', department: 'Finance & Accounts' },
     peer2Members: [
-      { name: 'Praveen Sharma', role: 'M3- Manager- P&C- Roorkee' },
+      { name: 'Praveen Kumar Sharma', key: 'Praveen Sharma', role: 'M3- Manager- P&C- Roorkee' },
     ],
     peer2Label: 'Reporting to functional head',
   },
@@ -62,40 +66,40 @@ export const SUB_TREE_ROOTS: Record<string, SubTreeRoot> = {
 export const SUB_TREES: Record<string, TeamMember[]> = {
   'pankaj-tripathi': [
     {
-      name: 'Hemant Tripathi', role: 'M2- HRBP- HO',
+      name: 'Hemant Tripathi', role: 'M2- Dy. Manager- HRBP- HO',
       photo: '/hierarchy/Hemant_Tripathi.jpeg',
       reports: [
         { name: 'Sandhya Singh', role: 'M1- AM- TA & TM- HO' },
-        { name: 'Gopa', role: 'O5- Sr. Executive- TA & ER- HO' },
+        { name: 'Gopa Chakarborty', key: 'Gopa', role: 'O5- Sr. Executive- TA & ER- HO' },
         { name: 'Manoj Kumar', role: 'O5- Sr. Executive- Payroll- HO' },
         { name: 'Sujat Alam', role: 'O5- Sr. Executive- P&C- HO' },
-        { name: 'Kanchan', role: 'O5- Sr. Executive- Admin & Facilities- HO' },
-        { name: 'Shobhit', role: 'O4-  EA Front Desk Executive- Admin & Facilities- HO' },
+        { name: 'Kanchan Juneja', key: 'Kanchan', role: 'O5- Sr. Executive- Admin & Facilities- HO' },
+        { name: 'Shobhit Verma', key: 'Shobhit', role: 'O4- Executive- EA cum Front Desk- Admin & Facilities- HO' },
         { name: 'Abhay', role: 'Management Trainee (MIS)- HR' },
       ],
     },
     {
-      name: 'Devender Kumar', role: 'M2- Dy. Manager - HO',
+      name: 'Devender Kumar', role: 'M2- Dy. Manager- IT- HO',
       photo: '/hierarchy/Devender Kumar- Dy. Manager - IT  .jpeg',
       reports: [
         // Anshul Antil sits first, with Rainy Chaudhary nested one level
         // under him; Sahil Jha beside him, then Kunal and Ravi.
         {
-          name: 'Anshul Antil', role: 'O5- Lead Automation- IT- HO',
+          name: 'Anshul Antil', role: 'O5- Business Analyst- IT- HO',
           reports: [{ name: 'Rainy Chaudhary', role: 'AI & ML Automation- IT- HO' }],
         },
         { name: 'Sahil Jha', role: 'O5- Business Analyst- IT- HO' },
         { name: 'Kunal', role: 'IT Support- IT- HO' },
-        { name: 'Ravi', role: 'O5- IT- Roorkee' },
+        { name: 'Ravi Sharma', key: 'Ravi', role: 'O5- Sr. Executive- IT- Roorkee' },
       ],
     },
     {
-      name: 'Praveen Sharma', role: 'M3- Manager- HR & Admin- Roorkee',
+      name: 'Praveen Kumar Sharma', key: 'Praveen Sharma', role: 'M3- Manager- P&C- Roorkee',
       photo: '/hierarchy/Praveen Sharma- Manager- P&C- Roorkee.jpeg',
       reports: [
-        { name: 'Anju', role: 'M- AM- HR & Admin- Roorkee' },
-        { name: 'Mohit', role: 'O5- P&C- Roorkee' },
-        { name: 'Amandeep', role: 'O5- Admin & Facilities- Roorkee' },
+        { name: 'Anju Tyagi', key: 'Anju', role: 'M1- AM- P&C- Roorkee' },
+        { name: 'Mohit Kumar', key: 'Mohit', role: 'O5- Sr. Executive- P&C- Roorkee' },
+        { name: 'Amandeep', role: 'O5- Sr. Executive- Admin & Facilities- Roorkee' },
       ],
     },
   ],
@@ -110,7 +114,7 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
   // uses the generic person icon rather than attempting one.
   'heera-swami': [
     { name: 'Rahul Dutt Sharma', role: 'M5- AGM- Production- Roorkee', location: 'Roorkee' },
-    { name: 'Amir Khan', role: 'M1- AM- Store & Dispatch- Roorkee', location: 'Roorkee' },
+    { name: 'Amir Khan', role: 'M1- AM- Stores & Dispatch- Roorkee', location: 'Roorkee' },
     { name: 'Sunil Kumar', role: 'M3- Manager- QA & QC- Roorkee', location: 'Roorkee' },
   ],
   // General Trade Sales (Arun Mishra). Flat — twelve regional GTR heads
@@ -118,29 +122,29 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
   // (FLAT_TREE_IDS) rather than the nested variant's manager tier, which
   // assumes a 3-column grid and doesn't wrap cleanly at this count.
   'arun-mishra': [
-    { name: 'Mohinder Sharma', role: 'GTR 1- Punjab, Himachal & Jammu & Kashmir- M3- Dy. RSM', location: 'Chandigarh',
+    { name: 'Mohinder Sharma', role: 'GTR 1- PB, HP & J&K- M2- Sr. ASM', location: 'Chandigarh',
       photo: '/hierarchy/arun-mishra/mohinder-sharma.jpeg' },
-    { name: 'Ramesh', role: 'GTR 2- Delhi, Haryana & Rajasthan- M4- RSM', location: 'Delhi',
+    { name: 'Ramesh Singh', key: 'Ramesh', role: 'GTR 2- DL, HR & RJ- M4- RSM', location: 'Delhi',
       photo: '/hierarchy/arun-mishra/ramesh.jpeg' },
-    { name: 'Asif Ali', role: 'GTR3A- Central & Eastern UP- M4- RSM', location: 'Pravagraj',
+    { name: 'Asif Ali Ansari', key: 'Asif Ali', role: 'GTR 3A- Central & East UP- M4- RSM', location: 'Prayagraj',
       photo: '/hierarchy/arun-mishra/asif-ali.jpeg' },
-    { name: 'Rajeev Kumar', role: 'GTR 3B- Uttarakhand & Western UP- M2- Sr. ASM', location: 'Ghaziabad',
+    { name: 'Rajeev Kumar Saxena', key: 'Rajeev Kumar', role: 'GTR 3B- UK & West UP- M2- Sr. ASM', location: 'Ghaziabad',
       photo: '/hierarchy/arun-mishra/rajeev-kumar.webp' },
-    { name: 'Arnab Ghosh', role: 'GTR 4A- West Bengal, North East Region- M5- RSM', location: 'Kolkata',
+    { name: 'Arnab Ghosh', role: 'GTR 4A- WB & NE- M4- RSM', location: 'Kolkata',
       photo: '/hierarchy/arun-mishra/arnab-ghosh.webp' },
-    { name: 'Gulshan Kumar', role: 'GTR 4B- Bihar & Jharkhand- M3- Dy. RSM', location: 'Patna',
+    { name: 'Gulshan Kumar', role: 'GTR 4B- BR & JH- M3- Dy. RSM', location: 'Patna',
       photo: '/hierarchy/arun-mishra/gulshan-kumar.jpeg' },
-    { name: 'Shakil Ahmed', role: 'GTR 5- Odisha, Chhattisgarh, Madhya Pradesh- M4- RSM', location: 'Bhilai',
+    { name: 'Shakil Ahmed', role: 'GTR 5- OD, CG & MP- M4- RSM', location: 'Bhilai',
       photo: '/hierarchy/arun-mishra/shakil-ahmed.jpeg' },
-    { name: 'Sanjay Singh', role: 'GTR 6A- Rest Of Maharashtra- M4- RSM', location: 'Pune',
+    { name: 'Sanjay Kumar Singh', key: 'Sanjay Singh', role: 'GTR 6A- Rest of MH- M4- RSM', location: 'Pune',
       photo: '/hierarchy/arun-mishra/sanjay-singh.jpeg' },
-    { name: 'Vinod Shah', role: 'GTR 6B- Mumbai & Gujarat- M2- Sr. ASM', location: 'Mumbai',
+    { name: 'Vinod Shah', role: 'GTR 6B- Mumbai & GJ- M2- Sr. ASM', location: 'Mumbai',
       photo: '/hierarchy/arun-mishra/vinod-shah.jpeg' },
-    { name: 'B. Bhaskar', role: 'GTR 7- AP & Telangana- M4- RSM', location: 'Hyderabad',
+    { name: 'B. Bhaskar', role: 'GTR 7- AP & TG- M4- RSM', location: 'Hyderabad',
       photo: '/hierarchy/arun-mishra/b-bhaskar.jpg' },
-    { name: 'R. Patil', role: 'GTR 8- Karnataka, Goa- M4- RSM0', location: 'Bangalore',
+    { name: 'R. Patil', role: 'GTR 8- KA & Goa- M4- RSM', location: 'Bangalore',
       photo: '/hierarchy/arun-mishra/r-patil.jpeg' },
-    { name: 'Vasanth D', role: 'GTR 9- Tamil Nadu & Kerala- M4- RSM', location: 'Chennai',
+    { name: 'Vasanthkumar D', key: 'Vasanth D', role: 'GTR 9- TN & KL- M4- RSM', location: 'Chennai',
       photo: '/hierarchy/arun-mishra/vasanth-d.jpeg' },
   ],
   // Business To Business (B2B) Sales (Narendra Gangawar) — no one listed
@@ -165,9 +169,9 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
           name: 'Gouri Shankar', role: 'M4- RSM- HQ- Delhi',
           reports: [
             { name: 'Rishi Raghav', role: 'M1- KAM- HQ- Delhi' },
-            { name: 'Navin Anchal', role: 'M1- KAM- HQ- Mumbai' },
+            { name: 'Naveen N Anchan', key: 'Navin Anchal', role: 'M1- KAM- HQ- Mumbai' },
             { name: 'Purushotham Kambalapally', role: 'M1- KAM- HQ- Hyderabad' },
-            { name: 'Tumba Biswas', role: 'M1- KAM- HQ- Kolkata' },
+            { name: 'Tumpa Biswas', key: 'Tumba Biswas', role: 'M1- KAM- HQ- Kolkata' },
           ],
         },
       ],
@@ -198,10 +202,10 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
       name: 'Supply Chain Management', role: 'Department',
       reports: [
         {
-          name: 'S.P. Chaubey', role: 'Sr. Manager',
+          name: 'Shri Prakash Chaubey', key: 'S.P. Chaubey', role: 'M4- Sr. Manager- HO',
           reports: [
             {
-              name: 'Sanjeev Kumar', role: 'AM',
+              name: 'Sanjeev Kumar', role: 'M1- AM- HO',
               reports: [
                 { name: 'Executive', role: 'Vacant' },
               ],
@@ -217,9 +221,9 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
           name: 'SFA', role: 'Department',
           reports: [
             {
-              name: 'Krishna', role: 'AM',
+              name: 'Krishna Kumar', key: 'Krishna', role: 'M1- AM- HO',
               reports: [
-                { name: 'K. Vinay', role: 'Executive' },
+                { name: 'K Vinay', key: 'K. Vinay', role: 'O4- Executive- SFA & Analytics- HO' },
               ],
             },
           ],
@@ -228,9 +232,9 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
           name: 'Assurance – GT', role: 'Department',
           reports: [
             {
-              name: 'Sunetro Banerjee', role: 'Manager',
+              name: 'Sunetro Banerjee', role: 'M3- Manager- HO',
               reports: [
-                { name: 'Rajesh Sharma', role: 'Sr. Executive' },
+                { name: 'Rajesh Sharma', role: 'O5- Sr. Executive- HO' },
               ],
             },
           ],
@@ -252,17 +256,17 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
   // FLAT_TREE_IDS above (like Arun Mishra's 12 GTRs) rather than the
   // nested variant, since none of these six have reports of their own.
   'pradeep-krishali': [
-    { name: 'Kundan', role: 'Dy. Manager', location: 'HO' },
+    { name: 'Kundan Singh Mer', key: 'Kundan', role: 'M2- Dy. Manager', location: 'HO' },
     { name: 'Vacant', role: 'O5- Sr. Executive', location: 'HO' },
-    { name: 'Rakesh', role: 'O4- Executive', location: 'HO' },
-    { name: 'Swamendra', role: 'M2- Dy. Manager', location: 'HO' },
+    { name: 'Rakesh Rajput', key: 'Rakesh', role: 'O5- Sr. Executive', location: 'HO' },
+    { name: 'Swamendra Gupta', key: 'Swamendra', role: 'M2- Dy. Manager', location: 'HO' },
     { name: 'Ashish Pal', role: 'O5- Sr. Executive', location: 'HO' },
-    { name: 'Neeraj Krishnatray', role: 'M1- AM', location: 'Factory' },
+    { name: 'Neeraj Krishnatray', role: 'M1- AM', location: 'Roorkee' },
   ],
   // CS & Legal (Vikas Aggarwal) — one direct report, per the org chart
   // supplied. A single manager box under the HOD, no T-bar.
   'vikas-aggarwal': [
-    { name: 'Sonal', role: 'O4- Executive- HO' },
+    { name: 'Sonal Mishra', key: 'Sonal', role: 'O4- Executive- HO' },
   ],
   // Export (Ershad Alam) — four flat direct reports, one of them a vacant
   // seat. Added to FLAT_TREE_IDS above. A vacant seat needs a distinct name
@@ -270,8 +274,8 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
   'ershad-alam': [
     { name: 'Vacant (M1-AM)', role: 'M1- AM', location: 'HO' },
     { name: 'Pratik Rai', role: 'O5- Sr. Executive- Export', location: 'HO' },
-    { name: 'Gholam', role: 'M1- AM', location: 'HO' },
-    { name: 'Deepak', role: 'O5- Sr. Executive', location: 'HO' },
+    { name: 'Gholam Yahya', key: 'Gholam', role: 'M1- AM', location: 'HO' },
+    { name: 'Deepak Kumar', key: 'Deepak', role: 'O5- Sr. Executive', location: 'HO' },
   ],
   // Marketing (Naagesh Mishra) — one manager (Pankaj Jha) with four flat
   // direct reports of his own, one a vacant seat, per the org chart
@@ -280,10 +284,10 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
   // of the four have reports of their own).
   'naagesh-mishra': [
     {
-      name: 'Pankaj Jha', role: 'M4- Sr. Manager- Marketing- HO',
+      name: 'Pankaj Kumar Jha', key: 'Pankaj Jha', role: 'M4- Sr. Manager- Marketing- HO',
       reports: [
         { name: 'Aman Bhardwaj', role: 'M1- AM- ATL- HO' },
-        { name: 'Abhishek Nagar', role: 'O4- Sr. Executive- HO' },
+        { name: 'Abhishek Kumar Nagar', key: 'Abhishek Nagar', role: 'O5- Sr. Executive- HO' },
         { name: 'Anoop Sehgal', role: 'O5- Sr. Executive- Design- HO' },
         { name: 'Performance Marketing (Vacant)', role: 'M1- AM' },
       ],
@@ -299,12 +303,12 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
       name: 'Internal Audit', role: 'Department', stemLabel: 'Functional Reporting',
       reports: [
         {
-          name: 'Tapan Behera', role: 'M4- Sr. Manager- HO',
+          name: 'Tapan Kumar Behera', key: 'Tapan Behera', role: 'M4- Sr. Manager- HO',
           reports: [
             { name: 'Rishab', role: 'O5- Sr. Executive' },
-            { name: 'Pravesh', role: 'O5- Sr. Executive' },
+            { name: 'Pravesh Kumar', key: 'Pravesh', role: 'O5- Sr. Executive' },
             { name: 'Puneet Singh', role: 'O4- Executive' },
-            { name: 'Abhishek', role: 'O4- Executive' },
+            { name: 'Abhishek Bisht', key: 'Abhishek', role: 'O4- Executive' },
           ],
         },
       ],
@@ -315,37 +319,67 @@ export const SUB_TREES: Record<string, TeamMember[]> = {
         {
           name: 'Prateek Aggarwal', role: 'M4- Sr. Manager- AP- HO',
           reports: [
-            { name: 'Satendra', role: 'M1- AM' },
+            { name: 'Satendra Singh', key: 'Satendra', role: 'M1- AM' },
             { name: 'Azad', role: 'O5- Sr. Executive' },
-            { name: 'Bhumika', role: 'O4- Executive' },
-            { name: 'Gaurav', role: 'O5- Sr. Executive' },
+            { name: 'Kumari Bhumika Vishwakarma', key: 'Bhumika', role: 'O4- Executive' },
+            { name: 'Gaurav Gupta', key: 'Gaurav', role: 'O5- Sr. Executive' },
             { name: 'Sailabh', role: 'O4- Executive' },
-            { name: 'Neha', role: 'O4- Executive' },
+            { name: 'Neha Baig', key: 'Neha', role: 'O4- Executive' },
           ],
         },
         {
           name: 'Amit Madan', role: 'M5- AGM – AR- HO',
           reports: [
-            { name: 'Sumit', role: 'M3- Manager' },
-            { name: 'Mayank', role: 'O4- Executive' },
-            { name: 'Roshan', role: 'O5- Sr. Executive' },
-            { name: 'Ashu', role: 'O4- Executive' },
-            { name: 'Arif', role: 'O4- Executive' },
+            { name: 'Sumit Kumar', key: 'Sumit', role: 'M3- Manager' },
+            { name: 'Mayank Jha', key: 'Mayank', role: 'O4- Executive' },
+            { name: 'Roshan Kumar', key: 'Roshan', role: 'O5- Sr. Executive' },
+            { name: 'Ashu Tyagi', key: 'Ashu', role: 'O5- Sr. Executive' },
+            { name: 'Arif Ansari', key: 'Arif', role: 'O3- Officer' },
             { name: 'Sunil Kumar', role: 'O5- Sr. Executive' },
           ],
         },
         {
-          name: 'Nischal Bhardwaj', role: 'M4- Sr. Manager- Plant Costing & Budgeting- Factory',
+          name: 'Nischal Bhardwaj', role: 'M4- Sr. Manager- Plant Costing & Budgeting- Roorkee',
           // Finance & Accounts team list supplied by HR — name and
           // designation only, as given (no grade codes on that list).
           reports: [
-            { name: 'Mohd. Alim', role: 'Senior Executive' },
-            { name: 'Vipul Kumar', role: 'Executive' },
-            { name: 'Mohd Ashraf', role: 'Senior Executive' },
-            { name: 'Rahul Kumar', role: 'Assistant Manager' },
+            { name: 'Mohd. Alim', role: 'O5- Sr. Executive- Roorkee' },
+            { name: 'Vipul Kumar', role: 'O4- Executive- Roorkee' },
+            { name: 'Mohd Ashraf', role: 'O5- Sr. Executive- Roorkee' },
+            { name: 'Rahul Kumar', role: 'M1- AM- Roorkee' },
           ],
         },
       ],
     },
   ],
 };
+
+/* Grade order, highest first: C2, C1, then M5 … M1, then O5 … O1, then
+   W3 … W1. A grade is read from the role ("O5- Sr. Executive", or
+   "GTR 1- PB, HP & J&K- M2- Sr. ASM"). A card with no grade (a department
+   label, or a role given without one) ranks 0: department labels keep
+   their order among themselves, and ungraded people go to the bottom. */
+const BAND: Record<string, number> = { C: 400, M: 300, O: 200, W: 100 };
+export function gradeRank(role: string): number {
+  const m = /(?:^|[\s-])([CMOW])(\d)(?=\s*-|\s|$)/.exec(role || '');
+  return m ? BAND[m[1]] + Number(m[2]) : 0;
+}
+
+/** Higher grade first (top of a column), lowest at the bottom. Stable, so
+ *  people of the same grade keep the order they were given in. */
+export function byGrade<T>(list: T[], role: (x: T) => string): T[] {
+  return list.map((x, i) => [x, i] as const)
+    .sort((a, b) => gradeRank(role(b[0])) - gradeRank(role(a[0])) || a[1] - b[1])
+    .map(([x]) => x);
+}
+
+// Every list below each HOD, sorted once at load, before APIS_TREE.tsx
+// builds the cards' ids from it.
+function sortTeam(list: TeamMember[]): TeamMember[] {
+  return byGrade(list, m => m.role).map(m => (m.reports ? { ...m, reports: sortTeam(m.reports) } : m));
+}
+for (const id of Object.keys(SUB_TREES)) SUB_TREES[id] = sortTeam(SUB_TREES[id]);
+for (const r of Object.values(SUB_TREE_ROOTS)) {
+  if (r.peerMembers) r.peerMembers = sortTeam(r.peerMembers);
+  if (r.peer2Members) r.peer2Members = sortTeam(r.peer2Members);
+}

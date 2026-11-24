@@ -29,7 +29,7 @@ export type Person = {
 };
 
 export const managingDirector: Person = {
-  id: 'md-1', name: 'Amit Anand', role: 'Managing Director', department: 'Executive Management',
+  id: 'md-1', name: 'Amit Anand', role: 'Managing Director', department: 'Director Office',
   level: 'md', photo: amitAnandPhoto,
 };
 
@@ -37,16 +37,16 @@ export const managingDirector: Person = {
 // layout: 4 per row, [Arun, Vaibhav, Narendra, Naagesh] / [Pankaj, Ankit,
 // Pradeep, Vikash] / [Manigandan, Heera Swami, Dinesh, Ershad].
 export const hods: Person[] = [
-  { id: 'arun-mishra', name: 'Arun Mishra', role: 'NSH-HO',department: 'General Trade', level: 'hod', photo: arunMishraPhoto },
-  { id: 'vaibhav-mishra', name: 'Vaibhav Mishra', role: 'AGM-HO', department: 'Alternate Channel', level: 'hod', photo: vaibhavMishraPhoto },
-  { id: 'narendra-gangwar', name: 'Narendra Gangwar', role: 'Sr. Manager',department: 'B2B', level: 'hod', photo: narendraGangwarPhoto },
-  { id: 'naagesh-mishra', name: 'Naagesh Mishra', role: 'GM', department: 'Marketing', level: 'hod', photo: naageshMishraPhoto },
-  { id: 'pankaj-tripathi', name: 'Pankaj Tripathi', role: 'GM', department: 'P&C Admin & IT', level: 'hod', photo: '/hierarchy/Pankaj_Tripathi1.png' },
-  { id: 'ankit-nagar', name: 'Ankit Nagar', role: 'CFO', department: 'F&A/Internal Audit', level: 'hod', photo: ankitNagarPhoto },
-  { id: 'pradeep-krishali', name: 'Pradeep Kumar', role: 'AGM', department: 'Procurement', level: 'hod', photo: pradeepKrishaliPhoto },
-  { id: 'vikas-aggarwal', name: 'Vikas Aggarwal', role: 'AGM', department: 'CS & Legal', level: 'hod', photo: vikashAggarwalPhoto },
-  { id: 'r-manigandan', name: 'R. Manigandan', role: 'GM', department: 'BEX & SCM', level: 'hod', photo: manigandanPhoto },
-  { id: 'heera-swami', name: 'Heera Swami', role: 'GM', department: 'PPC', level: 'hod', photo: heeraSwamiPhoto },
-  { id: 'dinesh-kumar', name: 'Dinesh Kumar', role: 'Manager', department: 'NPD', level: 'hod', photo: dineshPhoto },
+  { id: 'arun-mishra', name: 'Arun Mishra', role: 'C2- NSH- HO', department: 'General Trade', level: 'hod', photo: arunMishraPhoto },
+  { id: 'vaibhav-mishra', name: 'Vaibhav Mishra', role: 'M5- AGM- HO', department: 'Alternate Channels', level: 'hod', photo: vaibhavMishraPhoto },
+  { id: 'narendra-gangwar', name: 'Narendra Kumar Gangwar', role: 'M4- Sr. Manager- B2B- HO', department: 'Sales', level: 'hod', photo: narendraGangwarPhoto },
+  { id: 'naagesh-mishra', name: 'Naagesh Mishra', role: 'C1- GM- HO', department: 'Marketing', level: 'hod', photo: naageshMishraPhoto },
+  { id: 'pankaj-tripathi', name: 'Pankaj Tripathi', role: 'C1- GM- HO', department: 'People & Culture', level: 'hod', photo: '/hierarchy/Pankaj_Tripathi1.png' },
+  { id: 'ankit-nagar', name: 'Ankit Nagar', role: 'C2- AVP- HO', department: 'Finance & Accounts', level: 'hod', photo: ankitNagarPhoto },
+  { id: 'pradeep-krishali', name: 'Pradeep Kumar', role: 'M5- AGM- HO', department: 'Procurement', level: 'hod', photo: pradeepKrishaliPhoto },
+  { id: 'vikas-aggarwal', name: 'Vikas Aggarwal', role: 'M5- AGM- HO', department: 'Company Secretarial', level: 'hod', photo: vikashAggarwalPhoto },
+  { id: 'r-manigandan', name: 'R. Manigandan', role: 'C1- GM- HO', department: 'Business Excellence', level: 'hod', photo: manigandanPhoto },
+  { id: 'heera-swami', name: 'Heera Polandeappn', role: 'C1- GM- HO', department: 'Manufacturing', level: 'hod', photo: heeraSwamiPhoto },
+  { id: 'dinesh-kumar', name: 'Dinesh Kumar', role: 'M3- Manager- HO', department: 'New Product Development', level: 'hod', photo: dineshPhoto },
   { id: 'ershad-alam', name: 'Ershad Alam', role: 'Hod export', department: 'Export',level: 'hod', photo: ershadAlamPhoto },
 ];

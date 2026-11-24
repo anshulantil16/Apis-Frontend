@@ -28,7 +28,7 @@ import {
 import { apiFetch, fetchMe, type PortalUser } from '../portal/session';
 import { apiBase } from '../../apiBase';
 import { hods, managingDirector, type Level, type Person } from './hods';
-import { SUB_TREE_ROOTS, SUB_TREES, type SubTreeRoot, type TeamMember } from './teams';
+import { byGrade, SUB_TREE_ROOTS, SUB_TREES, type SubTreeRoot, type TeamMember } from './teams';
 
 
 /* Departments whose members hang directly off the HOD as one flat,
@@ -75,7 +75,7 @@ const MEMBER_IDS = new WeakMap<TeamMember, string>();
     const seen = new Map<string, number>();
     const walk = (members: TeamMember[]) => {
       for (const m of members) {
-        const base = `${hodId}--${slugify(m.name)}`;
+        const base = `${hodId}--${slugify(m.key ?? m.name)}`;
         const n = (seen.get(base) ?? 0) + 1;
         seen.set(base, n);
         MEMBER_IDS.set(m, n === 1 ? base : `${base}-${n}`);
@@ -98,7 +98,7 @@ const MEMBER_IDS = new WeakMap<TeamMember, string>();
  *  the off chance a member object isn't one the walk above reached (there
  *  shouldn't be any), rather than throwing. */
 function memberId(m: TeamMember): string {
-  return MEMBER_IDS.get(m) ?? slugify(m.name);
+  return MEMBER_IDS.get(m) ?? slugify(m.key ?? m.name);
 }
 
 /** Every person in one HOD's drill-down — the HOD themself, both PPC-style
@@ -1071,7 +1071,9 @@ function HodOwnCard({ hod, members }: { hod: Person; members: TeamMember[] }) {
           <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 inline-block mt-1">
             HOD
           </span>
-          <p className="text-sm font-bold text-amber-700 mt-1">{merged.role}- {merged.department}- HO</p>
+          {/* The role already carries grade, title and location ("C1- GM- HO"),
+              and the department has its own line just below. */}
+          <p className="text-sm font-bold text-amber-700 mt-1">{merged.role}</p>
           <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
             <Building2 className="w-4 h-4" />
             <span className="truncate">{merged.department}</span>
@@ -2147,6 +2149,8 @@ export function ApisTreePage() {
     for (const p of Object.values(profiles)) {
       if (p.is_new && p.parent_hod_id) (byParent[p.parent_hod_id] ??= []).push(p);
     }
+    // Same order as the built-in teams: highest grade first.
+    for (const k of Object.keys(byParent)) byParent[k] = byGrade(byParent[k], p => p.role);
     return byParent;
   }, [profiles]);
 
