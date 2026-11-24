@@ -16,7 +16,7 @@ import { WelcomeToast, WelcomeNotification } from './WelcomeToast';
 import { isWelcomePreview, markWelcomed } from './welcome';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
-  HelpCircle, User, Network, ShieldCheck, HeartPulse, CalendarDays, Quote, X, LogOut, Crown, Images, Calculator, UserSearch,
+  HelpCircle, User, Network, ShieldCheck, HeartPulse, CalendarDays, Quote, X, LogOut, Crown, Images, Calculator, UserSearch, ClipboardList,
   MessageSquare,
   Users, Landmark, MapPin, Mail, Phone, CalendarClock, Gift, UserCheck, Stamp,
 } from 'lucide-react';
@@ -33,7 +33,7 @@ import { useScrollRailHidden } from './scrollRailStore';
 
 /* Views the shell can highlight. 'home' plus every tool id, plus a couple of
    sub-views that live under a parent tool (approvals sits under letters). */
-export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies' | 'apis-wall' | 'talent-match' | 'ctc-calculator' | 'insurance' | 'attendance' | 'chat' | 'admin-console';
+export type ShellView = QuickAccessId | 'home' | 'offer-approvals' | 'apis-tree' | 'policies' | 'apis-wall' | 'talent-match' | 'ctc-calculator' | 'npd-tracker' | 'insurance' | 'attendance' | 'chat' | 'admin-console';
 
 interface Props {
   active: ShellView;
@@ -708,6 +708,16 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                                ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
                                : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
                   <Calculator className="w-3.5 h-3.5" />CTC Calculator
+                </button>
+              )}
+
+              {canOpen('npd-tracker') && (
+                <button onClick={() => go('npd-tracker')} title="NPD Master Tracker"
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-bold transition-all
+                             ${active === 'npd-tracker'
+                               ? 'bg-white/10 text-amber-300 ring-1 ring-amber-500/30'
+                               : 'text-amber-50/80 hover:bg-white/10 hover:text-white'}`}>
+                  <ClipboardList className="w-3.5 h-3.5" />NPD Master Tracker
                 </button>
               )}
 

@@ -175,7 +175,7 @@ export function MarketWatch() {
               ...(data?.days ?? []).filter(d => d !== today).map(d => ({ value: d, label: dayLabel(d) }))]} />
         </Filter>
         <Filter icon={Package} label="Compare at">
-          <MwSelect value={String(size)} onChange={v => busy(() => setSize(Number(v)))} ariaLabel="Compare at"
+          <MwSelect value={String(data?.size ?? size)} onChange={v => busy(() => setSize(Number(v)))} ariaLabel="Compare at"
             options={(data?.sizes ?? [250, 500, 1000]).map(s => ({ value: String(s), label: sizeLabel(s) }))} />
         </Filter>
         <Filter icon={Users} label="Competitor">
