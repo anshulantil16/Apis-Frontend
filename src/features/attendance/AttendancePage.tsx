@@ -38,6 +38,7 @@ import {
 import {
   arrivalHistogram, asClock, clockMins, dailySeries, group, summarise,
 } from './analytics';
+import { downloadCsv, statusText } from './csv';
 import { ArrivalChart, DeptChart, TrendChart } from './AttendanceCharts';
 import { AttendanceReports } from './AttendanceReports';
 
@@ -299,22 +300,17 @@ export function AttendancePage({ onBack }: Props) {
 
   const download = () => {
     const head = ['Code', 'Name', 'Designation', 'Grade', 'Department', 'Location',
-      'Date', 'In', 'Out', 'Worked', 'Normal', 'Late by', 'Early by', 'Flags'];
-    const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      'Date', 'In', 'Out', 'Worked', 'Worked (mins)', 'Normal', 'Normal (mins)',
+      'Late by', 'Late by (mins)', 'Early by', 'Early by (mins)', 'Status'];
     const body = analysed.map(r => [
       r.code, r.name, r.designation, r.grade, r.department, r.location, r.date,
       r.inUnswiped ? 'Unswiped' : r.inTime,
       r.outUnswiped ? 'Unswiped' : r.outTime,
-      hours(r.workedMins), hours(r.normalMins), dur(r.lateMins), dur(r.earlyMins),
-      r.flags.join(' '),
-    ].map(esc).join(','));
-    const blob = new Blob([[head.map(esc).join(','), ...body].join('\n')],
-      { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `attendance_${from}_to_${to}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+      hours(r.workedMins), r.workedMins, hours(r.normalMins), r.normalMins,
+      dur(r.lateMins), r.lateMins, dur(r.earlyMins), r.earlyMins,
+      statusText(r.flags),
+    ]);
+    downloadCsv(`attendance_${from}_to_${to}`, head, body);
   };
 
   const multiDay = (data?.days ?? 1) > 1;

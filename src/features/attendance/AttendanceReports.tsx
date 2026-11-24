@@ -15,6 +15,7 @@ import {
   type GroupStat, type PersonStat,
 } from './analytics';
 import { hours, type AttRow } from './api';
+import { downloadCsv } from './csv';
 
 type OffenceKey = 'absent' | 'late' | 'afterCutoff' | 'unswiped' | 'earlyOut';
 
@@ -26,16 +27,11 @@ const OFFENCE: Record<OffenceKey, { label: string; blurb: string }> = {
   earlyOut:    { label: 'Early out',     blurb: 'Days they left before their shift ended' },
 };
 
-function csv(name: string, head: string[], body: (string | number)[][]) {
-  const esc = (v: string | number) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const blob = new Blob([[head.map(esc).join(','), ...body.map(r => r.map(esc).join(','))].join('\n')],
-    { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${name}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+/* The shared writer: a UTF-8 BOM so Excel does not mangle the em-dash, and
+   empty cells instead of a dash so sums and blank-filters work. See csv.ts. */
+const csv = (name: string, head: string[], body: (string | number)[][]) =>
+  downloadCsv(name, head, body);
+
 
 const TH = 'px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap';
 const TD = 'px-3 py-2 text-[12px] text-slate-700 whitespace-nowrap';
