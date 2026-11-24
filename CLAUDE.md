@@ -317,6 +317,31 @@ CLAUDE.md for the counts that forced that. The scope is applied inside
 `scoped`, i.e. **before** the flags, so the KPI cards count head office only
 while it is on. "Everyone" is one click.
 
+### Every CSV goes through `csv.ts`
+
+Four exports in Reports and the Day-rows download all call `downloadCsv`.
+Three things in it are not cosmetic, each from a real export opened in Excel
+on 23-11-2026:
+
+- **The file starts with a UTF-8 BOM** (`\uFEFF`). Without it Excel on
+  Windows decodes the bytes as Windows-1252 and the em-dash this app uses for
+  "nothing here" arrives as `â€"` down four whole columns. The
+  `charset=utf-8` on the blob type is advisory and Excel ignores it — the BOM
+  is the only thing that works.
+- **An empty cell is empty, not an em-dash.** `—` is a reading aid for a
+  screen; in a spreadsheet it is text sitting in a numeric column, so SUM and
+  AVERAGE return 0 or `#VALUE!` and a filter for blanks finds nothing.
+- **Numbers are written unquoted.** Excel is inconsistent about reading
+  `"521"` back as a number, and a text column will not SUM. Everything else is
+  quoted — names and departments carry commas.
+
+The Day-rows export carries both the readable duration and a `(mins)` integer
+beside it, because `8h 41m` cannot be averaged. Its last column is **Status**,
+not the raw flags: `statusText()` turns `noRecord absent` into `Absent`.
+`noRecord` and `sunday` are deliberately not printed — one of
+absent/weekOff/holiday/notYet always sits beside `noRecord` and says the same
+thing in plain words, and `weekOff` already covers `sunday`.
+
 ### Overview charts, and why the colours are what they are
 
 `AttendanceCharts.tsx` uses four hues, and they were **validated, not chosen
