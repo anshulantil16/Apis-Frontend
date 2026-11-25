@@ -2,7 +2,7 @@
    Wall.
 
    Download the Excel template, fill in one row per candidate (name,
-   category, department, designation, grade, cadre, work location, CTC) and
+   category, department, cadre, grade, designation, work location, CTC) and
    upload it back here. Each upload is listed with its rows; clicking a row
    opens that candidate's compensation break-up (BreakdownModal), and the PDF
    button on the row downloads the same break-up as Annexure A. The numbers
@@ -30,9 +30,9 @@ const COLUMNS: { label: string; render: (c: CtcUpload['candidates'][number]) => 
   { label: 'Candidate Name', render: c => c.candidateName },
   { label: 'Category',       render: c => c.category || '—' },
   { label: 'Department',     render: c => c.department || '—' },
-  { label: 'Designation',    render: c => c.designation || '—' },
-  { label: 'Grade',          render: c => c.grade || '—' },
   { label: 'Cadre',          render: c => c.cadre || '—' },
+  { label: 'Grade',          render: c => c.grade || '—' },
+  { label: 'Designation',    render: c => c.designation || '—' },
   { label: 'Children',       render: c => String(c.numberOfChildren ?? 0) },
   { label: 'Work Location',  render: c => c.workLocation || '—' },
   { label: 'CTC (Annual)',   render: c => (c.ctcCorrected
