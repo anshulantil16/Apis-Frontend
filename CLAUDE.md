@@ -106,6 +106,20 @@ Who is a reviewer is decided by `reports_count` / `hod_reports_count` — who
 actually reports to them — not by user_type, so a manager typed into the
 upload sheet as "Employee" still gets their team.
 
+### People come from the directory, not a spreadsheet
+
+The People tab's main action is **Sync from directory**, which pulls everybody
+out of `accounts.PortalUser` with their department, designation, reporting
+manager and HOD. Upload sheet and Template are still there, demoted to
+secondary buttons, for somebody HRMS does not know about yet.
+
+The sync answers with `unresolved_hods` and **that list must stay on screen**.
+HRMS gives the HOD as a name with no employee code, so it is matched back by
+name and some names match nobody or two people — those employees are left with
+no HOD rather than pointed at a guess. The amber panel is how the admin learns
+which spellings HR needs to fix; swallowing it would leave people silently
+unreviewable. See the backend CLAUDE.md for the counts.
+
 ## SalesIQ (`src/features/salesiq/`)
 
 Figures come from two source files with different coverage, so panels carry a
