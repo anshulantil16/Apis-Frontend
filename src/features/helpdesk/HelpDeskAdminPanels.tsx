@@ -12,7 +12,7 @@ import {
   API, _API_BASE, type Session, Reveal, Panel, Skel, Empty, PURPOSE_LABEL,
   PURPOSE_COLOUR, CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, URGENCY_COLOUR,
   REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, fileHref,
-  TransferControl, TransferTrail} from './HelpDeskShared';
+  TransferControl, TransferTrail, span12, hour12} from './HelpDeskShared';
 import { TICKET_CATEGORY_LABEL, ticketPriorityMeta, ticketStatusMeta, fmtTicketWhen } from './HelpDeskTickets';
 
 // What the server treats as the normal working day — see roompulse/worktime.py.
@@ -241,7 +241,7 @@ function AdminApprovalsSection({ session, onChanged }: { session: Session; onCha
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">
                           {isRoom
-                            ? <>{fmtDate(row.date)} · {row.start_time}–{row.end_time} · {row.attendees} attendees</>
+                            ? <>{fmtDate(row.date)} · {span12(row.start_time, row.end_time)} · {row.attendees} attendees</>
                             : <>{row.needed_by ? `Needed by ${fmtDate(row.needed_by)}` : 'No deadline given'}</>}
                         </p>
                         <p className="text-[11px] text-slate-600 mt-1">
@@ -1464,7 +1464,7 @@ export function CalendarPanel({ rooms }: { rooms: any[] }) {
               <div key={h} className="absolute inset-x-0 border-t border-slate-200"
                 style={{ top: `${((h * 60 - dayStart) / span) * 100}%` }}>
                 <span className="absolute -left-10 -top-2 text-[10px] text-slate-400 tabular-nums">
-                  {String(h).padStart(2, '0')}:00
+                  {hour12(h)}
                 </span>
               </div>
             ))}
@@ -1478,7 +1478,7 @@ export function CalendarPanel({ rooms }: { rooms: any[] }) {
                            borderLeft: `3px solid ${colour}` }}>
                   <p className="text-[11px] font-black text-slate-800 truncate">{b.requested_by_name}</p>
                   <p className="text-[10px] text-slate-500 truncate">
-                    {b.start_time}–{b.end_time} · {b.status === 'pending' ? 'Pending' : PURPOSE_LABEL[b.purpose]}
+                    {span12(b.start_time, b.end_time)} · {b.status === 'pending' ? 'Pending' : PURPOSE_LABEL[b.purpose]}
                   </p>
                 </div>
               );
@@ -2382,7 +2382,7 @@ function AnalyticsPanel({ session }: { session: Session }) {
           { l: 'Approval Rate', v: data.approval_rate_pct, suffix: '%', icon: Percent },
           { l: 'Avg. Turnaround', v: data.avg_turnaround_minutes, suffix: 'm', icon: Timer },
           { l: 'Busiest Hour', v: data.busiest_hour !== null && data.busiest_hour !== undefined
-              ? `${data.busiest_hour}:00` : '—', icon: TrendingUp, raw: true },
+              ? hour12(data.busiest_hour) : '—', icon: TrendingUp, raw: true },
           { l: 'Item Requests', v: data.resource_requests?.total ?? 0, icon: PackageCheck, raw: true,
             sub: `${data.resource_requests?.pending ?? 0} pending` },
           { l: 'Tickets Raised', v: tickets.total ?? 0, icon: Headphones, raw: true,
