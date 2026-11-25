@@ -319,6 +319,19 @@ export const importEmployees = async (file: File) => {
     '/employees/import/', { method: 'POST', body: fd });
 };
 
+export interface DirectorySync {
+  created: number; updated: number; deactivated: number;
+  manual_untouched: number; with_manager: number; with_hod: number;
+  total: number;
+  /* HOD names HRMS gave us that match nobody, or match two people. Left
+     EMPTY on the profile rather than guessed -- a wrong HOD approves
+     somebody's goals. Shown to the admin so HR can fix the spelling. */
+  unresolved_hods: { name: string; people: number }[];
+}
+
+export const syncEmployees = () =>
+  call<DirectorySync>('/employees/sync/', { method: 'POST' });
+
 export const allPlans = (cycleId?: number, status?: string) => {
   const q = new URLSearchParams();
   if (cycleId) q.set('cycle_id', String(cycleId));

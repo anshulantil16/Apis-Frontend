@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import {
+  RefreshCw, AlertTriangle,
   Loader2, Upload, Plus, AlertCircle, CheckCircle2, Users, CalendarDays,
   Search, RotateCcw, Lock, Unlock, Pencil, X, Activity as ActivityIcon,
   ChevronRight, UserPlus, Download, Trash2, ShieldAlert, FileDown,
@@ -12,7 +13,7 @@ import {
 import {
   ApiError, allPlans, createCycle, createEmployee, downloadTemplate, getActivity,
   downloadExport, getOverview, getResetInfo, importEmployees, listEmployees,
-  reopenPlan, resetData, updateCycle, updateEmployee,
+  reopenPlan, resetData, updateCycle, updateEmployee, syncEmployees,
 } from './api';
 import type { Activity, Cycle, Employee, PlanSummary, ResetInfo, ResetScope } from './api';
 import { ROLE_LABEL, STATUS_HEX, STATUS_LABEL, STATUS_ORDER, STATUS_TONE, d, dt } from './api';
@@ -298,6 +299,7 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
   const [msg, setMsg] = useState('');
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState('');
+  const [unresolved, setUnresolved] = useState<{ name: string; people: number }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [newCycle, setNewCycle] = useState({ name: '', fiscal_year: '', submission_deadline: '' });
@@ -362,6 +364,27 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
     }
     setBusy('');
     if (fileRef.current) fileRef.current.value = '';
+  };
+
+  /* Fill the master from the company directory instead of a spreadsheet.
+     The unresolved HOD names are surfaced rather than swallowed: those
+     people end up with no HOD, and the admin is the only one who can get
+     that corrected in HRMS. */
+  const syncDirectory = async () => {
+    setBusy('sync'); setError(''); setMsg('');
+    try {
+      const r = await syncEmployees();
+      setMsg(`${r.total} people from the directory — ${r.created} added, ${r.updated} updated`
+        + (r.deactivated ? `, ${r.deactivated} marked inactive` : '')
+        + `. Reporting manager on ${r.with_manager}, HOD on ${r.with_hod}.`
+        + (r.manual_untouched ? ` ${r.manual_untouched} hand-added row${r.manual_untouched === 1 ? '' : 's'} left alone.` : ''));
+      setUnresolved(r.unresolved_hods);
+      await refresh();
+      if (tab === 'people') listEmployees(q).then(setPeople);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not sync from the directory.');
+    }
+    setBusy('');
   };
 
   const addCycle = async () => {
@@ -590,9 +613,11 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
               <div className="flex-1 min-w-[240px]">
                 <p className="font-black text-slate-700 text-sm mb-0.5">Employee master</p>
                 <p className="text-[11px] text-slate-400 font-semibold">
-                  Download the template, fill it in, upload it back. Every heading carries
-                  a note explaining what it holds, and the second sheet has a worked example.
-                  Uploading again updates the people already here rather than duplicating them.
+                  Sync pulls everybody from the company directory — name, department,
+                  designation, reporting manager and HOD — so there is nothing to type.
+                  People added here by hand are left alone, and anyone who has left is
+                  marked inactive rather than removed. The spreadsheet is still there for
+                  somebody HRMS does not know about yet.
                 </p>
               </div>
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
@@ -608,13 +633,43 @@ export function AdminView({ actorName, cycleId, onOpenPlan }: {
                   <UserPlus className="w-4 h-4" /> Add one
                 </button>
                 <button onClick={() => fileRef.current?.click()} disabled={busy === 'import'}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-bold text-[13px]">
+                  title="For somebody the directory does not have yet"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-[13px] border border-slate-200 shadow-sm">
                   {busy === 'import' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   Upload sheet
+                </button>
+                <button onClick={syncDirectory} disabled={busy === 'sync'}
+                  title="Pull everybody from the company directory, with their manager and HOD"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-bold text-[13px]">
+                  {busy === 'sync' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Sync from directory
                 </button>
               </div>
             </div>
           </div>
+
+          {unresolved.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+              <p className="text-[12px] font-black text-amber-900 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4" />
+                {unresolved.length} HOD name{unresolved.length === 1 ? '' : 's'} could not be matched to a person
+              </p>
+              <p className="text-[11px] text-amber-800/80 font-semibold mt-1">
+                HRMS gives the HOD as a name, not an employee code, so it has to be matched
+                back by name. These spellings match nobody in the directory — or match two
+                people — so those employees have been left with no HOD rather than being
+                pointed at a guess. Correcting the spelling in HRMS fixes it everywhere.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {unresolved.map(u => (
+                  <span key={u.name}
+                    className="px-2 py-1 rounded-lg bg-white border border-amber-200 text-[11px] font-bold text-amber-900">
+                    {u.name} · {u.people} {u.people === 1 ? 'person' : 'people'}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
