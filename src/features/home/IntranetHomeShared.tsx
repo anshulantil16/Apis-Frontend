@@ -346,6 +346,15 @@ export function summarizeVacancies(vacancies: VacancyListing[]): Vacancy[] {
 export interface CelebrationEntry {
   name: string; date: string; department?: string; designation?: string;
   days_away?: number; is_today?: boolean; years?: number;
+  /* The directory key a wish is addressed to. Not the employee code — this
+     feed is the one piece of directory data every employee sees about
+     everybody, and it carries name, department and designation only. */
+  id?: number;
+  /* Whether the signed-in person has already wished this one, so the row can
+     say "Wished" instead of offering the button twice. */
+  wished?: boolean;
+  /* You are on these cards too; your own row offers no button. */
+  is_me?: boolean;
 }
 
 /* Birthdays, work anniversaries and new joiners, straight from the employee

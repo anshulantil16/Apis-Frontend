@@ -425,3 +425,29 @@ only; it has never affected the counts.
 - The Delhi HO scope reads `meta.homeOffice.codePrefixes` (a LIST — `HO,NA`).
   `codePrefix` is the old single value, kept only so an older bundle does not
   break.
+
+## Wishes (`src/features/home/wishes.tsx`)
+
+The Wish button on the Birthdays / Anniversaries card and its "View all"
+popup, the banner on your own day, and the wish rows in the bell.
+
+**Nothing in this file decides when a wish is visible.** The server files each
+wish against the day it is for and only ever returns today's, so the frontend
+polls and renders. Do not add a date check here: a tab left open overnight
+would then be showing yesterday's greetings against today's date, and the two
+halves would have to agree forever.
+
+`useMyWishes()` polls every three minutes and re-asks when the tab comes back
+to the front — on your birthday the count climbing through the morning is most
+of the point, so it is faster than it strictly needs to be.
+
+`WishButton` seeds its "Wished" state from the server's `wished` flag and then
+owns it. The celebrations feed is fetched once and shared by four render sites
+(two cards, two popups), so re-fetching it to flip one button would reload all
+four. The server is asked again on the next page load and is the authority.
+
+`markSeen` clears the bell's dot only. It does not hide a wish — a greeting
+that vanishes the moment you glance at it is worse than no greeting.
+
+The bell in `IntranetShell` now has a real backend behind it. The comment
+saying otherwise is gone; wishes and unread messages both feed it.

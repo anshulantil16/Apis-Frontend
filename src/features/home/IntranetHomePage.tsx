@@ -17,6 +17,7 @@ import {
   type VacancyListing,
   type QuickAccessId, type ToolCategoryFilter, type OurProduct,
 } from './IntranetHomeShared';
+import { MyCelebrationBanner, MyWishesPopup, WishButton, useMyWishes } from './wishes';
 import amitAnandPhoto from '../../assets/hierarchy/amit-anand.jpeg';
 import { ReferralForm } from './ReferralFormPopup';
 import { ReferralsTab } from '../portal/ReferralsAdmin';
@@ -147,6 +148,8 @@ interface IntranetHomePageProps {
   canViewConfidentialVacancies?: boolean;
   /** Granted from the admin console; shows the Referrals Received tab. */
   canReviewReferrals?: boolean;
+  /** Only used to greet somebody by name on their own birthday banner. */
+  userName?: string;
 }
 
 /* Pointer handlers come from the shared kit: it measures once per
@@ -1281,6 +1284,8 @@ function CelebrationsPopup({ initialTab, onClose }: { initialTab: 'birthdays' | 
                 </p>
               </div>
               <span className="text-[12px] font-bold text-slate-400 flex-shrink-0">{p.date}</span>
+              <WishButton person={p} size="md"
+                occasion={tab === 'birthdays' ? 'birthday' : 'anniversary'} />
             </div>
           ))}
         </div>
@@ -1312,10 +1317,15 @@ function Particles() {
   );
 }
 
-export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canViewConfidentialVacancies, canReviewReferrals }: IntranetHomePageProps) {
+export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canViewConfidentialVacancies, canReviewReferrals, userName }: IntranetHomePageProps) {
   /* Birthdays, anniversaries and new joiners, live from the employee master.
      Only currently-employed people; the server enforces that. */
   const cel = useCelebrations();
+  /* Wishes that have arrived for ME today, and whether today is my own
+     birthday or anniversary. Empty on all but one or two days a year, which
+     is why the banner below renders nothing at all the rest of the time. */
+  const myWishes = useMyWishes();
+  const [myWishesOpen, setMyWishesOpen] = useState(false);
   const vac = useVacancies();
   const vacSummary = summarizeVacancies(vac.vacancies);
   const liveVacancyCount = vac.vacancies.filter(
@@ -1477,6 +1487,14 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
         <div className="relative max-w-[1600px] mx-auto px-6 py-5 flex gap-5 items-start">
           {/* ── Center column ──────────────────────────────────────────────── */}
           <div className="flex-1 min-w-0 space-y-6">
+            {/* Your own birthday or work anniversary, and the wishes your
+                colleagues have sent for it. Renders nothing on all but one or
+                two days a year — the server only reports an occasion that is
+                TODAY, and the wishes it returns are only ever today's, which
+                is also why they clear themselves overnight. */}
+            <MyCelebrationBanner occasions={myWishes.myOccasions} wishes={myWishes.wishes}
+              name={userName || ''} onOpen={() => { setMyWishesOpen(true); void myWishes.markSeen(); }} />
+
             {/* Hero product showcase — real APIS India product photography
                 (sourced from apisindia.com); see OUR_PRODUCTS for which
                 photos are still pending. */}
@@ -2021,6 +2039,9 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
             )}
             {openListPopup === 'news' && <DailyNewsPopup onClose={() => setOpenListPopup(null)} />}
             {openListPopup === 'celebrations' && <CelebrationsPopup initialTab={celebrationTab} onClose={() => setOpenListPopup(null)} />}
+            {myWishesOpen && (
+              <MyWishesPopup wishes={myWishes.wishes} onClose={() => setMyWishesOpen(false)} />
+            )}
 
             {/* Your Tools — filterable launcher grid, the intranet's app hub */}
             <section id="all-tools" className="scroll-mt-20">
@@ -2469,6 +2490,10 @@ export function IntranetHomePage({ onNavigate, allowedApps, isSuperadmin, canVie
                       )}
                     </div>
                     <span className="text-[10.5px] font-bold text-slate-400 flex-shrink-0">{p.date}</span>
+                    {/* Sends them a wish, which lands on their own dashboard
+                        on the day — see features/home/wishes.tsx. */}
+                    <WishButton person={p}
+                      occasion={celebrationTab === 'birthdays' ? 'birthday' : 'anniversary'} />
                   </div>
                 ))}
               </div>

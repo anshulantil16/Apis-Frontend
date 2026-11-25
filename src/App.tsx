@@ -206,7 +206,8 @@ function Workspace({ session }: { session: { user: PortalUser; signOut: () => vo
       ) : view === 'home' ? (
         <IntranetHomePage onNavigate={navigate} allowedApps={session.user.allowed_apps} isSuperadmin={session.user.is_superadmin}
           canViewConfidentialVacancies={session.user.can_view_confidential_vacancies}
-          canReviewReferrals={!!session.user.can_review_referrals} />
+          canReviewReferrals={!!session.user.can_review_referrals}
+          userName={session.user.name} />
       ) : view === 'extractor' ? (
         <DataExtractorPage />
       ) : view === 'helpdesk' ? (

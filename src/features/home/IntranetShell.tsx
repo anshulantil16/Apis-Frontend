@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { portalFetch, type PortalUser } from '../portal/session';
 import { WelcomeToast, WelcomeNotification } from './WelcomeToast';
+import { WishNotifications, useMyWishes } from './wishes';
 import { isWelcomePreview, markWelcomed } from './welcome';
 import {
   Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Home as HomeIcon, Building2, Command, CornerDownLeft,
@@ -258,6 +259,9 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
      message finds you wherever you are in the intranet. Muted while you are
      already reading Messages -- the thread itself is the notification. */
   const chat = useChatAlerts(canOpen('chat'), active === 'chat');
+  /* Birthday and anniversary wishes sent to this person. Open to everyone,
+     like the celebrations feed they come from -- not an app you are granted. */
+  const wishes = useMyWishes();
   const VISIBLE_GROUPS = useMemo(
     () => NAV_GROUPS
       .map(g => ({ ...g, items: g.items.filter(i => canOpen(i.id)) }))
@@ -901,14 +905,16 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
               )}
 
               {/* Notifications — same fixed-overlay/dropdown pattern as the
-                  Quote of the Day popup above. No notifications backend
-                  exists yet, so it says so rather than showing made-up
-                  rows, and the bell carries no unread dot. */}
+                  Quote of the Day popup above. Carries unread messages, the
+                  new joiner's welcome, and birthday/anniversary wishes sent
+                  to this person. A wish is only ever listed on the day it is
+                  for: the server returns today's and no others, so this list
+                  empties itself overnight with nothing having to run. */}
               <div className="relative">
-                <button onClick={() => { setNotifOpen(o => !o); setNotifSeen(true); }} title="Notifications"
+                <button onClick={() => { setNotifOpen(o => !o); setNotifSeen(true); void wishes.markSeen(); }} title="Notifications"
                   className="relative p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                   <Bell className="w-4 h-4" />
-                  {(chat.items.length > 0 || (welcomeNote && !notifSeen)) && (
+                  {(chat.items.length > 0 || wishes.unseen > 0 || (welcomeNote && !notifSeen)) && (
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
                   )}
                 </button>
@@ -928,6 +934,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                         </button>
                       </div>
                       {welcomeNote && user && <div className="mt-2"><WelcomeNotification user={user} /></div>}
+                      <WishNotifications wishes={wishes.wishes} />
                       {chat.items.length > 0 && (
                         <div className="-mx-1 mt-1 max-h-80 overflow-y-auto divide-y divide-slate-50">
                           {chat.items.map(n => (
@@ -946,7 +953,7 @@ export function IntranetShell({ active, onNavigate, children, subNav, title, sub
                           ))}
                         </div>
                       )}
-                      {chat.items.length === 0 && !(welcomeNote && user) && (
+                      {chat.items.length === 0 && wishes.wishes.length === 0 && !(welcomeNote && user) && (
                         <div className="flex flex-col items-center text-center py-6">
                           <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center mb-2">
                             <Bell className="w-4.5 h-4.5 text-slate-300" />
