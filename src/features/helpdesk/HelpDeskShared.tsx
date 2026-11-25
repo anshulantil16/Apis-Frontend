@@ -179,13 +179,27 @@ export const Empty = ({ msg, icon: Icon = Users2 }: { msg: string; icon?: any })
 export const PURPOSE_LABEL: Record<string, string> = {
   client_meeting: 'Client Meeting', internal_meeting: 'Internal Team Meeting',
   interview: 'Interview', training: 'Training / Workshop', board_meeting: 'Board Meeting',
-  presentation: 'Presentation', vendor_meeting: 'Vendor Meeting', other: 'Other',
+  presentation: 'Presentation', vendor_meeting: 'Vendor Meeting', erp_meeting: 'ERP Meeting', other: 'Other',
 };
 export const PURPOSE_COLOUR: Record<string, string> = {
   client_meeting: '#f59e0b', internal_meeting: '#6366f1', interview: '#ec4899',
   training: '#10b981', board_meeting: '#ef4444', presentation: '#06b6d4',
-  vendor_meeting: '#8b5cf6', other: '#94a3b8',
+  vendor_meeting: '#8b5cf6', erp_meeting: '#0ea5e9', other: '#94a3b8',
 };
+
+/* ── 12-hour clock ─────────────────────────────────────────────────────
+   The API sends 24-hour "14:00" (and the timeline maths uses it); people
+   read "2:00 PM". Use these wherever a time is shown. */
+export const to12 = (t?: string | null): string => {
+  if (!t) return '';
+  const [h, m = '00'] = t.split(':');
+  const hr = Number(h);
+  if (Number.isNaN(hr)) return t;
+  return `${hr % 12 || 12}:${m.slice(0, 2)} ${hr < 12 ? 'AM' : 'PM'}`;
+};
+export const span12 = (a?: string | null, b?: string | null) => `${to12(a)}–${to12(b)}`;
+/** An hour 0–23 as "2 PM". */
+export const hour12 = (h: number) => `${h % 12 || 12} ${h < 12 ? 'AM' : 'PM'}`;
 
 /* ── resource/item request badges — everything Admin covers that isn't IT
    (that lives on the ticket side — see TICKET_CATEGORY_LABEL in
