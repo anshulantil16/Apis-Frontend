@@ -40,6 +40,11 @@ export interface Wishable {
   name: string;
   wished?: boolean;
   is_me?: boolean;
+  /* Whether their day is TODAY. The cards list the week ahead and "View all"
+     the rest of the month, and a wish can only be sent on the day itself, so
+     this is what decides whether the row gets a button at all. The server
+     applies the same rule and is the authority. */
+  is_today?: boolean;
 }
 
 /* Three minutes. A wish is not a message — nobody is waiting on a reply — but
@@ -147,6 +152,12 @@ export function WishButton({ person, occasion, size = 'sm' }: {
      yourself reads as a bug. */
   if (person.is_me || !person.id) return null;
 
+  /* Not their day yet. Most rows on these cards are days or weeks out, and a
+     button on those would promise something it cannot do — the server refuses
+     a wish for any date but today. The row still shows the date, which is what
+     the card is for. */
+  if (!person.is_today) return null;
+
   const pad = size === 'md' ? 'px-3 py-1.5 text-[11.5px]' : 'px-2 py-1 text-[10px]';
 
   if (sent) {
@@ -235,10 +246,8 @@ function WishComposer({ person, occasion, onClose, onSent }: {
                      focus:border-amber-300 resize-none" />
 
         <div className="flex items-center justify-between mt-1">
-          {/* Said plainly, because it is the one surprising thing about the
-              feature: an early wish waits for the day rather than arriving now. */}
           <p className="text-[10px] text-slate-400">
-            Arrives on their {LABEL[occasion]}.
+            Shows on their dashboard today.
           </p>
           <p className="text-[10px] text-slate-300 tabular-nums">{message.length}/280</p>
         </div>

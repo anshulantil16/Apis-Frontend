@@ -431,11 +431,17 @@ only; it has never affected the counts.
 The Wish button on the Birthdays / Anniversaries card and its "View all"
 popup, the banner on your own day, and the wish rows in the bell.
 
-**Nothing in this file decides when a wish is visible.** The server files each
-wish against the day it is for and only ever returns today's, so the frontend
-polls and renders. Do not add a date check here: a tab left open overnight
-would then be showing yesterday's greetings against today's date, and the two
-halves would have to agree forever.
+**`WishButton` renders only when `person.is_today`.** The cards list the week
+ahead and "View all" the rest of the month, and a wish can only be sent on the
+day itself — a button on a row three days out would promise something the
+server refuses. The server applies the same rule and is the authority; this is
+the visible half of it.
+
+**Nothing in this file decides when a *received* wish is visible.** The server
+files each wish against the day it is for and only ever returns today's, so the
+frontend polls and renders. Do not add a date check to the feed: a tab left
+open overnight would then be showing yesterday's greetings against today's
+date, and the two halves would have to agree forever.
 
 `useMyWishes()` polls every three minutes and re-asks when the tab comes back
 to the front — on your birthday the count climbing through the morning is most
