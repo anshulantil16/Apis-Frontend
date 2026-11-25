@@ -7,7 +7,7 @@ import {
 import {
   API, _API_BASE, RP_STYLES, type Session, loadSession, saveSession, clearSession,
   ROLE_LABEL, Reveal, Panel, Skel, Empty, StatusPill, PURPOSE_LABEL, PURPOSE_COLOUR,
-  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, AssigneePicker} from './HelpDeskShared';
+  CATEGORY_LABEL, CATEGORY_COLOUR, URGENCY_LABEL, REQUEST_STATUS_BADGE, fmtDate, isoLocal, rpFetch, AssigneePicker, to12, span12} from './HelpDeskShared';
 import { HelpDeskLogin } from './HelpDeskLogin';
 import { useAssistantIntent } from '../assistant/intent';
 import { IT_ISSUES, type ItIssue } from '../assistant/itIssues';
@@ -141,13 +141,13 @@ function RoomCard({ room, delay, onBook, canManage, onFreed }: {
               Starts in {room.starts_in_min}m · {room.next_booking.requested_by_name}
             </p>
             <p className="text-[10px] text-amber-500 mt-0.5">
-              {room.next_booking.start_time}–{room.next_booking.end_time}
+              {span12(room.next_booking.start_time, room.next_booking.end_time)}
             </p>
           </div>
         )}
         {room.status === 'free' && room.next_booking && (
           <p className="relative text-[11px] text-slate-400 mb-3">
-            Next: {room.next_booking.start_time} · {room.next_booking.requested_by_name}
+            Next: {to12(room.next_booking.start_time)} · {room.next_booking.requested_by_name}
           </p>
         )}
         {room.status === 'free' && !room.next_booking && !room.pending?.length && (
@@ -168,7 +168,7 @@ function RoomCard({ room, delay, onBook, canManage, onFreed }: {
             </p>
             {room.pending.slice(0, 2).map((p: any) => (
               <p key={p.id} className="text-[11px] font-bold text-amber-800 mt-1">
-                {p.start_time}–{p.end_time} · {p.requested_by_name}
+                {span12(p.start_time, p.end_time)} · {p.requested_by_name}
               </p>
             ))}
             {room.pending.length > 2 && (
@@ -332,7 +332,7 @@ function BookingModal({ room, rooms, session, onClose, onDone }: {
                 </div>
                 {conflict && (
                   <p className="text-[11px] text-rose-500 mt-2 pl-6">
-                    Conflicting: {conflict.start_time}–{conflict.end_time} · {conflict.requested_by_name}
+                    Conflicting: {span12(conflict.start_time, conflict.end_time)} · {conflict.requested_by_name}
                   </p>
                 )}
               </div>
@@ -818,7 +818,7 @@ function MyRequestsPanel({ session, refreshKey }: { session: Session; refreshKey
                 </div>
                 <p className="text-[11px] text-slate-400">
                   {isRoom
-                    ? <>{fmtDate(row.date)} · {row.start_time}–{row.end_time} · {PURPOSE_LABEL[row.purpose]}</>
+                    ? <>{fmtDate(row.date)} · {span12(row.start_time, row.end_time)} · {PURPOSE_LABEL[row.purpose]}</>
                     : isTicket
                     ? <>{ticketPriorityMeta(row.priority).label} priority · {row.related_to} · {fmtTicketWhen(row.created_at)}</>
                     : <>{URGENCY_LABEL[row.urgency]} urgency{row.needed_by ? ` · needed by ${fmtDate(row.needed_by)}` : ''}</>}

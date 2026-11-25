@@ -17,7 +17,7 @@ import {
   APIS_FACTS, APIS_GLANCE, APIS_MISSION_POINTS, APIS_VISION, COMPANY_MILESTONES, PACK_SIZES, QUICK_ACCESS,
   SOCIAL_LINKS, dailyQuote, formatRelativeTime, getRecentToolsWithTime, useVacancies, type OurProduct,
 } from '../home/IntranetHomeShared';
-import { API, REQUEST_STATUS_BADGE, loadSession, type Session } from '../helpdesk/HelpDeskShared';
+import { API, REQUEST_STATUS_BADGE, loadSession, to12, type Session } from '../helpdesk/HelpDeskShared';
 import type { CompanyTopic, Extra } from './extras';
 import type { ItIssue } from './itIssues';
 import { AMBITIONBOX_HREF } from './links';
@@ -322,9 +322,9 @@ function Rooms({ go }: { go: Go }) {
   });
 
   const chip = (r: RoomRow) =>
-    r.status === 'occupied' ? { text: r.until ? `Busy until ${r.until}` : 'Busy', cls: 'bg-rose-50 text-rose-600 ring-rose-200' }
+    r.status === 'occupied' ? { text: r.until ? `Busy until ${to12(r.until)}` : 'Busy', cls: 'bg-rose-50 text-rose-600 ring-rose-200' }
     : r.status === 'upcoming' ? { text: 'Starting soon', cls: 'bg-amber-50 text-amber-600 ring-amber-200' }
-    : { text: r.next ? `Free · next ${r.next}` : 'Free', cls: 'bg-emerald-50 text-emerald-600 ring-emerald-200' };
+    : { text: r.next ? `Free · next ${to12(r.next)}` : 'Free', cls: 'bg-emerald-50 text-emerald-600 ring-emerald-200' };
 
   return (
     <Card icon={<DoorOpen className="w-3 h-3" />} title="Meeting rooms now">
