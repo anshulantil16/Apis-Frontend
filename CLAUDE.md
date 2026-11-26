@@ -285,8 +285,20 @@ zero the others, and several flags at once mean **any of**.
 - **Hours are blank on an unswiped day, never zero and never derived.** The
   day did not close; a duration taken from one reads as a fifteen-hour shift.
 - **`noRecord` is not "absent".** HRMS returns a blank row for every employee
-  on every date, future dates included, and the feed has no leave or week-off
-  column. The footnote on the page says this — keep it.
+  on every date, future dates included. What the blank MEANT now comes from
+  HRMS's own `Status`, merged in from a second endpoint — see the backend
+  CLAUDE.md. The footnote on the page says what is still unknowable — keep it.
+- **HRMS files approved leave as `Absent`.** Their word, not ours. The row
+  carries `leave` beside it and the chip for `absent` is suppressed where it
+  does, because showing both reads as a contradiction. **Count
+  `absentUnexplained`, never `absent`** — the Absent card, `analytics.ts` and
+  the reports all do, and using `absent` puts people on sanctioned leave into
+  a report called "worth a conversation".
+- The row's detail fields (`status`, `applyLabel`, `leaveBalance`, `shift`, …)
+  are all **optional**: a backend without the second feed, or a fetch where it
+  failed, simply leaves them off and the screen falls back to what it always
+  showed. `data.dayDetail === false` is the case to say out loud, and the
+  caveat box does.
 - **There is no overtime column** and must not be one: `OTHours` is `-` on
   every row this tenant returns.
 - `late` (HRMS, vs the person's shift) and `afterCutoff` (vs the 11:00 clock

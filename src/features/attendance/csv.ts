@@ -65,13 +65,26 @@ const STATUS: Record<string, string> = {
   late:            'Late vs shift',
   afterCutoff:     'After cutoff',
   earlyOut:        'Left early',
+  /* HRMS files an approved full-day leave as Absent, so a Status column
+     reading "Absent" alone would have somebody asked where they were. */
+  leave:           'On leave',
+  halfDay:         'Half day',
+  onDuty:          'On duty',
+  regularised:     'Punch regularised',
+  workedOnOff:     'Worked a day off',
 };
 
 /* `noRecord` and `sunday` are deliberately absent: one of absent/weekOff/
    holiday/notYet always sits beside noRecord and says the same thing in
    plain words, and weekOff already covers sunday. Printing both gives every
    blank row a redundant "No record, Absent". */
-const ORDER = ['present', 'absent', 'weekOff', 'holiday', 'optionalHoliday',
+/* `leave` comes before `absent` on purpose: it is the truer word for the
+   row, and whoever reads the file reads left to right. `absentUnexplained`
+   is not printed — `absent` with no "On leave" beside it already says it,
+   and the pair would read "Absent, Absent (unexplained)". `applied` is not
+   printed either: the leave type that follows is the useful half. */
+const ORDER = ['present', 'leave', 'halfDay', 'onDuty', 'regularised',
+  'absent', 'weekOff', 'holiday', 'optionalHoliday', 'workedOnOff',
   'notYet', 'unswiped', 'late', 'afterCutoff', 'earlyOut'];
 
 export function statusText(flags: readonly string[]): string {
