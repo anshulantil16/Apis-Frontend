@@ -20,7 +20,7 @@ import { downloadCsv } from './csv';
 type OffenceKey = 'absent' | 'late' | 'afterCutoff' | 'unswiped' | 'earlyOut';
 
 const OFFENCE: Record<OffenceKey, { label: string; blurb: string }> = {
-  absent:      { label: 'Absent',        blurb: 'Working days with nothing recorded — holidays, Sundays and future dates already excluded. May be approved leave.' },
+  absent:      { label: 'Absent',        blurb: 'Working days with nothing recorded, with approved leave, holidays, week offs and future dates already excluded. Still not proof — most leave here is never applied for in Pocket HRMS.' },
   late:        { label: 'Late (shift)',  blurb: 'Days HRMS marked late against their own shift' },
   afterCutoff: { label: 'After cutoff',  blurb: 'Days they punched in after the clock cutoff' },
   unswiped:    { label: 'Unswiped',      blurb: 'Days a punch was never made, so no hours exist' },

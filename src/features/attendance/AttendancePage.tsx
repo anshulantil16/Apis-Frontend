@@ -7,9 +7,11 @@
 
    Three things the data genuinely cannot tell us, said on screen rather than
    papered over:
-     * A blank row means "nothing recorded", NOT "absent". The feed has no
-       leave or week-off column at all, and it returns a blank row for every
-       employee on every date — including dates in the future.
+     * A blank row means "nothing recorded", NOT "absent". HRMS now states
+       the day's status per employee — holiday, week off, absent — so those
+       are facts rather than inferences. What it still cannot say is WHY
+       somebody was absent: leave only appears where it was applied for in
+       Pocket HRMS, which is a small fraction of the leave actually taken.
      * An unswiped punch yields no duration. Hours are left blank rather than
        guessed, because a day that never closed reads as fifteen hours.
      * Overtime is not computed by this tenant. OTHours was '-' on all 7,180
@@ -30,6 +32,7 @@ import {
   CalendarDays, ArrowLeft, Loader2, AlertTriangle, RefreshCw, Download,
   Users, Clock, CircleSlash, Timer, LogOut, CalendarOff, Search, Info, Table2,
   UserRound, ArrowUpDown, ArrowRight, EyeOff, Eye, LayoutDashboard, FileBarChart,
+  Briefcase,
 } from 'lucide-react';
 import {
   fetchAttMeta, fetchAttRecords, hours, dur,
@@ -69,14 +72,20 @@ type Tone = 'slate' | 'emerald' | 'amber' | 'rose' | 'orange' | 'violet' | 'sky'
 const CARDS: Card[] = [
   { key: 'all',         label: 'People',       hint: 'Everyone in this range',          icon: Users,         tone: 'slate' },
   { key: 'present',     label: 'Punched',      hint: 'At least one punch recorded',     icon: Clock,         tone: 'emerald' },
-  { key: 'absent',      label: 'Absent',       hint: 'A working day with nothing recorded. May be approved leave — the feed cannot tell them apart.',
+  { key: 'absentUnexplained', label: 'Absent',  hint: 'A working day with nothing recorded and no leave applied for in HRMS. Still not proof — most leave here is never applied for there.',
                                                                                         icon: CircleSlash,   tone: 'rose' },
+  { key: 'leave',       label: 'On leave',     hint: 'Leave applied for and recorded in HRMS. HRMS files these as "Absent"; they are counted here instead.',
+                                                                                        icon: CalendarOff,   tone: 'violet' },
+  { key: 'onDuty',      label: 'On duty',      hint: 'Out on company business — a working day, not a day off',
+                                                                                        icon: Briefcase,     tone: 'sky' },
   { key: 'late',        label: 'Late (shift)', hint: 'Late against their own shift',    icon: Timer,         tone: 'amber' },
   { key: 'afterCutoff', label: 'After cutoff', hint: 'In-punch after the clock cutoff', icon: Timer,         tone: 'rose' },
   { key: 'unswiped',    label: 'Unswiped',     hint: 'A punch was never made',          icon: AlertTriangle, tone: 'orange' },
   { key: 'earlyOut',    label: 'Early out',    hint: 'Left before their shift ended',   icon: LogOut,        tone: 'violet' },
   { key: 'holiday',     label: 'Holiday',      hint: "A company holiday at that person's location", icon: CalendarOff, tone: 'sky' },
-  { key: 'weekOff',     label: 'Week off',     hint: 'Sunday',                          icon: CalendarOff,   tone: 'slate' },
+  { key: 'weekOff',     label: 'Week off',     hint: "Their own week off, as HRMS rosters it", icon: CalendarOff, tone: 'slate' },
+  { key: 'workedOnOff', label: 'Worked a day off', hint: 'Punched in on their own holiday or week off',
+                                                                                        icon: Clock,         tone: 'amber' },
 ];
 
 /* Whole classes, never built by interpolation — Tailwind's scan is static and
@@ -301,7 +310,8 @@ export function AttendancePage({ onBack }: Props) {
   const download = () => {
     const head = ['Code', 'Name', 'Designation', 'Grade', 'Department', 'Location',
       'Date', 'In', 'Out', 'Worked', 'Worked (mins)', 'Normal', 'Normal (mins)',
-      'Late by', 'Late by (mins)', 'Early by', 'Early by (mins)', 'Status'];
+      'Late by', 'Late by (mins)', 'Early by', 'Early by (mins)', 'Status',
+      'Leave type', 'Leave span', 'Leave remarks', 'Leave balance', 'Shift'];
     const body = analysed.map(r => [
       r.code, r.name, r.designation, r.grade, r.department, r.location, r.date,
       r.inUnswiped ? 'Unswiped' : r.inTime,
@@ -309,6 +319,11 @@ export function AttendancePage({ onBack }: Props) {
       hours(r.workedMins), r.workedMins, hours(r.normalMins), r.normalMins,
       dur(r.lateMins), r.lateMins, dur(r.earlyMins), r.earlyMins,
       statusText(r.flags),
+      r.applyLabel || '',
+      r.applySpanLabel || '',
+      r.applyRemarks || '',
+      r.leaveBalance ?? '',
+      r.shift || '',
     ]);
     downloadCsv(`attendance_${from}_to_${to}`, head, body);
   };
@@ -630,15 +645,21 @@ export function AttendancePage({ onBack }: Props) {
             </p>
             <ul className="mt-2 space-y-1.5 text-[12px] text-slate-600 leading-relaxed">
               <li>
-                <b className="text-slate-800">Absent</b> means a working day with nothing recorded, once
-                holidays, Sundays and future dates have been taken out. It is <b>not</b> proof of
-                absence — the feed carries no leave column, so an approved leave arrives looking
-                exactly the same. Check against leave records before acting on it.
+                <b className="text-slate-800">Absent</b> means a working day with nothing recorded and no
+                leave applied for in HRMS. Leave, holidays, week offs and future dates are already
+                taken out. It is still <b>not</b> proof of absence: HRMS only knows about leave that
+                was applied for through it, which is a small share of the leave people actually
+                take. Check against leave records before acting on it.
               </li>
               <li>
-                <b className="text-slate-800">Holidays are matched to each person's location.</b> The
-                calendar is state-wise — 11 Nov is a holiday in Assam and West Bengal only — so one
-                state's holiday no longer marks the whole company off.
+                <b className="text-slate-800">HRMS files approved leave as “Absent”.</b> That is their
+                word, not ours. Wherever a leave type is known it is shown instead, and those rows
+                are kept out of the Absent count and out of the reports.
+              </li>
+              <li>
+                <b className="text-slate-800">Holidays come from HRMS, per person.</b> Their calendar is
+                state-wise — 11 Nov is a holiday in Assam and West Bengal only — and each employee's
+                own entitlement is what is shown here.
               </li>
               <li>
                 <b className="text-slate-800">Unswiped</b> days show no hours. The day never closed, and a
@@ -648,6 +669,13 @@ export function AttendancePage({ onBack }: Props) {
                 <li>
                   <b className="text-slate-800">Overtime</b> is not computed by this HRMS tenant, so there
                   is no overtime column to show.
+                </li>
+              )}
+              {data.dayDetail === false && (
+                <li className="text-amber-700">
+                  <b>HRMS did not answer for the day statuses on this fetch.</b> The punches are real;
+                  absent, week off and holiday have been worked out here from the calendar and the
+                  weekday instead, and no leave types are available. Press Refresh to try again.
                 </li>
               )}
             </ul>
@@ -736,11 +764,18 @@ function Chip({ flag }: { flag: AttFlag }) {
     holiday:         'bg-sky-100 text-sky-800 ring-sky-200',
     optionalHoliday: 'bg-sky-50 text-sky-700 ring-sky-200',
     sunday:          'bg-slate-100 text-slate-500 ring-slate-200',
+    leave:           'bg-violet-100 text-violet-800 ring-violet-200',
+    halfDay:         'bg-violet-50 text-violet-700 ring-violet-200',
+    onDuty:          'bg-sky-100 text-sky-800 ring-sky-200',
+    regularised:     'bg-slate-100 text-slate-600 ring-slate-200',
+    workedOnOff:     'bg-amber-100 text-amber-800 ring-amber-200',
   };
   const text: Partial<Record<AttFlag, string>> = {
     absent: 'Absent', weekOff: 'Week off', notYet: 'Not yet',
     late: 'Late', afterCutoff: 'After cutoff', unswiped: 'Unswiped', earlyOut: 'Early out',
     holiday: 'Holiday', optionalHoliday: 'Optional holiday', sunday: 'Sunday',
+    leave: 'On leave', halfDay: 'Half day', onDuty: 'On duty',
+    regularised: 'Regularised', workedOnOff: 'Worked a day off',
   };
   /* `noRecord` carries no chip of its own: it is the raw fact, and one of
      absent / weekOff / holiday / notYet always sits beside it saying what
@@ -777,7 +812,8 @@ function RowTable({ rows, multiDay, sort, onSort }: {
         {rows.map((r, i) => (
           <tr key={`${r.code}-${r.date}-${i}`}
             className={`border-b border-slate-100 last:border-0 transition-colors
-                        ${r.flags.includes('absent') ? 'bg-rose-50/50 hover:bg-rose-50'
+                        ${r.flags.includes('absentUnexplained') ? 'bg-rose-50/50 hover:bg-rose-50'
+                          : r.flags.includes('leave') ? 'bg-violet-50/40 hover:bg-violet-50'
                           : r.noRecord ? 'bg-slate-50/60 hover:bg-slate-100/60'
                           : 'hover:bg-indigo-50/40'}`}>
             {/* Name, code and the chips that explain the row, together —
@@ -789,7 +825,26 @@ function RowTable({ rows, multiDay, sort, onSort }: {
               </div>
               {r.flags.some(f => f !== 'present') && (
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {r.flags.map(f => <Chip key={f} flag={f} />)}
+                  {/* "Absent" is dropped where a leave sits beside it: HRMS
+                      files approved leave under that word, and showing both
+                      reads as a contradiction rather than an explanation. */}
+                  {r.flags
+                    .filter(f => !(f === 'absent' && r.flags.includes('leave')))
+                    .map(f => <Chip key={f} flag={f} />)}
+                </div>
+              )}
+              {/* Which leave, and which half of the day — the chip only says
+                  that there was one. */}
+              {r.applyLabel && (
+                <div className="text-[10px] text-violet-600 font-semibold mt-0.5">
+                  {r.applyLabel}
+                  {r.applySpanLabel ? ` · ${r.applySpanLabel}` : ''}
+                  {r.applyApproved ? '' : ' · not approved in HRMS'}
+                </div>
+              )}
+              {r.applyRemarks && (
+                <div className="text-[10px] text-slate-400 italic mt-0.5 line-clamp-2">
+                  “{r.applyRemarks}”
                 </div>
               )}
             </td>

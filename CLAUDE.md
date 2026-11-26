@@ -285,8 +285,20 @@ zero the others, and several flags at once mean **any of**.
 - **Hours are blank on an unswiped day, never zero and never derived.** The
   day did not close; a duration taken from one reads as a fifteen-hour shift.
 - **`noRecord` is not "absent".** HRMS returns a blank row for every employee
-  on every date, future dates included, and the feed has no leave or week-off
-  column. The footnote on the page says this — keep it.
+  on every date, future dates included. What the blank MEANT now comes from
+  HRMS's own `Status`, merged in from a second endpoint — see the backend
+  CLAUDE.md. The footnote on the page says what is still unknowable — keep it.
+- **HRMS files approved leave as `Absent`.** Their word, not ours. The row
+  carries `leave` beside it and the chip for `absent` is suppressed where it
+  does, because showing both reads as a contradiction. **Count
+  `absentUnexplained`, never `absent`** — the Absent card, `analytics.ts` and
+  the reports all do, and using `absent` puts people on sanctioned leave into
+  a report called "worth a conversation".
+- The row's detail fields (`status`, `applyLabel`, `leaveBalance`, `shift`, …)
+  are all **optional**: a backend without the second feed, or a fetch where it
+  failed, simply leaves them off and the screen falls back to what it always
+  showed. `data.dayDetail === false` is the case to say out loud, and the
+  caveat box does.
 - **There is no overtime column** and must not be one: `OTHours` is `-` on
   every row this tenant returns.
 - `late` (HRMS, vs the person's shift) and `afterCutoff` (vs the 11:00 clock
@@ -425,3 +437,35 @@ only; it has never affected the counts.
 - The Delhi HO scope reads `meta.homeOffice.codePrefixes` (a LIST — `HO,NA`).
   `codePrefix` is the old single value, kept only so an older bundle does not
   break.
+
+## Wishes (`src/features/home/wishes.tsx`)
+
+The Wish button on the Birthdays / Anniversaries card and its "View all"
+popup, the banner on your own day, and the wish rows in the bell.
+
+**`WishButton` renders only when `person.is_today`.** The cards list the week
+ahead and "View all" the rest of the month, and a wish can only be sent on the
+day itself — a button on a row three days out would promise something the
+server refuses. The server applies the same rule and is the authority; this is
+the visible half of it.
+
+**Nothing in this file decides when a *received* wish is visible.** The server
+files each wish against the day it is for and only ever returns today's, so the
+frontend polls and renders. Do not add a date check to the feed: a tab left
+open overnight would then be showing yesterday's greetings against today's
+date, and the two halves would have to agree forever.
+
+`useMyWishes()` polls every three minutes and re-asks when the tab comes back
+to the front — on your birthday the count climbing through the morning is most
+of the point, so it is faster than it strictly needs to be.
+
+`WishButton` seeds its "Wished" state from the server's `wished` flag and then
+owns it. The celebrations feed is fetched once and shared by four render sites
+(two cards, two popups), so re-fetching it to flip one button would reload all
+four. The server is asked again on the next page load and is the authority.
+
+`markSeen` clears the bell's dot only. It does not hide a wish — a greeting
+that vanishes the moment you glance at it is worse than no greeting.
+
+The bell in `IntranetShell` now has a real backend behind it. The comment
+saying otherwise is gone; wishes and unread messages both feed it.

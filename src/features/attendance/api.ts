@@ -12,7 +12,8 @@ const ATT_API = `${apiBase()}/api/attendance`;
 
 /** Mutually-exclusive-ish markers the server puts on each row.
  *  - `noRecord`    HRMS returned a row with nothing in it. NOT an absence:
- *                  the feed has no leave or week-off marker at all.
+ *                  it is the default state of every employee-day. What the
+ *                  blank MEANT comes from the day-detail feed's status.
  *  - `unswiped`    a punch was never made, so no duration can be trusted.
  *  - `late`        HRMS's own LateTime, measured against that person's SHIFT.
  *  - `afterCutoff` in-punch after the company clock cutoff (11:00).
@@ -21,11 +22,20 @@ const ATT_API = `${apiBase()}/api/attendance`;
 export type AttFlag =
   | 'present' | 'noRecord' | 'unswiped' | 'late' | 'afterCutoff'
   | 'earlyOut' | 'holiday' | 'optionalHoliday' | 'sunday'
-  /* What a blank row actually MEANS, worked out on the server from the
-     calendar, the weekday and the date. `absent` is the one that matters
-     and is NOT proof of absence — an approved leave is indistinguishable,
-     because the feed carries no column to tell them apart. */
-  | 'absent' | 'weekOff' | 'notYet';
+  /* What the day WAS. These come from HRMS's own `Status` column now, per
+     employee, rather than being inferred here from the weekday and a
+     state-wise holiday calendar — see `statusSource` on the row. */
+  | 'absent' | 'weekOff' | 'notYet'
+  /* What was applied for, which is the only thing separating an absence
+     somebody arranged from one nobody knows about. HRMS's Status says
+     `Absent` for an approved full-day leave, so these are not decoration. */
+  | 'applied' | 'leave' | 'halfDay' | 'onDuty' | 'regularised'
+  /* An absence with no application against it. Still NOT proof of anything:
+     most leave here is never applied for in Pocket HRMS. */
+  | 'absentUnexplained'
+  /* Punched in on their own week off or holiday. Invisible before: the day
+     was filed under "nobody was meant to be here" and the punch with it. */
+  | 'workedOnOff';
 
 export interface AttRow {
   code: string;
@@ -43,6 +53,36 @@ export interface AttRow {
   normalMins: number | null;
   noRecord: boolean;
   flags: AttFlag[];
+
+  /* ── From the day-detail feed (GetAttendance), merged on by code+date ──
+     All optional: an older backend, or a failed second fetch, simply leaves
+     them off and the screen falls back to what it always showed. */
+
+  /** HRMS's own words, e.g. 'Present/Week Off/Holiday'. It is a SET joined
+   *  with slashes, not one word — never compare it whole. */
+  status?: string;
+  /** 'hrms' when HRMS stated the day, 'derived' when it was inferred here
+   *  from the weekday and the holiday calendar. */
+  statusSource?: 'hrms' | 'derived';
+  shift?: string;
+  shiftTime?: string;
+  /** 'PL' | 'CL' | 'SL' | 'OD' | 'COFF' | … — raw, as HRMS spells it. */
+  applyCode?: string;
+  /** 'Privilege leave', or the bare code where the expansion is unconfirmed. */
+  applyLabel?: string;
+  applySpan?: '' | 'full' | 'firstHalf' | 'secondHalf';
+  applySpanLabel?: string;
+  applyRemarks?: string;
+  applyApproved?: boolean;
+  applyApprover?: string;
+  /** HRMS's reporting manager, which is not always the directory's. */
+  hrmsManager?: string;
+  hrmsManagerCode?: string;
+  checkInPlace?: string;
+  checkOutPlace?: string;
+  /** A running balance that CAN be negative — 112 of 9,732 rows were. */
+  leaveBalance?: number | null;
+  countedDay?: boolean;
   /* Joined on from the portal directory — the HRMS feed carries none of it. */
   department: string;
   location: string;
@@ -75,6 +115,10 @@ export interface AttMeta {
   directorySize: number;
   overtimeTracked: boolean;
   homeOffice: HomeOffice;
+  /** Whether this backend reads the day-detail feed at all. */
+  dayDetail?: boolean;
+  /** Leave code -> label, for anything that wants to name one up front. */
+  leaveTypes?: Record<string, string>;
 }
 
 export interface AttRecords {
@@ -88,6 +132,9 @@ export interface AttRecords {
   holidays: Record<string, { optional: boolean; locations: string[] }>;
   overtimeTracked: boolean;
   homeOffice: HomeOffice;
+  /** False when the day-detail feed could not be read for THIS fetch: every
+   *  row's statusSource is then 'derived' and the screen says so. */
+  dayDetail?: boolean;
   fetchedAt: string;
 }
 

@@ -9,8 +9,9 @@
    wrong without it:
 
      * `noRecord` rows are NOT absences. HRMS returns one for every employee
-       on every date and the feed has no leave or week-off column, so they
-       are counted as their own thing and never as "did not come in".
+       on every date, so a blank is the default state of the feed and is
+       counted as its own thing, never as "did not come in". What the blank
+       MEANT now comes from HRMS's own status column.
      * Durations are averaged over the days that HAVE one. An unswiped day
        carries `workedMins: null`, and treating that as a zero drags every
        average toward the floor.
@@ -71,7 +72,11 @@ export function summarise(rows: AttRow[]): Summary {
     days: new Set(rows.map(r => r.date).filter(Boolean)).size,
     punched,
     noRecord: rows.filter(r => r.noRecord).length,
-    absent: rows.filter(r => has(r, 'absent')).length,
+    /* Absences nobody filed anything against. An approved leave reaches
+       us flagged `absent` as well, because that is the word HRMS uses for
+       it, and counting those as absences is how somebody on sanctioned
+       leave ends up on a report called "worth a conversation". */
+    absent: rows.filter(r => has(r, 'absent') && !has(r, 'leave')).length,
     late: rows.filter(r => has(r, 'late')).length,
     afterCutoff: rows.filter(r => has(r, 'afterCutoff')).length,
     unswiped: rows.filter(r => has(r, 'unswiped')).length,
